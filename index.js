@@ -12,13 +12,6 @@ const PORT = process.env.PORT || 8080;
 app.use('/uv/', express.static('public/uv'));
 
 /* =========================
-   🔥 FIX: UV SERVICE ROUTE
-========================= */
-app.use('/uv/service/', (req, res) => {
-  res.status(200).end();
-});
-
-/* =========================
    CONFIG
 ========================= */
 app.get('/uv.config.js', (req, res) => {
@@ -87,7 +80,10 @@ app.get('/', (req, res) => {
   const loader = document.getElementById('loader');
 
   try {
-    await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    await navigator.serviceWorker.register('/uv/uv.sw.js', {
+      scope: '/uv/service/'
+    });
+
     await navigator.serviceWorker.ready;
 
     loader.style.display = 'none';
@@ -109,24 +105,7 @@ app.get('/', (req, res) => {
 });
 
 /* =========================
-   SERVICE WORKER
-========================= */
-app.get('/sw.js', (req, res) => {
-  res.type('application/javascript').send(`
-    importScripts('/uv/uv.bundle.js');
-    importScripts('/uv.config.js');
-    importScripts('/uv/uv.sw.js');
-
-    const sw = new UVServiceWorker();
-
-    self.addEventListener('fetch', event => {
-      event.respondWith(sw.fetch(event));
-    });
-  `);
-});
-
-/* =========================
-   SERVER ENTRY
+   BARE SERVER HANDLER
 ========================= */
 const server = http.createServer((req, res) => {
   if (bareServer.shouldRoute(req)) {
@@ -144,7 +123,7 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 /* =========================
-   START
+   START SERVER
 ========================= */
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Proxy running on port ${PORT}`);
