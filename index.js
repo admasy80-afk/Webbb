@@ -13,7 +13,46 @@ const bareServer = createBareServer('/bare/');
 // 2. ملفات Ultraviolet الأساسية
 app.use('/uv/', express.static(uvPath));
 
-// ❌ تم حذف مسار الحماية (app.get('/uv/service/*')) لأنه سبب الـ Loop المفرغ
+// 🌟 [المنقذ 1] تعريف ملف الإعدادات عشان الـ Service Worker ميموتش في الخلفية
+app.get('/uv/uv.config.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(`
+    self.__uv$config = {
+        prefix: '/service/',
+        bare: '/bare/',
+        encodeUrl: Ultraviolet.codec.xor.encode,
+        decodeUrl: Ultraviolet.codec.xor.decode,
+        handler: '/uv/uv.handler.js',
+        bundle: '/uv/uv.bundle.js',
+        config: '/uv/uv.config.js',
+        sw: '/uv/uv.sw.js',
+    };
+  `);
+});
+
+// 🌟 [المنقذ 2] مسار طوارئ ذكي بديل للـ Cannot GET وبيمنع اللوب المفرغ
+app.get('/service/*', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Connecting...</title>
+    </head>
+    <body style="background: #111; color: #00ff88; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;">
+      <h2>⏳ جاري إنشاء الاتصال المشفر... ثانية واحدة</h2>
+      <script>
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
+            // التريك هنا: بنستنى ثانيتين بدل ما نعمل ريفريش ورا بعض بجنون ونعلق المتصفح
+            setTimeout(() => { window.location.reload(); }, 2000);
+          });
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
 
 // 3. مسار الصفحة الرئيسية (استقبال الرابط المباشر)
 app.get('/', (req, res) => {
@@ -55,7 +94,6 @@ app.get('/', (req, res) => {
 
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
-              // التأكد من أن الـ Service Worker سيطر فعلياً على الصفحة قبل تحميل الـ iframe
               if (!navigator.serviceWorker.controller) {
                 navigator.serviceWorker.addEventListener('controllerchange', loadProxy);
               } else {
@@ -101,7 +139,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// 4. الـ Service Worker (تم تعديله ليعمل فوراً بدون انتظار)
+// 4. الـ Service Worker
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.send(`
@@ -111,13 +149,11 @@ app.get('/sw.js', (req, res) => {
     
     const sw = new UVServiceWorker();
     
-    // إجبار المتصفح على تفعيل البروكسي فوراً
     self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
     self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 
     self.addEventListener('fetch', (event) => {
       event.respondWith((async () => {
-        // التحقق الصحيح من مسار Ultraviolet
         if (event.request.url.startsWith(location.origin + __uv$config.prefix)) {
           return await sw.fetch(event);
         }
