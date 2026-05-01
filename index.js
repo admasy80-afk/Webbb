@@ -9,7 +9,10 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
-// ✅ أهم تصليح (كان غلط عندك)
+// ✅ حل مشكلة X-Forwarded-For (مهم جدًا)
+app.set('trust proxy', 1);
+
+// ✅ إنشاء السيرفر بشكل صحيح
 const server = createServer(app);
 
 const bareServer = createBareServer('/bare/', {
@@ -20,40 +23,41 @@ const PORT = process.env.PORT || 8080;
 
 
 // ==================
-// 🔐 حماية + أداء
+// 🔐 حماية + أداء (خفيف)
 // ==================
 app.use(helmet({
     contentSecurityPolicy: false
 }));
 
-app.use(rateLimit({
+// ✅ Rate limit بدون مشاكل
+const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 300
-}));
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false
+});
+app.use(limiter);
 
+// ✅ ضغط متوازن (أفضل من 9)
 app.use(compression({ level: 6 }));
 
 
 // ==================
 // 📁 المسارات
 // ==================
-
-// ملفات Ultraviolet
 app.use('/uv/', express.static(uvPath));
-
-// ملفاتك
 app.use(express.static(path.join(__dirname, 'public')));
 
 
 // ==================
-// 🔒 تشفير (محسن)
+// 🔒 تشفير خفيف (أسرع)
 // ==================
 function uvEncode(str) {
     if (!str) return str;
 
     return encodeURIComponent(
-        str.split('').map((char, i) =>
-            i % 2 ? String.fromCharCode(char.charCodeAt(0) ^ 7) : char
+        str.split('').map((c, i) =>
+            i % 2 ? String.fromCharCode(c.charCodeAt(0) ^ 5) : c
         ).join('')
     );
 }
@@ -64,43 +68,16 @@ function uvEncode(str) {
 // ==================
 app.get('/yt', (req, res) => {
     const target = 'https://m.youtube.com';
-    const encoded = uvEncode(target);
 
     res.send(`
     <!DOCTYPE html>
-    <html lang="ar" dir="rtl">
+    <html>
     <head>
-        <meta charset="UTF-8">
-        <title>جارٍ التحميل...</title>
         <script src="/uv/uv.bundle.js"></script>
         <script src="/uv/uv.config.js"></script>
-        <style>
-            body {
-                background: #050505;
-                color: #fff;
-                text-align: center;
-                font-family: sans-serif;
-                padding-top: 25vh;
-            }
-            .loader {
-                border: 4px solid #222;
-                border-top: 4px solid #1a73e8;
-                border-radius: 50%;
-                width: 50px;
-                height: 50px;
-                animation: spin 1s linear infinite;
-                margin: 20px auto;
-            }
-            @keyframes spin {
-                0% { transform: rotate(0deg); }
-                100% { transform: rotate(360deg); }
-            }
-        </style>
     </head>
-    <body>
-        <div class="loader"></div>
-        <h3>🚀 جاري الاتصال...</h3>
-
+    <body style="background:#000;color:#fff;text-align:center;padding-top:25vh">
+        <h3>🚀 جاري الدخول...</h3>
         <script>
             navigator.serviceWorker.register('/sw.js').then(() => {
                 location.href = '/uv/service/' + __uv$config.encodeUrl('${target}');
@@ -113,22 +90,23 @@ app.get('/yt', (req, res) => {
 
 
 // ==================
-// ⚙️ إصلاح التعليق
+// ⚙️ إصلاح التعليق (محسن)
 // ==================
 app.get('/uv/service/*', (req, res) => {
+    if (res.headersSent) return;
+
     res.send(`
-    <!DOCTYPE html>
     <html>
     <head>
         <script src="/uv/uv.bundle.js"></script>
         <script src="/uv/uv.config.js"></script>
     </head>
-    <body style="background:#000;color:#fff;text-align:center;padding-top:20vh;">
-        <h3>⚙️ إعادة تهيئة الاتصال...</h3>
+    <body style="background:#000;color:#fff;text-align:center;padding-top:20vh">
+        <h3>⚙️ تهيئة الاتصال...</h3>
         <script>
             navigator.serviceWorker.register('/sw.js').then(reg => {
                 reg.update();
-                setTimeout(() => location.reload(), 800);
+                setTimeout(() => location.reload(), 500);
             });
         </script>
     </body>
@@ -138,10 +116,12 @@ app.get('/uv/service/*', (req, res) => {
 
 
 // ==================
-// ❌ 404
+// ❌ 404 (آمن)
 // ==================
 app.use((req, res) => {
-    res.status(404).send('❌ Not Found');
+    if (!res.headersSent) {
+        res.status(404).send('❌ Not Found');
+    }
 });
 
 
@@ -149,10 +129,16 @@ app.use((req, res) => {
 // 🔌 الربط الأساسي
 // ==================
 server.on('request', (req, res) => {
-    if (bareServer.shouldRoute(req)) {
-        bareServer.routeRequest(req, res);
-    } else {
-        app(req, res);
+    try {
+        if (bareServer.shouldRoute(req)) {
+            bareServer.routeRequest(req, res);
+        } else {
+            app(req, res);
+        }
+    } catch (e) {
+        if (!res.headersSent) {
+            res.status(500).end('Internal Error');
+        }
     }
 });
 
