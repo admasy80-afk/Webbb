@@ -12,7 +12,14 @@ const PORT = process.env.PORT || 8080;
 app.use('/uv/', express.static('public/uv'));
 
 /* =========================
-   CONFIG ENDPOINT (FIXED)
+   🔥 FIX: UV SERVICE ROUTE
+========================= */
+app.use('/uv/service/', (req, res) => {
+  res.status(200).end();
+});
+
+/* =========================
+   CONFIG
 ========================= */
 app.get('/uv.config.js', (req, res) => {
   res.type('application/javascript').send(`
@@ -140,5 +147,5 @@ server.on('upgrade', (req, socket, head) => {
    START
 ========================= */
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(\`🚀 Proxy running on port \${PORT}\`);
+  console.log(`🚀 Proxy running on port ${PORT}`);
 });
