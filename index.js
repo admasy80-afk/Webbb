@@ -2303,7 +2303,7 @@ server.on('upgrade', (req, socket, head) => {
 // 🚀 START SERVER
 // =====================
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(\`⚡ Ultra Proxy Worker \${process.pid} running on port \${PORT}\`);
+  console.log(`⚡ Ultra Proxy Worker ${process.pid} running on port ${PORT}`);
 });
 
 // Graceful shutdown
