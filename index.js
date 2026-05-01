@@ -27,7 +27,7 @@ function uvEncode(str) {
     ).join(''));
 }
 
-// 4. رابط يوتيوب المباشر (مدمج به الرادار)
+// 4. رابط يوتيوب المباشر (النسخة المضمونة بالترتيب الصحيح)
 app.get('/yt', (req, res) => {
     if (res.headersSent) return;
     const encoded = uvEncode('https://m.youtube.com');
@@ -38,13 +38,15 @@ app.get('/yt', (req, res) => {
         <head>
             <meta charset="UTF-8">
             <title>جاري تشغيل Nebula...</title>
-            <script src="/uv.config.js"></script>
+            
             <script src="/uv/uv.bundle.js"></script>
+            <script src="/uv.config.js"></script>
+            
             <style>
                 body { background: #050505; color: #fff; text-align: center; font-family: sans-serif; padding-top: 25vh; margin:0; }
                 .loader { border: 4px solid #222; border-top: 4px solid #1a73e8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                #error { color: #ff4444; margin-top: 20px; font-weight: bold; font-size: 18px; }
+                #error { color: #ff4444; margin-top: 20px; font-weight: bold; font-size: 16px; direction: ltr; }
             </style>
         </head>
         <body>
@@ -55,7 +57,7 @@ app.get('/yt', (req, res) => {
                 setTimeout(async () => {
                     try {
                         if (typeof __uv$config === 'undefined') {
-                            throw new Error("ملف uv.config.js غير مقروء! تأكد من محتواه.");
+                            throw new Error("ملف uv.config.js فشل في التحميل! تأكد من وجوده في مجلد public.");
                         }
                         // تسجيل المحرك
                         await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
@@ -65,7 +67,7 @@ app.get('/yt', (req, res) => {
                         document.getElementById('spin').style.display = 'none';
                         document.getElementById('error').innerHTML = "⛔ عطل فني: " + e.message;
                     }
-                }, 500);
+                }, 400);
             </script>
         </body>
         </html>
