@@ -10,12 +10,40 @@ const PORT = process.env.PORT || 8080;
 // 1. خادم Bare للبروكسي
 const bareServer = createBareServer('/bare/');
 
-// 2. ملفات Ultraviolet
+// 2. ملفات Ultraviolet الأساسية
 app.use('/uv/', express.static(uvPath));
 
-// 3. مسار الصفحة الرئيسية (استقبال الرابط المباشر أو الواجهة)
+// =====================================
+// 🛡️ شبكة الحماية: لو المتصفح استعجل وطلب اللينك قبل البروكسي ما يشتغل
+// =====================================
+app.get('/uv/service/*', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <title>Connecting...</title>
+      <script src="/uv/uv.bundle.js"></script>
+      <script src="/uv/uv.config.js"></script>
+    </head>
+    <body style="background: #111; color: #00ff88; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;">
+      <h2>⚡ جاري تجهيز الاتصال... ثانية واحدة</h2>
+      <script>
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
+            navigator.serviceWorker.ready.then(() => {
+              window.location.reload(); // بيعمل ريفريش تلقائي لما البروكسي يجهز
+            });
+          });
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+// 3. مسار الصفحة الرئيسية (استقبال الرابط المباشر)
 app.get('/', (req, res) => {
-  // لو الرابط المباشر موجود
   if (req.query.__cpo) {
     let targetUrl;
     try {
@@ -24,7 +52,6 @@ app.get('/', (req, res) => {
       return res.send('Error: Invalid URL');
     }
 
-    // عرض الموقع جوا نافذة مخفية بملء الشاشة لمنع التعليق (Iframe)
     return res.send(`
       <!DOCTYPE html>
       <html style="margin:0; padding:0; height:100%;">
@@ -36,7 +63,7 @@ app.get('/', (req, res) => {
       </head>
       <body style="margin:0; padding:0; height:100%; background: #000; overflow: hidden;">
         
-        <div id="loader" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#00ff88; font-family:sans-serif; font-weight:bold; font-size: 20px;">
+        <div id="loader" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#00ff88; font-family:sans-serif; font-size: 20px;">
           ⚡ جاري الفتح...
         </div>
 
@@ -45,15 +72,13 @@ app.get('/', (req, res) => {
         <script>
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
+              return navigator.serviceWorker.ready; // 🚀 الإجبار على الانتظار هنا!
+            }).then(() => {
               const encodedTarget = __uv$config.encodeUrl("` + targetUrl + `");
               const frame = document.getElementById('proxyFrame');
               const loader = document.getElementById('loader');
               
-              // لما الموقع يجهز، نخفي رسالة التحميل ونعرض الموقع
-              frame.onload = () => { 
-                loader.style.display = 'none'; 
-              };
-              
+              frame.onload = () => { loader.style.display = 'none'; };
               frame.style.display = 'block';
               frame.src = '/uv/service/' + encodedTarget;
             });
@@ -64,7 +89,6 @@ app.get('/', (req, res) => {
     `);
   }
 
-  // الواجهة العادية لصنع الروابط
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
@@ -88,7 +112,6 @@ app.get('/', (req, res) => {
           let url = document.getElementById('url').value.trim();
           if (!url) return;
           if (!/^https?:\\/\\//i.test(url)) url = 'https://' + url;
-          
           const b64 = btoa(url);
           window.location.href = '/?__cpo=' + b64;
         }
@@ -134,5 +157,5 @@ server.on('upgrade', (req, socket, head) => {
 
 // 6. تشغيل السيرفر
 server.listen(PORT, '0.0.0.0', () => {
-  console.log('✅ Direct Proxy running on port ' + PORT);
+  console.log('✅ Proxy is READY on port ' + PORT);
 });
