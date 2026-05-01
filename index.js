@@ -4,8 +4,7 @@ const { createBareServer } = require('@tomphttp/bare-server-node');
 const { uvPath } = require('@titaniumnetwork-dev/ultraviolet');
 
 const app = express();
-// هنا كان الخطأ: مسحنا app من الأقواس عشان ميردش مرتين
-const server = http.createServer(); 
+const server = http.createServer(); // نظيف ومفيش أخطاء هيدرز
 const PORT = process.env.PORT || 8080;
 
 // 1. خادم Bare للبروكسي
@@ -14,13 +13,37 @@ const bareServer = createBareServer('/bare/');
 // 2. ملفات Ultraviolet
 app.use('/uv/', express.static(uvPath));
 
+// =====================================
+// 🚨 هنا كان الخطأ! المسار اللي نسيته في النسخة اللي فاتت
+// =====================================
+app.get('/uv/service/*', (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Loading...</title>
+      <script src="/uv/uv.bundle.js"></script>
+      <script src="/uv/uv.config.js"></script>
+    </head>
+    <body style="background: #111; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;">
+      <h2>جاري التحويل... ⚡</h2>
+      <script>
+        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
+          // بنخلي الـ Service Worker يمسك الرابط وبعدين نعمل ريفريش عشان يفتح الموقع
+          setTimeout(() => { window.location.reload(); }, 500);
+        });
+      </script>
+    </body>
+    </html>
+  `);
+});
+
 // 3. مسار الصفحة الرئيسية (استقبال الرابط المباشر)
 app.get('/', (req, res) => {
-  // لو الرابط فيه __cpo (الرابط المباشر السريع)
+  // لو الرابط فيه __cpo (الرابط السريع)
   if (req.query.__cpo) {
     let targetUrl;
     try {
-      // فك تشفير الـ Base64
       targetUrl = Buffer.from(req.query.__cpo, 'base64').toString('utf-8');
     } catch (e) {
       return res.send('Error: Invalid URL');
@@ -38,7 +61,6 @@ app.get('/', (req, res) => {
         <script>
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
-              // تحويل للموقع المطلوب فورا
               const encodedTarget = __uv$config.encodeUrl("${targetUrl}");
               window.location.href = '/uv/service/' + encodedTarget;
             });
@@ -49,7 +71,7 @@ app.get('/', (req, res) => {
     `);
   }
 
-  // الواجهة البسيطة لو فتحت اللينك العادي
+  // الواجهة البسيطة لصنع الروابط
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
@@ -98,7 +120,7 @@ app.get('/sw.js', (req, res) => {
   `);
 });
 
-// 5. توجيه الطلبات بشكل صحيح (مرة واحدة فقط)
+// 5. توجيه الطلبات
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -117,5 +139,5 @@ server.on('upgrade', (req, socket, head) => {
 
 // 6. تشغيل السيرفر
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`✅ Direct Proxy running on port ${PORT}`);
+  console.log(\`✅ Direct Proxy running on port \${PORT}\`);
 });
