@@ -4,23 +4,22 @@ const { uvPath } = require('@titaniumnetwork-dev/ultraviolet');
 const { createServer } = require('http');
 const path = require('path');
 const compression = require('compression');
-const helmet = require('helmet');
 
 const app = express();
-const server = createServer(app);
+const server = createServer();
 const bareServer = createBareServer('/bare/', { logErrors: false });
 
 const PORT = process.env.PORT || 8080;
 
 app.use(compression({ level: 9 }));
-app.use(helmet({ contentSecurityPolicy: false }));
 
-// 1. خدمة ملفات المحرك
+// 1. مسار محرك فك التشفير
 app.use('/uv/', express.static(uvPath));
 
-// 2. خدمة ملفات مجلد public (تأكد من وجود هذا المجلد في GitHub)
+// 2. مسار ملفات الإعدادات بتاعتك (public)
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 3. دالة التشفير الصاروخية
 function uvEncode(str) {
     if (!str) return str;
     return encodeURIComponent(str.toString().split('').map((char, ind) => 
@@ -28,88 +27,75 @@ function uvEncode(str) {
     ).join(''));
 }
 
-// دالة شاشة التحميل مع "رادار كشف الأعطال"
-function getLoaderHTML(encodedUrl) {
-    return `
+// 4. رابط يوتيوب المباشر (مدمج به الرادار)
+app.get('/yt', (req, res) => {
+    if (res.headersSent) return;
+    const encoded = uvEncode('https://m.youtube.com');
+    
+    res.status(200).send(`
         <!DOCTYPE html>
         <html lang="ar" dir="rtl">
         <head>
             <meta charset="UTF-8">
-            <title>جاري الاتصال...</title>
+            <title>جاري تشغيل Nebula...</title>
+            <script src="/uv.config.js"></script>
+            <script src="/uv/uv.bundle.js"></script>
             <style>
-                body { background: #000; color: #fff; text-align: center; font-family: sans-serif; padding-top: 20vh; }
-                .loader { border: 5px solid #333; border-top: 5px solid #1a73e8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+                body { background: #050505; color: #fff; text-align: center; font-family: sans-serif; padding-top: 25vh; margin:0; }
+                .loader { border: 4px solid #222; border-top: 4px solid #1a73e8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                #status { margin-top: 20px; font-size: 18px; color: #aaa; }
-                #error { color: #ff4444; margin-top: 20px; font-weight: bold; display: none; background: #220000; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; width: 80%; margin-left: auto; margin-right: auto; }
+                #error { color: #ff4444; margin-top: 20px; font-weight: bold; font-size: 18px; }
             </style>
         </head>
         <body>
             <div class="loader" id="spin"></div>
-            <div id="status">🚀 جاري تشغيل محرك Nebula...</div>
+            <h3>🚀 جاري إنشاء نفق مشفر ليوتيوب...</h3>
             <div id="error"></div>
-
             <script>
-                const errorBox = document.getElementById('error');
-                const spin = document.getElementById('spin');
-                const status = document.getElementById('status');
-
-                async function start() {
+                setTimeout(async () => {
                     try {
-                        // اختبار وجود ملفات الإعدادات
-                        const configCheck = await fetch('/uv.config.js');
-                        if (!configCheck.ok) throw new Error("ملف uv.config.js غير موجود في مجلد public على GitHub!");
-
-                        const swCheck = await fetch('/sw.js');
-                        if (!swCheck.ok) throw new Error("ملف sw.js غير موجود في مجلد public على GitHub!");
-
-                        // تحميل الملفات برمجياً
-                        const script = document.createElement('script');
-                        script.src = '/uv.config.js';
-                        script.onload = async () => {
-                            try {
-                                await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
-                                window.location.href = __uv$config.prefix + '${encodedUrl}';
-                            } catch (e) {
-                                showError("فشل تسجيل Service Worker: " + e.message);
-                            }
-                        };
-                        script.onerror = () => showError("فشل تحميل uv.config.js");
-                        document.head.appendChild(script);
-
-                    } catch (err) {
-                        showError(err.message);
+                        if (typeof __uv$config === 'undefined') {
+                            throw new Error("ملف uv.config.js غير مقروء! تأكد من محتواه.");
+                        }
+                        // تسجيل المحرك
+                        await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
+                        // الانطلاق ليوتيوب
+                        window.location.href = __uv$config.prefix + '${encoded}';
+                    } catch (e) {
+                        document.getElementById('spin').style.display = 'none';
+                        document.getElementById('error').innerHTML = "⛔ عطل فني: " + e.message;
                     }
-                }
-
-                function showError(msg) {
-                    spin.style.display = 'none';
-                    status.style.display = 'none';
-                    errorBox.style.display = 'block';
-                    errorBox.innerText = "⛔ عطل فني: " + msg;
-                }
-
-                start();
+                }, 500);
             </script>
-            <script src="/uv/uv.bundle.js"></script>
         </body>
         </html>
-    `;
-}
-
-app.get('/yt', (req, res) => {
-    const encoded = uvEncode('https://m.youtube.com');
-    res.send(getLoaderHTML(encoded));
+    `);
 });
 
+// 5. حماية من الروابط العشوائية (404)
+app.use((req, res) => {
+    if (!res.headersSent) {
+        res.status(404).send('Not Found: ' + req.url);
+    }
+});
+
+// 6. تشغيل السيرفر الأساسي والـ Bare
 server.on('request', (req, res) => {
-    if (bareServer.shouldRoute(req)) bareServer.routeRequest(req, res);
-    else app(req, res);
+    if (bareServer.shouldRoute(req)) {
+        bareServer.routeRequest(req, res);
+    } else {
+        app(req, res);
+    }
 });
 
 server.on('upgrade', (req, socket, head) => {
-    if (bareServer.shouldRoute(req)) bareServer.routeUpgrade(req, socket, head);
-    else socket.end();
+    if (bareServer.shouldRoute(req)) {
+        bareServer.routeUpgrade(req, socket, head);
+    } else {
+        socket.end();
+    }
 });
 
-server.listen(PORT, '0.0.0.0', () => console.log('Server Live on ' + PORT));
+server.listen(PORT, '0.0.0.0', () => {
+    console.log('🚀 Server is ONLINE on port ' + PORT);
+});
