@@ -48,7 +48,7 @@ app.use((req, res, next) => {
 });
 
 // ==========================================
-// 🚀 الترتيب الصحيح للمسارات (حل مشكلة Cannot GET)
+// 🚀 الترتيب الصحيح للمسارات
 // ==========================================
 
 // أولاً: خدمة ملفات محرك Ultraviolet (مهم جداً أن يكون في البداية)
@@ -69,7 +69,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.use(express.json({ limit: '10mb' }));
 
 // ==========================================
-// 🔗 ميزة الروابط المباشرة (CroxyProxy Style)
+// 🔗 ميزة الروابط المباشرة (CroxyProxy Style) مع شاشة تحميل
 // ==========================================
 
 function uvEncode(str) {
@@ -79,12 +79,47 @@ function uvEncode(str) {
     ).join(''));
 }
 
+// دالة بترجع شاشة التحميل الذكية
+function getLoaderHTML(encodedUrl, title) {
+    return `
+        <!DOCTYPE html>
+        <html lang="ar" dir="rtl">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${title}</title>
+            <script src="/uv/uv.bundle.js"></script>
+            <script src="/uv.config.js"></script>
+            <style>
+                body { background: #111; color: #fff; text-align: center; font-family: Arial, sans-serif; padding-top: 30vh; margin: 0; }
+                .loader { border: 4px solid #333; border-top: 4px solid #1a73e8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+            </style>
+        </head>
+        <body>
+            <h2>🚀 جاري تخطي الحجب وتجهيز الاتصال الآمن...</h2>
+            <div class="loader"></div>
+            <script>
+                // تشغيل الموتور وبعدين التوجيه فوراً
+                navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix })
+                    .then(() => {
+                        window.location.href = __uv$config.prefix + '${encodedUrl}';
+                    }).catch(err => {
+                        document.body.innerHTML += "<p style='color:red;'>حدث خطأ أثناء تحميل المحرك</p>";
+                        console.error(err);
+                    });
+            </script>
+        </body>
+        </html>
+    `;
+}
+
 // رابط يوتيوب المباشر
 app.get('/yt', (req, res) => {
     if (res.headersSent) return;
     const target = 'https://m.youtube.com';
     const encoded = uvEncode(target); 
-    return res.redirect('/uv/service/' + encoded);
+    res.send(getLoaderHTML(encoded, "جاري فتح يوتيوب..."));
 });
 
 // رابط التوجيه العام لأي موقع (Base64)
@@ -93,7 +128,7 @@ app.get('/go/:base64url', (req, res) => {
     try {
         const target = Buffer.from(req.params.base64url, 'base64').toString('utf-8');
         const encoded = uvEncode(target);
-        return res.redirect('/uv/service/' + encoded);
+        res.send(getLoaderHTML(encoded, "جاري فتح الموقع..."));
     } catch (e) {
         return res.status(400).send('Invalid Link Format');
     }
