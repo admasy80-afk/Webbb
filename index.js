@@ -13,34 +13,7 @@ const bareServer = createBareServer('/bare/');
 // 2. ملفات Ultraviolet الأساسية
 app.use('/uv/', express.static(uvPath));
 
-// =====================================
-// 🛡️ شبكة الحماية: لو المتصفح استعجل وطلب اللينك قبل البروكسي ما يشتغل
-// =====================================
-app.get('/uv/service/*', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Connecting...</title>
-      <script src="/uv/uv.bundle.js"></script>
-      <script src="/uv/uv.config.js"></script>
-    </head>
-    <body style="background: #111; color: #00ff88; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;">
-      <h2>⚡ جاري تجهيز الاتصال... ثانية واحدة</h2>
-      <script>
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
-            navigator.serviceWorker.ready.then(() => {
-              window.location.reload(); // بيعمل ريفريش تلقائي لما البروكسي يجهز
-            });
-          });
-        }
-      </script>
-    </body>
-    </html>
-  `);
-});
+// ❌ تم حذف مسار الحماية (app.get('/uv/service/*')) لأنه سبب الـ Loop المفرغ
 
 // 3. مسار الصفحة الرئيسية (استقبال الرابط المباشر)
 app.get('/', (req, res) => {
@@ -70,18 +43,25 @@ app.get('/', (req, res) => {
         <iframe id="proxyFrame" style="width:100%; height:100%; border:none; display:none; background:#fff;"></iframe>
 
         <script>
+          function loadProxy() {
+            const encodedTarget = __uv$config.encodeUrl("` + targetUrl + `");
+            const frame = document.getElementById('proxyFrame');
+            const loader = document.getElementById('loader');
+            
+            frame.onload = () => { loader.style.display = 'none'; };
+            frame.style.display = 'block';
+            frame.src = __uv$config.prefix + encodedTarget;
+          }
+
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
-              return navigator.serviceWorker.ready; // 🚀 الإجبار على الانتظار هنا!
-            }).then(() => {
-              const encodedTarget = __uv$config.encodeUrl("` + targetUrl + `");
-              const frame = document.getElementById('proxyFrame');
-              const loader = document.getElementById('loader');
-              
-              frame.onload = () => { loader.style.display = 'none'; };
-              frame.style.display = 'block';
-              frame.src = '/uv/service/' + encodedTarget;
-            });
+              // التأكد من أن الـ Service Worker سيطر فعلياً على الصفحة قبل تحميل الـ iframe
+              if (!navigator.serviceWorker.controller) {
+                navigator.serviceWorker.addEventListener('controllerchange', loadProxy);
+              } else {
+                loadProxy();
+              }
+            }).catch(err => console.error("SW Error:", err));
           }
         </script>
       </body>
@@ -121,17 +101,26 @@ app.get('/', (req, res) => {
   `);
 });
 
-// 4. الـ Service Worker
+// 4. الـ Service Worker (تم تعديله ليعمل فوراً بدون انتظار)
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.send(`
     importScripts('/uv/uv.bundle.js');
     importScripts('/uv/uv.config.js');
     importScripts('/uv/uv.sw.js');
+    
     const sw = new UVServiceWorker();
+    
+    // إجبار المتصفح على تفعيل البروكسي فوراً
+    self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
+    self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
+
     self.addEventListener('fetch', (event) => {
       event.respondWith((async () => {
-        if (event.request.url.includes('/uv/')) return await sw.fetch(event);
+        // التحقق الصحيح من مسار Ultraviolet
+        if (event.request.url.startsWith(location.origin + __uv$config.prefix)) {
+          return await sw.fetch(event);
+        }
         return await fetch(event.request);
       })());
     });
