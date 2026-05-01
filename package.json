@@ -12,6 +12,12 @@
     "@titaniumnetwork-dev/ultraviolet": "latest",
     "compression": "^1.7.4",
     "helmet": "^7.1.0",
-    "express-rate-limit": "^7.1.5"
+    "express-rate-limit": "^7.1.5",
+    "ws": "^8.18.0",
+    "cors": "^2.8.5",
+    "http-proxy": "^1.18.1",
+    "serve-static": "^1.15.0",
+    "mime-types": "^2.1.35",
+    "dotenv": "^16.4.0"
   }
 }
