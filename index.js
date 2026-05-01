@@ -5,72 +5,21 @@ const { createServer } = require('http');
 const path = require('path');
 const compression = require('compression');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 
 const app = express();
 const server = createServer(app);
-const bareServer = createBareServer('/bare/', {
-    logErrors: false,
-    maintainer: {
-        email: 'nebula@secure.proxy',
-        website: 'https://nebula.proxy'
-    }
-});
+const bareServer = createBareServer('/bare/', { logErrors: false });
 
-// ضبط البورت ليتوافق مع Railway تلقائياً
 const PORT = process.env.PORT || 8080;
 
-// 1. تحسين الأداء والحماية
-app.use(compression({ level: 9, threshold: 0 }));
-app.use(helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: false,
-    crossOriginResourcePolicy: false
-}));
+app.use(compression({ level: 9 }));
+app.use(helmet({ contentSecurityPolicy: false }));
 
-const limiter = rateLimit({
-    windowMs: 1 * 60 * 1000,
-    max: 1000,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many requests' }
-});
-app.use(limiter);
-
-// 2. إعدادات الـ Headers لضمان تخطي الحجب
-app.use((req, res, next) => {
-    res.setHeader('X-Powered-By', 'Nebula-Ultra');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Referrer-Policy', 'no-referrer');
-    next();
-});
-
-// ==========================================
-// 🚀 الترتيب الصحيح للمسارات
-// ==========================================
-
-// أولاً: خدمة ملفات محرك Ultraviolet (مهم جداً أن يكون في البداية)
+// 1. خدمة ملفات المحرك
 app.use('/uv/', express.static(uvPath));
 
-// ثانياً: معالجة طلبات الـ Bare Server لضمان عمل المواقع
-app.use('/bare/', (req, res) => {
-    if (bareServer.shouldRoute(req)) {
-        bareServer.routeRequest(req, res);
-    }
-});
-
-// ثالثاً: خدمة ملفات الواجهة من مجلد public
-app.use(express.static(path.join(__dirname, 'public'), {
-    extensions: ['html', 'js', 'css']
-}));
-
-app.use(express.json({ limit: '10mb' }));
-
-// ==========================================
-// 🔗 ميزة الروابط المباشرة (CroxyProxy Style) مع شاشة تحميل
-// ==========================================
+// 2. خدمة ملفات مجلد public (تأكد من وجود هذا المجلد في GitHub)
+app.use(express.static(path.join(__dirname, 'public')));
 
 function uvEncode(str) {
     if (!str) return str;
@@ -79,115 +28,88 @@ function uvEncode(str) {
     ).join(''));
 }
 
-// دالة بترجع شاشة التحميل الذكية
-function getLoaderHTML(encodedUrl, title) {
+// دالة شاشة التحميل مع "رادار كشف الأعطال"
+function getLoaderHTML(encodedUrl) {
     return `
         <!DOCTYPE html>
         <html lang="ar" dir="rtl">
         <head>
             <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>${title}</title>
-            <script src="/uv/uv.bundle.js"></script>
-            <script src="/uv.config.js"></script>
+            <title>جاري الاتصال...</title>
             <style>
-                body { background: #111; color: #fff; text-align: center; font-family: Arial, sans-serif; padding-top: 30vh; margin: 0; }
-                .loader { border: 4px solid #333; border-top: 4px solid #1a73e8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+                body { background: #000; color: #fff; text-align: center; font-family: sans-serif; padding-top: 20vh; }
+                .loader { border: 5px solid #333; border-top: 5px solid #1a73e8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+                #status { margin-top: 20px; font-size: 18px; color: #aaa; }
+                #error { color: #ff4444; margin-top: 20px; font-weight: bold; display: none; background: #220000; padding: 15px; border-radius: 8px; border: 1px solid #ff4444; width: 80%; margin-left: auto; margin-right: auto; }
             </style>
         </head>
         <body>
-            <h2>🚀 جاري تخطي الحجب وتجهيز الاتصال الآمن...</h2>
-            <div class="loader"></div>
+            <div class="loader" id="spin"></div>
+            <div id="status">🚀 جاري تشغيل محرك Nebula...</div>
+            <div id="error"></div>
+
             <script>
-                // تشغيل الموتور وبعدين التوجيه فوراً
-                navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix })
-                    .then(() => {
-                        window.location.href = __uv$config.prefix + '${encodedUrl}';
-                    }).catch(err => {
-                        document.body.innerHTML += "<p style='color:red;'>حدث خطأ أثناء تحميل المحرك</p>";
-                        console.error(err);
-                    });
+                const errorBox = document.getElementById('error');
+                const spin = document.getElementById('spin');
+                const status = document.getElementById('status');
+
+                async function start() {
+                    try {
+                        // اختبار وجود ملفات الإعدادات
+                        const configCheck = await fetch('/uv.config.js');
+                        if (!configCheck.ok) throw new Error("ملف uv.config.js غير موجود في مجلد public على GitHub!");
+
+                        const swCheck = await fetch('/sw.js');
+                        if (!swCheck.ok) throw new Error("ملف sw.js غير موجود في مجلد public على GitHub!");
+
+                        // تحميل الملفات برمجياً
+                        const script = document.createElement('script');
+                        script.src = '/uv.config.js';
+                        script.onload = async () => {
+                            try {
+                                await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
+                                window.location.href = __uv$config.prefix + '${encodedUrl}';
+                            } catch (e) {
+                                showError("فشل تسجيل Service Worker: " + e.message);
+                            }
+                        };
+                        script.onerror = () => showError("فشل تحميل uv.config.js");
+                        document.head.appendChild(script);
+
+                    } catch (err) {
+                        showError(err.message);
+                    }
+                }
+
+                function showError(msg) {
+                    spin.style.display = 'none';
+                    status.style.display = 'none';
+                    errorBox.style.display = 'block';
+                    errorBox.innerText = "⛔ عطل فني: " + msg;
+                }
+
+                start();
             </script>
+            <script src="/uv/uv.bundle.js"></script>
         </body>
         </html>
     `;
 }
 
-// رابط يوتيوب المباشر
 app.get('/yt', (req, res) => {
-    if (res.headersSent) return;
-    const target = 'https://m.youtube.com';
-    const encoded = uvEncode(target); 
-    res.send(getLoaderHTML(encoded, "جاري فتح يوتيوب..."));
+    const encoded = uvEncode('https://m.youtube.com');
+    res.send(getLoaderHTML(encoded));
 });
 
-// رابط التوجيه العام لأي موقع (Base64)
-app.get('/go/:base64url', (req, res) => {
-    if (res.headersSent) return;
-    try {
-        const target = Buffer.from(req.params.base64url, 'base64').toString('utf-8');
-        const encoded = uvEncode(target);
-        res.send(getLoaderHTML(encoded, "جاري فتح الموقع..."));
-    } catch (e) {
-        return res.status(400).send('Invalid Link Format');
-    }
-});
-
-// ==========================================
-
-// 4. واجهات الـ API المساعدة
-app.get('/api/health', (req, res) => {
-    return res.json({ status: 'online', timestamp: Date.now() });
-});
-
-app.get('/api/suggestions', async (req, res) => {
-    const query = req.query.q || '';
-    if (!query) return res.json([]);
-    try {
-        const response = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        return res.json(data[1] || []);
-    } catch (err) {
-        return res.json([]);
-    }
-});
-
-// 5. معالجة الأخطاء لضمان عدم توقف السيرفر
-app.use((err, req, res, next) => {
-    if (res.headersSent) return next(err);
-    console.error("[Server Error]:", err.message);
-    return res.status(500).json({ error: 'Internal Server Error' });
-});
-
-// 6. الربط بين Bare Server والـ HTTP Server
 server.on('request', (req, res) => {
-    if (bareServer.shouldRoute(req)) {
-        bareServer.routeRequest(req, res);
-    } else {
-        app(req, res);
-    }
+    if (bareServer.shouldRoute(req)) bareServer.routeRequest(req, res);
+    else app(req, res);
 });
 
 server.on('upgrade', (req, socket, head) => {
-    if (bareServer.shouldRoute(req)) {
-        bareServer.routeUpgrade(req, socket, head);
-    } else {
-        socket.end();
-    }
+    if (bareServer.shouldRoute(req)) bareServer.routeUpgrade(req, socket, head);
+    else socket.end();
 });
 
-// 7. انطلاق السيرفر
-server.listen(PORT, '0.0.0.0', () => {
-    console.log(`
-    ╔═══════════════════════════════════════════════════════════╗
-    ║              🚀 ULTRA SECURE PROXY SYSTEM 🚀              ║
-    ╠═══════════════════════════════════════════════════════════╣
-    ║  Status: ONLINE (Optimized for Railway)                   ║
-    ║  Port: ${PORT}                                              ║
-    ╚═══════════════════════════════════════════════════════════╝
-    `);
-});
-
-process.on('uncaughtException', (err) => console.error('Exception:', err));
-process.on('unhandledRejection', (reason) => console.error('Rejection:', reason));
+server.listen(PORT, '0.0.0.0', () => console.log('Server Live on ' + PORT));
