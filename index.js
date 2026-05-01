@@ -26,7 +26,7 @@ app.get('/uv.config.js', (req, res) => {
   `);
 });
 
-// 2. مسار طوارئ: لو المتصفح هرب من الـ Service Worker يقع هنا بدل الشاشة البيضاء
+// 2. مسار طوارئ (عشان لو هرب من الـ SW يظهر رسالة بدل ما يسود)
 app.get('/proxy/*', (req, res) => {
   res.status(500).send(`
     <html style="background:#111; color:#fff; text-align:center; padding:50px; font-family:sans-serif;">
@@ -65,7 +65,7 @@ app.get('/', (req, res) => {
           ⚡ جاري الاتصال...
         </div>
 
-        <iframe id="proxyFrame" style="width:100%; height:100%; border:none; display:none; background:#111;"></iframe>
+        <iframe id="proxyFrame" style="width:100%; height:100%; border:none; display:none; background:#fff;"></iframe>
 
         <script>
           async function startProxy() {
@@ -73,7 +73,7 @@ app.get('/', (req, res) => {
             const loader = document.getElementById('loader');
 
             try {
-              // تسجيل الـ SW بنجاح
+              // تسجيل البروكسي
               await navigator.serviceWorker.register('/sw.js', { scope: '/' });
               await navigator.serviceWorker.ready;
 
@@ -81,7 +81,7 @@ app.get('/', (req, res) => {
               loader.style.display = 'none';
               frame.style.display = 'block';
 
-              // تشفير الرابط ووضعه في الـ iframe
+              // تشفير الرابط ووضعه
               const encodedTarget = __uv$config.encodeUrl("` + targetUrl + `");
               frame.src = __uv$config.prefix + encodedTarget;
 
@@ -131,7 +131,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// 5. الـ Service Worker (أضفنا فيه تصليح الروابط عشان ميجيبش شاشة بيضاء + اصطياد الأخطاء)
+// 5. الـ Service Worker (✨ التعديل السحري هنا: شلنا الفزلكة وسبنا المكتبة تشتغل براحتها)
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.send(`
@@ -146,19 +146,11 @@ app.get('/sw.js', (req, res) => {
 
     self.addEventListener('fetch', event => {
       event.respondWith(
-        (async () => {
-          try {
-            // لو الرابط يخص البروكسي، خليه يمر من مكتبة UV
-            if (event.request.url.startsWith(location.origin + __uv$config.prefix)) {
-              return await sw.fetch(event);
-            }
-            // لو أي رابط تاني (صور/سكربتات عادية للموقع)، يمر بشكل طبيعي
-            return await fetch(event.request);
-          } catch (error) {
-            console.error("SW Proxy Error:", error);
-            return new Response("<html style='background:#111;color:#ff4444;text-align:center;padding:20px;'><h2>❌ خطأ داخلي في البروكسي</h2><p>" + error.message + "</p></html>", { headers: { 'Content-Type': 'text/html' } });
-          }
-        })()
+        sw.fetch(event).then(res => {
+          // البروكسي هيتكفل بكل حاجة (الرابط المشفر + طلبات السيرفر المخفية)
+          // ولو الطلب ملوش علاقة بالبروكسي هيمرره عادي
+          return res || fetch(event.request);
+        }).catch(() => fetch(event.request))
       );
     });
   `);
@@ -185,3 +177,4 @@ server.on('upgrade', (req, socket, head) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log('✅ Proxy is READY on port ' + PORT);
 });
+
