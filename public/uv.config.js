@@ -1,6 +1,6 @@
 self.__uv$config = {
     prefix: '/uv/service/',
-    bare: 'https://tomp.app/', // استخدمنا Bare Server جاهز عشان نسرع الشغل
+    bare: '/bare/', 
     encodeUrl: Ultraviolet.codec.xor.encode,
     decodeUrl: Ultraviolet.codec.xor.decode,
     handler: '/uv/uv.handler.js',
@@ -9,4 +9,3 @@ self.__uv$config = {
     config: '/uv.config.js',
     sw: '/uv/sw.js',
 };
-
