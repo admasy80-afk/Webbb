@@ -62,7 +62,7 @@ app.get('/yt', (req, res) => {
     `);
 });
 
-// 🌟 5. شبكة الأمان (هنا السحر لحل مشكلة Not Found)
+// 🌟 5. شبكة الأمان (النسخة اللي بتكسر التعليق)
 app.get('/uv/service/*', (req, res) => {
     res.status(200).send(`
         <!DOCTYPE html>
@@ -74,13 +74,15 @@ app.get('/uv/service/*', (req, res) => {
             <script src="/uv.config.js"></script>
         </head>
         <body style="background: #050505; color: #fff; text-align: center; font-family: sans-serif; padding-top: 25vh; margin:0;">
-            <h3>⚙️ جاري التفعيل النهائي للاتصال...</h3>
+            <h3 id="msg">⚙️ جاري التفعيل النهائي للاتصال...</h3>
             <script>
-                // المتصفح كان سريع جداً، فهنسجل المحرك تاني ونعمل ريفريش
+                // المتصفح كان سريع جداً، فهنسجل المحرك تاني ونجبره يشتغل فوراً
                 if (typeof __uv$config !== 'undefined') {
                     navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix })
-                        .then(() => {
-                            setTimeout(() => window.location.reload(), 500);
+                        .then(reg => {
+                            reg.update();
+                            document.getElementById('msg').innerText = "🚀 تم التفعيل! جاري الدخول...";
+                            setTimeout(() => window.location.reload(), 1000);
                         });
                 }
             </script>
