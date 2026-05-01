@@ -17,10 +17,11 @@ const bareServer = createBareServer('/bare/', {
     }
 });
 
-const PORT = process.env.PORT || 24643;
+// ضبط البورت ليتوافق مع Railway تلقائياً
+const PORT = process.env.PORT || 8080;
 
+// 1. تحسين الأداء والحماية
 app.use(compression({ level: 9, threshold: 0 }));
-
 app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
@@ -37,93 +38,38 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// 2. إعدادات الـ Headers لضمان تخطي الحجب
 app.use((req, res, next) => {
     res.setHeader('X-Powered-By', 'Nebula-Ultra');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'no-referrer');
-    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
     next();
 });
 
-app.use('/uv/', express.static(uvPath, {
-    maxAge: '1d',
-    etag: true,
-    lastModified: true
-}));
+// ==========================================
+// 🚀 الترتيب الصحيح للمسارات (حل مشكلة Cannot GET)
+// ==========================================
 
+// أولاً: خدمة ملفات محرك Ultraviolet (مهم جداً أن يكون في البداية)
+app.use('/uv/', express.static(uvPath));
+
+// ثانياً: معالجة طلبات الـ Bare Server لضمان عمل المواقع
+app.use('/bare/', (req, res) => {
+    if (bareServer.shouldRoute(req)) {
+        bareServer.routeRequest(req, res);
+    }
+});
+
+// ثالثاً: خدمة ملفات الواجهة من مجلد public
 app.use(express.static(path.join(__dirname, 'public'), {
-    maxAge: '1h',
-    etag: true,
     extensions: ['html', 'js', 'css']
 }));
 
 app.use(express.json({ limit: '10mb' }));
 
-app.get('/api/health', (req, res) => {
-    return res.json({
-        status: 'online',
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        timestamp: Date.now()
-    });
-});
-
-app.get('/api/suggestions', async (req, res) => {
-    const query = req.query.q || '';
-    if (!query) return res.json([]);
-    
-    try {
-        const response = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        
-        if (!res.headersSent && !res.closed) {
-            return res.json(data[1] || []);
-        }
-    } catch (err) {
-        if (!res.headersSent && !res.closed) {
-            return res.json([]);
-        }
-    }
-});
-
-const favorites = new Map();
-
-app.post('/api/favorites', (req, res) => {
-    const { id, url, title, icon } = req.body;
-    favorites.set(id, { url, title, icon, timestamp: Date.now() });
-    return res.json({ success: true });
-});
-
-app.get('/api/favorites', (req, res) => {
-    return res.json(Array.from(favorites.values()));
-});
-
-app.delete('/api/favorites/:id', (req, res) => {
-    favorites.delete(req.params.id);
-    return res.json({ success: true });
-});
-
-const history = [];
-
-app.post('/api/history', (req, res) => {
-    const { url, title } = req.body;
-    history.unshift({ url, title, timestamp: Date.now() });
-    if (history.length > 500) history.pop();
-    return res.json({ success: true });
-});
-
-app.get('/api/history', (req, res) => {
-    return res.json(history);
-});
-
-app.delete('/api/history', (req, res) => {
-    history.length = 0;
-    return res.json({ success: true });
-});
-
 // ==========================================
-// 🚀 الروابط المباشرة (النسخة المستقرة)
+// 🔗 ميزة الروابط المباشرة (CroxyProxy Style)
 // ==========================================
 
 function uvEncode(str) {
@@ -133,6 +79,7 @@ function uvEncode(str) {
     ).join(''));
 }
 
+// رابط يوتيوب المباشر
 app.get('/yt', (req, res) => {
     if (res.headersSent) return;
     const target = 'https://m.youtube.com';
@@ -140,6 +87,7 @@ app.get('/yt', (req, res) => {
     return res.redirect('/uv/service/' + encoded);
 });
 
+// رابط التوجيه العام لأي موقع (Base64)
 app.get('/go/:base64url', (req, res) => {
     if (res.headersSent) return;
     try {
@@ -150,16 +98,34 @@ app.get('/go/:base64url', (req, res) => {
         return res.status(400).send('Invalid Link Format');
     }
 });
+
 // ==========================================
 
-app.use((err, req, res, next) => {
-    if (res.headersSent || res.closed) {
-        return next(err);
+// 4. واجهات الـ API المساعدة
+app.get('/api/health', (req, res) => {
+    return res.json({ status: 'online', timestamp: Date.now() });
+});
+
+app.get('/api/suggestions', async (req, res) => {
+    const query = req.query.q || '';
+    if (!query) return res.json([]);
+    try {
+        const response = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        return res.json(data[1] || []);
+    } catch (err) {
+        return res.json([]);
     }
+});
+
+// 5. معالجة الأخطاء لضمان عدم توقف السيرفر
+app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
     console.error("[Server Error]:", err.message);
     return res.status(500).json({ error: 'Internal Server Error' });
 });
 
+// 6. الربط بين Bare Server والـ HTTP Server
 server.on('request', (req, res) => {
     if (bareServer.shouldRoute(req)) {
         bareServer.routeRequest(req, res);
@@ -176,23 +142,17 @@ server.on('upgrade', (req, socket, head) => {
     }
 });
 
+// 7. انطلاق السيرفر
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`
     ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
     ║              🚀 ULTRA SECURE PROXY SYSTEM 🚀              ║
-    ║                                                           ║
     ╠═══════════════════════════════════════════════════════════╣
-    ║  Status: ONLINE  (Anti-Crash Mode Enabled)                ║
+    ║  Status: ONLINE (Optimized for Railway)                   ║
     ║  Port: ${PORT}                                              ║
     ╚═══════════════════════════════════════════════════════════╝
     `);
 });
 
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
+process.on('uncaughtException', (err) => console.error('Exception:', err));
+process.on('unhandledRejection', (reason) => console.error('Rejection:', reason));
