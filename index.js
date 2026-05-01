@@ -13,12 +13,12 @@ const bareServer = createBareServer('/bare/');
 // 2. ملفات Ultraviolet الأساسية
 app.use('/uv/', express.static(uvPath));
 
-// 🌟 [المنقذ 1] تعريف ملف الإعدادات عشان الـ Service Worker ميموتش في الخلفية
+// 3. إعدادات البروكسي (تم تعديل المسار الافتراضي ليكون متوافق تماماً)
 app.get('/uv/uv.config.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.send(`
     self.__uv$config = {
-        prefix: '/service/',
+        prefix: '/uv/service/',
         bare: '/bare/',
         encodeUrl: Ultraviolet.codec.xor.encode,
         decodeUrl: Ultraviolet.codec.xor.decode,
@@ -30,31 +30,18 @@ app.get('/uv/uv.config.js', (req, res) => {
   `);
 });
 
-// 🌟 [المنقذ 2] مسار طوارئ ذكي بديل للـ Cannot GET وبيمنع اللوب المفرغ
-app.get('/service/*', (req, res) => {
-  res.send(`
+// 4. رسالة توضيحية لو حصل أي فشل (بدل Cannot GET المزعجة وبدون أي ريفريش يسبب لوب)
+app.get('/uv/service/*', (req, res) => {
+  res.status(200).send(`
     <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>Connecting...</title>
-    </head>
-    <body style="background: #111; color: #00ff88; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;">
-      <h2>⏳ جاري إنشاء الاتصال المشفر... ثانية واحدة</h2>
-      <script>
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
-            // التريك هنا: بنستنى ثانيتين بدل ما نعمل ريفريش ورا بعض بجنون ونعلق المتصفح
-            setTimeout(() => { window.location.reload(); }, 2000);
-          });
-        }
-      </script>
-    </body>
-    </html>
+    <html><head><meta charset="UTF-8"></head>
+    <body style="background:#111; color:#ff4444; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; text-align:center;">
+      <h2>⚠️ المتصفح لم يقم بتفعيل البروكسي.<br>يرجى عمل Refresh للصفحة (تحديث).</h2>
+    </body></html>
   `);
 });
 
-// 3. مسار الصفحة الرئيسية (استقبال الرابط المباشر)
+// 5. مسار الصفحة الرئيسية (استقبال الرابط المباشر)
 app.get('/', (req, res) => {
   if (req.query.__cpo) {
     let targetUrl;
@@ -76,31 +63,47 @@ app.get('/', (req, res) => {
       <body style="margin:0; padding:0; height:100%; background: #000; overflow: hidden;">
         
         <div id="loader" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#00ff88; font-family:sans-serif; font-size: 20px;">
-          ⚡ جاري الفتح...
+          ⚡ جاري الاتصال الآمن...
         </div>
 
         <iframe id="proxyFrame" style="width:100%; height:100%; border:none; display:none; background:#fff;"></iframe>
 
         <script>
-          function loadProxy() {
-            const encodedTarget = __uv$config.encodeUrl("` + targetUrl + `");
-            const frame = document.getElementById('proxyFrame');
-            const loader = document.getElementById('loader');
-            
-            frame.onload = () => { loader.style.display = 'none'; };
-            frame.style.display = 'block';
-            frame.src = __uv$config.prefix + encodedTarget;
+          // الطريقة الاحترافية: تجميد الكود حتى يجهز البروكسي 100%
+          async function startProxy() {
+            try {
+              if (!('serviceWorker' in navigator)) {
+                document.getElementById('loader').innerText = '❌ متصفحك لا يدعم الخدمة';
+                return;
+              }
+
+              // 1. تسجيل الـ Service Worker
+              await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+              await navigator.serviceWorker.ready;
+
+              // 2. الانتظار الإجباري لحين سيطرة البروكسي على المتصفح
+              if (!navigator.serviceWorker.controller) {
+                await new Promise(resolve => {
+                  navigator.serviceWorker.addEventListener('controllerchange', resolve, { once: true });
+                });
+              }
+
+              // 3. الآن فقط، أصبح من الآمن تماماً تحميل الـ iframe
+              const encodedTarget = __uv$config.encodeUrl("` + targetUrl + `");
+              const frame = document.getElementById('proxyFrame');
+              const loader = document.getElementById('loader');
+              
+              frame.onload = () => { loader.style.display = 'none'; };
+              frame.style.display = 'block';
+              frame.src = __uv$config.prefix + encodedTarget;
+
+            } catch (err) {
+              console.error('Setup Error:', err);
+              document.getElementById('loader').innerText = '❌ حدث خطأ، قم بتحديث الصفحة';
+            }
           }
 
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
-              if (!navigator.serviceWorker.controller) {
-                navigator.serviceWorker.addEventListener('controllerchange', loadProxy);
-              } else {
-                loadProxy();
-              }
-            }).catch(err => console.error("SW Error:", err));
-          }
+          startProxy();
         </script>
       </body>
       </html>
@@ -139,7 +142,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// 4. الـ Service Worker
+// 6. الـ Service Worker
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.send(`
@@ -163,7 +166,7 @@ app.get('/sw.js', (req, res) => {
   `);
 });
 
-// 5. توجيه الطلبات
+// 7. توجيه الطلبات
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -180,7 +183,7 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-// 6. تشغيل السيرفر
+// 8. تشغيل السيرفر
 server.listen(PORT, '0.0.0.0', () => {
   console.log('✅ Proxy is READY on port ' + PORT);
 });
