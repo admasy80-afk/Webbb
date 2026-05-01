@@ -1,162 +1,179 @@
 const express = require('express');
-const { createBareServer } = require('@tomphttp/bare-server-node');
-const { uvPath } = require('@titaniumnetwork-dev/ultraviolet');
-const { createServer } = require('http');
+const http = require('http');
 const path = require('path');
 const compression = require('compression');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
-const app = express();
+const { createBareServer } = require('@tomphttp/bare-server-node');
+const { uvPath } = require('@titaniumnetwork-dev/ultraviolet');
 
-// ✅ مهم خلف البروكسي (Render/Railway/NGINX)
+const app = express();
+const PORT = process.env.PORT || 8080;
+
+// =====================
+// 🔧 Proxy Support
+// =====================
 app.set('trust proxy', 1);
 
-const server = createServer(app);
-
+// =====================
+// 🧠 Core Servers
+// =====================
 const bareServer = createBareServer('/bare/', {
   logErrors: false
 });
 
-const PORT = process.env.PORT || 8080;
+// IMPORTANT: unified server handler (fix double-count + headers bug)
+const server = http.createServer((req, res) => {
+  try {
+    // Bare proxy first (important)
+    if (bareServer.shouldRoute(req)) {
+      return bareServer.routeRequest(req, res);
+    }
 
+    // then Express
+    return app(req, res);
 
-// ==================
-// 🔐 حماية خفيفة بدون كسر البروكسي
-// ==================
+  } catch (err) {
+    if (!res.headersSent) {
+      res.writeHead(500);
+      res.end('Internal Server Error');
+    }
+  }
+});
+
+// WebSocket / upgrade support
+server.on('upgrade', (req, socket, head) => {
+  try {
+    if (bareServer.shouldRoute(req)) {
+      bareServer.routeUpgrade(req, socket, head);
+    } else {
+      socket.destroy();
+    }
+  } catch {
+    socket.destroy();
+  }
+});
+
+// =====================
+// 🔐 Security (safe mode)
+// =====================
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
 }));
 
-// ❗ Rate limit فقط على الصفحات العادية (مو uv/bare)
+// =====================
+// ⚡ Compression
+// =====================
+app.use(compression({ level: 6 }));
+
+// =====================
+// 🚦 Rate Limit (skip proxy routes)
+// =====================
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 200,
   standardHeaders: true,
-  legacyHeaders: false
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip
 });
 
 app.use((req, res, next) => {
-  if (req.url.startsWith('/uv') || req.url.startsWith('/bare')) {
-    return next();
-  }
+  if (req.url.startsWith('/uv') || req.url.startsWith('/bare')) return next();
   limiter(req, res, next);
 });
 
-// ضغط متوازن
-app.use(compression({ level: 6 }));
+// =====================
+// ⚡ Static Assets
+// =====================
 
-
-// ==================
-// ⚡ كاش + أداء
-// ==================
-
-// ملفات UV (نادر تتغير → كاش طويل)
+// Ultraviolet core (long cache)
 app.use('/uv/', express.static(uvPath, {
   maxAge: '7d',
-  etag: true,
-  setHeaders: (res) => {
-    res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-  }
+  immutable: true
 }));
 
-// ملفاتك
+// Public files
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '1h'
 }));
 
-
-// ==================
-// 🎬 يوتيوب سريع
-// ==================
-app.get('/yt', (req, res) => {
-  const target = 'https://m.youtube.com';
-
-  res.send(`<!DOCTYPE html>
+// =====================
+// 🎯 Main Route (NO loading page, direct UX)
+// =====================
+app.get('/', (req, res) => {
+  res.send(`
+<!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<script src="/uv/uv.bundle.js"></script>
-<script src="/uv/uv.config.js"></script>
+  <meta charset="UTF-8" />
+  <title>Ultra Proxy</title>
+  <style>
+    body {
+      margin:0;
+      background:#0d0d0d;
+      color:white;
+      font-family:Arial;
+      display:flex;
+      height:100vh;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+    }
+    input {
+      width:300px;
+      padding:12px;
+      border-radius:10px;
+      border:none;
+      outline:none;
+    }
+    button {
+      margin-top:10px;
+      padding:10px 20px;
+      border:none;
+      border-radius:10px;
+      cursor:pointer;
+      background:#00ff88;
+    }
+  </style>
 </head>
-<body style="background:#000;color:#fff;text-align:center;padding-top:25vh">
-<h3>🚀 جاري الدخول...</h3>
-<script>
-navigator.serviceWorker.register('/sw.js').then(() => {
-  location.href = '/uv/service/' + __uv$config.encodeUrl('${target}');
-});
-</script>
+<body>
+
+  <h2>🚀 Ultra Proxy</h2>
+
+  <input id="url" placeholder="Enter URL (https://...)" />
+  <button onclick="go()">Go</button>
+
+  <script src="/uv/uv.bundle.js"></script>
+  <script src="/uv/uv.config.js"></script>
+
+  <script>
+    navigator.serviceWorker.register('/sw.js');
+
+    function go() {
+      const input = document.getElementById('url').value;
+      if (!input) return;
+
+      location.href = '/uv/service/' + __uv$config.encodeUrl(input);
+    }
+  </script>
+
 </body>
-</html>`);
+</html>
+  `);
 });
 
-
-// ==================
-// ⚙️ إصلاح التعليق
-// ==================
-app.get('/uv/service/*', (req, res) => {
-  if (res.headersSent) return;
-
-  res.send(`<!DOCTYPE html>
-<html>
-<head>
-<script src="/uv/uv.bundle.js"></script>
-<script src="/uv/uv.config.js"></script>
-</head>
-<body style="background:#000;color:#fff;text-align:center;padding-top:20vh">
-<h3>⚙️ تهيئة الاتصال...</h3>
-<script>
-navigator.serviceWorker.register('/sw.js').then(reg => {
-  reg.update();
-  setTimeout(() => location.reload(), 400);
-});
-</script>
-</body>
-</html>`);
-});
-
-
-// ==================
-// ❌ 404 نظيف
-// ==================
+// =====================
+// ❌ Clean 404
+// =====================
 app.use((req, res) => {
-  if (!res.headersSent) {
-    res.status(404).send('Not Found');
-  }
+  res.status(404).send('Not Found');
 });
 
-
-// ==================
-// 🔌 ربط البروكسي
-// ==================
-server.on('request', (req, res) => {
-  try {
-    if (bareServer.shouldRoute(req)) {
-      bareServer.routeRequest(req, res);
-    } else {
-      app(req, res);
-    }
-  } catch (err) {
-    if (!res.headersSent) {
-      res.writeHead(500);
-      res.end('Internal Error');
-    }
-  }
-});
-
-server.on('upgrade', (req, socket, head) => {
-  if (bareServer.shouldRoute(req)) {
-    bareServer.routeUpgrade(req, socket, head);
-  } else {
-    socket.destroy();
-  }
-});
-
-
-// ==================
-// 🚀 تشغيل
-// ==================
+// =====================
+// 🚀 Start Server
+// =====================
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🔥 LIVE: http://localhost:${PORT}`);
+  console.log(`🔥 Server running: http://localhost:${PORT}`);
 });
