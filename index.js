@@ -7,78 +7,83 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 8080;
 
-// 1. إنشاء خادم Bare للبروكسي (أساس الشغل)
+// 1. خادم Bare للبروكسي
 const bareServer = createBareServer('/bare/');
 
-// 2. تقديم ملفات Ultraviolet الأساسية
+// 2. ملفات Ultraviolet
 app.use('/uv/', express.static(uvPath));
 
-// 3. واجهة بسيطة جداً جداً (مربع بحث بس)
+// 3. مسار الصفحة الرئيسية (استقبال الرابط המباشر)
 app.get('/', (req, res) => {
+  // لو الرابط فيه __cpo (زي المثال بتاعك)
+  if (req.query.__cpo) {
+    let targetUrl;
+    try {
+      // فك تشفير الـ Base64 عشان نطلع اللينك الأصلي (مثلا youtube.com)
+      targetUrl = Buffer.from(req.query.__cpo, 'base64').toString('utf-8');
+    } catch (e) {
+      return res.send('Error: Invalid URL');
+    }
+
+    // إرسال كود HTML مخفي بيشغل البروكسي ويحولك للموقع فوراً
+    return res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Loading...</title>
+        <script src="/uv/uv.bundle.js"></script>
+        <script src="/uv/uv.config.js"></script>
+      </head>
+      <body style="background: #111;">
+        <script>
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
+              // تحويل تلقائي للموقع المطلوب جوه البروكسي
+              const encodedTarget = __uv$config.encodeUrl("${targetUrl}");
+              window.location.href = '/uv/service/' + encodedTarget;
+            });
+          }
+        </script>
+      </body>
+      </html>
+    `);
+  }
+
+  // لو دخلت على الموقع من غير __cpo يعرضلك واجهة بسيطة عشان تعمل منها اللينكات دي
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Ultra Proxy - Fast</title>
-        <style>
-            body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background-color: #121212; color: white; margin: 0; overflow: hidden; }
-            .container { text-align: center; z-index: 10; }
-            input { padding: 15px; width: 400px; border-radius: 8px; border: none; outline: none; font-size: 16px; background: #222; color: white; margin-bottom: 20px;}
-            button { padding: 15px 30px; background-color: #00ff88; border: none; border-radius: 8px; cursor: pointer; color: black; font-weight: bold; font-size: 16px; transition: 0.2s;}
-            button:hover { background-color: #00cc6a; }
-            iframe { width: 100vw; height: 100vh; border: none; display: none; position: absolute; top: 0; left: 0; background: white; z-index: 20; }
-        </style>
+      <meta charset="UTF-8">
+      <title>Proxy Generator</title>
+      <style>
+        body { background: #111; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;}
+        input { padding: 12px; width: 300px; border-radius: 5px; border: none; margin-bottom: 15px; outline: none; background: #222; color: #fff;}
+        button { padding: 12px 20px; background: #00ff88; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+      </style>
     </head>
     <body>
-        <div class="container" id="ui">
-            <h1>⚡ Ultra Proxy</h1>
-            <p style="color: #888; margin-bottom: 20px;">Fast, Simple, No Tracking.</p>
-            <input type="text" id="url" placeholder="Enter URL (e.g., youtube.com)" autofocus autocomplete="off">
-            <br>
-            <button onclick="go()">Browse / تصفح</button>
-        </div>
-        
-        <iframe id="frame"></iframe>
-
-        <script src="/uv/uv.bundle.js"></script>
-        <script src="/uv/uv.config.js"></script>
-        <script>
-            // تشغيل الـ Service Worker عشان البروكسي يشتغل
-            navigator.serviceWorker.register('/sw.js', { scope: '/' });
-
-            function go() {
-                let url = document.getElementById('url').value.trim();
-                if (!url) return;
-                
-                // لو مفيش http، ضيفها أو ابحث في جوجل
-                if (!/^https?:\\/\\//i.test(url)) {
-                    if (url.includes('.')) {
-                        url = 'https://' + url;
-                    } else {
-                        url = 'https://www.google.com/search?q=' + encodeURIComponent(url);
-                    }
-                }
-
-                // تشفير الرابط وفتح الـ iframe
-                const encodedUrl = __uv$config.encodeUrl(url);
-                document.getElementById('ui').style.display = 'none';
-                const frame = document.getElementById('frame');
-                frame.style.display = 'block';
-                frame.src = '/uv/service/' + encodedUrl;
-            }
-
-            document.getElementById('url').addEventListener('keypress', function (e) {
-                if (e.key === 'Enter') go();
-            });
-        </script>
+      <h3>🔗 أدخل الرابط لإنشاء رابط مباشر</h3>
+      <input type="text" id="url" placeholder="https://youtube.com">
+      <button onclick="go()">دخول / تحويل</button>
+      <script>
+        function go() {
+          let url = document.getElementById('url').value.trim();
+          if (!url) return;
+          if (!url.startsWith('http')) url = 'https://' + url;
+          
+          // تشفير الرابط بـ Base64
+          const b64 = btoa(url);
+          // الانتقال للرابط المباشر
+          window.location.href = '/?__cpo=' + b64;
+        }
+      </script>
     </body>
     </html>
   `);
 });
 
-// 4. ملف الـ Service Worker
+// 4. الـ Service Worker الأساسي
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.send(`
@@ -87,17 +92,15 @@ app.get('/sw.js', (req, res) => {
     importScripts('/uv/uv.sw.js');
     const sw = new UVServiceWorker();
     self.addEventListener('fetch', (event) => {
-        event.respondWith(
-            (async () => {
-                if (event.request.url.includes('/uv/')) return await sw.fetch(event);
-                return await fetch(event.request);
-            })()
-        );
+      event.respondWith((async () => {
+        if (event.request.url.includes('/uv/')) return await sw.fetch(event);
+        return await fetch(event.request);
+      })());
     });
   `);
 });
 
-// 5. توجيه الطلبات للـ Bare Server أو للـ App العادي
+// 5. توجيه الطلبات
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -114,7 +117,7 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-// تشغيل السيرفر
+// 6. تشغيل السيرفر
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Proxy is running fast & clean on port ${PORT}`);
+  console.log(`✅ Direct Proxy running on port ${PORT}`);
 });
