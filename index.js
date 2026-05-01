@@ -4,15 +4,17 @@ const { createBareServer } = require('@tomphttp/bare-server-node');
 const { uvPath } = require('@titaniumnetwork-dev/ultraviolet');
 
 const app = express();
-const server = http.createServer(app);
+const bareServer = createBareServer('/bare/');
 const PORT = process.env.PORT || 8080;
 
-const bareServer = createBareServer('/bare/');
-
-// ملفات UV
+/* =========================
+   STATIC UV FILES
+========================= */
 app.use('/uv/', express.static(uvPath));
 
-// config
+/* =========================
+   CONFIG ENDPOINT
+========================= */
 app.get('/uv.config.js', (req, res) => {
   res.type('application/javascript').send(`
     self.__uv$config = {
@@ -23,48 +25,58 @@ app.get('/uv.config.js', (req, res) => {
       handler: '/uv/uv.handler.js',
       bundle: '/uv/uv.bundle.js',
       config: '/uv.config.js',
-      sw: '/uv/uv.sw.js'
+      sw: '/sw.js'
     };
   `);
 });
 
-// صفحة الطوارئ
-app.get('/proxy/*', (req, res) => {
-  res.status(500).send(`<h2 style="color:white;background:#111;padding:20px">
-  Proxy Error</h2>`);
-});
-
-// الصفحة الرئيسية
+/* =========================
+   MAIN PROXY PAGE
+========================= */
 app.get('/', (req, res) => {
-  if (req.query.__cpo) {
-    let targetUrl;
-
-    try {
-      targetUrl = Buffer.from(req.query.__cpo, 'base64').toString();
-    } catch {
-      return res.send('Invalid URL');
-    }
-
+  if (!req.query.__cpo) {
     return res.send(`
+      <html style="background:#111;color:#fff;font-family:sans-serif;text-align:center;padding-top:100px">
+        <h2>Ultra Proxy</h2>
+        <input id="u" placeholder="https://example.com" style="padding:10px;width:300px">
+        <button onclick="go()">Go</button>
+
+        <script>
+          function go(){
+            let u = document.getElementById('u').value;
+            if(!u.startsWith('http')) u = 'https://' + u;
+            location.href='/?__cpo=' + btoa(u);
+          }
+        </script>
+      </html>
+    `);
+  }
+
+  let target;
+  try {
+    target = Buffer.from(req.query.__cpo, 'base64').toString();
+  } catch {
+    return res.status(400).send('Invalid URL');
+  }
+
+  return res.send(`
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Proxy</title>
   <script src="/uv/uv.bundle.js"></script>
   <script src="/uv.config.js"></script>
 </head>
 
 <body style="margin:0;background:#111;overflow:hidden">
 
-<div id="loader" style="color:#0f0;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
+<div id="loader" style="color:#00ff88;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
   Loading...
 </div>
 
 <iframe id="frame" style="width:100%;height:100%;border:none;display:none"></iframe>
 
 <script>
-async function start() {
+(async () => {
   const frame = document.getElementById('frame');
   const loader = document.getElementById('loader');
 
@@ -75,37 +87,24 @@ async function start() {
     loader.style.display = 'none';
     frame.style.display = 'block';
 
-    const encoded = __uv$config.encodeUrl("${targetUrl}");
+    const encoded = __uv$config.encodeUrl("${target}");
     frame.src = __uv$config.prefix + encoded;
 
   } catch (e) {
-    loader.innerHTML = "Error: " + e.message;
+    loader.innerHTML = "Proxy Error: " + e.message;
     loader.style.color = "red";
   }
-}
-
-start();
+})();
 </script>
 
 </body>
 </html>
-    `);
-  }
-
-  res.send(`
-    <input id="u" placeholder="url">
-    <button onclick="go()">Go</button>
-    <script>
-      function go(){
-        let u = document.getElementById('u').value;
-        if(!u.startsWith('http')) u = 'https://' + u;
-        location.href='/?__cpo=' + btoa(u);
-      }
-    </script>
   `);
 });
 
-// Service Worker (نظيف بدون override خطير)
+/* =========================
+   SERVICE WORKER (STABLE CORE)
+========================= */
 app.get('/sw.js', (req, res) => {
   res.type('application/javascript').send(`
     importScripts('/uv/uv.bundle.js');
@@ -120,24 +119,42 @@ app.get('/sw.js', (req, res) => {
   `);
 });
 
-// Bare routing (مهم جداً)
-server.on('request', (req, res) => {
-  if (bareServer.shouldRoute(req)) {
-    bareServer.routeRequest(req, res);
-  } else {
-    app(req, res);
-  }
+/* =========================
+   PROXY ERROR SAFETY LAYER
+========================= */
+app.get('/proxy/*', (req, res) => {
+  res.status(500).send(`
+    <h1 style="color:white;background:#111;text-align:center;padding:20px">
+      Proxy routing error
+    </h1>
+  `);
 });
 
+/* =========================
+   💥 SINGLE ENTRY POINT (IMPORTANT)
+========================= */
+const server = http.createServer((req, res) => {
+
+  // 1. Bare takes priority
+  if (bareServer.shouldRoute(req)) {
+    return bareServer.routeRequest(req, res);
+  }
+
+  // 2. Everything else → Express
+  return app(req, res);
+});
+
+/* WebSocket / Upgrade handling */
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
-    bareServer.routeUpgrade(req, socket, head);
-  } else {
-    socket.destroy();
+    return bareServer.routeUpgrade(req, socket, head);
   }
+  socket.destroy();
 });
 
-// تشغيل
-server.listen(PORT, () => {
-  console.log('Proxy running on port', PORT);
+/* =========================
+   START SERVER
+========================= */
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Production Proxy running on ${PORT}`);
 });
