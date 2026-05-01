@@ -1,16 +1,15 @@
 const express = require('express');
 const http = require('http');
 const { createBareServer } = require('@tomphttp/bare-server-node');
-const { uvPath } = require('@titaniumnetwork-dev/ultraviolet');
 
 const app = express();
 const bareServer = createBareServer('/bare/');
 const PORT = process.env.PORT || 8080;
 
 /* =========================
-   STATIC UV FILES
+   STATIC UV FILES (FIXED)
 ========================= */
-app.use('/uv/', express.static(uvPath));
+app.use('/uv/', express.static('public/uv'));
 
 /* =========================
    CONFIG ENDPOINT
@@ -31,7 +30,7 @@ app.get('/uv.config.js', (req, res) => {
 });
 
 /* =========================
-   MAIN PROXY PAGE
+   MAIN PAGE
 ========================= */
 app.get('/', (req, res) => {
   if (!req.query.__cpo) {
@@ -91,7 +90,7 @@ app.get('/', (req, res) => {
     frame.src = __uv$config.prefix + encoded;
 
   } catch (e) {
-    loader.innerHTML = "Proxy Error: " + e.message;
+    loader.innerHTML = "Error: " + e.message;
     loader.style.color = "red";
   }
 })();
@@ -103,7 +102,7 @@ app.get('/', (req, res) => {
 });
 
 /* =========================
-   SERVICE WORKER (STABLE CORE)
+   SERVICE WORKER
 ========================= */
 app.get('/sw.js', (req, res) => {
   res.type('application/javascript').send(`
@@ -120,31 +119,27 @@ app.get('/sw.js', (req, res) => {
 });
 
 /* =========================
-   PROXY ERROR SAFETY LAYER
+   PROXY ERROR PAGE
 ========================= */
 app.get('/proxy/*', (req, res) => {
   res.status(500).send(`
     <h1 style="color:white;background:#111;text-align:center;padding:20px">
-      Proxy routing error
+      Proxy Error
     </h1>
   `);
 });
 
 /* =========================
-   💥 SINGLE ENTRY POINT (IMPORTANT)
+   SINGLE ENTRY POINT
 ========================= */
 const server = http.createServer((req, res) => {
-
-  // 1. Bare takes priority
   if (bareServer.shouldRoute(req)) {
     return bareServer.routeRequest(req, res);
   }
-
-  // 2. Everything else → Express
   return app(req, res);
 });
 
-/* WebSocket / Upgrade handling */
+/* WebSocket support */
 server.on('upgrade', (req, socket, head) => {
   if (bareServer.shouldRoute(req)) {
     return bareServer.routeUpgrade(req, socket, head);
@@ -153,8 +148,8 @@ server.on('upgrade', (req, socket, head) => {
 });
 
 /* =========================
-   START SERVER
+   START
 ========================= */
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Production Proxy running on ${PORT}`);
+  console.log(`🚀 Proxy running on port ${PORT}`);
 });
