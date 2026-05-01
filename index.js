@@ -27,7 +27,7 @@ function uvEncode(str) {
     ).join(''));
 }
 
-// 4. رابط يوتيوب المباشر (النسخة المضمونة بالترتيب الصحيح)
+// 4. رابط يوتيوب المباشر
 app.get('/yt', (req, res) => {
     if (res.headersSent) return;
     const encoded = uvEncode('https://m.youtube.com');
@@ -38,50 +38,65 @@ app.get('/yt', (req, res) => {
         <head>
             <meta charset="UTF-8">
             <title>جاري تشغيل Nebula...</title>
-            
             <script src="/uv/uv.bundle.js"></script>
             <script src="/uv.config.js"></script>
-            
             <style>
                 body { background: #050505; color: #fff; text-align: center; font-family: sans-serif; padding-top: 25vh; margin:0; }
                 .loader { border: 4px solid #222; border-top: 4px solid #1a73e8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                #error { color: #ff4444; margin-top: 20px; font-weight: bold; font-size: 16px; direction: ltr; }
             </style>
         </head>
         <body>
             <div class="loader" id="spin"></div>
             <h3>🚀 جاري إنشاء نفق مشفر ليوتيوب...</h3>
-            <div id="error"></div>
             <script>
-                setTimeout(async () => {
-                    try {
-                        if (typeof __uv$config === 'undefined') {
-                            throw new Error("ملف uv.config.js فشل في التحميل! تأكد من وجوده في مجلد public.");
-                        }
-                        // تسجيل المحرك
-                        await navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix });
-                        // الانطلاق ليوتيوب
-                        window.location.href = __uv$config.prefix + '${encoded}';
-                    } catch (e) {
-                        document.getElementById('spin').style.display = 'none';
-                        document.getElementById('error').innerHTML = "⛔ عطل فني: " + e.message;
-                    }
-                }, 400);
+                if (typeof __uv$config !== 'undefined') {
+                    navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix })
+                        .then(() => {
+                            window.location.href = __uv$config.prefix + '${encoded}';
+                        });
+                }
             </script>
         </body>
         </html>
     `);
 });
 
-// 5. حماية من الروابط العشوائية (404)
+// 🌟 5. شبكة الأمان (هنا السحر لحل مشكلة Not Found)
+app.get('/uv/service/*', (req, res) => {
+    res.status(200).send(`
+        <!DOCTYPE html>
+        <html lang="ar" dir="rtl">
+        <head>
+            <meta charset="UTF-8">
+            <title>جاري التفعيل...</title>
+            <script src="/uv/uv.bundle.js"></script>
+            <script src="/uv.config.js"></script>
+        </head>
+        <body style="background: #050505; color: #fff; text-align: center; font-family: sans-serif; padding-top: 25vh; margin:0;">
+            <h3>⚙️ جاري التفعيل النهائي للاتصال...</h3>
+            <script>
+                // المتصفح كان سريع جداً، فهنسجل المحرك تاني ونعمل ريفريش
+                if (typeof __uv$config !== 'undefined') {
+                    navigator.serviceWorker.register('/sw.js', { scope: __uv$config.prefix })
+                        .then(() => {
+                            setTimeout(() => window.location.reload(), 500);
+                        });
+                }
+            </script>
+        </body>
+        </html>
+    `);
+});
+
+// 6. حماية من الروابط العشوائية (404)
 app.use((req, res) => {
     if (!res.headersSent) {
         res.status(404).send('Not Found: ' + req.url);
     }
 });
 
-// 6. تشغيل السيرفر الأساسي والـ Bare
+// 7. تشغيل السيرفر الأساسي والـ Bare
 server.on('request', (req, res) => {
     if (bareServer.shouldRoute(req)) {
         bareServer.routeRequest(req, res);
