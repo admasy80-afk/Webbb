@@ -7,24 +7,24 @@ const bareServer = createBareServer('/bare/');
 const PORT = process.env.PORT || 8080;
 
 /* =========================
-   STATIC UV FILES (FIXED)
+   STATIC UV FILES
 ========================= */
 app.use('/uv/', express.static('public/uv'));
 
 /* =========================
-   CONFIG ENDPOINT
+   CONFIG ENDPOINT (FIXED)
 ========================= */
 app.get('/uv.config.js', (req, res) => {
   res.type('application/javascript').send(`
     self.__uv$config = {
-      prefix: '/proxy/',
+      prefix: '/uv/service/',
       bare: '/bare/',
       encodeUrl: Ultraviolet.codec.xor.encode,
       decodeUrl: Ultraviolet.codec.xor.decode,
       handler: '/uv/uv.handler.js',
       bundle: '/uv/uv.bundle.js',
       config: '/uv.config.js',
-      sw: '/sw.js'
+      sw: '/uv/uv.sw.js'
     };
   `);
 });
@@ -119,18 +119,7 @@ app.get('/sw.js', (req, res) => {
 });
 
 /* =========================
-   PROXY ERROR PAGE
-========================= */
-app.get('/proxy/*', (req, res) => {
-  res.status(500).send(`
-    <h1 style="color:white;background:#111;text-align:center;padding:20px">
-      Proxy Error
-    </h1>
-  `);
-});
-
-/* =========================
-   SINGLE ENTRY POINT
+   SERVER ENTRY
 ========================= */
 const server = http.createServer((req, res) => {
   if (bareServer.shouldRoute(req)) {
@@ -151,5 +140,5 @@ server.on('upgrade', (req, socket, head) => {
    START
 ========================= */
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Proxy running on port ${PORT}`);
+  console.log(\`🚀 Proxy running on port \${PORT}\`);
 });
