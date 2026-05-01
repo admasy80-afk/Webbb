@@ -13,30 +13,9 @@ const bareServer = createBareServer('/bare/');
 // 2. ملفات Ultraviolet
 app.use('/uv/', express.static(uvPath));
 
-// 3. المسار الخاص بفتح المواقع
-app.get('/uv/service/*', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Loading...</title>
-      <script src="/uv/uv.bundle.js"></script>
-      <script src="/uv/uv.config.js"></script>
-    </head>
-    <body style="background: #111; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;">
-      <h2>جاري التحويل... ⚡</h2>
-      <script>
-        navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
-          setTimeout(() => { window.location.reload(); }, 500);
-        });
-      </script>
-    </body>
-    </html>
-  `);
-});
-
-// 4. مسار الصفحة الرئيسية (استقبال الرابط المباشر)
+// 3. مسار الصفحة الرئيسية (استقبال الرابط المباشر أو الواجهة)
 app.get('/', (req, res) => {
+  // لو الرابط المباشر موجود
   if (req.query.__cpo) {
     let targetUrl;
     try {
@@ -45,20 +24,38 @@ app.get('/', (req, res) => {
       return res.send('Error: Invalid URL');
     }
 
+    // عرض الموقع جوا نافذة مخفية بملء الشاشة لمنع التعليق (Iframe)
     return res.send(`
       <!DOCTYPE html>
       <html style="margin:0; padding:0; height:100%;">
       <head>
-        <title>Loading...</title>
+        <title>Ultra Proxy</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="/uv/uv.bundle.js"></script>
         <script src="/uv/uv.config.js"></script>
       </head>
-      <body style="margin:0; padding:0; height:100%; background: #111; overflow: hidden;">
+      <body style="margin:0; padding:0; height:100%; background: #000; overflow: hidden;">
+        
+        <div id="loader" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:#00ff88; font-family:sans-serif; font-weight:bold; font-size: 20px;">
+          ⚡ جاري الفتح...
+        </div>
+
+        <iframe id="proxyFrame" style="width:100%; height:100%; border:none; display:none; background:#fff;"></iframe>
+
         <script>
           if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(() => {
               const encodedTarget = __uv$config.encodeUrl("` + targetUrl + `");
-              window.location.href = '/uv/service/' + encodedTarget;
+              const frame = document.getElementById('proxyFrame');
+              const loader = document.getElementById('loader');
+              
+              // لما الموقع يجهز، نخفي رسالة التحميل ونعرض الموقع
+              frame.onload = () => { 
+                loader.style.display = 'none'; 
+              };
+              
+              frame.style.display = 'block';
+              frame.src = '/uv/service/' + encodedTarget;
             });
           }
         </script>
@@ -67,22 +64,25 @@ app.get('/', (req, res) => {
     `);
   }
 
+  // الواجهة العادية لصنع الروابط
   res.send(`
     <!DOCTYPE html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <title>Proxy Generator</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <style>
         body { background: #111; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; font-family: sans-serif; margin: 0;}
-        input { padding: 12px; width: 300px; border-radius: 5px; border: none; margin-bottom: 15px; outline: none; background: #222; color: #fff;}
-        button { padding: 12px 20px; background: #00ff88; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; color: black;}
+        input { padding: 15px; width: 350px; max-width: 90%; border-radius: 8px; border: none; margin-bottom: 20px; outline: none; background: #222; color: #fff; font-size: 16px;}
+        button { padding: 15px 30px; background: #00ff88; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; color: black; transition: 0.2s;}
+        button:hover { background: #00cc6a; }
       </style>
     </head>
     <body>
       <h3>🔗 أدخل الرابط لإنشاء رابط مباشر</h3>
-      <input type="text" id="url" placeholder="youtube.com">
-      <button onclick="go()">دخول / تحويل</button>
+      <input type="text" id="url" placeholder="مثال: youtube.com">
+      <button onclick="go()">دخول / تحويل ⚡</button>
       <script>
         function go() {
           let url = document.getElementById('url').value.trim();
@@ -98,7 +98,7 @@ app.get('/', (req, res) => {
   `);
 });
 
-// 5. الـ Service Worker
+// 4. الـ Service Worker
 app.get('/sw.js', (req, res) => {
   res.setHeader('Content-Type', 'application/javascript');
   res.send(`
@@ -115,7 +115,7 @@ app.get('/sw.js', (req, res) => {
   `);
 });
 
-// 6. توجيه الطلبات
+// 5. توجيه الطلبات
 server.on('request', (req, res) => {
   if (bareServer.shouldRoute(req)) {
     bareServer.routeRequest(req, res);
@@ -132,7 +132,7 @@ server.on('upgrade', (req, socket, head) => {
   }
 });
 
-// 7. تشغيل السيرفر
+// 6. تشغيل السيرفر
 server.listen(PORT, '0.0.0.0', () => {
   console.log('✅ Direct Proxy running on port ' + PORT);
 });
