@@ -4,36 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة الدحيح | دراسات وتاريخ</title>
-    
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <style>
-        /* أنيميشن دخول العناصر تدريجياً */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
-        /* أنيميشن الطفو للعناصر الزخرفية */
         @keyframes float {
             0% { transform: translateY(0px); }
             50% { transform: translateY(-20px); }
             100% { transform: translateY(0px); }
         }
-
-        /* خلفية متدرجة متحركة تعطي طابعاً فخماً */
         .bg-animated-gradient {
             background: linear-gradient(135deg, #0f172a, #1e293b, #0f172a);
             background-size: 400% 400%;
             animation: gradientMove 10s ease infinite;
         }
-
         @keyframes gradientMove {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-
         .animate-fade { animation: fadeIn 1s ease-out forwards; }
         .animate-float { animation: float 5s ease-in-out infinite; }
         .delay-1 { animation-delay: 0.2s; }
@@ -55,7 +46,6 @@
     </nav>
 
     <main class="relative flex flex-col items-center justify-center text-center px-4 pt-20 pb-32 overflow-hidden">
-        
         <div class="absolute top-20 left-[-10%] w-72 h-72 bg-blue-600/20 rounded-full blur-[100px] animate-float"></div>
         <div class="absolute bottom-10 right-[-10%] w-80 h-80 bg-yellow-600/10 rounded-full blur-[100px] animate-float" style="animation-delay: 2s;"></div>
 
@@ -68,24 +58,18 @@
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 justify-center animate-fade" style="animation-delay: 0.6s;">
-                <a href="#start" class="px-10 py-4 bg-white text-black font-bold rounded-xl hover:bg-yellow-500 transition duration-300 shadow-xl">
+                <button onclick="alert('مرحباً بك!')" class="px-10 py-4 bg-white text-black font-bold rounded-xl hover:bg-yellow-500 transition duration-300 shadow-xl">
                     ابدأ التعلم الآن
-                </a>
-                <a href="#quiz" class="px-10 py-4 border-2 border-gray-700 font-bold rounded-xl hover:border-white transition duration-300">
+                </button>
+                <button class="px-10 py-4 border-2 border-gray-700 font-bold rounded-xl hover:border-white transition duration-300">
                     جرب بنك الأسئلة
-                </a>
+                </button>
             </div>
         </div>
-
     </main>
 
     <footer class="text-center py-10 border-t border-white/5 text-gray-500 text-sm">
         جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026
     </footer>
-
-    <script>
-        // هنا مستقبلاً سنضع كود الربط مع قاعدة البيانات
-        console.log("تم تحميل منصة الدحيح بنجاح!");
-    </script>
 </body>
 </html>
