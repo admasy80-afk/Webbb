@@ -4,71 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة الدحيح | دراسات وتاريخ</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* تطبيق الخط الجديد على الموقع بالكامل */
+        body {
+            font-family: 'Readex Pro', sans-serif;
         }
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-20px); }
-            100% { transform: translateY(0px); }
-        }
+
+        /* أنيميشن الخلفية المتدرجة المتحركة بشكل ناعم */
         .bg-animated-gradient {
-            background: linear-gradient(135deg, #0f172a, #1e293b, #0f172a);
+            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
             background-size: 400% 400%;
-            animation: gradientMove 10s ease infinite;
+            animation: gradientMove 15s ease infinite;
         }
         @keyframes gradientMove {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
-        .animate-fade { animation: fadeIn 1s ease-out forwards; }
-        .animate-float { animation: float 5s ease-in-out infinite; }
-        .delay-1 { animation-delay: 0.2s; }
-        .delay-2 { animation-delay: 0.4s; }
+
+        /* أنيميشن الظهور السلس عند تحميل الصفحة */
+        @keyframes customFadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* أنيميشن الطفو للمجسمات الدائرية في الخلفية */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-30px) scale(1.1); }
+        }
+
+        .animate-fade-up {
+            opacity: 0;
+            animation: customFadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .animate-float-1 {
+            animation: floatSlow 8s ease-in-out infinite;
+        }
+
+        .animate-float-2 {
+            animation: floatSlow 12s ease-in-out infinite;
+            animation-delay: 2s;
+        }
+
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-500 { animation-delay: 0.5s; }
     </style>
 </head>
-<body class="bg-animated-gradient text-white font-sans min-h-screen selection:bg-yellow-500 selection:text-black">
+<body class="bg-animated-gradient text-white min-h-screen selection:bg-yellow-500 selection:text-black overflow-x-hidden">
 
-    <nav class="flex justify-between items-center p-6 max-w-7xl mx-auto animate-fade">
-        <div class="text-3xl font-black text-yellow-500 tracking-tighter">الدحيح<span class="text-white">.</span></div>
-        <div class="hidden md:flex gap-8 text-sm font-medium text-gray-300">
-            <a href="#" class="hover:text-yellow-500 transition-colors">الرئيسية</a>
-            <a href="#" class="hover:text-yellow-500 transition-colors">بنك الأسئلة</a>
-            <a href="#" class="hover:text-yellow-400 transition-colors">المناهج</a>
+    <nav class="flex justify-between items-center p-6 max-w-7xl mx-auto animate-fade-up">
+        <div class="text-3xl font-extrabold text-yellow-500 tracking-tight">
+            الدحيح<span class="text-white">.</span>
         </div>
-        <button class="bg-yellow-500 text-black px-6 py-2 rounded-full font-bold hover:bg-yellow-400 transition transform hover:scale-105 shadow-lg shadow-yellow-500/20">
+        <div class="hidden md:flex gap-8 text-sm font-medium text-gray-300">
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">الرئيسية</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">بنك الأسئلة</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">المناهج</a>
+        </div>
+        <button class="bg-yellow-500 text-black px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)]">
             دخول الطلاب
         </button>
     </nav>
 
-    <main class="relative flex flex-col items-center justify-center text-center px-4 pt-20 pb-32 overflow-hidden">
-        <div class="absolute top-20 left-[-10%] w-72 h-72 bg-blue-600/20 rounded-full blur-[100px] animate-float"></div>
-        <div class="absolute bottom-10 right-[-10%] w-80 h-80 bg-yellow-600/10 rounded-full blur-[100px] animate-float" style="animation-delay: 2s;"></div>
+    <main class="relative flex flex-col items-center justify-center text-center px-4 pt-24 pb-36 overflow-hidden">
+        <div class="absolute top-10 left-[-15%] w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-float-1 pointer-events-none"></div>
+        <div class="absolute bottom-5 right-[-15%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] animate-float-2 pointer-events-none"></div>
 
-        <div class="relative z-10">
-            <h1 class="text-7xl md:text-9xl font-black mb-6 animate-fade delay-1">
-                دحيح <span class="text-yellow-500">التاريخ</span>
+        <div class="relative z-10 max-w-4xl">
+            <h1 class="text-6xl md:text-8xl font-black mb-8 leading-tight animate-fade-up delay-100 tracking-tight">
+                دحيح <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">التاريخ</span>
             </h1>
-            <p class="text-lg md:text-2xl text-gray-400 max-w-2xl mx-auto mb-10 animate-fade delay-2">
-                سافر عبر الزمن واكتشف أسرار الحضارات مع أقوى منصة تعليمية للدراسات الاجتماعية.
+            <p class="text-lg md:text-2xl text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-up delay-300">
+                سافر عبر الزمن واكتشف أسرار الحضارات مع أقوى منصة تعليمية تفاعلية للدراسات الاجتماعية.
             </p>
 
-            <div class="flex flex-col sm:flex-row gap-4 justify-center animate-fade" style="animation-delay: 0.6s;">
-                <button onclick="alert('مرحباً بك!')" class="px-10 py-4 bg-white text-black font-bold rounded-xl hover:bg-yellow-500 transition duration-300 shadow-xl">
+            <div class="flex flex-col sm:flex-row gap-5 justify-center items-center animate-fade-up delay-500">
+                <button onclick="alert('مرحباً بك في عالم التاريخ!')" class="w-full sm:w-auto px-10 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105 hover:shadow-[0_10px_30px_rgba(255,255,255,0.1)]">
                     ابدأ التعلم الآن
                 </button>
-                <button class="px-10 py-4 border-2 border-gray-700 font-bold rounded-xl hover:border-white transition duration-300">
+                <button class="w-full sm:w-auto px-10 py-4 border-2 border-gray-800 font-bold rounded-2xl hover:border-white hover:bg-white/5 transition-all duration-500 transform hover:scale-105">
                     جرب بنك الأسئلة
                 </button>
             </div>
         </div>
     </main>
 
-    <footer class="text-center py-10 border-t border-white/5 text-gray-500 text-sm">
+    <footer class="text-center py-10 border-t border-white/5 text-gray-600 text-sm">
         جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026
     </footer>
 </body>
