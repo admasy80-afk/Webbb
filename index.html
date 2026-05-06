@@ -21,7 +21,6 @@
             background-size: 400% 400%;
             animation: gradientMove 15s ease infinite;
         }
-
         @keyframes gradientMove {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -46,72 +45,93 @@
         .animate-float-1 { animation: floatSlow 8s ease-in-out infinite; }
         .animate-float-2 { animation: floatSlow 12s ease-in-out infinite; animation-delay: 2s; }
 
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 12px;
-            font-size: 14px;
-            display: none;
-            z-index: 9999;
-        }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-500 { animation-delay: 0.5s; }
+        .delay-700 { animation-delay: 0.7s; }
     </style>
 </head>
+<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between selection:bg-yellow-500 selection:text-black overflow-x-hidden p-6">
 
-<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between p-6">
+    <nav class="w-full flex justify-between items-center py-6 max-w-7xl mx-auto animate-fade-up">
+        <div class="text-3xl font-extrabold text-yellow-500 tracking-tight">
+            الدحيح<span class="text-white">.</span>
+        </div>
 
-<!-- Toast بدل "site says" -->
-<div id="toast" class="toast"></div>
-
-<nav class="w-full flex justify-between items-center py-6 max-w-7xl mx-auto animate-fade-up">
-    <div class="text-3xl font-extrabold text-yellow-500">
-        الدحيح<span class="text-white">.</span>
-    </div>
-
-    <div class="hidden md:flex gap-8 text-sm text-gray-300">
-        <a href="#">الرئيسية</a>
-        <a href="#">بنك الأسئلة</a>
-        <a href="#">المناهج</a>
-    </div>
-
-    <div class="flex gap-3 items-center">
-        <!-- أيقونة الجوال الجديدة -->
-        <a href="/public/login.html" class="p-2 rounded-full border border-white/10 hover:bg-white/10 transition">
-            <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm5 18a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
-            </svg>
+        <div class="hidden md:flex gap-8 text-sm font-medium text-gray-300">
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">الرئيسية</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">بنك الأسئلة</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">المناهج</a>
+        </div>
+        
+        <a href="/public/login.html" class="bg-yellow-500 text-black px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] inline-block">
+            التسجيل 
         </a>
+    </nav>
 
-        <a href="/public/login.html" class="bg-yellow-500 text-black px-6 py-2 rounded-full font-bold">
-            التسجيل
-        </a>
-    </div>
-</nav>
+    <main class="relative flex-grow flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+        
+        <div class="absolute top-0 left-[-15%] w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-float-1 pointer-events-none"></div>
+        <div class="absolute bottom-0 right-[-15%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] animate-float-2 pointer-events-none"></div>
 
-<main class="text-center">
-    <h1 class="text-6xl font-black text-yellow-500">الدحيح في التاريخ</h1>
-    <p class="text-gray-400 mt-4">رحلة من ميح لـ دحيح</p>
-</main>
+        <div class="relative z-10 max-w-5xl my-auto w-full flex flex-col items-center pt-10">
+            
+            <h1 class="text-6xl md:text-8xl font-black mb-10 leading-normal tracking-tight animate-fade-up delay-100">
+                <span class="text-yellow-500">الدحيح</span> في التاريخ
+            </h1>
+            
+            <p class="text-2xl md:text-3xl text-gray-400 font-extralight max-w-3xl mx-auto mt-4 mb-16 leading-relaxed animate-fade-up delay-300">
+                رحلة من <span class="text-white font-medium">ميح</span> لـ <span class="text-white font-medium">دحيح</span>
+            </p>
 
-<script>
-    // بدل alert "site says"
-    function showToast(msg) {
-        const toast = document.getElementById("toast");
-        toast.textContent = msg;
-        toast.style.display = "block";
+            <div class="flex flex-col sm:flex-row gap-5 w-full max-w-xl justify-center items-center animate-fade-up delay-500 mb-16">
+                <a href="/public/login.html" class="w-full sm:w-1/2 text-center px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105">
+                    ابدأ التعلم الآن
+                </a>
 
-        setTimeout(() => {
-            toast.style.display = "none";
-        }, 3000);
-    }
+                <a href="/public/login.html" class="w-full sm:w-1/2 text-center px-8 py-4 border-2 border-gray-800 font-bold rounded-2xl hover:border-white hover:bg-white/5 transition-all duration-500 transform hover:scale-105">
+                    جرب بنك الأسئلة
+                </a>
+            </div>
 
-    // تحويل أي alert إلى رسالة داخل الشاشة
-    window.alert = showToast;
-</script>
+            <div class="w-full flex flex-col items-center animate-fade-up delay-700 mt-6">
+                <p class="text-sm text-gray-500 font-light mb-6">سجل دخولك الفوري عبر:</p>
+
+                <div class="flex flex-row gap-6 justify-center items-center">
+
+                    <!-- Google -->
+                    <a href="/public/login.html" class="p-5 rounded-full border-2 border-white/10 bg-white/5 hover:border-white hover:bg-white/10 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                        <svg class="w-8 h-8" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.61c-.29 1.5-1.14 2.78-2.4 3.63v3h3.84c2.24-2.06 3.53-5.1 3.53-8.48z"/>
+                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-3c-1.07.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.36v3.1A11.99 11.99 0 0 0 12 24z"/>
+                            <path fill="#FBBC05" d="M5.24 14.24a7.2 7.2 0 0 1 0-4.48V6.66H1.36a11.99 11.99 0 0 0 0 10.68l3.88-3.1z"/>
+                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.28 2.68 1.36 6.66l3.88 3.1c.95-2.88 3.61-5.01 6.76-5.01z"/>
+                        </svg>
+                    </a>
+
+                    <!-- Apple -->
+                    <a href="/public/login.html" class="p-5 rounded-full border-2 border-white/10 bg-black/30 hover:border-white hover:bg-black/50 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                        <svg class="w-8 h-8 fill-current text-white" viewBox="0 0 24 24">
+                            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.13.67-2.85 1.51-.62.73-1.16 1.87-1.01 2.98 1.1.09 2.15-.55 2.87-1.43z"/>
+                        </svg>
+                    </a>
+
+                    <!-- Mobile (NEW) -->
+                    <a href="/public/login.html" class="p-5 rounded-full border-2 border-white/10 bg-white/5 hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17 1H7C5.9 1 5 1.9 5 3v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm-5 21c-.83 0-1.5-.67-1.5-1.5S11.17 19 12 19s1.5.67 1.5 1.5S12.83 22 12 22z"/>
+                        </svg>
+                    </a>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="w-full text-center py-6 border-t border-white/5 text-gray-600 text-sm mt-auto">
+        <p class="text-sm text-gray-700">جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026</p>
+    </footer>
 
 </body>
 </html>
