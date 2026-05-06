@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول | منصة الدحيح</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        body { font-family: 'Readex Pro', sans-serif; }
+        .bg-animated-gradient {
+            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
+            background-size: 400% 400%;
+            animation: gradientMove 15s ease infinite;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glass-card {
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+        }
+        @keyframes customFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+            opacity: 0;
+            animation: customFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+
+<body class="bg-animated-gradient text-white min-h-screen flex items-center justify-center p-6">
+
+    <div class="glass-card bg-white/5 w-full max-w-md rounded-[2.5rem] p-10 relative overflow-hidden animate-fade-up">
+        
+        <div class="text-center mb-8">
+            <div class="text-4xl font-black text-yellow-500 mb-2 tracking-tight">الدحيح<span class="text-white">.</span></div>
+            <h2 class="text-xl font-bold mt-4 mb-2">تسجيل الدخول</h2>
+            <p class="text-gray-400 text-xs leading-relaxed">ادخل على حسابك بإدخال رقم الهاتف و كلمة المرور</p>
+        </div>
+
+        <form id="loginForm">
+
+            <div class="mb-5">
+                <label class="block text-xs font-medium text-gray-300 mb-2 flex justify-between">
+                    <span>رقم الهاتف</span>
+                    <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>
+                </label>
+                <input type="tel" id="phone" required placeholder="01XXXXXXXXX"
+                    class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
+                    dir="rtl">
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-xs font-medium text-gray-300 mb-2 flex justify-between">
+                    <span>كلمة السر</span>
+                    <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </label>
+                <input type="password" id="password" required placeholder="••••••••"
+                    class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
+                    dir="ltr">
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full bg-yellow-500 text-black font-bold py-3.5 rounded-xl hover:bg-yellow-400 transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.3)] transform hover:scale-[1.02]">
+                تسجيل الدخول
+            </button>
+
+            <p id="successMessage" class="text-green-400 text-xs text-center mt-4 hidden"></p>
+            <p id="errorMessage" class="text-red-400 text-xs text-center mt-4 hidden"></p>
+
+        </form>
+    </div>
+
+<script>
+const form = document.getElementById('loginForm');
+const btn = document.getElementById('submitBtn');
+const errorMsg = document.getElementById('errorMessage');
+const successMsg = document.getElementById('successMessage');
+
+function setLoading(state) {
+    if (state) {
+        btn.innerText = "جاري الحفظ...";
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+    } else {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    }
+}
+
+function showError(msg) {
+    errorMsg.innerText = msg;
+    errorMsg.classList.remove('hidden');
+    successMsg.classList.add('hidden');
+}
+
+function showSuccess(msg) {
+    successMsg.innerText = msg;
+    successMsg.classList.remove('hidden');
+    errorMsg.classList.add('hidden');
+}
+
+function validate(phone, password) {
+    if (!phone || phone.length < 10) {
+        return "رقم الهاتف غير صحيح";
+    }
+    if (!password || password.length < 4) {
+        return "كلمة المرور قصيرة جدًا";
+    }
+    return null;
+}
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const phone = document.getElementById('phone').value.trim();
+    const password = document.getElementById('password').value;
+
+    const validationError = validate(phone, password);
+    if (validationError) {
+        showError(validationError);
+        return;
+    }
+
+    setLoading(true);
+    errorMsg.classList.add('hidden');
+    successMsg.classList.add('hidden');
+
+    try {
+        const response = await fetch('/api/saveUser', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ phone, password })
+        });
+
+        const result = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(result.message || "حدث خطأ غير معروف");
+        }
+
+        showSuccess(result.message || "تم الحفظ بنجاح ✓");
+
+        btn.innerText = "تم الحفظ ✓";
+        btn.style.backgroundColor = "#22c55e";
+
+    } catch (error) {
+        btn.innerText = "حاول مرة أخرى";
+        showError("فشل الاتصال: " + error.message);
+    } finally {
+        setLoading(false);
+    }
+});
+</script>
+
+</body>
+</html>
