@@ -1,149 +1,179 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول | منصة الدحيح</title>
-    
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <style>
-        body { font-family: 'Readex Pro', sans-serif; }
-        .bg-animated-gradient {
-            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
-            background-size: 400% 400%;
-            animation: gradientMove 15s ease infinite;
-        }
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        .glass-card {
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
-        }
-        .hidden-step { display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تسجيل الدخول | منصة الدحيح</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body { font-family: 'Readex Pro', sans-serif; }
+.bg-animated-gradient {
+    background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
+    background-size: 400% 400%;
+    animation: gradientMove 15s ease infinite;
+}
+@keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.glass-card {
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+}
+.hidden-step { display:none; }
+</style>
 </head>
+
 <body class="bg-animated-gradient text-white min-h-screen flex items-center justify-center p-6">
 
-    <div class="glass-card bg-white/5 w-full max-w-md rounded-[2.5rem] p-10 text-center relative overflow-hidden">
-        
-        <div class="text-4xl font-black text-yellow-500 mb-2">الدحيح<span class="text-white">.</span></div>
-        <p class="text-gray-400 text-sm mb-8">سجل دخولك عبر رقم الجوال للمتابعة</p>
+<div class="glass-card bg-white/5 w-full max-w-md rounded-[2.5rem] p-10 text-center">
 
-        <div class="flex flex-row gap-4 justify-center items-center mb-8 opacity-50 cursor-not-allowed">
-            <div class="p-3 rounded-full border border-white/10 bg-white/5">
-                <svg class="w-6 h-6" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.61c-.29 1.5-1.14 2.78-2.4 3.63v3h3.84c2.24-2.06 3.53-5.1 3.53-8.48z"/>
-                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-3c-1.07.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.36v3.1A11.99 11.99 0 0 0 12 24z"/>
-                    <path fill="#FBBC05" d="M5.24 14.24a7.2 7.2 0 0 1 0-4.48V6.66H1.36a11.99 11.99 0 0 0 0 10.68l3.88-3.1z"/>
-                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.28 2.68 1.36 6.66l3.88 3.1c.95-2.88 3.61-5.01 6.76-5.01z"/>
-                </svg>
+<div class="text-4xl font-black text-yellow-500 mb-2">الدحيح<span class="text-white">.</span></div>
+<p class="text-gray-400 text-sm mb-8">أدخل رقم جوالك للمتابعة بشكل آمن وسريع</p>
+
+<div id="phone-container">
+<input id="phone" type="tel" placeholder="+201000000000"
+class="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-3 mb-4 text-left"
+dir="ltr">
+
+<div id="recaptcha-container" class="mb-4 flex justify-center"></div>
+
+<button id="sendBtn" onclick="sendCode()"
+class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition">
+إرسال رمز التحقق
+</button>
+
+<p id="phone-error" class="text-red-400 text-xs mt-3 hidden"></p>
+</div>
+
+<div id="otp-container" class="hidden-step">
+<p class="text-sm text-green-400 mb-4">تم إرسال رمز التحقق</p>
+
+<input id="code" type="text" maxlength="6" placeholder="••••••"
+class="w-full text-center tracking-[0.5em] bg-black/20 border border-white/10 rounded-xl px-4 py-3 mb-4">
+
+<button id="verifyBtn" onclick="verifyCode()"
+class="w-full bg-green-500 py-3 rounded-xl font-bold">
+تأكيد
+</button>
+
+<p id="otp-error" class="text-red-400 text-xs mt-3 hidden"></p>
+
+<button onclick="resetAll()" class="text-xs text-gray-400 mt-4 hover:text-white">
+تغيير الرقم
+</button>
+</div>
+
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDSQvaTzE73ua2U8eKKMT_shuQ_l52tpxU",
+    authDomain: "eld7e7-63bfe.firebaseapp.com",
+    projectId: "eld7e7-63bfe",
+    storageBucket: "eld7e7-63bfe.firebasestorage.app",
+    messagingSenderId: "124898726301",
+    appId: "1:124898726301:web:49af90b841b8d7317e5f74"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+auth.languageCode = "ar";
+
+let sending = false;
+
+// reCAPTCHA
+window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    size: 'normal'
+});
+
+// إرسال الكود
+window.sendCode = async function() {
+    if (sending) return;
+
+    const phone = document.getElementById("phone").value.trim();
+    const error = document.getElementById("phone-error");
+
+    if (!/^\+20\d{10}$/.test(phone)) {
+        error.textContent = "يرجى إدخال رقم صحيح بصيغة +20XXXXXXXXXX";
+        error.classList.remove("hidden");
+        return;
+    }
+
+    error.classList.add("hidden");
+    sending = true;
+
+    const btn = document.getElementById("sendBtn");
+    btn.innerText = "جارٍ الإرسال...";
+    btn.disabled = true;
+
+    try {
+        const result = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+        window.confirmationResult = result;
+
+        document.getElementById("phone-container").classList.add("hidden-step");
+        document.getElementById("otp-container").classList.remove("hidden-step");
+    } catch (e) {
+        error.textContent = "تعذر إرسال الرمز. حاول مرة أخرى.";
+        error.classList.remove("hidden");
+
+        window.recaptchaVerifier.render().then(id => grecaptcha.reset(id));
+    }
+
+    btn.innerText = "إرسال رمز التحقق";
+    btn.disabled = false;
+    sending = false;
+};
+
+// تحقق الكود
+window.verifyCode = async function() {
+    const code = document.getElementById("code").value;
+    const error = document.getElementById("otp-error");
+    const btn = document.getElementById("verifyBtn");
+
+    if (code.length !== 6) {
+        error.textContent = "أدخل رمز مكون من 6 أرقام";
+        error.classList.remove("hidden");
+        return;
+    }
+
+    error.classList.add("hidden");
+    btn.innerText = "جارٍ التحقق...";
+    btn.disabled = true;
+
+    try {
+        const result = await window.confirmationResult.confirm(code);
+
+        // نجاح
+        document.body.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center text-center">
+            <div>
+                <h1 class="text-2xl font-bold text-green-400 mb-4">تم تسجيل الدخول بنجاح</h1>
+                <p class="text-gray-400">مرحبًا بك</p>
             </div>
-            <div class="p-3 rounded-full border border-white/10 bg-white/5">
-                <svg class="w-6 h-6 fill-current text-white" viewBox="0 0 24 24">
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.13.67-2.85 1.51-.62.73-1.16 1.87-1.01 2.98 1.1.09 2.15-.55 2.87-1.43z"/>
-                </svg>
-            </div>
-        </div>
+        </div>`;
+    } catch (e) {
+        error.textContent = "رمز غير صحيح أو منتهي";
+        error.classList.remove("hidden");
+    }
 
-        <div class="relative flex py-4 items-center mb-6">
-            <div class="flex-grow border-t border-white/10"></div>
-            <span class="flex-shrink-0 mx-4 text-gray-500 text-xs">أو برقم الجوال</span>
-            <div class="flex-grow border-t border-white/10"></div>
-        </div>
+    btn.innerText = "تأكيد";
+    btn.disabled = false;
+};
 
-        <div id="phone-container">
-            <input type="tel" id="phone" placeholder="مثال: 01000000000+20" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 mb-4 focus:outline-none focus:border-yellow-500 transition-colors text-left font-sans" dir="ltr">
-            <div id="recaptcha-container" class="mb-4 flex justify-center"></div>
-            <button id="send-code-btn" onclick="sendCode()" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all duration-300 hover:shadow-[0_0_15px_rgba(234,179,8,0.4)]">إرسال كود التحقق</button>
-        </div>
+// إعادة تعيين
+window.resetAll = function() {
+    location.reload();
+};
+</script>
 
-        <div id="otp-container" class="hidden-step">
-            <p class="text-xs text-green-400 mb-4">تم إرسال الرمز لرقمك بنجاح!</p>
-            <input type="number" id="verificationCode" placeholder="أدخل الرمز المكون من 6 أرقام" class="w-full bg-black/20 border border-white/10 text-white placeholder-gray-500 rounded-xl px-4 py-3 mb-6 focus:outline-none focus:border-yellow-500 transition-colors text-center tracking-[0.5em] font-sans" dir="ltr">
-            <button id="verify-code-btn" onclick="verifyCode()" class="w-full bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-400 transition-all duration-300 shadow-[0_0_15px_rgba(34,197,94,0.3)]">تأكيد الدخول</button>
-            <button onclick="location.reload()" class="w-full mt-4 text-xs text-gray-400 hover:text-white transition-colors">إدخال رقم آخر</button>
-        </div>
-
-        <a href="/" class="text-sm text-gray-500 hover:text-white transition-colors block mt-8 pb-2">العودة للرئيسية</a>
-    </div>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, signInWithPhoneNumber, RecaptchaVerifier } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-        // بيانات مشروعك الحقيقية
-        const firebaseConfig = {
-            apiKey: "AIzaSyDSQvaTzE73ua2U8eKKMT_shuQ_l52tpxU",
-            authDomain: "eld7e7-63bfe.firebaseapp.com",
-            projectId: "eld7e7-63bfe",
-            storageBucket: "eld7e7-63bfe.firebasestorage.app",
-            messagingSenderId: "124898726301",
-            appId: "1:124898726301:web:49af90b841b8d7317e5f74",
-            measurementId: "G-CGYSR2WF80"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        auth.languageCode = 'ar'; // لدعم اللغة العربية في الكابتشا والرسائل
-
-        // إعداد reCAPTCHA
-        window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-            'size': 'normal'
-        });
-
-        // دالة إرسال الكود
-        window.sendCode = function() {
-            const phoneNumber = document.getElementById('phone').value;
-            if(!phoneNumber.includes("+")) {
-                alert("يرجى كتابة الرقم بالصيغة الدولية، مثال: +201234567890");
-                return;
-            }
-
-            const appVerifier = window.recaptchaVerifier;
-            document.getElementById('send-code-btn').innerText = "جاري الإرسال...";
-
-            signInWithPhoneNumber(auth, phoneNumber, appVerifier)
-                .then((confirmationResult) => {
-                    window.confirmationResult = confirmationResult;
-                    document.getElementById('phone-container').classList.add('hidden-step');
-                    document.getElementById('otp-container').classList.remove('hidden-step');
-                }).catch((error) => {
-                    console.error(error);
-                    alert("حدث خطأ! تأكد من الرقم واجتياز الـ reCAPTCHA.");
-                    document.getElementById('send-code-btn').innerText = "إرسال كود التحقق";
-                    window.recaptchaVerifier.render().then(function(widgetId) {
-                        grecaptcha.reset(widgetId);
-                    });
-                });
-        }
-
-        // دالة التحقق
-        window.verifyCode = function() {
-            const code = document.getElementById('verificationCode').value;
-            if(code.length < 6) {
-                alert("الرمز مكون من 6 أرقام، يرجى كتابته كاملاً.");
-                return;
-            }
-
-            document.getElementById('verify-code-btn').innerText = "جاري التحقق...";
-
-            window.confirmationResult.confirm(code).then((result) => {
-                alert("تم التحقق بنجاح! أهلاً بك يا دحيح");
-                window.location.href = "/app"; // التوجيه لصفحة التطبيق بعد النجاح
-            }).catch((error) => {
-                alert("الكود غير صحيح أو انتهت صلاحيته.");
-                document.getElementById('verify-code-btn').innerText = "تأكيد الدخول";
-            });
-        }
-    </script>
 </body>
 </html>
