@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منصة الدحيح | دراسات وتاريخ</title>
+    <title>منصة الدحيح التعليمية | رحلة من ميح لـ دحيح</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,18 +28,18 @@
         }
 
         @keyframes customFadeUp {
-            from { opacity: 0; transform: translateY(30px); }
+            from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes floatSlow {
             0%, 100% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-30px) scale(1.1); }
+            50% { transform: translateY(-20px) scale(1.05); }
         }
 
         .animate-fade-up {
             opacity: 0;
-            animation: customFadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: customFadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         
         .animate-float-1 { animation: floatSlow 8s ease-in-out infinite; }
@@ -48,12 +48,11 @@
         .delay-100 { animation-delay: 0.1s; }
         .delay-300 { animation-delay: 0.3s; }
         .delay-500 { animation-delay: 0.5s; }
-        .delay-700 { animation-delay: 0.7s; }
     </style>
 </head>
-<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between selection:bg-yellow-500 selection:text-black overflow-x-hidden">
+<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between selection:bg-yellow-500 selection:text-black overflow-x-hidden p-6">
 
-    <nav class="w-full flex justify-between items-center px-6 py-8 md:py-10 max-w-7xl mx-auto animate-fade-up">
+    <nav class="w-full flex justify-between items-center py-6 max-w-7xl mx-auto animate-fade-up">
         <div class="text-3xl font-extrabold text-yellow-500 tracking-tight">
             الدحيح<span class="text-white">.</span>
         </div>
@@ -62,22 +61,23 @@
             <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">بنك الأسئلة</a>
             <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">المناهج</a>
         </div>
-        <button class="bg-yellow-500 text-black px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)]">
+        <a href="/public/login.html" class="bg-yellow-500 text-black px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] inline-block">
             دخول الطلاب
-        </button>
+        </a>
     </nav>
 
-    <main class="relative flex-grow flex flex-col items-center justify-center text-center px-6 py-12 overflow-hidden">
-        <div class="absolute top-10 left-[-15%] w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-float-1 pointer-events-none"></div>
-        <div class="absolute bottom-5 right-[-15%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] animate-float-2 pointer-events-none"></div>
+    <main class="relative flex-grow flex flex-col items-center justify-center text-center px-4 overflow-hidden mb-24">
+        <div class="absolute top-0 left-[-15%] w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-float-1 pointer-events-none"></div>
+        <div class="absolute bottom-0 right-[-15%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] animate-float-2 pointer-events-none"></div>
 
-        <div class="relative z-10 max-w-4xl my-auto w-full flex flex-col items-center">
+        <div class="relative z-10 max-w-5xl my-auto w-full flex flex-col items-center">
             
             <h1 class="text-5xl md:text-8xl font-black mb-6 leading-tight animate-fade-up delay-100 tracking-tight">
-                دحيح <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">التاريخ</span>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">الدحيح</span> في التاريخ
             </h1>
-            <p class="text-md md:text-2xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-up delay-300">
-                سافر عبر الزمن واكتشف أسرار الحضارات مع أقوى منصة تعليمية تفاعلية للدراسات الاجتماعية.
+            
+            <p class="text-2xl md:text-3xl text-gray-400 font-extralight max-w-3xl mx-auto mb-12 leading-relaxed animate-fade-up delay-300">
+                رحلة من <span class="text-white font-medium">ميح</span> لـ <span class="text-white font-medium">دحيح</span>
             </p>
 
             <div class="flex flex-col sm:flex-row gap-5 w-full max-w-xl justify-center items-center animate-fade-up delay-500 mb-12">
@@ -89,40 +89,12 @@
                 </a>
             </div>
 
-            <div class="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl animate-fade-up delay-700 shadow-2xl">
-                <p class="text-sm text-gray-400 mb-4 font-medium">أو سجل دخولك السريع للمتابعة:</p>
-                <div class="flex flex-col gap-3">
-                    
-                    <button onclick="loginWithProvider('google')" class="w-full flex items-center justify-center gap-3 bg-white text-black py-3.5 px-6 rounded-xl font-bold hover:bg-gray-100 transition-all duration-300 transform hover:scale-[1.02]">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24">
-                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.61c-.29 1.5-1.14 2.78-2.4 3.63v3h3.84c2.24-2.06 3.53-5.1 3.53-8.48z"/>
-                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-3c-1.07.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.36v3.1A11.99 11.99 0 0 0 12 24z"/>
-                            <path fill="#FBBC05" d="M5.24 14.24a7.2 7.2 0 0 1 0-4.48V6.66H1.36a11.99 11.99 0 0 0 0 10.68l3.88-3.1z"/>
-                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.28 2.68 1.36 6.66l3.88 3.1c.95-2.88 3.61-5.01 6.76-5.01z"/>
-                        </svg>
-                        <span>متابعة باستخدام Google</span>
-                    </button>
-
-                    <button onclick="loginWithProvider('apple')" class="w-full flex items-center justify-center gap-3 bg-black border border-white/20 text-white py-3.5 px-6 rounded-xl font-bold hover:bg-zinc-900 transition-all duration-300 transform hover:scale-[1.02]">
-                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.13.67-2.85 1.51-.62.73-1.16 1.87-1.01 2.98 1.1.09 2.15-.55 2.87-1.43z"/>
-                        </svg>
-                        <span>متابعة باستخدام Apple</span>
-                    </button>
-                </div>
-            </div>
-
         </div>
     </main>
 
-    <footer class="w-full text-center py-8 border-t border-white/5 text-gray-600 text-sm mt-auto">
-        جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026
+    <footer class="w-full text-center py-10 border-t border-white/5 text-gray-600 text-sm mt-auto">
+        <p class="text-sm text-gray-700">جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026</p>
     </footer>
 
-    <script>
-        function loginWithProvider(provider) {
-            alert("تم تحديد طريقة التسجيل عبر: " + provider.toUpperCase() + "\nقريباً سنقوم بربط هذه الأزرار بقاعدة البيانات لتمكين تسجيل الدخول الفعلي.");
-        }
-    </script>
 </body>
 </html>
