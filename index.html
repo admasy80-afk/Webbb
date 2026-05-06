@@ -1,154 +1,143 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>منصة الدحيح التعليمية | رحلة من ميح لـ دحيح</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منصة الدحيح التعليمية | رحلة من ميح لـ دحيح</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    
+    <style>
+        body {
+            font-family: 'Readex Pro', sans-serif;
+        }
 
-<link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com"></script>
+        .bg-animated-gradient {
+            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
+            background-size: 400% 400%;
+            animation: gradientMove 15s ease infinite;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
 
-<style>
-body { font-family: 'Readex Pro', sans-serif; }
+        @keyframes customFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-/* خلفية أنعم */
-.bg-animated-gradient {
-    background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
-    background-size: 300% 300%;
-    animation: gradientMove 20s ease-in-out infinite;
-}
-@keyframes gradientMove {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            50% { transform: translateY(-20px) scale(1.05); }
+        }
 
-/* دخول أنعم */
-@keyframes customFadeUp {
-    from { opacity: 0; transform: translateY(30px) scale(.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
+        .animate-fade-up {
+            opacity: 0;
+            animation: customFadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        
+        .animate-float-1 { animation: floatSlow 8s ease-in-out infinite; }
+        .animate-float-2 { animation: floatSlow 12s ease-in-out infinite; animation-delay: 2s; }
 
-.animate-fade-up {
-    opacity: 0;
-    animation: customFadeUp 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* float أهدأ */
-@keyframes floatSlow {
-    0%,100% { transform: translateY(0px); }
-    50% { transform: translateY(-15px); }
-}
-
-.animate-float-1 { animation: floatSlow 10s ease-in-out infinite; }
-.animate-float-2 { animation: floatSlow 14s ease-in-out infinite; }
-
-.delay-100 { animation-delay: .1s; }
-.delay-300 { animation-delay: .3s; }
-.delay-500 { animation-delay: .5s; }
-.delay-700 { animation-delay: .7s; }
-
-/* تأثير أزرار احترافي */
-.btn-glass {
-    backdrop-filter: blur(12px);
-    transition: all .35s cubic-bezier(.16,1,.3,1);
-}
-.btn-glass:hover {
-    transform: scale(1.08);
-}
-</style>
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-500 { animation-delay: 0.5s; }
+        .delay-700 { animation-delay: 0.7s; }
+    </style>
 </head>
+<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between selection:bg-yellow-500 selection:text-black overflow-x-hidden p-6">
 
-<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between overflow-x-hidden p-6">
+    <nav class="w-full flex justify-between items-center py-6 max-w-7xl mx-auto animate-fade-up">
+        <div class="text-3xl font-extrabold text-yellow-500 tracking-tight">
+            الدحيح<span class="text-white">.</span>
+        </div>
+        <div class="hidden md:flex gap-8 text-sm font-medium text-gray-300">
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">الرئيسية</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">بنك الأسئلة</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">المناهج</a>
+        </div>
+        <a href="#" class="bg-yellow-500 text-black px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] inline-block">
+            التسجيل 
+        </a>
+    </nav>
 
-<nav class="w-full flex justify-between items-center py-6 max-w-7xl mx-auto animate-fade-up">
-<div class="text-3xl font-extrabold text-yellow-500 tracking-tight">
-الدحيح<span class="text-white">.</span>
-</div>
+    <main class="relative flex-grow flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+        
+        <div class="absolute top-0 left-[-15%] w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-float-1 pointer-events-none"></div>
+        <div class="absolute bottom-0 right-[-15%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] animate-float-2 pointer-events-none"></div>
 
-<div class="hidden md:flex gap-8 text-sm text-gray-300">
-<a href="#" class="hover:text-yellow-500 transition">الرئيسية</a>
-<a href="#" class="hover:text-yellow-500 transition">بنك الأسئلة</a>
-<a href="#" class="hover:text-yellow-500 transition">المناهج</a>
-</div>
+        <div class="relative z-10 max-w-5xl my-auto w-full flex flex-col items-center pt-10">
+            
+            <h1 class="text-6xl md:text-8xl font-black mb-10 leading-normal tracking-tight animate-fade-up delay-100">
+                <span class="text-yellow-500">الدحيح</span> في التاريخ
+            </h1>
+            
+            <p class="text-2xl md:text-3xl text-gray-400 font-extralight max-w-3xl mx-auto mt-4 mb-16 leading-relaxed animate-fade-up delay-300">
+                رحلة من <span class="text-white font-medium">ميح</span> لـ <span class="text-white font-medium">دحيح</span>
+            </p>
 
-<a href="#" class="bg-yellow-500 text-black px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 transition transform hover:scale-105">
-التسجيل
-</a>
-</nav>
+            <div class="flex flex-col sm:flex-row gap-5 w-full max-w-xl justify-center items-center animate-fade-up delay-500 mb-20">
+                <a href="/app" class="w-full sm:w-1/2 text-center px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105 hover:shadow-[0_10px_30px_rgba(255,255,255,0.1)]">
+                    ابدأ التعلم الآن
+                </a>
+                <a href="/app" class="w-full sm:w-1/2 text-center px-8 py-4 border-2 border-gray-800 font-bold rounded-2xl hover:border-white hover:bg-white/5 transition-all duration-500 transform hover:scale-105">
+                    جرب بنك الأسئلة
+                </a>
+            </div>
 
-<main class="relative flex-grow flex flex-col items-center justify-center text-center px-4">
+            <div class="w-full flex flex-col items-center animate-fade-up delay-700 mt-10">
+                <p class="text-sm text-gray-500 font-light mb-6">أو سجل دخولك الفوري للمتابعة:</p>
+                <div class="flex flex-row gap-6 justify-center items-center">
+                    
+                    <button onclick="realGoogleLogin()" class="p-5 rounded-full border-2 border-white/10 bg-white/5 hover:border-white hover:bg-white/10 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                        <svg class="w-8 h-8" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.61c-.29 1.5-1.14 2.78-2.4 3.63v3h3.84c2.24-2.06 3.53-5.1 3.53-8.48z"/>
+                            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-3c-1.07.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.36v3.1A11.99 11.99 0 0 0 12 24z"/>
+                            <path fill="#FBBC05" d="M5.24 14.24a7.2 7.2 0 0 1 0-4.48V6.66H1.36a11.99 11.99 0 0 0 0 10.68l3.88-3.1z"/>
+                            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.28 2.68 1.36 6.66l3.88 3.1c.95-2.88 3.61-5.01 6.76-5.01z"/>
+                        </svg>
+                    </button>
 
-<div class="absolute top-0 left-[-15%] w-96 h-96 bg-blue-600/10 rounded-full blur-[140px] animate-float-1"></div>
-<div class="absolute bottom-0 right-[-15%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[140px] animate-float-2"></div>
+                    <button onclick="realAppleLogin()" class="p-5 rounded-full border-2 border-white/10 bg-black/30 hover:border-white hover:bg-black/50 transition-all duration-300 transform hover:scale-110 shadow-lg">
+                        <svg class="w-8 h-8 fill-current text-white" viewBox="0 0 24 24">
+                            <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 4.17c.66-.81 1.11-1.93.99-3.06-1 .04-2.13.67-2.85 1.51-.62.73-1.16 1.87-1.01 2.98 1.1.09 2.15-.55 2.87-1.43z"/>
+                        </svg>
+                    </button>
+                    
+                </div>
+            </div>
 
-<div class="relative z-10 max-w-5xl w-full flex flex-col items-center pt-10">
+        </div>
+    </main>
 
-<h1 class="text-6xl md:text-8xl font-black mb-10 animate-fade-up delay-100">
-<span class="text-yellow-500">الدحيح</span> في التاريخ
-</h1>
+    <footer class="w-full text-center py-6 border-t border-white/5 text-gray-600 text-sm mt-auto">
+        <p class="text-sm text-gray-700">جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026</p>
+    </footer>
 
-<p class="text-2xl md:text-3xl text-gray-400 max-w-3xl mb-16 animate-fade-up delay-300">
-رحلة من <span class="text-white">ميح</span> لـ <span class="text-white">دحيح</span>
-</p>
+    <script>
+        function realGoogleLogin() {
+            // هذا الرابط يفتح شاشة جوجل الحقيقية لاختيار الإيميل (OAuth 2.0)
+            // ملاحظة: الـ client_id هنا وهمي للتجربة، عشان كده جوجل هتكتب لك error في الشاشة لحد ما تحط الـ ID الحقيقي بتاعك
+            const clientId = "YOUR_GOOGLE_CLIENT_ID"; 
+            const redirectUri = window.location.origin;
+            const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=email profile`;
+            
+            // فتح نافذة منبثقة (Pop-up) زي التطبيقات الاحترافية
+            window.open(googleAuthUrl, "Google Login", "width=500,height=600");
+        }
 
-<div class="flex flex-col sm:flex-row gap-5 w-full max-w-xl animate-fade-up delay-500 mb-20">
-<a href="/app" class="w-full text-center px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-500 transition transform hover:scale-105">
-ابدأ التعلم الآن
-</a>
-
-<a href="/app" class="w-full text-center px-8 py-4 border border-gray-700 rounded-2xl hover:border-white hover:bg-white/5 transition transform hover:scale-105">
-جرب بنك الأسئلة
-</a>
-</div>
-
-<div class="w-full flex flex-col items-center animate-fade-up delay-700 mt-10">
-<p class="text-sm text-gray-500 mb-6">أو سجل دخولك الفوري للمتابعة:</p>
-
-<div class="flex gap-6">
-
-<!-- Google -->
-<button onclick="realGoogleLogin()"
-class="btn-glass p-5 rounded-full border border-white/10 bg-white/5 hover:border-white hover:bg-white/10 shadow-lg">
-<svg class="w-8 h-8" viewBox="0 0 24 24">
-<path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.61c-.29 1.5-1.14 2.78-2.4 3.63v3h3.84c2.24-2.06 3.53-5.1 3.53-8.48z"/>
-<path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.84-3c-1.07.72-2.45 1.16-4.09 1.16-3.15 0-5.81-2.13-6.76-5.01H1.36v3.1A11.99 11.99 0 0 0 12 24z"/>
-<path fill="#FBBC05" d="M5.24 14.24a7.2 7.2 0 0 1 0-4.48V6.66H1.36a11.99 11.99 0 0 0 0 10.68l3.88-3.1z"/>
-<path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.28 2.68 1.36 6.66l3.88 3.1c.95-2.88 3.61-5.01 6.76-5.01z"/>
-</svg>
-</button>
-
-<!-- جوال -->
-<a href="/login"
-class="btn-glass p-5 rounded-full border border-white/10 bg-white/5 hover:border-white hover:bg-white/10 shadow-lg flex items-center justify-center">
-
-<svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-d="M3 5a2 2 0 012-2h3l2 5-2 1a11 11 0 005 5l1-2 5 2v3a2 2 0 01-2 2h-1C9.163 19 5 14.837 5 9V8a2 2 0 01-2-2z"/>
-</svg>
-
-</a>
-
-</div>
-</div>
-
-</div>
-</main>
-
-<footer class="w-full text-center py-6 border-t border-white/5 text-gray-600 text-sm">
-جميع الحقوق محفوظة لمنصة الدحيح التعليمية © 2026
-</footer>
-
-<script>
-function realGoogleLogin() {
-const clientId = "YOUR_GOOGLE_CLIENT_ID";
-const redirectUri = window.location.origin;
-
-const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=email profile`;
-
-window.open(url, "Google Login", "width=500,height=600");
-}
-</script>
+        function realAppleLogin() {
+            alert("الميزة مش موجودة حاليا.");
+        }
+    </script>
 
 </body>
 </html>
