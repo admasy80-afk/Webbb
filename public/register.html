@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إنشاء حساب | منصة الدحيح</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Readex Pro', sans-serif; }
+        .bg-animated { 
+            background: linear-gradient(135deg, #070b19, #0f172a, #1e1b4b); 
+            background-size: 400% 400%; 
+            animation: move 15s ease infinite; 
+        }
+        @keyframes move { 0% {background-position: 0% 50%} 50% {background-position: 100% 50%} 100% {background-position: 0% 50%} }
+        .glass { 
+            backdrop-filter: blur(20px); 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+        }
+
+        /* أنيميشن النجاح */
+        @keyframes success-pop {
+            0% { transform: scale(0.9); opacity: 0; }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-success { animation: success-pop 0.4s ease-out forwards; }
+
+        /* أنيميشن الفشل (اهتزاز) */
+        @keyframes error-shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .animate-error { animation: error-shake 0.3s ease-in-out; }
+
+        input:focus, select:focus {
+            border-color: #eab308 !important;
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.2);
+            transform: translateY(-2px);
+        }
+        input, select { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-animated text-white min-h-screen p-4 md:p-10 flex items-center justify-center">
+
+    <div class="glass w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl my-10">
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-black text-yellow-500 tracking-tight">طلب إنشاء حساب جديد</h1>
+            <p class="text-gray-400 mt-3 text-base">يرجى إدخال البيانات المطلوبة بدقة لإتمام عملية التسجيل</p>
+        </div>
+
+        <form id="regForm" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <input type="text" id="fName" placeholder="الاسم الأول" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
+            <input type="text" id="sName" placeholder="الاسم الثاني" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
+            <input type="text" id="tName" placeholder="الاسم الثالث" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
+            <input type="text" id="lName" placeholder="الاسم الأخير" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
+
+            <input type="tel" id="phone" placeholder="رقم الهاتف" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
+            <input type="tel" id="pPhone" placeholder="رقم هاتف ولي الأمر" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
+
+            <select id="gender" required class="bg-black/50 border border-white/10 rounded-2xl p-4 focus:outline-none text-gray-300">
+                <option value="" disabled selected>الجنس</option>
+                <option value="ذكر">ذكر</option>
+                <option value="أنثى">أنثى</option>
+            </select>
+
+            <select id="level" required onchange="updateGrades()" class="bg-black/50 border border-white/10 rounded-2xl p-4 focus:outline-none text-gray-300">
+                <option value="" disabled selected>المرحلة الدراسية</option>
+                <option value="primary">ابتدائي</option>
+                <option value="preparatory">إعدادي</option>
+                <option value="secondary">ثانوي</option>
+            </select>
+
+            <select id="grade" required class="bg-black/50 border border-white/10 rounded-2xl p-4 focus:outline-none md:col-span-2 text-gray-300">
+                <option value="" disabled selected>اختر المرحلة الدراسية</option>
+            </select>
+
+            <input type="email" id="email" placeholder="البريد الإلكتروني" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none md:col-span-2" dir="ltr">
+            
+            <input type="password" id="pass" placeholder="كلمة المرور" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
+            <input type="password" id="confirmPass" placeholder="تأكيد كلمة المرور" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
+
+            <button type="submit" id="subBtn" class="md:col-span-2 bg-yellow-500 text-black font-black text-lg py-5 rounded-2xl hover:bg-yellow-400 transition transform hover:scale-[1.02] mt-4 shadow-xl shadow-yellow-500/10">
+                تأكيد إنشاء الحساب
+            </button>
+            
+            <div class="md:col-span-2 text-center mt-4">
+                <a href="/login.html" class="text-gray-400 text-sm hover:text-yellow-500 transition-all font-medium border-b border-transparent hover:border-yellow-500 pb-1">لديك حساب بالفعل؟ سجل دخولك الآن</a>
+            </div>
+        </form>
+        
+        <div id="msgContainer" class="mt-6 hidden">
+            <p id="msg" class="p-4 rounded-2xl font-bold text-center"></p>
+        </div>
+    </div>
+
+    <script>
+        function updateGrades() {
+            const level = document.getElementById('level').value;
+            const gradeSelect = document.getElementById('grade');
+            gradeSelect.innerHTML = '';
+            
+            const grades = {
+                primary: ["الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"],
+                preparatory: ["الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"],
+                secondary: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"]
+            };
+
+            if (grades[level]) {
+                grades[level].forEach(g => {
+                    let opt = document.createElement('option');
+                    opt.value = g;
+                    opt.innerHTML = g;
+                    gradeSelect.appendChild(opt);
+                });
+            }
+        }
+
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('subBtn');
+            const msg = document.getElementById('msg');
+            const msgContainer = document.getElementById('msgContainer');
+            
+            // إعادة ضبط الحالة قبل البدء
+            msgContainer.classList.add('hidden');
+            msgContainer.classList.remove('animate-success', 'animate-error');
+
+            const pass = document.getElementById('pass').value;
+            const confirmPass = document.getElementById('confirmPass').value;
+
+            if (pass !== confirmPass) {
+                msg.innerText = "❌ كلمات المرور غير متطابقة!";
+                msg.className = "p-4 rounded-2xl font-bold text-center text-red-400 bg-red-400/10";
+                msgContainer.classList.remove('hidden');
+                msgContainer.classList.add('animate-error');
+                return;
+            }
+
+            btn.innerText = "جاري الحفظ...";
+            btn.disabled = true;
+
+            const formData = {
+                first_name: document.getElementById('fName').value.trim(),
+                second_name: document.getElementById('sName').value.trim(),
+                third_name: document.getElementById('tName').value.trim(),
+                last_name: document.getElementById('lName').value.trim(),
+                phone: document.getElementById('phone').value.trim(),
+                parent_phone: document.getElementById('pPhone').value.trim(),
+                gender: document.getElementById('gender').value,
+                level: document.getElementById('level').value,
+                grade: document.getElementById('grade').value,
+                email: document.getElementById('email').value.trim(),
+                password: pass
+            };
+
+            try {
+                const response = await fetch('/api/saveUser', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const text = await response.text();
+                let result = {};
+                try { result = text ? JSON.parse(text) : {}; } catch (e) { throw new Error("استجابة السيرفر غير صالحة"); }
+
+                if (!response.ok) { throw new Error(result.message || "فشل التسجيل"); }
+
+                // حالة النجاح
+                msg.innerText = "✅ تم إنشاء حسابك بنجاح";
+                msg.className = "p-4 rounded-2xl font-bold text-center text-green-400 bg-green-400/10";
+                msgContainer.classList.remove('hidden');
+                msgContainer.classList.add('animate-success');
+                
+                btn.innerText = "تم بنجاح ✓";
+                btn.classList.add('bg-green-500');
+
+                setTimeout(() => { window.location.href = "/"; }, 2000);
+
+            } catch (err) {
+                // حالة الفشل
+                msg.innerText = "❌ " + err.message;
+                msg.className = "p-4 rounded-2xl font-bold text-center text-red-400 bg-red-400/10";
+                msgContainer.classList.remove('hidden');
+                msgContainer.classList.add('animate-error');
+                
+                btn.disabled = false;
+                btn.innerText = "حاول مرة أخرى";
+            }
+        });
+    </script>
+</body>
+</html>
