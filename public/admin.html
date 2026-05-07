@@ -13,6 +13,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        select option { background-color: #0f172a; color: white; }
     </style>
 </head>
 <body class="flex h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
@@ -52,16 +53,16 @@
             <h1 class="text-3xl font-bold mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-500">
-                    <p class="text-gray-400 text-sm mb-1">الطلاب المسجلين</p>
-                    <h3 class="text-3xl font-black">--</h3>
+                    <p class="text-gray-400 text-sm mb-1">الطلاب المقبولين</p>
+                    <h3 id="stats-students" class="text-3xl font-black text-white">0</h3>
                 </div>
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-blue-500">
                     <p class="text-gray-400 text-sm mb-1">تقديمات قيد المراجعة</p>
-                    <h3 class="text-3xl font-black text-blue-400">--</h3>
+                    <h3 id="stats-pending" class="text-3xl font-black text-blue-400">0</h3>
                 </div>
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-green-500">
-                    <p class="text-gray-400 text-sm mb-1">الأسئلة المضافة</p>
-                    <h3 class="text-3xl font-black text-green-400">--</h3>
+                    <p class="text-gray-400 text-sm mb-1">المحتوى المضاف</p>
+                    <h3 id="stats-questions" class="text-3xl font-black text-green-400">نشط</h3>
                 </div>
             </div>
         </div>
@@ -69,58 +70,264 @@
         <div id="tab-requests" class="tab-content">
             <h1 class="text-3xl font-bold mb-2">التقديمات الحالية</h1>
             <p class="text-gray-400 mb-8">راجع بيانات الطلاب الجدد وقم بقبولهم أو رفضهم.</p>
-            
-            <div class="glass-panel rounded-2xl p-6 flex items-center justify-center min-h-[300px]">
-                <p class="text-gray-500 text-sm">سيتم جلب قائمة التقديمات قيد المراجعة هنا...</p>
+            <div id="pendingRequestsContainer" class="glass-panel rounded-2xl p-6 min-h-[300px]">
+                <p class="text-gray-500 text-sm text-center mt-10">جاري تحميل البيانات...</p>
             </div>
         </div>
 
         <div id="tab-students" class="tab-content">
             <h1 class="text-3xl font-bold mb-2">درجات الطلاب</h1>
-            <p class="text-gray-400 mb-8">ابحث عن طالب لتقييمه أو تعديل درجاته.</p>
-            
-            <div class="glass-panel rounded-2xl p-6 flex items-center justify-center min-h-[300px]">
-                <p class="text-gray-500 text-sm">واجهة البحث عن الطلاب وتعديل الدرجات ستكون هنا...</p>
+            <p class="text-gray-400 mb-8">أضف نقاط للطلاب لرفع ترتيبهم في لوحة الشرف.</p>
+            <div class="glass-panel rounded-2xl p-6 max-w-2xl">
+                <form id="pointsForm" class="space-y-5">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">بريد الطالب (الإيميل)</label>
+                        <input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" dir="ltr" placeholder="student@mail.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">عدد النقاط المضافة</label>
+                        <input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" placeholder="مثال: 50">
+                    </div>
+                    <button type="submit" id="savePointsBtn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-400 transition-all">تحديث الدرجات</button>
+                    <p id="pointsMsg" class="text-sm text-center hidden mt-2"></p>
+                </form>
             </div>
         </div>
 
         <div id="tab-content" class="tab-content">
             <h1 class="text-3xl font-bold mb-2">المحتوى والأسئلة</h1>
-            <p class="text-gray-400 mb-8">أضف نقاط المنهج والأسئلة المتوقعة لتظهر في لوحة الطالب.</p>
+            <p class="text-gray-400 mb-8">أضف نقاط المنهج والأسئلة المتوقعة لتظهر في لوحة الطالب الخاصة بالدفعة.</p>
             
-            <div class="glass-panel rounded-2xl p-6 flex items-center justify-center min-h-[300px]">
-                <p class="text-gray-500 text-sm">فورم إضافة المحتوى (سؤال، إجابة، ملحوظة) سيكون هنا...</p>
+            <div class="glass-panel rounded-2xl p-6 max-w-2xl">
+                <form id="contentForm" class="space-y-5">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">اختر الدفعة (الصف الدراسي)</label>
+                        <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer">
+                            <option value="" disabled selected>اختر الصف...</option>
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-2">نوع المحتوى</label>
+                        <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer">
+                            <option value="point">نقطة هامة في المنهج</option>
+                            <option value="question">سؤال متوقع بالحل</option>
+                        </select>
+                    </div>
+
+                    <div id="pointField">
+                        <label class="block text-sm text-gray-400 mb-2">الملحوظة أو النقطة</label>
+                        <textarea id="pointText" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" placeholder="مثال: ركز على أسباب الحملة الفرنسية..."></textarea>
+                    </div>
+
+                    <div id="questionFields" class="hidden space-y-5">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">نص السؤال</label>
+                            <textarea id="questionText" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" placeholder="بم تفسر: ..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">الإجابة / التلميح</label>
+                            <textarea id="questionHint" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" placeholder="الإجابة النموذجية أو تلميح للطالب..."></textarea>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="saveContentBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all">حفظ ونشر للطلاب</button>
+                    <p id="contentMsg" class="text-sm text-center hidden mt-2"></p>
+                </form>
             </div>
         </div>
 
     </main>
 
     <script>
-        // التحقق من الصلاحيات (حماية الصفحة من الطلاب العاديين)
+        // التحقق من الصلاحيات
         const userDataStr = localStorage.getItem('dahih_user');
+        let user = null;
+
         if (!userDataStr) {
             window.location.href = "/logina.html";
         } else {
-            const user = JSON.parse(userDataStr);
+            user = JSON.parse(userDataStr);
             if (user.role !== 'dev' && user.role !== 'owner') {
-                // طرد أي حد مش أدمن
                 window.location.href = "/dashboard.html";
             } else {
-                // تخصيص الترحيب بناءً على الدور اللي جاي من السيرفر
                 document.getElementById('adminWelcomeName').innerText = user.name || "إدارة";
             }
         }
 
-        // دالة التبديل بين الأقسام
+        // جلب الإحصائيات
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/admin/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role })
+                });
+                const data = await res.json();
+                document.getElementById('stats-students').innerText = data.studentsCount || 0;
+                document.getElementById('stats-pending').innerText = data.pendingCount || 0;
+            } catch (err) {}
+        }
+
+        // جلب التقديمات (نفس الكود اللي شغال عندك)
+        async function fetchPendingRequests() {
+            const container = document.getElementById('pendingRequestsContainer');
+            container.innerHTML = '<p class="text-yellow-500 text-center mt-10 animate-pulse">جاري جلب التقديمات...</p>';
+            try {
+                const res = await fetch('/api/admin/pending', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role })
+                });
+                const students = await res.json();
+                if (students.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center mt-10">لا توجد تقديمات قيد المراجعة حالياً.</p>';
+                    return;
+                }
+                let html = '<div class="space-y-4">';
+                students.forEach(st => {
+                    html += `
+                    <div class="bg-black/30 border border-white/10 rounded-xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-yellow-500/30 transition-all">
+                        <div>
+                            <h4 class="font-bold text-lg text-white">${st.first_name} ${st.last_name || ''}</h4>
+                            <p class="text-sm text-gray-400 mt-1">المرحلة: <span class="text-yellow-500">${st.grade}</span> | الهاتف: <span dir="ltr">${st.phone}</span></p>
+                            <p class="text-xs text-gray-500 mt-1">الإيميل: ${st.email}</p>
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto">
+                            <button onclick="updateStudentStatus('${st.email}', 'accepted')" class="flex-1 md:flex-none bg-green-500/10 text-green-400 border border-green-500/30 px-6 py-2 rounded-lg hover:bg-green-500 hover:text-white transition-all font-bold">قبول</button>
+                            <button onclick="rejectStudent('${st.email}')" class="flex-1 md:flex-none bg-red-500/10 text-red-400 border border-red-500/30 px-6 py-2 rounded-lg hover:bg-red-500 hover:text-white transition-all font-bold">رفض</button>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500 text-center mt-10">❌ حدث خطأ في الاتصال بقاعدة البيانات.</p>';
+            }
+        }
+
+        async function updateStudentStatus(email, newStatus, reason = '') {
+            try {
+                const res = await fetch('/api/admin/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, studentEmail: email, newStatus, reason })
+                });
+                if (res.ok) { fetchPendingRequests(); fetchStats(); }
+            } catch (err) { alert("مشكلة في الاتصال بالسيرفر"); }
+        }
+
+        function rejectStudent(email) {
+            const reason = prompt("اكتب سبب الرفض (سيظهر للطالب):");
+            if (reason !== null) updateStudentStatus(email, 'rejected', reason);
+        }
+
+        // =====================================
+        // لوجيك تبديل نوع المحتوى
+        // =====================================
+        function toggleContentFields() {
+            const type = document.getElementById('contentType').value;
+            if (type === 'point') {
+                document.getElementById('pointField').classList.remove('hidden');
+                document.getElementById('questionFields').classList.add('hidden');
+            } else {
+                document.getElementById('pointField').classList.add('hidden');
+                document.getElementById('questionFields').classList.remove('hidden');
+            }
+        }
+
+        // =====================================
+        // إرسال المحتوى للسيرفر
+        // =====================================
+        document.getElementById('contentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveContentBtn');
+            const msg = document.getElementById('contentMsg');
+            btn.innerText = "جاري الحفظ..."; btn.disabled = true;
+
+            const grade = document.getElementById('contentGrade').value;
+            const type = document.getElementById('contentType').value;
+            
+            let payload = { role: user.role, grade: grade, type: type };
+            if (type === 'point') payload.pointText = document.getElementById('pointText').value;
+            else {
+                payload.questionText = document.getElementById('questionText').value;
+                payload.questionHint = document.getElementById('questionHint').value;
+            }
+
+            try {
+                const res = await fetch('/api/admin/add-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    msg.innerText = "✅ تم إضافة المحتوى للدفعة بنجاح!";
+                    msg.className = "text-green-400 text-sm text-center block mt-2";
+                    document.getElementById('pointText').value = '';
+                    document.getElementById('questionText').value = '';
+                    document.getElementById('questionHint').value = '';
+                } else throw new Error();
+            } catch (err) {
+                msg.innerText = "❌ حدث خطأ أثناء الحفظ.";
+                msg.className = "text-red-400 text-sm text-center block mt-2";
+            } finally {
+                btn.innerText = "حفظ ونشر للطلاب"; btn.disabled = false;
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        });
+
+        // =====================================
+        // إرسال النقاط للسيرفر
+        // =====================================
+        document.getElementById('pointsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('savePointsBtn');
+            const msg = document.getElementById('pointsMsg');
+            btn.innerText = "جاري التحديث..."; btn.disabled = true;
+
+            const email = document.getElementById('studentEmail').value;
+            const points = parseInt(document.getElementById('pointsAmount').value);
+
+            try {
+                const res = await fetch('/api/admin/update-points', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, studentEmail: email, points: points })
+                });
+                if (res.ok) {
+                    msg.innerText = "✅ تم تحديث نقاط الطالب بنجاح!";
+                    msg.className = "text-green-400 text-sm text-center block mt-2";
+                    document.getElementById('pointsForm').reset();
+                } else throw new Error();
+            } catch (err) {
+                msg.innerText = "❌ حدث خطأ، تأكد من إيميل الطالب.";
+                msg.className = "text-red-400 text-sm text-center block mt-2";
+            } finally {
+                btn.innerText = "تحديث الدرجات"; btn.disabled = false;
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        });
+
+        // التبديل بين التابات
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
             document.getElementById(`tab-${tabId}`).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('active');
+
+            if(tabId === 'requests') fetchPendingRequests();
+            if(tabId === 'dashboard') fetchStats();
         }
 
-        // دالة تسجيل الخروج
+        fetchStats();
+
         function logout() {
             localStorage.removeItem('dahih_user');
             window.location.href = "/logina.html";
@@ -128,4 +335,3 @@
     </script>
 </body>
 </html>
-
