@@ -20,7 +20,6 @@
             border: 1px solid rgba(255, 255, 255, 0.1); 
         }
 
-        /* أنيميشن النجاح */
         @keyframes success-pop {
             0% { transform: scale(0.9); opacity: 0; }
             50% { transform: scale(1.05); }
@@ -28,7 +27,6 @@
         }
         .animate-success { animation: success-pop 0.4s ease-out forwards; }
 
-        /* أنيميشن الفشل (اهتزاز) */
         @keyframes error-shake {
             0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-8px); }
@@ -42,12 +40,7 @@
             transform: translateY(-2px);
         }
         input, select { transition: all 0.3s ease; }
-        
-        /* تخصيص الـ Select ليناسب التصميم المظلم */
-        select option {
-            background-color: #0f172a;
-            color: white;
-        }
+        select option { background-color: #0f172a; color: white; }
     </style>
 </head>
 <body class="bg-animated text-white min-h-screen p-4 md:p-8 flex items-center justify-center">
@@ -151,24 +144,9 @@
             gradeSelect.innerHTML = '';
             
             const grades = {
-                primary: [
-                    "الصف الأول الابتدائي", 
-                    "الصف الثاني الابتدائي", 
-                    "الصف الثالث الابتدائي", 
-                    "الصف الرابع الابتدائي", 
-                    "الصف الخامس الابتدائي", 
-                    "الصف السادس الابتدائي"
-                ],
-                preparatory: [
-                    "الصف الأول الإعدادي", 
-                    "الصف الثاني الإعدادي", 
-                    "الصف الثالث الإعدادي"
-                ],
-                secondary: [
-                    "الصف الأول الثانوي", 
-                    "الصف الثاني الثانوي", 
-                    "الصف الثالث الثانوي"
-                ]
+                primary: ["الصف الأول الابتدائي", "الصف الثاني الابتدائي", "الصف الثالث الابتدائي", "الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"],
+                preparatory: ["الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"],
+                secondary: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"]
             };
 
             if (grades[level]) {
@@ -187,7 +165,6 @@
             const msg = document.getElementById('msg');
             const msgContainer = document.getElementById('msgContainer');
             
-            // إعادة ضبط الحالة قبل البدء
             msgContainer.classList.add('hidden');
             msgContainer.classList.remove('animate-success', 'animate-error');
 
@@ -195,7 +172,7 @@
             const confirmPass = document.getElementById('confirmPass').value;
 
             if (pass !== confirmPass) {
-                msg.innerText = "❌ كلمات المرور غير متطابقة!";
+                msg.innerText = "كلمات المرور غير متطابقة!";
                 msg.className = "p-4 rounded-xl font-bold text-center text-sm text-red-400 bg-red-400/10 border border-red-500/20";
                 msgContainer.classList.remove('hidden');
                 msgContainer.classList.add('animate-error');
@@ -233,20 +210,20 @@
                 if (!response.ok) { throw new Error(result.message || "فشل التسجيل"); }
 
                 // حالة النجاح
-                msg.innerText = "✅ تم إنشاء حسابك بنجاح";
+                msg.innerText = "تم انشاء حسابك بنجاح";
                 msg.className = "p-4 rounded-xl font-bold text-center text-sm text-green-400 bg-green-400/10 border border-green-500/20";
                 msgContainer.classList.remove('hidden');
                 msgContainer.classList.add('animate-success');
                 
-                btn.innerText = "تم بنجاح ✓";
+                btn.innerText = "تم بنجاح";
                 btn.classList.add('bg-green-500', 'text-white');
                 btn.classList.remove('bg-yellow-500', 'text-black');
 
-                setTimeout(() => { window.location.href = "/"; }, 2000);
+                // تحويل لصفحة logina.html بعد ثانية ونص
+                setTimeout(() => { window.location.href = "/logina.html"; }, 1500);
 
             } catch (err) {
-                // حالة الفشل
-                msg.innerText = "❌ " + err.message;
+                msg.innerText = err.message;
                 msg.className = "p-4 rounded-xl font-bold text-center text-sm text-red-400 bg-red-400/10 border border-red-500/20";
                 msgContainer.classList.remove('hidden');
                 msgContainer.classList.add('animate-error');
