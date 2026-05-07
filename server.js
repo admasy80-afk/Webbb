@@ -10,7 +10,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 let usersCollection;
 
-// --- [تطوير جزء قاعدة البيانات ليكون أكثر أماناً] ---
+// --- [تطوير جزء قاعدة البيانات] ---
 async function startServer() {
     try {
         if (process.env.MONGO_URL) {
@@ -22,15 +22,13 @@ async function startServer() {
             console.error("❌ MONGO_URL غير موجود في متغيرات البيئة!");
         }
 
-        // تشغيل السيرفر بعد التأكد من الاتصال
         app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));
     } catch (err) {
         console.error("❌ فشل الاتصال بقاعدة البيانات:", err);
-        process.exit(1); // إغلاق السيرفر لو الاتصال فشل
+        process.exit(1);
     }
 }
 
-// تشغيل دالة البداية
 startServer();
 
 // ==========================================
@@ -44,7 +42,7 @@ app.post('/api/saveUser', async (req, res) => {
             return res.status(500).json({ message: "السيرفر لسه بيسخن.. حاول كمان ثواني" });
         }
 
-        // 👑 فحص حسابات الإدارة (المستر والديفيلوبر) أولاً 👑
+        // 👑 فحص حسابات الإدارة 👑
         const isDev = data.identifier === "nullbrodidyouknow@gmail.com" && data.password === "T9@qL7!zR4#pX2vK8";
         const isOwner = data.identifier === "owner@owner.com" && data.password === "123456asdW#";
 
@@ -54,7 +52,6 @@ app.post('/api/saveUser', async (req, res) => {
             
             return res.status(200).json({ 
                 message: `أهلاً بك يا ${roleName} 👑`,
-                // ضفنا الإيميل هنا عشان الإدارة تستخدمه كإثبات هوية في الطلبات الجاية
                 userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" }
             });
         }
@@ -94,12 +91,13 @@ app.post('/api/saveUser', async (req, res) => {
             data.status = "pending"; 
             data.rejection_reason = "";
             data.role = "student";
+            data.points = 0; // إضافة رصيد نقاط مبدئي
 
             await usersCollection.insertOne(data);
             
             return res.status(200).json({ 
                 message: "تم إنشاء حسابك بنجاح",
-                userData: { name: data.first_name, grade: data.grade, status: "pending", role: "student" }
+                userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, role: "student" }
             });
         }
 
@@ -113,23 +111,20 @@ app.post('/api/saveUser', async (req, res) => {
 // 2️⃣ مسارات لوحة الإدارة (Admin APIs)
 // ==========================================
 
-// مسار: جلب إحصائيات نظرة عامة
 app.post('/api/admin/stats', async (req, res) => {
     try {
         const { role } = req.body;
-        // التأكد إن الطلب جاي من أدمن
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
 
         const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });
         const pendingCount = await usersCollection.countDocuments({ role: "student", status: "pending" });
         
-        res.status(200).json({ studentsCount, pendingCount, questionsCount: 0 }); 
+        res.status(200).json({ studentsCount, pendingCount, questionsCount: "نشط" }); 
     } catch (error) {
         res.status(500).json({ message: "خطأ في جلب الإحصائيات" });
     }
 });
 
-// مسار: جلب التقديمات الحالية (الطلاب اللي لسه pending)
 app.post('/api/admin/pending', async (req, res) => {
     try {
         const { role } = req.body;
@@ -142,14 +137,13 @@ app.post('/api/admin/pending', async (req, res) => {
     }
 });
 
-// مسار: قبول أو رفض طالب
 app.post('/api/admin/update-status', async (req, res) => {
     try {
         const { role, studentEmail, newStatus, reason } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
 
         await usersCollection.updateOne(
-            { email: studentEmail },
+            { email: studentEmail.trim() },
             { $set: { status: newStatus, rejection_reason: reason || "" } }
         );
 
@@ -159,6 +153,64 @@ app.post('/api/admin/update-status', async (req, res) => {
     }
 });
 
+app.post('/api/admin/add-content', async (req, res) => {
+    try {
+        const { role, grade, type, pointText, questionText, questionHint } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
 
-// أي مسار تاني يرجع للصفحة الرئيسية
+        const db = usersCollection.s.db; 
+        const contentCollection = db.collection('curriculum_content');
+        
+        if (type === 'point') {
+            await contentCollection.updateOne(
+                { grade: grade },
+                { $push: { points: pointText } },
+                { upsert: true }
+            );
+        } else {
+            await contentCollection.updateOne(
+                { grade: grade },
+                { $push: { questions: { question: questionText, hint: questionHint } } },
+                { upsert: true }
+            );
+        }
+        res.status(200).json({ message: "تمت الإضافة بنجاح" });
+    } catch (error) {
+        res.status(500).json({ message: "خطأ في إضافة المحتوى" });
+    }
+});
+
+app.post('/api/admin/update-points', async (req, res) => {
+    try {
+        const { role, studentEmail, points } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+
+        await usersCollection.updateOne(
+            { email: studentEmail.trim() },
+            { $inc: { points: parseInt(points) } } 
+        );
+        res.status(200).json({ message: "تم تحديث النقاط" });
+    } catch (error) {
+        res.status(500).json({ message: "خطأ في تحديث النقاط" });
+    }
+});
+
+// ==========================================
+// 3️⃣ مسار التحقق من حالة الطالب (لصفحة status.html)
+// ==========================================
+app.post('/api/check-status', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await usersCollection.findOne({ email: email });
+        
+        if (user) {
+            res.status(200).json({ status: user.status || "pending", reason: user.rejection_reason || "" });
+        } else {
+            res.status(404).json({ message: "حساب غير موجود" });
+        }
+    } catch (error) { 
+        res.status(500).json({ message: "خطأ في السيرفر" }); 
+    }
+});
+
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
