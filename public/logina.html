@@ -172,14 +172,22 @@ form.addEventListener('submit', async (event) => {
         btn.innerText = "تم بنجاح";
         btn.style.backgroundColor = "#22c55e";
 
-        // حفظ بيانات الطالب في المتصفح عشان الـ dashboard تقرأها
+        // حفظ بيانات الطالب في المتصفح
         if (result.userData) {
             localStorage.setItem('dahih_user', JSON.stringify(result.userData));
         }
 
-        // تحويل لصفحة لوحة التحكم
+        // 🔥 التوجيه الذكي بناءً على الدور والحالة 🔥
         setTimeout(() => {
-            window.location.href = "/dashboard.html";
+            const user = result.userData;
+            
+            if (user.role === 'dev' || user.role === 'owner') {
+                window.location.href = "/dashboard.html"; 
+            } else if (user.status === 'pending' || user.status === 'rejected') {
+                window.location.href = "/status.html";
+            } else {
+                window.location.href = "/dashboard.html";
+            }
         }, 1000);
 
     } catch (error) {
