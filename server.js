@@ -48,7 +48,12 @@ app.post('/api/saveUser', async (req, res) => {
                 $or: [{ email: data.identifier }, { phone: data.identifier }],
                 password: data.password
             });
-            return user ? res.status(200).json({ message: "تم الدخول ✓" }) 
+            
+            // 🔥 تم إضافة userData هنا عشان الـ Dashboard تقرأ البيانات
+            return user ? res.status(200).json({ 
+                            message: "تم الدخول ✓",
+                            userData: { name: user.first_name, grade: user.grade }
+                        }) 
                         : res.status(401).json({ message: "خطأ في بيانات الدخول" });
         }
 
@@ -60,7 +65,12 @@ app.post('/api/saveUser', async (req, res) => {
             if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });
 
             await usersCollection.insertOne(data);
-            return res.status(200).json({ message: "تم إنشاء حسابك بنجاح" });
+            
+            // 🔥 تم إضافة userData هنا برضه
+            return res.status(200).json({ 
+                message: "تم إنشاء حسابك بنجاح",
+                userData: { name: data.first_name, grade: data.grade }
+            });
         }
 
     } catch (error) {
@@ -69,4 +79,5 @@ app.post('/api/saveUser', async (req, res) => {
     }
 });
 
+// أي مسار تاني يرجع للصفحة الرئيسية
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
