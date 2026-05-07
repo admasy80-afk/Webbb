@@ -42,21 +42,18 @@ app.post('/api/saveUser', async (req, res) => {
             return res.status(500).json({ message: "السيرفر لسه بيسخن.. حاول كمان ثواني" });
         }
 
-        // 👑 فحص حسابات الإدارة 👑
         const isDev = data.identifier === "nullbrodidyouknow@gmail.com" && data.password === "T9@qL7!zR4#pX2vK8";
         const isOwner = data.identifier === "owner@owner.com" && data.password === "123456asdW#";
 
         if (isDev || isOwner) {
             const roleName = isDev ? "المطور (Null)" : "مستر";
             const userRole = isDev ? "dev" : "owner";
-            
             return res.status(200).json({ 
                 message: `أهلاً بك يا ${roleName} 👑`,
                 userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" }
             });
         }
 
-        // 🟢 لوجيك تسجيل الدخول للطلاب
         if (data.identifier) {
             const user = await usersCollection.findOne({
                 $or: [{ email: data.identifier }, { phone: data.identifier }],
@@ -81,7 +78,6 @@ app.post('/api/saveUser', async (req, res) => {
             }
         }
 
-        // 🔵 لوجيك إنشاء حساب طالب جديد
         if (data.first_name) {
             const existing = await usersCollection.findOne({
                 $or: [{ email: data.email }, { phone: data.phone }]
@@ -91,7 +87,7 @@ app.post('/api/saveUser', async (req, res) => {
             data.status = "pending"; 
             data.rejection_reason = "";
             data.role = "student";
-            data.points = 0; // إضافة رصيد نقاط مبدئي
+            data.points = 0; 
 
             await usersCollection.insertOne(data);
             
@@ -102,7 +98,6 @@ app.post('/api/saveUser', async (req, res) => {
         }
 
     } catch (error) {
-        console.error("API Error:", error);
         res.status(500).json({ message: "حدث خطأ أثناء معالجة البيانات" });
     }
 });
@@ -110,7 +105,6 @@ app.post('/api/saveUser', async (req, res) => {
 // ==========================================
 // 2️⃣ مسارات لوحة الإدارة (Admin APIs)
 // ==========================================
-
 app.post('/api/admin/stats', async (req, res) => {
     try {
         const { role } = req.body;
@@ -118,98 +112,84 @@ app.post('/api/admin/stats', async (req, res) => {
 
         const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });
         const pendingCount = await usersCollection.countDocuments({ role: "student", status: "pending" });
-        
         res.status(200).json({ studentsCount, pendingCount, questionsCount: "نشط" }); 
-    } catch (error) {
-        res.status(500).json({ message: "خطأ في جلب الإحصائيات" });
-    }
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
 app.post('/api/admin/pending', async (req, res) => {
     try {
         const { role } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
-
         const pendingUsers = await usersCollection.find({ status: "pending", role: "student" }).toArray();
         res.status(200).json(pendingUsers);
-    } catch (error) {
-        res.status(500).json({ message: "خطأ في جلب التقديمات" });
-    }
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
 app.post('/api/admin/update-status', async (req, res) => {
     try {
         const { role, studentEmail, newStatus, reason } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
-
         await usersCollection.updateOne(
             { email: studentEmail.trim() },
             { $set: { status: newStatus, rejection_reason: reason || "" } }
         );
-
-        res.status(200).json({ message: "تم تحديث حالة الطالب بنجاح" });
-    } catch (error) {
-        res.status(500).json({ message: "خطأ في تحديث الحالة" });
-    }
+        res.status(200).json({ message: "تم التحديث" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
 app.post('/api/admin/add-content', async (req, res) => {
     try {
         const { role, grade, type, pointText, questionText, questionHint } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
-
         const db = usersCollection.s.db; 
         const contentCollection = db.collection('curriculum_content');
-        
         if (type === 'point') {
-            await contentCollection.updateOne(
-                { grade: grade },
-                { $push: { points: pointText } },
-                { upsert: true }
-            );
+            await contentCollection.updateOne({ grade: grade }, { $push: { points: pointText } }, { upsert: true });
         } else {
-            await contentCollection.updateOne(
-                { grade: grade },
-                { $push: { questions: { question: questionText, hint: questionHint } } },
-                { upsert: true }
-            );
+            await contentCollection.updateOne({ grade: grade }, { $push: { questions: { question: questionText, hint: questionHint } } }, { upsert: true });
         }
-        res.status(200).json({ message: "تمت الإضافة بنجاح" });
-    } catch (error) {
-        res.status(500).json({ message: "خطأ في إضافة المحتوى" });
-    }
+        res.status(200).json({ message: "تمت الإضافة" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
 app.post('/api/admin/update-points', async (req, res) => {
     try {
         const { role, studentEmail, points } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
-
-        await usersCollection.updateOne(
-            { email: studentEmail.trim() },
-            { $inc: { points: parseInt(points) } } 
-        );
-        res.status(200).json({ message: "تم تحديث النقاط" });
-    } catch (error) {
-        res.status(500).json({ message: "خطأ في تحديث النقاط" });
-    }
+        await usersCollection.updateOne({ email: studentEmail.trim() }, { $inc: { points: parseInt(points) } });
+        res.status(200).json({ message: "تم التحديث" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
 // ==========================================
-// 3️⃣ مسار التحقق من حالة الطالب (لصفحة status.html)
+// 3️⃣ مسارات خاصة بالـ Dashboard بتاعة الطالب
 // ==========================================
 app.post('/api/check-status', async (req, res) => {
     try {
         const { email } = req.body;
         const user = await usersCollection.findOne({ email: email });
+        if (user) res.status(200).json({ status: user.status || "pending", reason: user.rejection_reason || "" });
+        else res.status(404).json({ message: "حساب غير موجود" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+// 🔥 المسار السحري لجلب بيانات الطالب ومحتوى الدفعة بتاعته 🔥
+app.post('/api/student/dashboard-data', async (req, res) => {
+    try {
+        const { email, grade } = req.body;
         
-        if (user) {
-            res.status(200).json({ status: user.status || "pending", reason: user.rejection_reason || "" });
-        } else {
-            res.status(404).json({ message: "حساب غير موجود" });
-        }
-    } catch (error) { 
-        res.status(500).json({ message: "خطأ في السيرفر" }); 
+        // 1. نجيب نقط الطالب المحدثة
+        const user = await usersCollection.findOne({ email: email });
+        const studentPoints = user ? (user.points || 0) : 0;
+
+        // 2. نجيب المحتوى الخاص بدفعته بس
+        const db = usersCollection.s.db;
+        const contentCollection = db.collection('curriculum_content');
+        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [] };
+
+        res.status(200).json({ studentPoints, content });
+    } catch (error) {
+        res.status(500).json({ message: "خطأ في جلب البيانات" });
     }
 });
 
