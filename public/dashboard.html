@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
     <title>لوحة الطالب | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
@@ -67,8 +71,8 @@
                             أهم النقاط في المنهج
                         </h2>
                     </div>
-                    <div class="glass-panel rounded-2xl p-6 border-r-4 border-r-blue-500 min-h-[150px] flex items-center justify-center">
-                        <p class="text-gray-500 text-sm">سيتم عرض النقاط الهامة هنا قريباً.</p>
+                    <div id="pointsContainer" class="glass-panel rounded-2xl p-6 border-r-4 border-r-blue-500 min-h-[150px] flex flex-col justify-center">
+                        <p class="text-gray-500 text-sm text-center animate-pulse">جاري تحميل النقاط الهامة...</p>
                     </div>
                 </section>
 
@@ -78,9 +82,9 @@
                             أهم الأسئلة (متوقعة)
                         </h2>
                     </div>
-                    <div class="space-y-4">
+                    <div id="questionsContainer" class="space-y-4">
                        <div class="glass-panel rounded-2xl p-8 flex items-center justify-center">
-                           <p class="text-gray-500 text-sm">لا توجد أسئلة مضافة حالياً.</p>
+                           <p class="text-gray-500 text-sm animate-pulse">جاري تحميل الأسئلة...</p>
                        </div>
                     </div>
                 </section>
@@ -90,32 +94,20 @@
             <div class="space-y-8">
                 
                 <section class="glass-panel rounded-3xl p-6 relative overflow-hidden">
-                    <h2 class="text-xl font-bold text-white mb-6">ترتيبك الحالي</h2>
-                    
-                    <div class="bg-black/30 rounded-2xl p-4 mb-4 flex items-center justify-between border border-white/5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-black text-lg">
-                                --
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-sm">اختبار الفصل الأول</h4>
-                                <p class="text-xs text-gray-500">لم يتم تقييمك بعد</p>
-                            </div>
-                        </div>
-                        <div class="text-left">
-                            <span class="block text-xl font-black text-gray-500">0%</span>
-                        </div>
-                    </div>
+                    <h2 class="text-xl font-bold text-white mb-6">مستواك الحالي</h2>
 
                     <div class="bg-black/30 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-black text-lg">
-                                --
+                            <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-black text-lg">
+                                👑
                             </div>
                             <div>
-                                <h4 class="font-bold text-sm">على مستوى الدفعة</h4>
-                                <p class="text-xs text-gray-500">مجموع النقاط: 0</p>
+                                <h4 class="font-bold text-sm">مجموع النقاط</h4>
+                                <p class="text-xs text-green-400">استمر في التقدم!</p>
                             </div>
+                        </div>
+                        <div class="text-left">
+                            <span id="studentPointsDisplay" class="block text-xl font-black text-white">0</span>
                         </div>
                     </div>
                     
@@ -139,27 +131,80 @@
     </main>
 
     <script>
-        // التأكد من تسجيل الدخول وجلب البيانات
         const userDataStr = localStorage.getItem('dahih_user');
         
         if (!userDataStr) {
-            // طرد المستخدم لو مش مسجل دخول
-            window.location.href = "/logina.html";
+            window.location.replace("/logina.html");
         } else {
-            // وضع اسم الطالب وصفه الدراسي في الصفحة
             const userData = JSON.parse(userDataStr);
-            
-            // التأكد من إن الأسماء موجودة، لو فاضية نحط اسم افتراضي
             const firstName = userData.name ? userData.name.split(' ')[0] : "يا دحيح";
             
             document.getElementById('studentName').innerText = firstName;
             document.getElementById('studentGrade').innerText = userData.grade || "الصف غير محدد";
+
+            // جلب الداتا المخصصة للدفعة دي من السيرفر
+            fetchDashboardData(userData.email, userData.grade);
         }
 
-        // دالة تسجيل الخروج
+        async function fetchDashboardData(email, grade) {
+            try {
+                const res = await fetch('/api/student/dashboard-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, grade: grade })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // 1. تحديث النقاط
+                    document.getElementById('studentPointsDisplay').innerText = data.studentPoints || 0;
+
+                    // 2. تحديث النقاط الهامة في المنهج
+                    const pContainer = document.getElementById('pointsContainer');
+                    if (data.content.points && data.content.points.length > 0) {
+                        let pHTML = '<ul class="space-y-4 text-gray-300 text-sm md:text-base font-medium">';
+                        data.content.points.forEach(point => {
+                            pHTML += `
+                            <li class="flex items-start gap-3">
+                                <span class="text-blue-400 mt-1">▪</span>
+                                <p>${point}</p>
+                            </li>`;
+                        });
+                        pHTML += '</ul>';
+                        pContainer.innerHTML = pHTML;
+                        pContainer.classList.remove('justify-center');
+                    } else {
+                        pContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">لم يتم إضافة نقاط هامة لهذه الدفعة بعد.</p>';
+                    }
+
+                    // 3. تحديث الأسئلة المتوقعة
+                    const qContainer = document.getElementById('questionsContainer');
+                    if (data.content.questions && data.content.questions.length > 0) {
+                        let qHTML = '';
+                        data.content.questions.forEach(q => {
+                            qHTML += `
+                            <div class="glass-panel rounded-2xl p-5 card-hover transition-all cursor-pointer mb-4">
+                                <h3 class="font-bold text-lg mb-2 text-white">س: ${q.question}</h3>
+                                <p class="text-gray-400 text-sm font-light mt-2 border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold">ج: </span>${q.hint}</p>
+                            </div>`;
+                        });
+                        qContainer.innerHTML = qHTML;
+                    } else {
+                        qContainer.innerHTML = `
+                        <div class="glass-panel rounded-2xl p-8 flex items-center justify-center">
+                           <p class="text-gray-500 text-sm">لا توجد أسئلة مضافة حالياً.</p>
+                        </div>`;
+                    }
+                }
+            } catch (err) {
+                console.error("فشل جلب البيانات:", err);
+            }
+        }
+
         function logout() {
             localStorage.removeItem('dahih_user');
-            window.location.href = "/logina.html";
+            window.location.replace("/logina.html");
         }
     </script>
 </body>
