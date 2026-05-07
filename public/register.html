@@ -38,62 +38,109 @@
 
         input:focus, select:focus {
             border-color: #eab308 !important;
-            box-shadow: 0 0 15px rgba(234, 179, 8, 0.2);
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.15);
             transform: translateY(-2px);
         }
         input, select { transition: all 0.3s ease; }
+        
+        /* تخصيص الـ Select ليناسب التصميم المظلم */
+        select option {
+            background-color: #0f172a;
+            color: white;
+        }
     </style>
 </head>
-<body class="bg-animated text-white min-h-screen p-4 md:p-10 flex items-center justify-center">
+<body class="bg-animated text-white min-h-screen p-4 md:p-8 flex items-center justify-center">
 
-    <div class="glass w-full max-w-2xl rounded-[2.5rem] p-6 md:p-10 shadow-2xl my-10">
+    <div class="glass w-full max-w-3xl rounded-[2rem] p-8 md:p-12 shadow-2xl my-8">
+        
         <div class="text-center mb-10">
-            <h1 class="text-4xl font-black text-yellow-500 tracking-tight">طلب إنشاء حساب جديد</h1>
-            <p class="text-gray-400 mt-3 text-base">يرجى إدخال البيانات المطلوبة بدقة لإتمام عملية التسجيل</p>
+            <h1 class="text-3xl md:text-4xl font-black text-yellow-500 tracking-tight mb-2">طلب إنشاء حساب جديد</h1>
+            <p class="text-gray-400 text-sm md:text-base">يرجى إدخال البيانات المطلوبة بدقة لإتمام عملية التسجيل</p>
         </div>
 
-        <form id="regForm" class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <input type="text" id="fName" placeholder="الاسم الأول" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
-            <input type="text" id="sName" placeholder="الاسم الثاني" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
-            <input type="text" id="tName" placeholder="الاسم الثالث" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
-            <input type="text" id="lName" placeholder="الاسم الأخير" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none placeholder-gray-500">
-
-            <input type="tel" id="phone" placeholder="رقم الهاتف" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
-            <input type="tel" id="pPhone" placeholder="رقم هاتف ولي الأمر" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
-
-            <select id="gender" required class="bg-black/50 border border-white/10 rounded-2xl p-4 focus:outline-none text-gray-300">
-                <option value="" disabled selected>الجنس</option>
-                <option value="ذكر">ذكر</option>
-                <option value="أنثى">أنثى</option>
-            </select>
-
-            <select id="level" required onchange="updateGrades()" class="bg-black/50 border border-white/10 rounded-2xl p-4 focus:outline-none text-gray-300">
-                <option value="" disabled selected>المرحلة الدراسية</option>
-                <option value="primary">ابتدائي</option>
-                <option value="preparatory">إعدادي</option>
-                <option value="secondary">ثانوي</option>
-            </select>
-
-            <select id="grade" required class="bg-black/50 border border-white/10 rounded-2xl p-4 focus:outline-none md:col-span-2 text-gray-300">
-                <option value="" disabled selected>اختر المرحلة الدراسية</option>
-            </select>
-
-            <input type="email" id="email" placeholder="البريد الإلكتروني" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none md:col-span-2" dir="ltr">
+        <form id="regForm" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
             
-            <input type="password" id="pass" placeholder="كلمة المرور" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
-            <input type="password" id="confirmPass" placeholder="تأكيد كلمة المرور" required class="bg-black/40 border border-white/10 rounded-2xl p-4 focus:outline-none" dir="ltr">
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">الاسم الأول</label>
+                <input type="text" id="fName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">الاسم الثاني</label>
+                <input type="text" id="sName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">الاسم الثالث</label>
+                <input type="text" id="tName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">الاسم الأخير</label>
+                <input type="text" id="lName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors">
+            </div>
 
-            <button type="submit" id="subBtn" class="md:col-span-2 bg-yellow-500 text-black font-black text-lg py-5 rounded-2xl hover:bg-yellow-400 transition transform hover:scale-[1.02] mt-4 shadow-xl shadow-yellow-500/10">
-                تأكيد إنشاء الحساب
-            </button>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">رقم الهاتف</label>
+                <input type="tel" id="phone" placeholder="01XXXXXXXXX" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors placeholder-gray-600 text-right" dir="ltr">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">رقم هاتف ولي الأمر</label>
+                <input type="tel" id="pPhone" placeholder="01XXXXXXXXX" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors placeholder-gray-600 text-right" dir="ltr">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">الجنس</label>
+                <select id="gender" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors appearance-none cursor-pointer">
+                    <option value="" disabled selected>اختر الجنس</option>
+                    <option value="ذكر">ذكر</option>
+                    <option value="أنثى">أنثى</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">المرحلة الدراسية</label>
+                <select id="level" required onchange="updateGrades()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors appearance-none cursor-pointer">
+                    <option value="" disabled selected>اختر المرحلة</option>
+                    <option value="primary">ابتدائي</option>
+                    <option value="preparatory">إعدادي</option>
+                    <option value="secondary">ثانوي</option>
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">الصف الدراسي</label>
+                <select id="grade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors appearance-none cursor-pointer">
+                    <option value="" disabled selected>يرجى اختيار المرحلة الدراسية أولاً</option>
+                </select>
+            </div>
+
+            <div class="md:col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">البريد الإلكتروني</label>
+                <input type="email" id="email" placeholder="example@mail.com" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors placeholder-gray-600 text-right" dir="ltr">
+            </div>
             
-            <div class="md:col-span-2 text-center mt-4">
-                <a href="/login.html" class="text-gray-400 text-sm hover:text-yellow-500 transition-all font-medium border-b border-transparent hover:border-yellow-500 pb-1">لديك حساب بالفعل؟ سجل دخولك الآن</a>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">كلمة المرور</label>
+                <input type="password" id="pass" placeholder="••••••••" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors placeholder-gray-600 text-right" dir="ltr">
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">تأكيد كلمة المرور</label>
+                <input type="password" id="confirmPass" placeholder="••••••••" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 focus:outline-none text-white transition-colors placeholder-gray-600 text-right" dir="ltr">
+            </div>
+
+            <div class="md:col-span-2 mt-4">
+                <button type="submit" id="subBtn" class="w-full bg-yellow-500 text-black font-bold text-lg py-4 rounded-xl hover:bg-yellow-400 transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.2)] transform hover:scale-[1.01]">
+                    تأكيد وإنشاء الحساب
+                </button>
+            </div>
+            
+            <div class="md:col-span-2 text-center mt-2">
+                <p class="text-gray-400 text-sm">لديك حساب بالفعل؟ 
+                    <a href="/logina.html" class="text-yellow-500 font-bold hover:underline">سجل دخولك الآن</a>
+                </p>
             </div>
         </form>
         
         <div id="msgContainer" class="mt-6 hidden">
-            <p id="msg" class="p-4 rounded-2xl font-bold text-center"></p>
+            <p id="msg" class="p-4 rounded-xl font-bold text-center text-sm"></p>
         </div>
     </div>
 
@@ -104,9 +151,24 @@
             gradeSelect.innerHTML = '';
             
             const grades = {
-                primary: ["الصف الرابع الابتدائي", "الصف الخامس الابتدائي", "الصف السادس الابتدائي"],
-                preparatory: ["الصف الأول الإعدادي", "الصف الثاني الإعدادي", "الصف الثالث الإعدادي"],
-                secondary: ["الصف الأول الثانوي", "الصف الثاني الثانوي", "الصف الثالث الثانوي"]
+                primary: [
+                    "الصف الأول الابتدائي", 
+                    "الصف الثاني الابتدائي", 
+                    "الصف الثالث الابتدائي", 
+                    "الصف الرابع الابتدائي", 
+                    "الصف الخامس الابتدائي", 
+                    "الصف السادس الابتدائي"
+                ],
+                preparatory: [
+                    "الصف الأول الإعدادي", 
+                    "الصف الثاني الإعدادي", 
+                    "الصف الثالث الإعدادي"
+                ],
+                secondary: [
+                    "الصف الأول الثانوي", 
+                    "الصف الثاني الثانوي", 
+                    "الصف الثالث الثانوي"
+                ]
             };
 
             if (grades[level]) {
@@ -134,7 +196,7 @@
 
             if (pass !== confirmPass) {
                 msg.innerText = "❌ كلمات المرور غير متطابقة!";
-                msg.className = "p-4 rounded-2xl font-bold text-center text-red-400 bg-red-400/10";
+                msg.className = "p-4 rounded-xl font-bold text-center text-sm text-red-400 bg-red-400/10 border border-red-500/20";
                 msgContainer.classList.remove('hidden');
                 msgContainer.classList.add('animate-error');
                 return;
@@ -172,24 +234,25 @@
 
                 // حالة النجاح
                 msg.innerText = "✅ تم إنشاء حسابك بنجاح";
-                msg.className = "p-4 rounded-2xl font-bold text-center text-green-400 bg-green-400/10";
+                msg.className = "p-4 rounded-xl font-bold text-center text-sm text-green-400 bg-green-400/10 border border-green-500/20";
                 msgContainer.classList.remove('hidden');
                 msgContainer.classList.add('animate-success');
                 
                 btn.innerText = "تم بنجاح ✓";
-                btn.classList.add('bg-green-500');
+                btn.classList.add('bg-green-500', 'text-white');
+                btn.classList.remove('bg-yellow-500', 'text-black');
 
                 setTimeout(() => { window.location.href = "/"; }, 2000);
 
             } catch (err) {
                 // حالة الفشل
                 msg.innerText = "❌ " + err.message;
-                msg.className = "p-4 rounded-2xl font-bold text-center text-red-400 bg-red-400/10";
+                msg.className = "p-4 rounded-xl font-bold text-center text-sm text-red-400 bg-red-400/10 border border-red-500/20";
                 msgContainer.classList.remove('hidden');
                 msgContainer.classList.add('animate-error');
                 
                 btn.disabled = false;
-                btn.innerText = "حاول مرة أخرى";
+                btn.innerText = "تأكيد وإنشاء الحساب";
             }
         });
     </script>
