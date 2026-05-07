@@ -95,9 +95,14 @@ const errorMsg = document.getElementById('errorMessage');
 const successMsg = document.getElementById('successMessage');
 
 function setLoading(state) {
-    btn.innerText = state ? "جاري الحفظ..." : "تسجيل الدخول";
-    btn.disabled = state;
-    btn.style.opacity = state ? "0.7" : "1";
+    if (state) {
+        btn.innerText = "جاري التحقق...";
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+    } else {
+        btn.disabled = false;
+        btn.style.opacity = "1";
+    }
 }
 
 function showError(msg) {
@@ -131,6 +136,7 @@ function validate(identifier, password) {
 }
 
 form.addEventListener('submit', async (event) => {
+    // 🔥 السطر السحري عشان الصفحة ما ترسترش
     event.preventDefault();
 
     const identifier = document.getElementById('loginIdentifier').value.trim();
@@ -153,25 +159,33 @@ form.addEventListener('submit', async (event) => {
             body: JSON.stringify({ identifier, password })
         });
 
-        const result = await response.json().catch(() => ({}));
+        // استخدام text() لتفادي انهيار JSON في حال خطأ السيرفر
+        const text = await response.text();
+        let result = {};
+        try { 
+            result = text ? JSON.parse(text) : {}; 
+        } catch (e) { 
+            throw new Error("استجابة السيرفر غير صالحة"); 
+        }
 
         if (!response.ok) {
             throw new Error(result.message || "فشل تسجيل الدخول");
         }
 
+        // حالة النجاح
         showSuccess(result.message || "تم تسجيل الدخول بنجاح ✓");
-
-        btn.innerText = "تم ✓";
+        btn.innerText = "نجح ✓";
         btn.style.backgroundColor = "#22c55e";
 
-        // تحويل تلقائي بعد نجاح الحفظ بـ 800 مللي ثانية
+        // تحويل تلقائي لصفحة إنشاء الحساب أو الرئيسية
         setTimeout(() => {
             window.location.href = "/register.html";
-        }, 800);
+        }, 1000);
 
     } catch (error) {
+        // حالة الفشل
         showError(error.message);
-        btn.innerText = "تسجيل الدخول";
+        btn.innerText = "حاول مرة أخرى";
     } finally {
         setLoading(false);
     }
