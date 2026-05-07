@@ -182,7 +182,7 @@ form.addEventListener('submit', async (event) => {
             const user = result.userData;
             
             if (user.role === 'dev' || user.role === 'owner') {
-                window.location.href = "/dashboard.html"; 
+                window.location.href = "/admin.html"; // تم التعديل هنا للتوجه للوحة التحكم
             } else if (user.status === 'pending' || user.status === 'rejected') {
                 window.location.href = "/status.html";
             } else {
