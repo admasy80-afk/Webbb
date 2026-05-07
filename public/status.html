@@ -60,7 +60,7 @@
         </div>
 
         <div class="flex flex-col gap-3">
-            <button onclick="checkAgain()" class="w-full bg-white/5 border border-white/10 text-white font-bold py-3.5 rounded-xl hover:bg-white/10 transition-all">
+            <button id="refreshBtn" onclick="checkAgain()" class="w-full bg-white/5 border border-white/10 text-white font-bold py-3.5 rounded-xl hover:bg-white/10 transition-all">
                 تحديث الصفحة
             </button>
             <button onclick="logout()" class="w-full text-red-400 font-medium py-2 hover:text-red-300 transition-colors text-sm">
@@ -74,35 +74,70 @@
         const userDataStr = localStorage.getItem('dahih_user');
         
         if (!userDataStr) {
-            window.location.href = "/logina.html";
+            window.location.replace("/logina.html");
         } else {
             const user = JSON.parse(userDataStr);
             const firstName = user.name ? user.name.split(' ')[0] : "بطل";
+            
+            // أول ما الصفحة تفتح، يروح يكلم السيرفر يتأكد من الحالة الجديدة
+            checkStatusFromServer(user.email, firstName);
+        }
 
-            if (user.status === 'pending') {
-                document.getElementById('pendingSection').classList.remove('hidden');
-                document.getElementById('pendingName').innerText = firstName;
-            } else if (user.status === 'rejected') {
-                document.getElementById('rejectedSection').classList.remove('hidden');
-                document.getElementById('rejectedName').innerText = firstName;
-                if(user.reason && user.reason.trim() !== "") {
-                    document.getElementById('rejectionReason').innerText = user.reason;
+        async function checkStatusFromServer(email, name) {
+            const btn = document.getElementById('refreshBtn');
+            btn.innerText = "جاري التحقق من الإدارة...";
+            
+            try {
+                const res = await fetch('/api/check-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    
+                    // لو الإدارة قبلته، نعدل بياناته وندخله للداشبورد فوراً!
+                    if (data.status === 'accepted') {
+                        const user = JSON.parse(localStorage.getItem('dahih_user'));
+                        user.status = 'accepted';
+                        localStorage.setItem('dahih_user', JSON.stringify(user));
+                        window.location.replace("/dashboard.html");
+                        return;
+                    }
+
+                    // لو لسه قيد المراجعة أو مرفوض، نعرض له الواجهة المناسبة
+                    document.getElementById('pendingSection').classList.add('hidden');
+                    document.getElementById('rejectedSection').classList.add('hidden');
+
+                    if (data.status === 'pending') {
+                        document.getElementById('pendingSection').classList.remove('hidden');
+                        document.getElementById('pendingName').innerText = name;
+                    } else if (data.status === 'rejected') {
+                        document.getElementById('rejectedSection').classList.remove('hidden');
+                        document.getElementById('rejectedName').innerText = name;
+                        if(data.reason && data.reason.trim() !== "") {
+                            document.getElementById('rejectionReason').innerText = data.reason;
+                        }
+                    }
                 }
-            } else {
-                // لو الحساب مقبول ودخل بالغلط هنا يرجعه للداشبورد
-                window.location.href = "/dashboard.html";
+            } catch (err) {
+                console.error("خطأ في الاتصال");
+            } finally {
+                btn.innerText = "تحديث الصفحة";
             }
         }
 
         function checkAgain() {
-            window.location.reload();
+            const user = JSON.parse(localStorage.getItem('dahih_user'));
+            const firstName = user.name ? user.name.split(' ')[0] : "بطل";
+            checkStatusFromServer(user.email, firstName);
         }
 
         function logout() {
             localStorage.removeItem('dahih_user');
-            window.location.href = "/logina.html";
+            window.location.replace("/logina.html");
         }
     </script>
 </body>
 </html>
-
