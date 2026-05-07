@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم | منصة الدحيح</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
+        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
+        .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-right: 4px solid #eab308; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
+
+    <aside class="w-64 glass-panel h-full flex flex-col border-l border-white/10 shrink-0">
+        <div class="p-6 border-b border-white/10">
+            <div class="text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
+            <p class="text-xs text-gray-400 mt-1">لوحة التحكم</p>
+        </div>
+        
+        <nav class="flex-grow py-4 flex flex-col gap-2">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">
+                نظرة عامة
+            </button>
+            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">
+                التقديمات الحالية
+            </button>
+            <button onclick="switchTab('students')" id="btn-students" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">
+                درجات الطلاب
+            </button>
+            <button onclick="switchTab('content')" id="btn-content" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">
+                المحتوى والأسئلة
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <button onclick="logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3 rounded-xl text-sm font-bold transition-colors">
+                تسجيل الخروج
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-grow h-full overflow-y-auto p-8 relative">
+        <div class="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+
+        <div id="tab-dashboard" class="tab-content active">
+            <h1 class="text-3xl font-bold mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-500">
+                    <p class="text-gray-400 text-sm mb-1">الطلاب المسجلين</p>
+                    <h3 class="text-3xl font-black">--</h3>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-blue-500">
+                    <p class="text-gray-400 text-sm mb-1">تقديمات قيد المراجعة</p>
+                    <h3 class="text-3xl font-black text-blue-400">--</h3>
+                </div>
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-green-500">
+                    <p class="text-gray-400 text-sm mb-1">الأسئلة المضافة</p>
+                    <h3 class="text-3xl font-black text-green-400">--</h3>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-requests" class="tab-content">
+            <h1 class="text-3xl font-bold mb-2">التقديمات الحالية</h1>
+            <p class="text-gray-400 mb-8">راجع بيانات الطلاب الجدد وقم بقبولهم أو رفضهم.</p>
+            
+            <div class="glass-panel rounded-2xl p-6 flex items-center justify-center min-h-[300px]">
+                <p class="text-gray-500 text-sm">سيتم جلب قائمة التقديمات قيد المراجعة هنا...</p>
+            </div>
+        </div>
+
+        <div id="tab-students" class="tab-content">
+            <h1 class="text-3xl font-bold mb-2">درجات الطلاب</h1>
+            <p class="text-gray-400 mb-8">ابحث عن طالب لتقييمه أو تعديل درجاته.</p>
+            
+            <div class="glass-panel rounded-2xl p-6 flex items-center justify-center min-h-[300px]">
+                <p class="text-gray-500 text-sm">واجهة البحث عن الطلاب وتعديل الدرجات ستكون هنا...</p>
+            </div>
+        </div>
+
+        <div id="tab-content" class="tab-content">
+            <h1 class="text-3xl font-bold mb-2">المحتوى والأسئلة</h1>
+            <p class="text-gray-400 mb-8">أضف نقاط المنهج والأسئلة المتوقعة لتظهر في لوحة الطالب.</p>
+            
+            <div class="glass-panel rounded-2xl p-6 flex items-center justify-center min-h-[300px]">
+                <p class="text-gray-500 text-sm">فورم إضافة المحتوى (سؤال، إجابة، ملحوظة) سيكون هنا...</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // التحقق من الصلاحيات (حماية الصفحة من الطلاب العاديين)
+        const userDataStr = localStorage.getItem('dahih_user');
+        if (!userDataStr) {
+            window.location.href = "/logina.html";
+        } else {
+            const user = JSON.parse(userDataStr);
+            if (user.role !== 'dev' && user.role !== 'owner') {
+                // طرد أي حد مش أدمن
+                window.location.href = "/dashboard.html";
+            } else {
+                // تخصيص الترحيب بناءً على الدور اللي جاي من السيرفر
+                document.getElementById('adminWelcomeName').innerText = user.name || "إدارة";
+            }
+        }
+
+        // دالة التبديل بين الأقسام
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.getElementById(`btn-${tabId}`).classList.add('active');
+        }
+
+        // دالة تسجيل الخروج
+        function logout() {
+            localStorage.removeItem('dahih_user');
+            window.location.href = "/logina.html";
+        }
+    </script>
+</body>
+</html>
+
