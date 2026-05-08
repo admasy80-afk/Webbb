@@ -1,11 +1,9 @@
 const express = require('express');
 const path = require('path');
 const { MongoClient } = require('mongodb');
-const jwt = require('jsonwebtoken'); // 👈 إضافة مكتبة التوكن
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "DAHIH_SECRET_KEY_123!@#"; // 👈 مفتاح التشفير
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -34,23 +32,6 @@ async function startServer() {
 startServer();
 
 // ==========================================
-// 🛡️ وسيط الحماية (Middleware) لمنع الدخول غير المصرح
-// ==========================================
-const verifyToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if (!authHeader) return res.status(403).json({ message: "غير مصرح لك بالدخول، يرجى تسجيل الدخول أولاً" });
-
-    const token = authHeader.split(" ")[1];
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET); 
-        req.user = decoded; 
-        next();
-    } catch (err) {
-        return res.status(401).json({ message: "انتهت صلاحية الجلسة، قم بتسجيل الدخول مجدداً" });
-    }
-};
-
-// ==========================================
 // 1️⃣ مسارات الطلاب وتسجيل الدخول الأساسية
 // ==========================================
 app.post('/api/saveUser', async (req, res) => {
@@ -64,23 +45,15 @@ app.post('/api/saveUser', async (req, res) => {
         const isDev = data.identifier === "nullbrodidyouknow@gmail.com" && data.password === "T9@qL7!zR4#pX2vK8";
         const isOwner = data.identifier === "owner@owner.com" && data.password === "123456asdW#";
 
-        // دالة إنشاء التوكن (صالح لمدة 30 يوم)
-        const generateToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' });
-
-        // تسجيل دخول المطور / الإدارة
         if (isDev || isOwner) {
             const roleName = isDev ? "المطور (Null)" : "مستر";
             const userRole = isDev ? "dev" : "owner";
-            const token = generateToken({ email: data.identifier, role: userRole });
-
             return res.status(200).json({ 
                 message: `أهلاً بك يا ${roleName} 👑`,
-                token: token, // 👈 إرسال التوكن
                 userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" }
             });
         }
 
-        // تسجيل دخول طالب
         if (data.identifier) {
             const user = await usersCollection.findOne({
                 $or: [{ email: data.identifier }, { phone: data.identifier }],
@@ -89,11 +62,8 @@ app.post('/api/saveUser', async (req, res) => {
             
             if (user) {
                 const userStatus = user.status || "pending"; 
-                const token = generateToken({ email: user.email, role: "student" });
-
                 return res.status(200).json({ 
                     message: "تم الدخول ✓",
-                    token: token, // 👈 إرسال التوكن
                     userData: { 
                         name: user.first_name, 
                         grade: user.grade, 
@@ -108,7 +78,6 @@ app.post('/api/saveUser', async (req, res) => {
             }
         }
 
-        // إنشاء حساب جديد
         if (data.first_name) {
             const existing = await usersCollection.findOne({
                 $or: [{ email: data.email }, { phone: data.phone }]
@@ -122,12 +91,8 @@ app.post('/api/saveUser', async (req, res) => {
 
             await usersCollection.insertOne(data);
             
-            // إنشاء توكن حتى يدخل مباشرة بعد التسجيل ليتابع حالته (قيد المراجعة)
-            const token = generateToken({ email: data.email, role: "student" });
-
             return res.status(200).json({ 
                 message: "تم إنشاء حسابك بنجاح",
-                token: token,
                 userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, role: "student" }
             });
         }
@@ -138,31 +103,9 @@ app.post('/api/saveUser', async (req, res) => {
 });
 
 // ==========================================
-// 🚀 مسار جديد: التحقق التلقائي (Auto-Login)
+// 2️⃣ مسارات لوحة الإدارة (Admin APIs)
 // ==========================================
-app.get('/api/verify-session', verifyToken, async (req, res) => {
-    const userEmail = req.user.email;
-    
-    if(req.user.role === 'dev' || req.user.role === 'owner') {
-         return res.status(200).json({ role: req.user.role, redirectTo: '/admin-dashboard.html' }); // غير المسار لو اسم صفحة الأدمن مختلف
-    }
-
-    const user = await usersCollection.findOne({ email: userEmail });
-    if(user) {
-        return res.status(200).json({ 
-            role: "student", 
-            status: user.status,
-            redirectTo: '/student-dashboard.html', // غير المسار لو اسم صفحة الطالب مختلف
-            userData: user
-        });
-    }
-    res.status(404).json({ message: "المستخدم غير موجود" });
-});
-
-// ==========================================
-// 2️⃣ مسارات لوحة الإدارة (Admin APIs) - (محمية 🛡️)
-// ==========================================
-app.post('/api/admin/stats', verifyToken, async (req, res) => {
+app.post('/api/admin/stats', async (req, res) => {
     try {
         const { role } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
@@ -173,7 +116,7 @@ app.post('/api/admin/stats', verifyToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/admin/pending', verifyToken, async (req, res) => {
+app.post('/api/admin/pending', async (req, res) => {
     try {
         const { role } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
@@ -182,7 +125,7 @@ app.post('/api/admin/pending', verifyToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/admin/update-status', verifyToken, async (req, res) => {
+app.post('/api/admin/update-status', async (req, res) => {
     try {
         const { role, studentEmail, newStatus, reason } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
@@ -194,7 +137,8 @@ app.post('/api/admin/update-status', verifyToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/admin/students-by-grade', verifyToken, async (req, res) => {
+// 🔥 المسار الجديد لجلب قائمة الطلاب المقبولين في صف معين 🔥
+app.post('/api/admin/students-by-grade', async (req, res) => {
     try {
         const { role, grade } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
@@ -204,7 +148,7 @@ app.post('/api/admin/students-by-grade', verifyToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ في جلب الطلاب" }); }
 });
 
-app.post('/api/admin/add-content', verifyToken, async (req, res) => {
+app.post('/api/admin/add-content', async (req, res) => {
     try {
         const { role, grade, type, pointText, questionText, questionHint } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
@@ -219,16 +163,16 @@ app.post('/api/admin/add-content', verifyToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/admin/update-points', verifyToken, async (req, res) => {
+app.post('/api/admin/update-points', async (req, res) => {
     try {
         const { role, studentEmail, points } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
-        await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { points: parseInt(points) } }); 
+        await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { points: parseInt(points) } }); // تم تغييرها لـ $set لتكون نسبة تقييم ثابتة وليست تراكمية
         res.status(200).json({ message: "تم التحديث" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/admin/add-test-scores', verifyToken, async (req, res) => {
+app.post('/api/admin/add-test-scores', async (req, res) => {
     try {
         const { role, grade, testName, scores } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
@@ -246,9 +190,9 @@ app.post('/api/admin/add-test-scores', verifyToken, async (req, res) => {
 });
 
 // ==========================================
-// 3️⃣ مسارات خاصة بالـ Dashboard بتاعة الطالب - (محمية 🛡️)
+// 3️⃣ مسارات خاصة بالـ Dashboard بتاعة الطالب
 // ==========================================
-app.post('/api/check-status', verifyToken, async (req, res) => {
+app.post('/api/check-status', async (req, res) => {
     try {
         const { email } = req.body;
         const user = await usersCollection.findOne({ email: email });
@@ -257,7 +201,7 @@ app.post('/api/check-status', verifyToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/student/dashboard-data', verifyToken, async (req, res) => {
+app.post('/api/student/dashboard-data', async (req, res) => {
     try {
         const { email, grade } = req.body;
         const user = await usersCollection.findOne({ email: email });
