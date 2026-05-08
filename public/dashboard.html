@@ -30,7 +30,6 @@
             box-shadow: 0 10px 25px rgba(234, 179, 8, 0.1);
             border-color: rgba(234, 179, 8, 0.3);
         }
-        .transition-all { transition: all 0.3s ease; }
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black">
@@ -48,12 +47,10 @@
         
         <div class="glass-panel rounded-[2rem] p-8 md:p-10 mb-8 relative overflow-hidden">
             <div class="absolute top-0 left-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-            
             <div class="relative z-10">
                 <div class="inline-block bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-xs md:text-sm font-bold px-4 py-1.5 rounded-full mb-4">
                     المرحلة: <span id="studentGrade">جاري التحميل...</span>
                 </div>
-                
                 <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-tight">
                     أهلاً بك يا <span id="studentName" class="text-transparent bg-clip-text bg-gradient-to-l from-yellow-300 to-yellow-600">بطل</span>
                 </h1>
@@ -67,24 +64,31 @@
                 
                 <section>
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-                            أهم النقاط في المنهج
-                        </h2>
+                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">نتائج الاختبارات 🏆</h2>
                     </div>
-                    <div id="pointsContainer" class="glass-panel rounded-2xl p-6 border-r-4 border-r-blue-500 min-h-[150px] flex flex-col justify-center">
-                        <p class="text-gray-500 text-sm text-center animate-pulse">جاري تحميل النقاط الهامة...</p>
+                    <div id="testsContainer" class="space-y-6">
+                        <div class="glass-panel rounded-2xl p-6 flex items-center justify-center">
+                            <p class="text-gray-500 text-sm animate-pulse">جاري تحميل النتائج...</p>
+                        </div>
                     </div>
                 </section>
 
                 <section>
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">
-                            أهم الأسئلة (متوقعة)
-                        </h2>
+                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">أهم النقاط في المنهج</h2>
+                    </div>
+                    <div id="pointsContainer" class="glass-panel rounded-2xl p-6 border-r-4 border-r-blue-500 min-h-[150px] flex flex-col justify-center">
+                        <p class="text-gray-500 text-sm text-center">جاري تحميل النقاط الهامة...</p>
+                    </div>
+                </section>
+
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">أهم الأسئلة (متوقعة)</h2>
                     </div>
                     <div id="questionsContainer" class="space-y-4">
                        <div class="glass-panel rounded-2xl p-8 flex items-center justify-center">
-                           <p class="text-gray-500 text-sm animate-pulse">جاري تحميل الأسئلة...</p>
+                           <p class="text-gray-500 text-sm">جاري تحميل الأسئلة...</p>
                        </div>
                     </div>
                 </section>
@@ -95,12 +99,9 @@
                 
                 <section class="glass-panel rounded-3xl p-6 relative overflow-hidden">
                     <h2 class="text-xl font-bold text-white mb-6">مستواك الحالي</h2>
-
                     <div class="bg-black/30 rounded-2xl p-4 flex items-center justify-between border border-white/5">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-black text-lg">
-                                👑
-                            </div>
+                            <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-black text-lg">👑</div>
                             <div>
                                 <h4 class="font-bold text-sm">مجموع النقاط</h4>
                                 <p class="text-xs text-green-400">استمر في التقدم!</p>
@@ -108,19 +109,6 @@
                         </div>
                         <div class="text-left">
                             <span id="studentPointsDisplay" class="block text-xl font-black text-white">0</span>
-                        </div>
-                    </div>
-                    
-                    <button class="w-full mt-5 bg-white/5 hover:bg-white/10 text-gray-400 font-medium py-3 rounded-xl transition-all text-sm border border-white/10 cursor-not-allowed">
-                        عرض لوحة الشرف الكاملة
-                    </button>
-                </section>
-
-                <section class="glass-panel rounded-3xl p-6">
-                    <h2 class="text-xl font-bold text-white mb-4">المهام المطلوبة</h2>
-                    <div class="space-y-3">
-                        <div class="p-4 bg-black/20 rounded-xl text-center">
-                            <span class="text-sm text-gray-500">لا توجد مهام مطلوبة حالياً.</span>
                         </div>
                     </div>
                 </section>
@@ -142,7 +130,6 @@
             document.getElementById('studentName').innerText = firstName;
             document.getElementById('studentGrade').innerText = userData.grade || "الصف غير محدد";
 
-            // جلب الداتا المخصصة للدفعة دي من السيرفر
             fetchDashboardData(userData.email, userData.grade);
         }
 
@@ -157,44 +144,70 @@
                 if (res.ok) {
                     const data = await res.json();
                     
-                    // 1. تحديث النقاط
                     document.getElementById('studentPointsDisplay').innerText = data.studentPoints || 0;
 
-                    // 2. تحديث النقاط الهامة في المنهج
+                    // 1. تعبئة النقاط
                     const pContainer = document.getElementById('pointsContainer');
                     if (data.content.points && data.content.points.length > 0) {
                         let pHTML = '<ul class="space-y-4 text-gray-300 text-sm md:text-base font-medium">';
-                        data.content.points.forEach(point => {
-                            pHTML += `
-                            <li class="flex items-start gap-3">
-                                <span class="text-blue-400 mt-1">▪</span>
-                                <p>${point}</p>
-                            </li>`;
-                        });
+                        data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-blue-400 mt-1">▪</span><p>${point}</p></li>`);
                         pHTML += '</ul>';
                         pContainer.innerHTML = pHTML;
                         pContainer.classList.remove('justify-center');
-                    } else {
-                        pContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">لم يتم إضافة نقاط هامة لهذه الدفعة بعد.</p>';
-                    }
+                    } else pContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">لا توجد نقاط هامة حالياً.</p>';
 
-                    // 3. تحديث الأسئلة المتوقعة
+                    // 2. تعبئة الأسئلة
                     const qContainer = document.getElementById('questionsContainer');
                     if (data.content.questions && data.content.questions.length > 0) {
                         let qHTML = '';
                         data.content.questions.forEach(q => {
-                            qHTML += `
-                            <div class="glass-panel rounded-2xl p-5 card-hover transition-all cursor-pointer mb-4">
+                            qHTML += `<div class="glass-panel rounded-2xl p-5 card-hover transition-all mb-4">
                                 <h3 class="font-bold text-lg mb-2 text-white">س: ${q.question}</h3>
                                 <p class="text-gray-400 text-sm font-light mt-2 border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold">ج: </span>${q.hint}</p>
                             </div>`;
                         });
                         qContainer.innerHTML = qHTML;
+                    } else qContainer.innerHTML = '<div class="glass-panel rounded-2xl p-8 flex items-center justify-center"><p class="text-gray-500 text-sm">لا توجد أسئلة مضافة حالياً.</p></div>';
+
+                    // 3. تعبئة الاختبارات وتتويج الأوائل 👑
+                    const tContainer = document.getElementById('testsContainer');
+                    if (data.content.tests && data.content.tests.length > 0) {
+                        let tHTML = '';
+                        // عكس الترتيب عشان أحدث اختبار يظهر فوق
+                        data.content.tests.slice().reverse().forEach(test => {
+                            tHTML += `<div class="glass-panel rounded-3xl p-6 mb-6">
+                                <h3 class="text-xl font-bold text-yellow-500 mb-4">${test.testName}</h3>
+                                <div class="space-y-3">`;
+                            
+                            // ترتيب الدرجات من الأكبر للأصغر
+                            let sortedScores = test.scores.sort((a, b) => b.score - a.score);
+                            
+                            sortedScores.forEach((s, index) => {
+                                let rankIcon = '';
+                                let highlightClass = '';
+                                
+                                // تتويج أول 3 طلاب
+                                if (index === 0) { rankIcon = '🥇'; highlightClass = 'border border-yellow-500/50 bg-yellow-500/10'; }
+                                else if (index === 1) { rankIcon = '🥈'; highlightClass = 'border border-gray-300/50 bg-gray-400/10'; }
+                                else if (index === 2) { rankIcon = '🥉'; highlightClass = 'border border-orange-400/50 bg-orange-400/10'; }
+                                else { rankIcon = `<span class="text-gray-500 text-sm w-6 inline-block text-center">${index + 1}</span>`; highlightClass = 'bg-black/30 border border-white/5'; }
+
+                                tHTML += `
+                                <div class="flex items-center justify-between p-3 rounded-xl ${highlightClass}">
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-xl">${rankIcon}</div>
+                                        <h4 class="font-bold text-white text-sm md:text-base">${s.name}</h4>
+                                    </div>
+                                    <div class="text-left font-black text-lg ${index < 3 ? 'text-white' : 'text-gray-400'}">
+                                        ${s.score}
+                                    </div>
+                                </div>`;
+                            });
+                            tHTML += `</div></div>`;
+                        });
+                        tContainer.innerHTML = tHTML;
                     } else {
-                        qContainer.innerHTML = `
-                        <div class="glass-panel rounded-2xl p-8 flex items-center justify-center">
-                           <p class="text-gray-500 text-sm">لا توجد أسئلة مضافة حالياً.</p>
-                        </div>`;
+                        tContainer.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center"><p class="text-gray-500 text-sm">لم يتم نشر نتائج اختبارات بعد.</p></div>';
                     }
                 }
             } catch (err) {
