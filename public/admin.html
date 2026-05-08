@@ -9,13 +9,20 @@
     <style>
         body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
         .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
+        
         .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-bottom: 3px solid #eab308; }
-        @media (min-width: 768px) { .tab-btn.active { border-bottom: none; border-right: 4px solid #eab308; } }
+        @media (min-width: 768px) {
+            .tab-btn.active { border-bottom: none; border-right: 4px solid #eab308; }
+        }
+
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
+        
+        /* 🔥 أنيميشن بلوكات الأسئلة 🔥 */
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); scale: 0.98; } to { opacity: 1; transform: translateY(0); scale: 1; } }
         .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
         select option { background-color: #0f172a; color: white; }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
@@ -27,19 +34,19 @@
         <div class="p-4 md:p-6 border-b border-white/10 shrink-0 flex justify-between items-center">
             <div>
                 <div class="text-xl md:text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-                <p class="text-xs text-gray-400 mt-1">إدارة المنصة</p>
+                <p class="text-xs text-gray-400 mt-1">لوحة التحكم</p>
             </div>
             <button onclick="logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors">خروج</button>
         </div>
         
         <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-2 p-2 md:py-4 md:px-0 scrollbar-hide shrink-0">
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">نظرة عامة</button>
-            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">طلبات التسجيل</button>
+            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">التقديمات الحالية</button>
             <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">قائمة الطلاب</button>
-            <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">التقييم المستمر</button>
-            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">نتائج الاختبارات</button>
+            <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">تقييم الطلاب</button>
+            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">درجات الاختبارات</button>
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">المحتوى المقالي</button>
-            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300 hover:bg-white/5 transition-all text-sm md:text-base">اختبار إلكتروني</button>
+            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-bold text-yellow-500 hover:bg-white/5 transition-all text-sm md:text-base border-r-2 border-yellow-500/50 bg-yellow-500/5">إنشاء اختبار MCQ</button>
             <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-bold text-red-400 hover:bg-red-400/10 transition-all text-sm md:text-base border-r-2 border-red-500/50 bg-red-500/5">إدارة المحتوى والنتائج</button>
         </nav>
 
@@ -53,38 +60,51 @@
 
         <div id="tab-dashboard" class="tab-content active">
             <h1 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-500"><p class="text-gray-400 text-sm mb-1">الطلاب المقبولين</p><h3 id="stats-students" class="text-3xl font-black text-white">0</h3></div>
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-blue-500"><p class="text-gray-400 text-sm mb-1">طلبات قيد المراجعة</p><h3 id="stats-pending" class="text-3xl font-black text-blue-400">0</h3></div>
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-blue-500"><p class="text-gray-400 text-sm mb-1">تقديمات قيد المراجعة</p><h3 id="stats-pending" class="text-3xl font-black text-blue-400">0</h3></div>
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-green-500"><p class="text-gray-400 text-sm mb-1">المحتوى المضاف</p><h3 id="stats-questions" class="text-3xl font-black text-green-400">نشط</h3></div>
             </div>
         </div>
 
         <div id="tab-requests" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">التقديمات الحالية</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">مراجعة بيانات الطلاب الجدد.</p>
+            <p class="text-gray-400 mb-6 md:mb-8">راجع بيانات الطلاب.</p>
             <div id="pendingRequestsContainer" class="glass-panel rounded-2xl p-4 md:p-6 min-h-[300px]"></div>
         </div>
 
         <div id="tab-students-list" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">قائمة الطلاب</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">اختر الدفعة للعرض.</p>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">قائمة الطلاب الحاليين 👥</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">اختر الدفعة.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl">
                 <select id="listGradeSelect" onchange="fetchStudentsByGrade()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
                     <option value="" disabled selected>اختر الصف لعرض قائمة الطلاب...</option>
+                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
                     <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
                     <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
                     <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
                 </select>
-                <div id="studentsListContainer" class="space-y-4"></div>
+                <div id="studentsListContainer" class="space-y-4">
+                    <p class="text-gray-500 text-sm text-center py-10">يرجى اختيار الصف من القائمة أعلاه.</p>
+                </div>
             </div>
         </div>
 
         <div id="tab-students" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">التقييم المستمر</h1>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">تقييم الطلاب</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">أضف تقييمك للطالب.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl">
                 <form id="pointsForm" class="space-y-5">
                     <div><label class="block text-sm text-gray-400 mb-2">إيميل الطالب</label><input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" dir="ltr"></div>
-                    <div><label class="block text-sm text-gray-400 mb-2">التقييم (%)</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base"></div>
+                    <div><label class="block text-sm text-gray-400 mb-2">التقييم (%)</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="مثال: 85"></div>
                     <button type="submit" id="savePointsBtn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-400 transition-colors">تحديث التقييم</button>
                     <p id="pointsMsg" class="text-sm text-center hidden mt-2"></p>
                 </form>
@@ -92,48 +112,140 @@
         </div>
 
         <div id="tab-tests" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">نتائج الاختبارات الورقية</h1>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">درجات الاختبارات (الورقية)</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">أضف درجات اختبار جديد للدفعة.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-3xl">
                 <form id="testsForm" class="space-y-5">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><input type="text" id="testName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="اسم الاختبار"></div>
-                        <div><select id="testGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base"><option value="" disabled selected>اختر الصف...</option><option value="الصف الأول الثانوي">الصف الأول الثانوي</option><option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option><option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option></select></div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">اسم الاختبار</label>
+                            <input type="text" id="testName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="مثال: اختبار شهر فبراير">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">الدفعة</label>
+                            <select id="testGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base">
+                                <option value="" disabled selected>اختر الصف...</option>
+                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                            </select>
+                        </div>
                     </div>
-                    <div id="scoresContainer" class="space-y-3 mt-4"></div>
-                    <button type="button" onclick="addScoreRow()" class="w-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-bold py-3 rounded-xl hover:bg-yellow-500/20 transition-all border-dashed mt-2 text-sm md:text-base">إضافة طالب للإختبار</button>
-                    <button type="submit" id="saveTestBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all mt-6 text-sm md:text-base">نشر الدرجات</button>
+                    
+                    <div id="scoresContainer" class="space-y-3 mt-4">
+                        <div class="flex gap-2 md:gap-3 items-center score-row">
+                            <input type="text" placeholder="اسم الطالب" required class="w-2/3 md:w-3/4 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 student-name-input text-sm md:text-base">
+                            <input type="number" placeholder="الدرجة" required class="w-1/3 md:w-1/4 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 student-score-input text-sm md:text-base">
+                        </div>
+                    </div>
+                    
+                    <button type="button" onclick="addScoreRow()" class="w-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-bold py-3 rounded-xl hover:bg-yellow-500/20 transition-all border-dashed mt-2 text-sm md:text-base">
+                        + إضافة طالب
+                    </button>
+                    
+                    <button type="submit" id="saveTestBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all mt-6 text-sm md:text-base">نشر الدرجات للدفعة</button>
                     <p id="testMsg" class="text-sm text-center hidden mt-2"></p>
                 </form>
             </div>
         </div>
 
         <div id="tab-content" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى المقالي</h1>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى والأسئلة المقالية</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">أضف نقاط المنهج والأسئلة المقالية.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl">
                 <form id="contentForm" class="space-y-5">
-                    <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base"><option value="" disabled selected>اختر الصف...</option><option value="الصف الأول الثانوي">الصف الأول الثانوي</option><option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option><option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option></select>
-                    <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base"><option value="point">نقطة هامة في المنهج</option><option value="question">سؤال متوقع بالحل</option></select>
-                    <div id="pointField"><textarea id="pointText" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="النقاط الهامة..."></textarea></div>
-                    <div id="questionFields" class="hidden space-y-5"><textarea id="questionText" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="نص السؤال..."></textarea><textarea id="questionHint" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="الإجابة..."></textarea></div>
-                    <button type="submit" id="saveContentBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base">نشر</button>
+                    <div>
+                        <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none cursor-pointer text-sm md:text-base">
+                            <option value="" disabled selected>اختر الصف...</option>
+                            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                        </select>
+                    </div>
+                    <div>
+                        <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none cursor-pointer text-sm md:text-base">
+                            <option value="point">نقطة هامة في المنهج</option>
+                            <option value="question">سؤال متوقع بالحل</option>
+                        </select>
+                    </div>
+                    <div id="pointField">
+                        <textarea id="pointText" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="الملحوظة أو النقطة..."></textarea>
+                    </div>
+                    <div id="questionFields" class="hidden space-y-5">
+                        <textarea id="questionText" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="نص السؤال..."></textarea>
+                        <textarea id="questionHint" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="الإجابة..."></textarea>
+                    </div>
+                    <button type="submit" id="saveContentBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base">حفظ ونشر للطلاب</button>
                     <p id="contentMsg" class="text-sm text-center hidden mt-2"></p>
                 </form>
             </div>
         </div>
 
         <div id="tab-quiz" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">إنشاء اختبار إلكتروني</h1>
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-2">إنشاء اختبار إلكتروني</h1>
+                    <p class="text-gray-400">صمم اختبارك، أضف العدد الذي تريده من الأسئلة.</p>
+                </div>
+            </div>
+
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500 relative">
                 <form id="quizForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
-                        <select id="quizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base"><option value="" disabled selected>الدفعة المستهدفة...</option><option value="الصف الأول الثانوي">الصف الأول الثانوي</option><option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option><option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option></select>
-                        <input type="text" id="quizTitle" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5 shadow-inner">
+                        <div>
+                            <label class="block text-sm text-yellow-500 font-bold mb-2">الدفعة المستهدفة</label>
+                            <select id="quizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
+                                <option value="" disabled selected>اختر الصف...</option>
+                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-yellow-500 font-bold mb-2">عنوان الاختبار</label>
+                            <input type="text" id="quizTitle" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base transition-colors" placeholder="مثال: امتحان شهر أكتوبر الشامل">
+                        </div>
                     </div>
+
                     <div id="dynamicQuestionsContainer" class="space-y-6 mt-6"></div>
+
                     <div class="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-6 mt-4">
-                        <button type="button" onclick="addMCQBlock()" class="flex-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold py-4 rounded-xl hover:bg-blue-500 hover:text-white transition-all text-sm md:text-base">إضافة سؤال جديد</button>
-                        <button type="submit" id="saveQuizBtn" class="flex-1 bg-yellow-500 text-black font-bold py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base">نشر الاختبار</button>
+                        <button type="button" onclick="addMCQBlock()" class="flex-1 bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold py-4 rounded-xl hover:bg-blue-500 hover:text-white transition-all text-sm md:text-base shadow-lg hover:shadow-blue-500/20 group flex items-center justify-center gap-2">
+                            <span class="text-xl group-hover:scale-125 transition-transform">+</span> أضف سؤال جديد
+                        </button>
+                        
+                        <button type="submit" id="saveQuizBtn" class="flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black py-4 rounded-xl hover:from-yellow-400 hover:to-yellow-500 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/20 flex items-center justify-center gap-2">
+                             حفظ ونشر الاختبار
+                        </button>
                     </div>
+                    
                     <p id="quizMsg" class="text-sm text-center hidden mt-2 font-bold"></p>
                 </form>
             </div>
@@ -146,6 +258,15 @@
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl">
                 <select id="manageGradeSelect" onchange="fetchGradeContent()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-red-400 cursor-pointer mb-6 text-sm md:text-base">
                     <option value="" disabled selected>اختر الصف لعرض بياناته...</option>
+                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
                     <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
                     <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
                     <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
@@ -188,19 +309,21 @@
     </div>
 
     <script>
-        // إعدادات الأساسيات والأمان
+        // أيقونة سلة المهملات (SVG الرسمية)
+        const trashSVG = `<svg class="w-5 h-5 text-red-500 hover:text-red-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
+
         const userDataStr = localStorage.getItem('dahih_user');
         let user = null;
         let sessionToken = null;
         if (!userDataStr) window.location.href = "/logina.html";
         else {
             user = JSON.parse(userDataStr);
-            sessionToken = localStorage.getItem('dahih_token'); // يجب حفظ التوكن عند الدخول
+            // جلب التوكن بأمان من أجل حارس النظام
+            sessionToken = user.token || localStorage.getItem('dahih_token') || ""; 
             if (user.role !== 'dev' && user.role !== 'owner') window.location.href = "/dashboard.html";
             else document.getElementById('adminWelcomeName').innerText = user.name || "إدارة";
         }
 
-        // --- الدوال الخاصة بصفحة إدارة المحتوى (الجديدة) ---
         let currentGradeData = null;
 
         async function fetchGradeContent() {
@@ -212,10 +335,11 @@
             loading.classList.remove('hidden');
 
             try {
+                // دمجنا التوكن مع الطلب عشان السيرفر يقبله
                 const res = await fetch('/api/admin/get-grade-content', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionToken: sessionToken, grade: grade }) // إرسال التوكن للحماية
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
                 });
                 
                 if (res.ok) {
@@ -223,67 +347,63 @@
                     renderManageContent(grade);
                     loading.classList.add('hidden');
                     container.classList.remove('hidden');
-                } else alert("حدث خطأ في الجلب، تأكد من تسجيل الدخول.");
+                } else alert("حدث خطأ في الجلب.");
             } catch (err) { alert("مشكلة في الاتصال."); }
         }
 
         function renderManageContent(grade) {
             const data = currentGradeData;
             
-            // 1. الاختبارات الإلكترونية
             let htmlQZ = '';
             if (data.quizzes && data.quizzes.length > 0) {
                 data.quizzes.forEach(q => {
                     const resultsCount = q.results ? q.results.length : 0;
                     htmlQZ += `
-                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center">
+                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center group">
                         <div>
                             <p class="font-bold text-white text-lg">${q.title}</p>
                             <p class="text-sm text-gray-400 mt-1">عدد المجيبين: <span class="text-yellow-500 font-bold">${resultsCount}</span> طالب</p>
                         </div>
-                        <div class="flex gap-2">
+                        <div class="flex gap-4 items-center">
                             <button onclick="showQuizResults('${q.id}')" class="bg-blue-500/10 text-blue-400 px-4 py-2 rounded-lg text-sm hover:bg-blue-500 hover:text-white transition-colors">النتائج</button>
-                            <button onclick="deleteContent('${grade}', 'quiz', '${q.id}')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-lg text-sm hover:bg-red-500 hover:text-white transition-colors">حذف</button>
+                            <button onclick="deleteContent('${grade}', 'quiz', '${q.id}')" class="p-2 bg-transparent hover:bg-white/5 rounded-full transition-colors" title="حذف">${trashSVG}</button>
                         </div>
                     </div>`;
                 });
             } else htmlQZ = '<p class="text-gray-500 text-sm">لا توجد اختبارات إلكترونية.</p>';
             document.getElementById('manageQuizzes').innerHTML = htmlQZ;
 
-            // 2. الاختبارات الورقية
             let htmlTS = '';
             if (data.tests && data.tests.length > 0) {
                 data.tests.forEach(t => {
                     htmlTS += `
-                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center">
+                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center group">
                         <p class="font-bold text-white">${t.testName}</p>
-                        <button onclick="deleteContent('${grade}', 'test', '${t.testName}')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-lg text-sm hover:bg-red-500 hover:text-white">حذف</button>
+                        <button onclick="deleteContent('${grade}', 'test', '${t.testName}')" class="p-2 bg-transparent hover:bg-white/5 rounded-full transition-colors" title="حذف">${trashSVG}</button>
                     </div>`;
                 });
             } else htmlTS = '<p class="text-gray-500 text-sm">لا توجد اختبارات ورقية.</p>';
             document.getElementById('manageTests').innerHTML = htmlTS;
 
-            // 3. الأسئلة
             let htmlQS = '';
             if (data.questions && data.questions.length > 0) {
                 data.questions.forEach(q => {
                     htmlQS += `
-                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-start gap-4">
+                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-start gap-4 group">
                         <div class="flex-1"><p class="text-white text-sm leading-relaxed">${q.question}</p></div>
-                        <button onclick="deleteContent('${grade}', 'question', '${q.question}')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-lg text-sm hover:bg-red-500 hover:text-white shrink-0">حذف</button>
+                        <button onclick="deleteContent('${grade}', 'question', '${q.question}')" class="p-2 bg-transparent hover:bg-white/5 rounded-full transition-colors shrink-0" title="حذف">${trashSVG}</button>
                     </div>`;
                 });
             } else htmlQS = '<p class="text-gray-500 text-sm">لا توجد أسئلة.</p>';
             document.getElementById('manageQuestions').innerHTML = htmlQS;
 
-            // 4. النقاط
             let htmlPT = '';
             if (data.points && data.points.length > 0) {
                 data.points.forEach(p => {
                     htmlPT += `
-                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4">
+                    <div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4 group">
                         <p class="text-gray-300 text-sm flex-1 truncate">${p}</p>
-                        <button onclick="deleteContent('${grade}', 'point', '${p}')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-lg text-sm hover:bg-red-500 hover:text-white shrink-0">حذف</button>
+                        <button onclick="deleteContent('${grade}', 'point', '${p}')" class="p-2 bg-transparent hover:bg-white/5 rounded-full transition-colors shrink-0" title="حذف">${trashSVG}</button>
                     </div>`;
                 });
             } else htmlPT = '<p class="text-gray-500 text-sm">لا توجد نقاط.</p>';
@@ -291,20 +411,24 @@
         }
 
         async function deleteContent(grade, itemType, identifier) {
-            if(!confirm("هل أنت متأكد من حذف هذا العنصر؟ لا يمكن التراجع.")) return;
+            if(!confirm("هل أنت متأكد من مسح هذا العنصر نهائياً؟")) return;
             
             try {
+                // إرسال التوكن لضمان قبول السيرفر لأمر الحذف
                 const res = await fetch('/api/admin/delete-item', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionToken: sessionToken, grade, itemType, identifier })
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade, itemType: itemType, identifier: identifier })
                 });
-                if (res.ok) fetchGradeContent(); // تحديث الصفحة تلقائياً
-                else alert("خطأ في الحذف");
+                
+                if (res.ok) {
+                    fetchGradeContent(); 
+                } else {
+                    alert("خطأ: السيرفر يرفض الحذف.");
+                }
             } catch (err) { alert("مشكلة في الاتصال."); }
         }
 
-        // عرض درجات الطلاب في اختبار معين
         function showQuizResults(quizId) {
             const quiz = currentGradeData.quizzes.find(q => q.id === quizId);
             if(!quiz) return;
@@ -316,7 +440,6 @@
                 container.innerHTML = '<p class="text-gray-400 text-center py-6">لم يقم أي طالب بحل الاختبار حتى الآن.</p>';
             } else {
                 let html = '';
-                // ترتيب النتائج من الأعلى للأقل
                 quiz.results.sort((a,b) => b.percentage - a.percentage).forEach(res => {
                     let color = res.percentage >= 85 ? 'text-green-400' : (res.percentage >= 50 ? 'text-yellow-400' : 'text-red-400');
                     html += `
@@ -327,7 +450,7 @@
                         </div>
                         <div class="text-left">
                             <p class="font-black text-xl ${color}" dir="ltr">${res.percentage}%</p>
-                            <p class="text-xs text-gray-400">${res.score} من ${quiz.questions.length}</p>
+                            <p class="text-xs text-gray-400">${res.score} / ${quiz.questions.length}</p>
                         </div>
                     </div>`;
                 });
@@ -338,12 +461,13 @@
 
         function closeResultsModal() { document.getElementById('resultsModal').classList.add('hidden'); }
 
-        // --- باقي دوال الموقع (كما هي) ---
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabId}`).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('active');
+
+            if(tabId === 'requests') fetchPendingRequests();
             if(tabId === 'dashboard') fetchStats();
         }
 
@@ -352,7 +476,7 @@
                 const res = await fetch('/api/admin/stats', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sessionToken: sessionToken })
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
                 });
                 const data = await res.json();
                 document.getElementById('stats-students').innerText = data.studentsCount || 0;
@@ -367,21 +491,144 @@
             const block = document.createElement('div');
             block.className = 'mcq-block glass-panel p-5 rounded-2xl relative border-l-4 border-l-blue-500 animate-fade-in-up';
             block.innerHTML = `
-                <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-blue-400">سؤال ${questionCounter}</h3><button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 bg-red-400/10 rounded-xl px-3 py-1 text-sm font-bold">حذف</button></div>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-blue-400">سؤال ${questionCounter}</h3>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="p-2 bg-transparent hover:bg-white/5 rounded-full transition-colors" title="حذف السؤال">${trashSVG}</button>
+                </div>
                 <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 text-sm md:text-base mb-4" rows="2" placeholder="نص السؤال..." required></textarea>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none required></div>
-                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none required></div>
-                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none required></div>
-                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none required></div>
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500 required></div>
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500 required></div>
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500 required></div>
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500 required></div>
                 </div>
                 <div class="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center gap-3"><label class="text-sm font-bold text-green-400">الإجابة الصحيحة:</label><select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm"><option value="0" class="bg-gray-900">الخيار (أ)</option><option value="1" class="bg-gray-900">الخيار (ب)</option><option value="2" class="bg-gray-900">الخيار (ج)</option><option value="3" class="bg-gray-900">الخيار (د)</option></select></div>
             `;
             container.appendChild(block);
         }
-        document.addEventListener('DOMContentLoaded', addMCQBlock);
-        
-        function logout() { localStorage.removeItem('dahih_user'); localStorage.removeItem('dahih_token'); window.location.href = "/logina.html"; }
+        document.addEventListener('DOMContentLoaded', () => { addMCQBlock(); });
+
+        document.getElementById('quizForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveQuizBtn');
+            const msg = document.getElementById('quizMsg');
+            const blocks = document.querySelectorAll('.mcq-block');
+            
+            if(blocks.length === 0) { alert("يجب إضافة سؤال واحد على الأقل!"); return; }
+            btn.innerText = "جاري رفع الاختبار..."; btn.disabled = true;
+
+            const questions = [];
+            blocks.forEach(block => {
+                questions.push({
+                    questionText: block.querySelector('.mcq-q-text').value,
+                    options: [ block.querySelector('.mcq-opt-0').value, block.querySelector('.mcq-opt-1').value, block.querySelector('.mcq-opt-2').value, block.querySelector('.mcq-opt-3').value ],
+                    correctAnswer: parseInt(block.querySelector('.mcq-correct').value)
+                });
+            });
+
+            try {
+                const res = await fetch('/api/admin/add-mcq-quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: document.getElementById('quizGrade').value, quizTitle: document.getElementById('quizTitle').value, questionsArray: questions })
+                });
+
+                if (res.ok) {
+                    msg.innerText = `✅ تم النشر (${questions.length} أسئلة)!`;
+                    msg.className = "text-green-400 text-sm text-center block mt-2 font-bold";
+                    document.getElementById('quizForm').reset();
+                    document.getElementById('dynamicQuestionsContainer').innerHTML = '';
+                    questionCounter = 0; addMCQBlock();
+                } else throw new Error();
+            } catch (err) {
+                msg.innerText = "❌ حدث خطأ أثناء الحفظ.";
+                msg.className = "text-red-400 text-sm text-center block mt-2 font-bold";
+            } finally {
+                btn.innerHTML = "نشر الاختبار"; btn.disabled = false;
+                setTimeout(() => msg.classList.add('hidden'), 4000);
+            }
+        });
+
+        // دوال الإضافة 
+        document.getElementById('testsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const names = document.querySelectorAll('.student-name-input');
+            const scores = document.querySelectorAll('.student-score-input');
+            let scoresArray = [];
+            for(let i=0; i<names.length; i++) if(names[i].value.trim() !== "") scoresArray.push({ name: names[i].value.trim(), score: parseFloat(scores[i].value) });
+            
+            try {
+                const res = await fetch('/api/admin/add-test-scores', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: document.getElementById('testGrade').value, testName: document.getElementById('testName').value, scores: scoresArray }) });
+                if (res.ok) { alert("تم النشر بنجاح!"); document.getElementById('testsForm').reset(); }
+            } catch (err) { alert("خطأ في الحفظ"); }
+        });
+
+        document.getElementById('contentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const type = document.getElementById('contentType').value;
+            let payload = { role: user.role, sessionToken: sessionToken, grade: document.getElementById('contentGrade').value, type: type };
+            if (type === 'point') payload.pointText = document.getElementById('pointText').value;
+            else { payload.questionText = document.getElementById('questionText').value; payload.questionHint = document.getElementById('questionHint').value; }
+            
+            try {
+                const res = await fetch('/api/admin/add-content', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) { alert("تم النشر!"); document.getElementById('contentForm').reset(); }
+            } catch (err) { alert("خطأ في النشر"); }
+        });
+
+        function addScoreRow() {
+            const container = document.getElementById('scoresContainer');
+            const row = document.createElement('div');
+            row.className = 'flex gap-2 md:gap-3 items-center score-row animate-fade-in-up';
+            row.innerHTML = `<input type="text" placeholder="اسم الطالب" required class="w-2/3 md:w-3/4 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 student-name-input text-sm md:text-base"><input type="number" placeholder="الدرجة" required class="w-1/3 md:w-1/4 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 student-score-input text-sm md:text-base"><button type="button" onclick="this.parentElement.remove()" class="p-2 bg-transparent hover:bg-white/5 rounded-full transition-colors" title="حذف الطالب">${trashSVG}</button>`;
+            container.appendChild(row);
+        }
+
+        async function fetchPendingRequests() {
+            const container = document.getElementById('pendingRequestsContainer');
+            try {
+                const res = await fetch('/api/admin/pending', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken }) });
+                const students = await res.json();
+                if (students.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center mt-10">لا توجد تقديمات قيد المراجعة حالياً.</p>'; return; }
+                let html = '<div class="space-y-6">';
+                students.forEach(st => {
+                    html += `<div class="bg-black/30 border border-white/10 rounded-xl p-4 md:p-6 flex flex-col gap-4 md:gap-5"><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><h4 class="font-bold text-lg md:text-xl text-yellow-500 mb-2">${st.first_name || ''}</h4><p class="text-sm text-gray-400 mt-1">البريد: <span class="text-white">${st.email}</span></p></div><div><p class="text-sm text-gray-400">المرحلة: <span class="text-white font-bold">${st.grade}</span></p><p class="text-sm text-gray-400 mt-1">الموبايل: <span class="text-white" dir="ltr">${st.phone}</span></p></div></div><div class="flex gap-3 w-full border-t border-white/10 pt-4"><button onclick="updateStudentStatus('${st.email}', 'accepted')" class="flex-1 bg-green-500/10 text-green-400 px-6 py-3 rounded-lg font-bold">قبول</button><button onclick="rejectStudent('${st.email}')" class="flex-1 bg-red-500/10 text-red-400 px-6 py-3 rounded-lg font-bold">رفض</button></div></div>`;
+                });
+                container.innerHTML = html + '</div>';
+            } catch (err) { container.innerHTML = '<p class="text-red-500 text-center">خطأ في الاتصال.</p>'; }
+        }
+
+        async function fetchStudentsByGrade() {
+            const grade = document.getElementById('listGradeSelect').value;
+            const container = document.getElementById('studentsListContainer');
+            try {
+                const res = await fetch('/api/admin/students-by-grade', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade }) });
+                const students = await res.json();
+                if (students.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10">لا يوجد طلاب مقبولين.</p>`; return; }
+                let html = '<div class="space-y-3">';
+                students.forEach(st => {
+                    html += `<div class="bg-black/40 border border-white/5 rounded-xl p-4 flex justify-between items-center"><div><h4 class="font-bold text-white">${st.first_name}</h4><p class="text-xs text-gray-400 mt-1">${st.email} <span class="text-yellow-500 ml-2">تقييم: ${st.points || 0}%</span></p></div><div class="text-sm text-gray-400"><span class="text-white" dir="ltr">${st.phone}</span></div></div>`;
+                });
+                container.innerHTML = html + '</div>';
+            } catch (err) { container.innerHTML = '<p class="text-red-500 text-center">خطأ.</p>'; }
+        }
+
+        async function updateStudentStatus(email, newStatus, reason = '') {
+            await fetch('/api/admin/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) });
+            fetchPendingRequests(); fetchStats();
+        }
+
+        function rejectStudent(email) { const reason = prompt("سبب الرفض:"); if (reason) updateStudentStatus(email, 'rejected', reason); }
+
+        function toggleContentFields() {
+            const type = document.getElementById('contentType').value;
+            document.getElementById('pointField').classList.toggle('hidden', type !== 'point');
+            document.getElementById('questionFields').classList.toggle('hidden', type === 'point');
+        }
+
+        // دالة الخروج كما طلبتها حرفياً
+        function logout() { localStorage.removeItem('dahih_user'); window.location.href = "/logina.html"; }
+
         fetchStats();
     </script>
 </body>
