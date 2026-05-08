@@ -1,345 +1,242 @@
 const express = require('express');
 const path = require('path');
 const { MongoClient } = require('mongodb');
-const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser');
-const bcrypt = require('bcryptjs'); 
 
 const app = express();
-
-// 🔥 هذا السطر ضروري جداً جداً عشان الكوكيز تشتغل على Railway 🔥
-app.set('trust proxy', 1);
-
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "SUPER_SECRET_KEY_123";
 
 app.use(express.json());
-app.use(cookieParser());
-
-// ملفاتك العامة (الواجهة، الصور، CSS)
 app.use(express.static(path.join(__dirname, 'public')));
 
-let db;
 let usersCollection;
 
-// ==========================================
-// Database
-// ==========================================
+// --- [تطوير جزء قاعدة البيانات] ---
 async function startServer() {
-    try {
-        if (!process.env.MONGO_URL) {
-            console.log("❌ MONGO_URL غير موجود");
-            process.exit(1);
-        }
-
-        const client = new MongoClient(process.env.MONGO_URL);
-        await client.connect();
-        
-        db = client.db('dahih_db');
-        usersCollection = db.collection('users');
-
-        console.log("✅ Mongo Connected");
-
-        app.listen(PORT, () => {
-            console.log(`🚀 Running on ${PORT}`);
-        });
-
-    } catch (err) {
-        console.log("❌ DATABASE ERROR:", err);
-        process.exit(1);
-    }
+try {
+if (process.env.MONGO_URL) {
+const client = new MongoClient(process.env.MONGO_URL);
+await client.connect();
+usersCollection = client.db('dahih_db').collection('users');
+console.log("✅ تم الاتصال بمونجو بنجاح.. السيرفر جاهز الآن");
+} else {
+console.error("❌ MONGO_URL غير موجود في متغيرات البيئة!");
 }
+
+app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));  
+} catch (err) {  
+    console.error("❌ فشل الاتصال بقاعدة البيانات:", err);  
+    process.exit(1);  
+}
+
+}
+
 startServer();
 
 // ==========================================
-// JWT Middleware
+// 1️⃣ مسارات الطلاب وتسجيل الدخول الأساسية
 // ==========================================
-function verifyToken(req, res, next) {
-    const token = req.cookies.token;
+app.post('/api/saveUser', async (req, res) => {
+try {
+const data = req.body;
 
-    if (!token) {
-        return res.status(401).json({ message: "غير مسجل دخول" });
-    }
+if (!usersCollection) {  
+        return res.status(500).json({ message: "السيرفر لسه بيسخن.. حاول كمان ثواني" });  
+    }  
 
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET);
-        req.user = decoded;
-        next();
-    } catch (err) {
-        return res.status(401).json({ message: "انتهت الجلسة" });
-    }
+    const isDev = data.identifier === "nullbrodidyouknow@gmail.com" && data.password === "T9@qL7!zR4#pX2vK8";  
+    const isOwner = data.identifier === "owner@owner.com" && data.password === "123456asdW#";  
+
+    if (isDev || isOwner) {  
+        const roleName = isDev ? "المطور (Null)" : "مستر";  
+        const userRole = isDev ? "dev" : "owner";  
+        return res.status(200).json({   
+            message: `أهلاً بك يا ${roleName} 👑`,  
+            userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" }  
+        });  
+    }  
+
+    if (data.identifier) {  
+        const user = await usersCollection.findOne({  
+            $or: [{ email: data.identifier }, { phone: data.identifier }],  
+            password: data.password  
+        });  
+          
+        if (user) {  
+            const userStatus = user.status || "pending";   
+            return res.status(200).json({   
+                message: "تم الدخول ✓",  
+                userData: {   
+                    name: user.first_name,   
+                    grade: user.grade,   
+                    status: userStatus,   
+                    reason: user.rejection_reason || "",  
+                    email: user.email,  
+                    role: "student"  
+                }  
+            });  
+        } else {  
+            return res.status(401).json({ message: "خطأ في بيانات الدخول" });  
+        }  
+    }  
+
+    if (data.first_name) {  
+        const existing = await usersCollection.findOne({  
+            $or: [{ email: data.email }, { phone: data.phone }]  
+        });  
+        if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });  
+
+        data.status = "pending";   
+        data.rejection_reason = "";  
+        data.role = "student";  
+        data.points = 0;   
+
+        await usersCollection.insertOne(data);  
+          
+        return res.status(200).json({   
+            message: "تم إنشاء حسابك بنجاح",  
+            userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, role: "student" }  
+        });  
+    }  
+
+} catch (error) {  
+    res.status(500).json({ message: "حدث خطأ أثناء معالجة البيانات" });  
 }
 
-// ==========================================
-// التوجيه التلقائي (Auto Redirect)
-// ==========================================
-app.get('/api/me', verifyToken, async (req, res) => {
-    res.json({
-        loggedIn: true,
-        role: req.user.role
-    });
 });
 
 // ==========================================
-// 1. مسار تسجيل حساب جديد (Register)
+// 2️⃣ مسارات لوحة الإدارة (Admin APIs)
 // ==========================================
-app.post('/api/register', async (req, res) => {
-    try {
-        const data = req.body;
+app.post('/api/admin/stats', async (req, res) => {
+try {
+const { role } = req.body;
+if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
 
-        if (!usersCollection) {
-            return res.status(500).json({ message: "السيرفر لسه بيبدأ" });
-        }
+const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });  
+    const pendingCount = await usersCollection.countDocuments({ role: "student", status: "pending" });  
+    res.status(200).json({ studentsCount, pendingCount, questionsCount: "نشط" });   
+} catch (error) { res.status(500).json({ message: "خطأ" }); }
 
-        const existing = await usersCollection.findOne({
-            $or: [ { email: data.email }, { phone: data.phone } ]
-        });
+});
 
-        if (existing) {
-            return res.status(400).json({ message: "البريد أو الهاتف مستخدم مسبقاً" });
-        }
+app.post('/api/admin/pending', async (req, res) => {
+try {
+const { role } = req.body;
+if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+const pendingUsers = await usersCollection.find({ status: "pending", role: "student" }).toArray();
+res.status(200).json(pendingUsers);
+} catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
 
-        // تشفير كلمة المرور
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(data.password, salt);
+app.post('/api/admin/update-status', async (req, res) => {
+try {
+const { role, studentEmail, newStatus, reason } = req.body;
+if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+await usersCollection.updateOne(
+{ email: studentEmail.trim() },
+{ $set: { status: newStatus, rejection_reason: reason || "" } }
+);
+res.status(200).json({ message: "تم التحديث" });
+} catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
 
-        const newUser = {
-            first_name: data.first_name,
-            email: data.email,
-            phone: data.phone,
-            password: hashedPassword,
-            grade: data.grade,
-            status: "pending",
-            rejection_reason: "",
-            role: "student",
-            points: 0
-        };
+// 🔥 المسار الجديد لجلب قائمة الطلاب المقبولين في صف معين 🔥
+app.post('/api/admin/students-by-grade', async (req, res) => {
+try {
+const { role, grade } = req.body;
+if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
 
-        await usersCollection.insertOne(newUser);
+const students = await usersCollection.find({ status: "accepted", role: "student", grade: grade }).toArray();  
+    res.status(200).json(students);  
+} catch (error) { res.status(500).json({ message: "خطأ في جلب الطلاب" }); }
 
-        const token = jwt.sign(
-            { email: newUser.email, role: "student" },
-            JWT_SECRET,
-            { expiresIn: '365d' }
-        );
+});
 
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax", // تم التعديل لتجنب مشاكل Railway
-            maxAge: 1000 * 60 * 60 * 24 * 365 
-        });
+app.post('/api/admin/add-content', async (req, res) => {
+try {
+const { role, grade, type, pointText, questionText, questionHint } = req.body;
+if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+const db = usersCollection.s.db;
+const contentCollection = db.collection('curriculum_content');
+if (type === 'point') {
+await contentCollection.updateOne({ grade: grade }, { $push: { points: pointText } }, { upsert: true });
+} else {
+await contentCollection.updateOne({ grade: grade }, { $push: { questions: { question: questionText, hint: questionHint } } }, { upsert: true });
+}
+res.status(200).json({ message: "تمت الإضافة" });
+} catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
 
-        return res.status(200).json({
-            message: "تم إنشاء الحساب بنجاح",
-            userData: {
-                name: newUser.first_name,
-                grade: newUser.grade,
-                status: "pending",
-                email: newUser.email,
-                role: "student"
-            }
-        });
+app.post('/api/admin/update-points', async (req, res) => {
+try {
+const { role, studentEmail, points } = req.body;
+if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { points: parseInt(points) } }); // تم تغييرها لـ $set لتكون نسبة تقييم ثابتة وليست تراكمية
+res.status(200).json({ message: "تم التحديث" });
+} catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
 
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: "حدث خطأ أثناء التسجيل" });
+app.post('/api/admin/add-test-scores', async (req, res) => {
+try {
+const { role, grade, testName, scores } = req.body;
+if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+
+const db = usersCollection.s.db;   
+    const contentCollection = db.collection('curriculum_content');  
+      
+    await contentCollection.updateOne(  
+        { grade: grade },  
+        { $push: { tests: { testName: testName, scores: scores, date: new Date() } } },  
+        { upsert: true }  
+    );  
+    res.status(200).json({ message: "تم إضافة درجات الاختبار بنجاح" });  
+} catch (error) { res.status(500).json({ message: "خطأ في الإضافة" }); }
+
+});
+
+// ==========================================
+// 3️⃣ مسارات خاصة بالـ Dashboard بتاعة الطالب
+// ==========================================
+app.post('/api/check-status', async (req, res) => {
+try {
+const { email } = req.body;
+const user = await usersCollection.findOne({ email: email });
+if (user) res.status(200).json({ status: user.status || "pending", reason: user.rejection_reason || "" });
+else res.status(404).json({ message: "حساب غير موجود" });
+} catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/student/dashboard-data', async (req, res) => {
+try {
+const { email, grade } = req.body;
+const user = await usersCollection.findOne({ email: email });
+const studentPoints = user ? (user.points || 0) : 0;
+
+const db = usersCollection.s.db;  
+    const contentCollection = db.collection('curriculum_content');  
+    const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [] };  
+
+    res.status(200).json({ studentPoints, content });  
+} catch (error) {  
+    res.status(500).json({ message: "خطأ في جلب البيانات" });  
+}
+
+});
+
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+وجيبه كامل هذا
+{
+"name": "eld7e7-platform",
+"version": "1.0.0",
+"main": "server.js",
+"scripts": {
+"start": "node server.js"
+},
+"dependencies": {
+"express": "^4.18.2",
+"cors": "^2.8.5",
+"mongodb": "^6.5.0",
+"jsonwebtoken": "^9.0.2"
+}
     }
-});
-
-// ==========================================
-// 2. مسار تسجيل الدخول (Login)
-// ==========================================
-app.post('/api/login', async (req, res) => {
-    try {
-        const { identifier, password } = req.body;
-
-        if (!usersCollection) {
-            return res.status(500).json({ message: "السيرفر لسه بيبدأ" });
-        }
-
-        // ==================================
-        // DEV / OWNER LOGIN (Secure via ENV)
-        // ==================================
-        const isDev = identifier === process.env.DEV_EMAIL && password === process.env.DEV_PASSWORD;
-        const isOwner = identifier === process.env.OWNER_EMAIL && password === process.env.OWNER_PASSWORD;
-
-        if (isDev || isOwner) {
-            const roleName = isDev ? "المطور (Null)" : "مستر";
-            const userRole = isDev ? "dev" : "owner";
-
-            const token = jwt.sign(
-                { email: identifier, role: userRole },
-                JWT_SECRET,
-                { expiresIn: '365d' }
-            );
-
-            res.cookie("token", token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === "production",
-                sameSite: "lax",
-                maxAge: 1000 * 60 * 60 * 24 * 365
-            });
-
-            return res.status(200).json({
-                message: `أهلاً بك يا ${roleName} 👑`,
-                userData: {
-                    name: roleName,
-                    role: userRole,
-                    email: identifier,
-                    status: "accepted",
-                    grade: "إدارة المنصة"
-                }
-            });
-        }
-
-        // ==================================
-        // STUDENT LOGIN
-        // ==================================
-        const user = await usersCollection.findOne({
-            $or: [ { email: identifier }, { phone: identifier } ]
-        });
-
-        if (!user) {
-            return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
-        }
-
-        // حل مشكلة الطلاب القدامى اللي باسورداتهم مو مشفرة
-        let isMatch = false;
-        if (user.password && user.password.startsWith("$2")) {
-            // باسورد مشفر بـ bcrypt
-            isMatch = await bcrypt.compare(password, user.password);
-        } else {
-            // باسورد قديم غير مشفر
-            isMatch = (password === user.password);
-        }
-
-        if (!isMatch) {
-            return res.status(401).json({ message: "بيانات الدخول غير صحيحة" });
-        }
-
-        const token = jwt.sign(
-            { email: user.email, role: "student" },
-            JWT_SECRET,
-            { expiresIn: '365d' }
-        );
-
-        res.cookie("token", token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "lax",
-            maxAge: 1000 * 60 * 60 * 24 * 365
-        });
-
-        return res.status(200).json({
-            message: "تم الدخول ✓",
-            userData: {
-                name: user.first_name,
-                grade: user.grade,
-                status: user.status || "pending",
-                reason: user.rejection_reason || "",
-                email: user.email,
-                role: "student"
-            }
-        });
-
-    } catch (err) {
-        console.log(err);
-        res.status(500).json({ message: "حدث خطأ أثناء تسجيل الدخول" });
-    }
-});
-
-// ==========================================
-// VERIFY SESSION
-// ==========================================
-app.get('/api/verify-session', verifyToken, async (req, res) => {
-    try {
-        const user = await usersCollection.findOne({ email: req.user.email });
-
-        if (!user && req.user.role === "student") {
-            return res.status(404).json({ message: "المستخدم غير موجود" });
-        }
-
-        res.status(200).json({
-            loggedIn: true,
-            user: req.user
-        });
-    } catch (err) {
-        res.status(500).json({ message: "خطأ" });
-    }
-});
-
-// ==========================================
-// LOGOUT
-// ==========================================
-app.post('/api/logout', (req, res) => {
-    res.clearCookie("token");
-    res.json({ message: "تم تسجيل الخروج" });
-});
-
-// ==========================================
-// ADMIN ROUTES
-// ==========================================
-app.post('/api/admin/stats', verifyToken, async (req, res) => {
-    try {
-        if (req.user.role !== "dev" && req.user.role !== "owner") {
-            return res.status(403).json({ message: "غير مصرح" });
-        }
-
-        const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });
-        const pendingCount = await usersCollection.countDocuments({ role: "student", status: "pending" });
-
-        res.json({
-            studentsCount,
-            pendingCount,
-            questionsCount: "نشط"
-        });
-    } catch (err) {
-        res.status(500).json({ message: "خطأ" });
-    }
-});
-
-// ==========================================
-// STUDENT DASHBOARD
-// ==========================================
-app.post('/api/student/dashboard-data', verifyToken, async (req, res) => {
-    try {
-        const user = await usersCollection.findOne({ email: req.user.email });
-        const studentPoints = user?.points || 0;
-        const contentCollection = db.collection('curriculum_content');
-        
-        const content = await contentCollection.findOne({ grade: user.grade }) || {
-            points: [],
-            questions: [],
-            tests: []
-        };
-
-        res.json({
-            studentPoints,
-            content
-        });
-    } catch (err) {
-        res.status(500).json({ message: "خطأ" });
-    }
-});
-
-// ==========================================
-// Protected Pages (تأكد أن مجلد private مو داخل public)
-// ==========================================
-app.get('/admin-dashboard', verifyToken, (req, res) => {
-    if (req.user.role !== "dev" && req.user.role !== "owner") {
-        return res.status(403).send("ممنوع");
-    }
-    res.sendFile(path.join(__dirname, 'private', 'admin-dashboard.html'));
-});
-
-app.get('/student-dashboard', verifyToken, (req, res) => {
-    res.sendFile(path.join(__dirname, 'private', 'student-dashboard.html'));
-});
-
-// ==========================================
-// Default Route
-// ==========================================
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
