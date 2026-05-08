@@ -224,4 +224,3 @@ const db = usersCollection.s.db;
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-هذا اشتغل عادي
