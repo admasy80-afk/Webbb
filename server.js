@@ -8,27 +8,35 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// رابط الداتا بيس الخاص بك (Railway)
-const MONGO_URI = process.env.MONGO_URL || "mongodb://mongo:iWteUaeFERklPvvTTVixFSuaHHfoUlMw@turntable.proxy.rlwy.net:21742";
+// رابط الداتا بيس الخاص بك (Railway) مع حل مشكلة الاتصال (authSource=admin)
+const MONGO_URI = process.env.MONGO_URL || "mongodb://mongo:iWteUaeFERklPvvTTVixFSuaHHfoUlMw@turntable.proxy.rlwy.net:21742/dahih_db?authSource=admin";
 
 // ==========================================
-// ⚙️ إعدادات السيرفر والحماية الخارقة
+// ⚙️ إعدادات السيرفر والحماية الخارقة (Zero Dependencies)
 // ==========================================
 app.set('trust proxy', true);
-app.disable('x-powered-by');
-app.use(express.json({ limit: '5mb' })); 
+app.disable('x-powered-by'); // إخفاء هوية السيرفر عن المخترقين
+app.use(express.json({ limit: '1mb' })); // تقليل الـ Payload لـ 1 ميجا لمنع هجمات الـ DoS
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d', etag: true }));
 
-// 🔥 Headers حماية صارمة
+// 🔥 Strict Security Headers & CORS
 app.use((req, res, next) => {
+    // CORS مدمج لحماية الـ API
+    res.setHeader('Access-Control-Allow-Origin', '*'); // يفضل في الإنتاج وضع رابط موقعك الفعلي بدل *
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
+    
+    // Security Headers لمنع ثغرات XSS و Clickjacking
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-Frame-Options', 'DENY'); // أقوى من SAMEORIGIN
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    
+    if (req.method === 'OPTIONS') return res.status(200).end();
     next();
 });
 
-// 🔥 تنظيف المدخلات (NoSQL Injection Protection)
+// 🔥 تنظيف المدخلات الصارم (NoSQL Injection & Prototype Pollution Protection)
 function sanitizeInput(obj, depth = 0) {
     if (depth > 5) return obj;
     if (obj === null || obj === undefined) return obj;
@@ -40,7 +48,8 @@ function sanitizeInput(obj, depth = 0) {
     if (typeof obj === 'object') {
         const cleaned = {};
         for (const key of Object.keys(obj)) {
-            if (key.startsWith('$') || key.includes('.')) continue;
+            if (key.startsWith('$') || key.includes('.')) continue; // رفض مفاتيح مونجو المشبوهة
+            if (key === '__proto__' || key === 'constructor') continue; // حماية Prototype
             cleaned[key] = sanitizeInput(obj[key], depth + 1);
         }
         return cleaned;
@@ -53,7 +62,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 🔥 نظام Rate Limiting بسيط في الذاكرة لمنع هجمات الـ DDoS (لا يستهلك مساحة الداتا بيس)
+// 🔥 نظام Rate Limiting ذكي لمنع هجمات الـ Brute Force
 const rateLimiter = new Map();
 app.use((req, res, next) => {
     const ip = req.ip || req.connection.remoteAddress;
@@ -66,7 +75,7 @@ app.use((req, res, next) => {
             bucket.count = 1; bucket.resetAt = now + 60000;
         } else {
             bucket.count++;
-            if (bucket.count > 150) return res.status(429).json({ message: "🛑 طلبات كتير.. تم حظر الآي بي مؤقتاً" });
+            if (bucket.count > 100) return res.status(429).json({ message: "🛑 تم حظر الـ IP مؤقتاً بسبب كثرة الطلبات" });
         }
     }
     next();
@@ -89,7 +98,7 @@ function clearCache(prefix) {
     for (const key of cache.keys()) { if (key.startsWith(prefix)) cache.delete(key); }
 }
 
-// 🔥 أدوات التشفير والتوكن
+// 🔥 التشفير الآمن ضد هجمات الـ Timing Attacks
 function generateSessionToken() { return crypto.randomBytes(48).toString('hex'); }
 function hashPassword(password, salt) {
     const useSalt = salt || crypto.randomBytes(16).toString('hex');
@@ -99,7 +108,8 @@ function hashPassword(password, salt) {
 function verifyPassword(password, storedHash, storedSalt) {
     if (!storedSalt) return password === storedHash;
     const { hash } = hashPassword(password, storedSalt);
-    return hash === storedHash;
+    // Timing Safe Equal تمنع الهاكرز من تخمين الباسورد عن طريق قياس سرعة استجابة السيرفر
+    return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(storedHash, 'hex'));
 }
 
 // ==========================================
@@ -116,8 +126,6 @@ async function startServer() {
         contentCollection = dbInstance.collection('curriculum_content');
         sessionsCollection = dbInstance.collection('sessions');
 
-        // لا نقوم بإنشاء فهارس (Indexes) هنا لتجنب خطأ المساحة
-
         console.log("✅ تم الاتصال بمونجو Railway بنجاح.. السيرفر الخارق جاهز!");
         app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));
     } catch (err) {
@@ -130,26 +138,39 @@ startServer();
 // 🛡️ Middlewares التحقق (حراس الأمن)
 // ==========================================
 function ensureDB(req, res, next) {
-    if (!usersCollection) return res.status(503).json({ message: "السيرفر لسه بيسخن" });
+    if (!usersCollection) return res.status(503).json({ message: "السيرفر قيد التشغيل.. انتظر لحظات" });
     next();
 }
 
-// حارس أمن الإدارة (يمنع أي شخص من الدخول للإدارة بدون توكن حقيقي)
+// 1. حارس أمن الإدارة (Admin Bouncer)
 async function requireAdmin(req, res, next) {
     try {
-        // يقبل التوكن من البودي أو الهيدر
         const token = req.body.sessionToken || req.headers['x-session-token'] || req.headers.authorization;
-        if (!token) return res.status(401).json({ message: "تسجيل الدخول مطلوب.. التوكن مفقود" });
+        if (!token) return res.status(401).json({ message: "غير مصرح لك: التوكن مفقود" });
 
         const session = await sessionsCollection.findOne({ token, expiresAt: { $gt: new Date() } });
         if (!session || (session.role !== 'dev' && session.role !== 'owner')) {
-            console.log(`🚨 [HACK ATTEMPT] محاولة دخول للإدارة مرفوضة من IP: ${req.ip}`);
-            return res.status(403).json({ message: "غير مصرح لك" });
+            console.warn(`🚨 [HACK ATTEMPT] محاولة دخول للإدارة مرفوضة من IP: ${req.ip}`);
+            return res.status(403).json({ message: "غير مصرح لك بالدخول للإدارة" });
         }
         
-        req.adminSession = session; // تمرير بيانات الأدمن للمسار
+        req.adminSession = session; 
         next();
-    } catch (e) { res.status(500).json({ message: "خطأ في النظام" }); }
+    } catch (e) { res.status(500).json({ message: "خطأ داخلي" }); }
+}
+
+// 2. حارس أمن الطلاب (Student Bouncer - يمنع سرقة بيانات طلاب آخرين)
+async function requireAuth(req, res, next) {
+    try {
+        const token = req.body.sessionToken || req.headers['x-session-token'] || req.headers.authorization;
+        if (!token) return res.status(401).json({ message: "الرجاء تسجيل الدخول أولاً" });
+
+        const session = await sessionsCollection.findOne({ token, expiresAt: { $gt: new Date() } });
+        if (!session) return res.status(401).json({ message: "انتهت صلاحية الجلسة" });
+        
+        req.userSession = session; // السيرفر يثق في هذه البيانات فقط
+        next();
+    } catch (e) { res.status(500).json({ message: "خطأ داخلي" }); }
 }
 
 // ==========================================
@@ -176,7 +197,7 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
             return res.status(200).json({ 
                 message: `أهلاً بك يا ${roleName} 👑`, 
                 userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" },
-                sessionToken: token // 🔥 السلاح السري اللي الفرونت إند لازم يخزنه
+                sessionToken: token
             });
         }
 
@@ -185,13 +206,12 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
             const user = await usersCollection.findOne({ $or: [{ email: data.identifier }, { phone: data.identifier }] });
             if (!user) return res.status(401).json({ message: "خطأ في بيانات الدخول" });
             
-            // تحقق الباسورد
             const passwordMatch = user.passwordSalt ? verifyPassword(data.password, user.password, user.passwordSalt) : user.password === data.password;
             if (!passwordMatch) return res.status(401).json({ message: "خطأ في بيانات الدخول" });
 
             const token = generateSessionToken();
             await sessionsCollection.insertOne({ 
-                token, email: user.email, role: 'student', 
+                token, email: user.email, role: 'student', grade: user.grade, // حفظ الصف في الجلسة
                 createdAt: new Date(), expiresAt: new Date(Date.now() + 7 * 24 * 3600000) 
             });
 
@@ -208,7 +228,6 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
             const existing = await usersCollection.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });
             if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });
 
-            // تشفير الباسورد
             const { hash, salt } = hashPassword(data.password);
             data.password = hash; data.passwordSalt = salt;
             
@@ -222,7 +241,7 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
 });
 
 // ==========================================
-// 2️⃣ مسارات لوحة الإدارة (محمية بـ requireAdmin بقوة)
+// 2️⃣ مسارات لوحة الإدارة (محمية بـ requireAdmin)
 // ==========================================
 app.post('/api/admin/stats', ensureDB, requireAdmin, async (req, res) => {
     try {
@@ -288,34 +307,48 @@ app.post('/api/admin/add-test-scores', ensureDB, requireAdmin, async (req, res) 
 });
 
 // ==========================================
-// 3️⃣ مسارات الطالب
+// 3️⃣ مسارات الطالب (محمية بـ requireAuth)
 // ==========================================
+
+// مسار فحص الحالة (تركناه بدون توكن للسماح بفحص الحظر قبل تسجيل الدخول)
 app.post('/api/check-status', ensureDB, async (req, res) => {
     try {
         const user = await usersCollection.findOne({ email: req.body.email });
-        if (user) res.status(200).json({ status: user.status || "pending", reason: user.rejection_reason || "" });
-        else res.status(404).json({ message: "حساب غير موجود" });
+        if (user) {
+            if(user.banned) return res.status(200).json({ status: "banned", reason: user.banReason });
+            res.status(200).json({ status: user.status || "pending", reason: user.rejection_reason || "" });
+        } else res.status(404).json({ message: "حساب غير موجود" });
     } catch (e) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/student/dashboard-data', ensureDB, async (req, res) => {
+// 🔥 هذا المسار كان به ثغرة IDOR.. الآن هو آمن تماماً!
+app.post('/api/student/dashboard-data', ensureDB, requireAuth, async (req, res) => {
     try {
-        const { email, grade } = req.body;
-        const user = await usersCollection.findOne({ email: email });
+        // نعتمد على الإيميل الموجود في التوكن الآمن، وليس المُرسل من العميل!
+        const secureEmail = req.userSession.email; 
+        const secureGrade = req.userSession.grade;
+
+        const user = await usersCollection.findOne({ email: secureEmail });
         const studentPoints = user ? (user.points || 0) : 0;
         
-        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [] };  
+        const content = await contentCollection.findOne({ grade: secureGrade }) || { points: [], questions: [], tests: [] };  
         res.status(200).json({ studentPoints, content });
     } catch (error) { res.status(500).json({ message: "خطأ في جلب البيانات" }); }
 });
 
-// 🔥 تنظيف الجلسات المنتهية كل ساعة للحفاظ على المساحة
+// ==========================================
+// 🌐 معالج الأخطاء العام والتنظيف
+// ==========================================
+// إخفاء الأخطاء الداخلية (Stack Trace) عن المستخدمين
+app.use((err, req, res, next) => {
+    console.error("Internal Server Error:", err);
+    res.status(500).json({ message: "حدث خطأ غير متوقع في الخادم" });
+});
+
+// تنظيف الجلسات المنتهية كل ساعة للحفاظ على المساحة
 setInterval(async () => { 
     if (sessionsCollection) await sessionsCollection.deleteMany({ expiresAt: { $lt: new Date() } }); 
 }, 3600000);
 
-// ==========================================
-// 🌐 الشاشة الرئيسية
-// ==========================================
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
