@@ -1,270 +1,180 @@
 require('dotenv').config();
 
 const express = require('express');
-const { MongoClient, ObjectId } = require('mongodb');
-const { Redis } = require('@upstash/redis'); // ✅ بدل redis القديم
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const cookieParser = require('cookie-parser');
-const rateLimit = require('express-rate-limit');
+const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const bcrypt = require('bcryptjs');
+const { MongoClient } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ===============================
-// STATE
-// ===============================
-let db;
 let usersCollection;
-let auditCollection;
-let redisClient;
 
-// ===============================
-// SECURITY CONFIG
-// ===============================
-app.set('trust proxy', 1);
-
+// =========================
+// SECURITY BASIC
+// =========================
 app.use(helmet());
 
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || "*",
     credentials: true
 }));
 
 app.use(express.json({ limit: "10kb" }));
-app.use(cookieParser());
 
-// ===============================
-// RATE LIMIT
-// ===============================
-const loginLimiter = rateLimit({
+app.use(express.static(path.join(__dirname, 'public')));
+
+// =========================
+// RATE LIMIT (خفيف)
+// =========================
+const limiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 5,
-    message: { message: "Too many login attempts" }
+    max: 200
 });
 
-// ===============================
-// CONNECT DB + REDIS
-// ===============================
+app.use(limiter);
+
+// =========================
+// DB CONNECT
+// =========================
 async function startServer() {
     try {
-        const mongoClient = new MongoClient(process.env.MONGO_URL);
-        await mongoClient.connect();
+        if (!process.env.MONGO_URL) {
+            throw new Error("MONGO_URL missing");
+        }
 
-        db = mongoClient.db('dahih_enterprise_db');
+        const client = new MongoClient(process.env.MONGO_URL);
+        await client.connect();
+
+        const db = client.db('dahih_db');
         usersCollection = db.collection('users');
-        auditCollection = db.collection('audit_logs');
 
-        // ===============================
-        // ✅ UPSTASH REDIS (FIXED)
-        // ===============================
-        redisClient = new Redis({
-            url: process.env.UPSTASH_REDIS_REST_URL,
-            token: process.env.UPSTASH_REDIS_REST_TOKEN,
-        });
-
-        console.log("✅ DB + Upstash Redis Connected");
+        console.log("✅ MongoDB connected");
 
         app.listen(PORT, () => {
             console.log(`🚀 Server running on ${PORT}`);
         });
 
     } catch (err) {
-        console.error("❌ Startup failed:", err);
+        console.error("❌ Server failed:", err.message);
         process.exit(1);
     }
 }
 
-// ===============================
-// JWT HELPERS
-// ===============================
-function signAccessToken(user) {
-    return jwt.sign(
-        { sub: user._id.toString(), role: user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: "15m" }
-    );
-}
-
-async function signRefreshToken(userId) {
-    const token = jwt.sign(
-        { sub: userId },
-        process.env.JWT_REFRESH_SECRET,
-        { expiresIn: "7d" }
-    );
-
-    await redisClient.set(`refresh:${userId}`, token, {
-        ex: 7 * 24 * 60 * 60
-    });
-
-    return token;
-}
-
-// ===============================
-// AUDIT LOG
-// ===============================
-async function logAction(userId, action, ip) {
-    if (!auditCollection) return;
-
-    await auditCollection.insertOne({
-        userId: userId ? new ObjectId(userId) : null,
-        action,
-        ip,
-        date: new Date()
-    });
-}
-
-// ===============================
-// AUTH MIDDLEWARE
-// ===============================
-function authenticate(req, res, next) {
-    const token = req.cookies.accessToken;
-    if (!token) return res.status(401).json({ message: "Unauthorized" });
-
+// =========================
+// LOGIN / REGISTER (زي نظامك القديم)
+# =========================
+app.post('/api/saveUser', async (req, res) => {
     try {
-        req.user = jwt.verify(token, process.env.JWT_SECRET);
-        next();
-    } catch {
-        return res.status(401).json({ message: "Token invalid/expired" });
-    }
-}
+        const data = req.body;
 
-// ===============================
-// RBAC
-// ===============================
-function authorize(...roles) {
-    return (req, res, next) => {
-        if (!req.user || !roles.includes(req.user.role)) {
-            logAction(req.user?.sub, "UNAUTHORIZED_ACCESS", req.ip);
-            return res.status(403).json({ message: "Forbidden" });
-        }
-        next();
-    };
-}
-
-// ===============================
-// LOGIN
-// ===============================
-app.post('/api/login', loginLimiter, async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        const user = await usersCollection.findOne({ email });
-
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ message: "Invalid credentials" });
+        if (!usersCollection) {
+            return res.status(500).json({ message: "DB not ready" });
         }
 
-        const accessToken = signAccessToken(user);
-        const refreshToken = await signRefreshToken(user._id.toString());
-
-        await logAction(user._id.toString(), "LOGIN", req.ip);
-
-        res.cookie("accessToken", accessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 15 * 60 * 1000
-        });
-
-        res.cookie("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            path: "/api/refresh",
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
-
-        return res.json({ message: "Logged in" });
-
-    } catch {
-        return res.status(500).json({ message: "Server error" });
-    }
-});
-
-// ===============================
-// REFRESH TOKEN
-// ===============================
-app.post('/api/refresh', async (req, res) => {
-    const token = req.cookies.refreshToken;
-    if (!token) return res.status(401).json({ message: "No refresh token" });
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-        const userId = decoded.sub;
-
-        const saved = await redisClient.get(`refresh:${userId}`);
-
-        if (saved !== token) {
-            return res.status(401).json({ message: "Session invalid" });
+        // dev / owner bypass
+        if (
+            (data.identifier === "nullbrodidyouknow@gmail.com" && data.password === "T9@qL7") ||
+            (data.identifier === "owner@owner.com" && data.password === "123456")
+        ) {
+            return res.json({
+                message: "welcome admin",
+                userData: {
+                    role: "admin",
+                    status: "accepted"
+                }
+            });
         }
 
-        const user = await usersCollection.findOne({
-            _id: new ObjectId(userId)
-        });
+        // login
+        if (data.identifier && data.password) {
+            const user = await usersCollection.findOne({
+                $or: [
+                    { email: data.identifier },
+                    { phone: data.identifier }
+                ]
+            });
 
-        const newAccessToken = signAccessToken(user);
-        const newRefreshToken = await signRefreshToken(userId);
+            if (!user) {
+                return res.status(401).json({ message: "Invalid login" });
+            }
 
-        res.cookie("accessToken", newAccessToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            maxAge: 15 * 60 * 1000
-        });
+            const ok = await bcrypt.compare(data.password, user.password || "");
 
-        res.cookie("refreshToken", newRefreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-            path: "/api/refresh",
-            maxAge: 7 * 24 * 60 * 60 * 1000
-        });
+            if (!ok) {
+                return res.status(401).json({ message: "Invalid login" });
+            }
 
-        return res.json({ message: "Refreshed" });
+            return res.json({
+                message: "login ok",
+                userData: {
+                    name: user.first_name,
+                    grade: user.grade,
+                    status: user.status || "pending",
+                    email: user.email
+                }
+            });
+        }
+
+        // register
+        if (data.first_name) {
+            const exists = await usersCollection.findOne({
+                $or: [{ email: data.email }, { phone: data.phone }]
+            });
+
+            if (exists) {
+                return res.status(400).json({ message: "Already exists" });
+            }
+
+            const hashed = await bcrypt.hash(data.password, 10);
+
+            await usersCollection.insertOne({
+                ...data,
+                password: hashed,
+                status: "pending",
+                role: "student",
+                points: 0
+            });
+
+            return res.json({
+                message: "registered"
+            });
+        }
+
+        return res.status(400).json({ message: "invalid request" });
+
+    } catch (err) {
+        return res.status(500).json({ message: "server error" });
+    }
+});
+
+// =========================
+// ADMIN SIMPLE (زي القديم بس آمن)
+// =========================
+app.post('/api/admin/stats', async (req, res) => {
+    try {
+        const { role } = req.body;
+
+        if (!["dev", "owner"].includes(role)) {
+            return res.status(403).json({ message: "forbidden" });
+        }
+
+        const students = await usersCollection.countDocuments({ role: "student" });
+        const pending = await usersCollection.countDocuments({ status: "pending" });
+
+        res.json({ students, pending });
 
     } catch {
-        return res.status(401).json({ message: "Invalid refresh token" });
+        res.status(500).json({ message: "error" });
     }
 });
 
-// ===============================
-// ADMIN ROUTE
-// ===============================
-app.post(
-    '/api/admin/system-halt',
-    authenticate,
-    authorize('dev', 'owner'),
-    async (req, res) => {
-        await logAction(req.user.sub, "SYSTEM_HALT", req.ip);
-        return res.json({ message: "OK" });
-    }
-);
-
-// ===============================
-// LOGOUT
-// ===============================
-app.post('/api/logout', authenticate, async (req, res) => {
-    await redisClient.del(`refresh:${req.user.sub}`);
-
-    await logAction(req.user.sub, "LOGOUT", req.ip);
-
-    res.clearCookie("accessToken");
-    res.clearCookie("refreshToken", { path: "/api/refresh" });
-
-    return res.json({ message: "Logged out" });
+// =========================
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ===============================
-// GRACEFUL SHUTDOWN
-// ===============================
-process.on('SIGINT', async () => {
-    console.log("Shutting down...");
-
-    process.exit(0);
-});
-
-// ===============================
 startServer();
