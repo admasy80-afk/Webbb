@@ -137,6 +137,17 @@ app.post('/api/admin/update-status', async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
+// 🔥 المسار الجديد لجلب قائمة الطلاب المقبولين في صف معين 🔥
+app.post('/api/admin/students-by-grade', async (req, res) => {
+    try {
+        const { role, grade } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+        
+        const students = await usersCollection.find({ status: "accepted", role: "student", grade: grade }).toArray();
+        res.status(200).json(students);
+    } catch (error) { res.status(500).json({ message: "خطأ في جلب الطلاب" }); }
+});
+
 app.post('/api/admin/add-content', async (req, res) => {
     try {
         const { role, grade, type, pointText, questionText, questionHint } = req.body;
@@ -156,12 +167,11 @@ app.post('/api/admin/update-points', async (req, res) => {
     try {
         const { role, studentEmail, points } = req.body;
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
-        await usersCollection.updateOne({ email: studentEmail.trim() }, { $inc: { points: parseInt(points) } });
+        await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { points: parseInt(points) } }); // تم تغييرها لـ $set لتكون نسبة تقييم ثابتة وليست تراكمية
         res.status(200).json({ message: "تم التحديث" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// 🔥 المسار الجديد: إضافة درجات الاختبار للدفعة 🔥
 app.post('/api/admin/add-test-scores', async (req, res) => {
     try {
         const { role, grade, testName, scores } = req.body;
