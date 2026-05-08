@@ -57,8 +57,8 @@
         </div>
 
         <div id="tab-students-list" class="tab-content">
-            <h1 class="text-3xl font-bold mb-2">قائمة الطلاب المعتمدين 👥</h1>
-            <p class="text-gray-400 mb-8">اختر الدفعة لتعرف عدد الطلاب وأسمائهم وبيانات التواصل.</p>
+            <h1 class="text-3xl font-bold mb-2">قائمة الطلاب الحاليين 👥</h1>
+            <p class="text-gray-400 mb-8">اختر الدفعة.</p>
             <div class="glass-panel rounded-2xl p-6 max-w-4xl">
                 <select id="listGradeSelect" onchange="fetchStudentsByGrade()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6">
                     <option value="" disabled selected>اختر الصف لعرض قائمة الطلاب...</option>
@@ -83,7 +83,7 @@
 
         <div id="tab-students" class="tab-content">
             <h1 class="text-3xl font-bold mb-2">تقييم الطلاب</h1>
-            <p class="text-gray-400 mb-8">أضف تقييم للطالب ليظهر له كنسبة مئوية.</p>
+            <p class="text-gray-400 mb-8">أضف تقييمك للطالب.</p>
             <div class="glass-panel rounded-2xl p-6 max-w-2xl">
                 <form id="pointsForm" class="space-y-5">
                     <div><label class="block text-sm text-gray-400 mb-2">إيميل الطالب</label><input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" dir="ltr"></div>
@@ -95,8 +95,8 @@
         </div>
 
         <div id="tab-tests" class="tab-content">
-            <h1 class="text-3xl font-bold mb-2">درجات الاختبارات 📝</h1>
-            <p class="text-gray-400 mb-8">أضف درجات اختبار جديد للدفعة (سيتم ترتيبها وتتويج الأوائل تلقائياً).</p>
+            <h1 class="text-3xl font-bold mb-2">درجات الاختبارات </h1>
+            <p class="text-gray-400 mb-8">أضف درجات اختبار جديد للدفعة.</p>
             <div class="glass-panel rounded-2xl p-6 max-w-3xl">
                 <form id="testsForm" class="space-y-5">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -304,7 +304,7 @@
         }
 
         function rejectStudent(email) {
-            const reason = prompt("اكتب سبب الرفض (سيظهر للطالب):");
+            const reason = prompt("اكتب سبب الرفض");
             if (reason !== null) updateStudentStatus(email, 'rejected', reason);
         }
         
