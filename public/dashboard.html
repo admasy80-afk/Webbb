@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
     <title>لوحة الطالب | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Readex Pro', sans-serif; }
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
         .bg-animated-gradient {
             background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
             background-size: 400% 400%;
@@ -19,111 +16,97 @@
         }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        .glass-panel { 
-            background: rgba(255, 255, 255, 0.03); 
-            border: 1px solid rgba(255, 255, 255, 0.08); 
-            backdrop-filter: blur(12px); 
-        }
+        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-color: rgba(255, 255, 255, 0.2); }
         
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(234, 179, 8, 0.1);
-            border-color: rgba(234, 179, 8, 0.3);
-        }
-
         /* تنسيقات الراديو (خيارات الامتحان) */
-        .quiz-option input[type="radio"]:checked + div {
-            border-color: #eab308;
-            background-color: rgba(234, 179, 8, 0.1);
-        }
+        .quiz-option input[type="radio"]:checked + div { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
+        
+        /* حركات السحب والإفلات */
+        .section-content { transition: max-height 0.4s ease-in-out, opacity 0.4s ease-in-out; overflow: hidden; opacity: 1; }
+        .section-content.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none; }
+        .icon-rotate { transition: transform 0.3s ease; }
+        .icon-rotate.collapsed { transform: rotate(180deg); }
     </style>
 </head>
-<body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
+<body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-blue-500 selection:text-white relative">
 
     <nav class="w-full glass-panel sticky top-0 z-50 border-b border-white/10">
         <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
-            <div class="text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-            <button onclick="logout()" class="text-xs md:text-sm text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl transition-all font-bold">
-                تسجيل الخروج
-            </button>
+            <div class="text-2xl font-black text-white tracking-tight">الدحيح<span class="text-blue-500">.</span></div>
+            <button onclick="logout()" class="text-xs md:text-sm text-red-400 border border-red-500/30 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl transition-all font-bold">تسجيل الخروج</button>
         </div>
     </nav>
 
-    <main class="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 py-8">
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8">
         
-        <div class="glass-panel rounded-[2rem] p-8 md:p-10 mb-8 relative overflow-hidden">
-            <div class="absolute top-0 left-0 w-64 h-64 bg-yellow-500/10 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+        <div class="glass-panel rounded-2xl md:rounded-[2rem] p-6 md:p-10 mb-6 md:mb-8 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
             <div class="relative z-10">
-                <div class="inline-block bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 text-xs md:text-sm font-bold px-4 py-1.5 rounded-full mb-4">
-                    المرحلة: <span id="studentGrade">جاري التحميل...</span>
+                <div class="inline-block bg-white/5 border border-white/10 text-gray-300 text-xs md:text-sm font-bold px-4 py-1.5 rounded-full mb-4">
+                    المرحلة: <span id="studentGrade" class="text-white">جاري التحميل...</span>
                 </div>
-                <h1 class="text-4xl md:text-5xl font-black tracking-tight leading-tight">
-                    أهلاً بك يا <span id="studentName" class="text-transparent bg-clip-text bg-gradient-to-l from-yellow-300 to-yellow-600">بطل</span>
+                <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight mb-2">
+                    مرحباً بك، <span id="studentName" class="text-white">...</span>
                 </h1>
-                <p class="text-gray-400 mt-3 font-light text-sm md:text-base">جاهز لمواصلة التعلم اليوم؟</p>
+                <p class="text-gray-400 font-light text-sm md:text-base">نرجو لك التوفيق في دراستك.</p>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
 
-            <div class="lg:col-span-2 space-y-8">
+            <div class="lg:col-span-2 space-y-6 md:space-y-8">
                 
-                <section>
-                    <div class="flex items-center justify-between mb-4 mt-4">
-                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">الاختبارات الإلكترونية المتاحة 📝</h2>
+                <section class="glass-panel rounded-2xl overflow-hidden">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('quizzesSection', 'quizIcon')">
+                        <h2 class="text-xl font-bold text-white">الاختبارات الإلكترونية المتاحة</h2>
+                        <svg id="quizIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="onlineQuizzesContainer" class="space-y-4">
-                        <div class="glass-panel rounded-2xl p-6 flex items-center justify-center">
-                            <p class="text-gray-500 text-sm animate-pulse">جاري تحميل الاختبارات...</p>
+                    <div id="quizzesSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
+                        <div id="onlineQuizzesContainer" class="space-y-4">
+                            <p class="text-gray-500 text-sm text-center">جاري التحميل...</p>
                         </div>
                     </div>
                 </section>
 
-                <section>
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">أهم النقاط في المنهج</h2>
+                <section class="glass-panel rounded-2xl overflow-hidden">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('pointsSection', 'pointsIcon')">
+                        <h2 class="text-xl font-bold text-white">أهم النقاط في المنهج</h2>
+                        <svg id="pointsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="pointsContainer" class="glass-panel rounded-2xl p-6 border-r-4 border-r-blue-500 min-h-[150px] flex flex-col justify-center">
-                        <p class="text-gray-500 text-sm text-center">جاري تحميل النقاط الهامة...</p>
+                    <div id="pointsSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
+                        <div id="pointsContainer" class="min-h-[50px] flex flex-col justify-center"></div>
                     </div>
                 </section>
 
-                <section>
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">أهم الأسئلة (متوقعة)</h2>
+                <section class="glass-panel rounded-2xl overflow-hidden">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('questionsSection', 'questionsIcon')">
+                        <h2 class="text-xl font-bold text-white">أهم الأسئلة المقالية</h2>
+                        <svg id="questionsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="questionsContainer" class="space-y-4">
-                       <div class="glass-panel rounded-2xl p-8 flex items-center justify-center">
-                           <p class="text-gray-500 text-sm">جاري تحميل الأسئلة...</p>
-                       </div>
+                    <div id="questionsSection" class="section-content max-h-[2000px] p-5 md:p-6 bg-black/20">
+                        <div id="questionsContainer" class="space-y-4"></div>
                     </div>
                 </section>
-                
-                <section>
-                    <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-2xl font-bold text-white flex items-center gap-2">نتائج الاختبارات (الورقية) 🏆</h2>
+
+                <section class="glass-panel rounded-2xl overflow-hidden">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('testsSection', 'testsIcon')">
+                        <h2 class="text-xl font-bold text-white">نتائج الاختبارات الحضورية</h2>
+                        <svg id="testsIcon" class="w-5 h-5 text-gray-400 icon-rotate collapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="testsContainer" class="space-y-6">
-                        <div class="glass-panel rounded-2xl p-6 flex items-center justify-center">
-                            <p class="text-gray-500 text-sm animate-pulse">جاري تحميل النتائج...</p>
-                        </div>
+                    <div id="testsSection" class="section-content max-h-[1000px] collapsed p-5 md:p-6 bg-black/20">
+                        <div id="testsContainer" class="space-y-4"></div>
                     </div>
                 </section>
 
             </div>
 
-            <div class="space-y-8">
-                <section class="glass-panel rounded-3xl p-6 relative overflow-hidden">
-                    <h2 class="text-xl font-bold text-white mb-6">تقييم المستر لك حتى اليوم</h2>
-                    <div class="bg-black/30 rounded-2xl p-4 flex items-center justify-between border border-white/5">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-yellow-500 flex items-center justify-center text-black font-black text-lg">👑</div>
-                            <div>
-                                <h4 class="font-bold text-sm">النسبة المئوية</h4>
-                                <p class="text-xs text-green-400">استمر في التقدم!</p>
-                            </div>
-                        </div>
-                        <div class="text-left" dir="ltr"> <span id="studentPointsDisplay" class="block text-xl font-black text-white">0%</span> </div>
+            <div class="space-y-6 md:space-y-8">
+                <section class="glass-panel rounded-2xl p-6 border-t-2 border-t-blue-500">
+                    <h2 class="text-lg font-bold text-white mb-4 text-center md:text-right">التقييم المستمر</h2>
+                    <div class="bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center border border-white/5 py-8">
+                        <span id="studentPointsDisplay" class="text-5xl md:text-6xl font-black text-blue-400" dir="ltr">0%</span>
+                        <p class="text-sm text-gray-400 mt-4 text-center">النسبة المئوية لتقييم الأداء العام.</p>
                     </div>
                 </section>
             </div>
@@ -131,27 +114,39 @@
         </div>
     </main>
 
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-md transition-opacity">
-        <div class="bg-gray-900 border border-yellow-500/30 w-full max-w-3xl rounded-[2rem] p-6 md:p-10 max-h-[90vh] overflow-y-auto shadow-2xl shadow-yellow-500/10">
-            <div id="quizModalContent">
-                </div>
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-lg transition-opacity">
+        <div class="bg-[#0f172a] border border-white/10 w-full max-w-3xl rounded-[1.5rem] p-5 md:p-8 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div id="quizModalContent"></div>
         </div>
     </div>
 
     <script>
         const userDataStr = localStorage.getItem('dahih_user');
-        window.availableQuizzes = []; // مصفوفة لتخزين الاختبارات
+        window.availableQuizzes = []; 
+        let currentUser = null;
         
         if (!userDataStr) {
             window.location.replace("/logina.html");
         } else {
-            const userData = JSON.parse(userDataStr);
-            const firstName = userData.name ? userData.name.split(' ')[0] : "يا دحيح";
-            
+            currentUser = JSON.parse(userDataStr);
+            const firstName = currentUser.name ? currentUser.name.split(' ')[0] : "طالب";
             document.getElementById('studentName').innerText = firstName;
-            document.getElementById('studentGrade').innerText = userData.grade || "الصف غير محدد";
+            document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
+            fetchDashboardData(currentUser.email, currentUser.grade);
+        }
 
-            fetchDashboardData(userData.email, userData.grade);
+        // دالة الطي والفرد (Collapse)
+        function toggleSection(sectionId, iconId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById(iconId);
+            section.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
+            // تعديل الارتفاع بناءً على المحتوى
+            if(section.classList.contains('collapsed')) {
+                section.style.maxHeight = '0px';
+            } else {
+                section.style.maxHeight = section.scrollHeight + 500 + 'px'; // مساحة إضافية احتياطية
+            }
         }
 
         async function fetchDashboardData(email, grade) {
@@ -164,125 +159,116 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    
                     document.getElementById('studentPointsDisplay').innerText = (data.studentPoints || 0) + '%';
-
-                    // عرض الاختبارات الإلكترونية (الجديد)
-                    const qzContainer = document.getElementById('onlineQuizzesContainer');
                     window.availableQuizzes = data.content.quizzes || [];
                     
+                    // 1. الاختبارات الإلكترونية (الفحص لمنع التكرار)
+                    const qzContainer = document.getElementById('onlineQuizzesContainer');
                     if (window.availableQuizzes.length > 0) {
                         let qzHTML = '';
-                        // عرض الأحدث أولاً
                         window.availableQuizzes.slice().reverse().forEach(quiz => {
+                            // فحص هل الطالب امتحن قبل كده؟
+                            const studentResult = quiz.results ? quiz.results.find(r => r.email === email) : null;
+                            
                             qzHTML += `
-                            <div class="glass-panel rounded-2xl p-5 md:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-r-4 border-r-yellow-500 card-hover transition-all">
+                            <div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all">
                                 <div>
-                                    <h3 class="font-bold text-lg md:text-xl text-white">${quiz.title}</h3>
-                                    <p class="text-sm text-gray-400 mt-1">يحتوي على ${quiz.questions.length} أسئلة اختيار من متعدد.</p>
+                                    <h3 class="font-bold text-base md:text-lg text-white">${quiz.title}</h3>
+                                    <p class="text-xs md:text-sm text-gray-400 mt-1">يتكون من ${quiz.questions.length} أسئلة.</p>
                                 </div>
-                                <button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-gradient-to-l from-yellow-500 to-yellow-600 text-black font-black px-6 py-3 rounded-xl hover:scale-105 transition-transform shadow-lg shadow-yellow-500/20 text-sm">
-                                    ▶ ابدأ الاختبار الآن
-                                </button>
+                                ${studentResult 
+                                    ? `<div class="bg-green-500/10 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg text-sm text-center w-full md:w-auto font-bold">اكتمل بنسبة ${studentResult.percentage}%</div>`
+                                    : `<button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-blue-600 text-white font-bold px-6 py-2 rounded-lg hover:bg-blue-500 transition-colors text-sm">بدء الاختبار</button>`
+                                }
                             </div>`;
                         });
                         qzContainer.innerHTML = qzHTML;
                     } else {
-                        qzContainer.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center"><p class="text-gray-500 text-sm">لا توجد اختبارات إلكترونية مطلوبة حالياً.</p></div>';
+                        qzContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لا توجد اختبارات إلكترونية حالياً.</p>';
                     }
 
-                    // 1. تعبئة النقاط
+                    // 2. النقاط
                     const pContainer = document.getElementById('pointsContainer');
                     if (data.content.points && data.content.points.length > 0) {
-                        let pHTML = '<ul class="space-y-4 text-gray-300 text-sm md:text-base font-medium">';
-                        data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-blue-400 mt-1">▪</span><p>${point}</p></li>`);
+                        let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
+                        data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-blue-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
                         pHTML += '</ul>';
                         pContainer.innerHTML = pHTML;
-                        pContainer.classList.remove('justify-center');
-                    } else pContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">لا توجد نقاط هامة حالياً.</p>';
+                    } else pContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">لا توجد ملاحظات.</p>';
 
-                    // 2. تعبئة الأسئلة المقالية
+                    // 3. الأسئلة المتوقعة
                     const qContainer = document.getElementById('questionsContainer');
                     if (data.content.questions && data.content.questions.length > 0) {
                         let qHTML = '';
-                        data.content.questions.forEach(q => {
-                            qHTML += `<div class="glass-panel rounded-2xl p-5 card-hover transition-all mb-4">
-                                <h3 class="font-bold text-lg mb-2 text-white">س: ${q.question}</h3>
-                                <p class="text-gray-400 text-sm font-light mt-2 border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold">ج: </span>${q.hint}</p>
+                        data.content.questions.forEach((q, idx) => {
+                            qHTML += `
+                            <div class="bg-black/30 border border-white/5 rounded-xl p-4 card-hover">
+                                <h3 class="font-bold text-sm md:text-base text-white mb-2"><span class="text-gray-500 mr-1">${idx + 1}.</span> ${q.question}</h3>
+                                <p class="text-gray-400 text-sm leading-relaxed border-t border-white/10 pt-2"><span class="text-blue-400 font-bold ml-1">الإجابة:</span>${q.hint}</p>
                             </div>`;
                         });
                         qContainer.innerHTML = qHTML;
-                    } else qContainer.innerHTML = '<div class="glass-panel rounded-2xl p-8 flex items-center justify-center"><p class="text-gray-500 text-sm">لا توجد أسئلة مضافة حالياً.</p></div>';
+                    } else qContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لا توجد أسئلة مقالية.</p>';
 
-                    // 3. تعبئة الاختبارات الورقية وتتويج الأوائل 👑
+                    // 4. الاختبارات الورقية
                     const tContainer = document.getElementById('testsContainer');
                     if (data.content.tests && data.content.tests.length > 0) {
                         let tHTML = '';
                         data.content.tests.slice().reverse().forEach(test => {
-                            tHTML += `<div class="glass-panel rounded-3xl p-6 mb-6"><h3 class="text-xl font-bold text-yellow-500 mb-4">${test.testName}</h3><div class="space-y-3">`;
+                            tHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5"><h3 class="font-bold text-white mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
                             let sortedScores = test.scores.sort((a, b) => b.score - a.score);
                             sortedScores.forEach((s, index) => {
-                                let rankIcon = ''; let highlightClass = '';
-                                if (index === 0) { rankIcon = '🥇'; highlightClass = 'border border-yellow-500/50 bg-yellow-500/10'; }
-                                else if (index === 1) { rankIcon = '🥈'; highlightClass = 'border border-gray-300/50 bg-gray-400/10'; }
-                                else if (index === 2) { rankIcon = '🥉'; highlightClass = 'border border-orange-400/50 bg-orange-400/10'; }
-                                else { rankIcon = `<span class="text-gray-500 text-sm w-6 inline-block text-center">${index + 1}</span>`; highlightClass = 'bg-black/30 border border-white/5'; }
-                                tHTML += `<div class="flex items-center justify-between p-3 rounded-xl ${highlightClass}"><div class="flex items-center gap-3"><div class="text-xl">${rankIcon}</div><h4 class="font-bold text-white text-sm md:text-base">${s.name}</h4></div><div class="text-left font-black text-lg ${index < 3 ? 'text-white' : 'text-gray-400'}">${s.score}</div></div>`;
+                                let highlight = index < 3 ? 'text-white font-bold bg-white/5' : 'text-gray-400';
+                                let rank = index < 3 ? ['الأول', 'الثاني', 'الثالث'][index] : index + 1;
+                                tHTML += `<div class="flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-2 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr">${s.score}</span></div>`;
                             });
                             tHTML += `</div></div>`;
                         });
                         tContainer.innerHTML = tHTML;
-                    } else {
-                        tContainer.innerHTML = '<div class="glass-panel rounded-2xl p-6 flex items-center justify-center"><p class="text-gray-500 text-sm">لم يتم نشر نتائج اختبارات بعد.</p></div>';
-                    }
+                    } else tContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لم تُنشر نتائج.</p>';
                 }
-            } catch (err) {
-                console.error("فشل جلب البيانات:", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
-        // 🔥 برمجة فتح نافذة الاختبار (Quiz Logic) 🔥
         function openQuizModal(quizId) {
             const quiz = window.availableQuizzes.find(q => q.id === quizId);
             if (!quiz) return;
 
             let html = `
-                <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-4">
-                    <h2 class="text-2xl md:text-3xl font-black text-yellow-500">${quiz.title}</h2>
-                    <span class="bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-lg text-sm font-bold">${quiz.questions.length} أسئلة</span>
+                <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                    <h2 class="text-xl md:text-2xl font-bold text-white">${quiz.title}</h2>
+                    <span class="text-gray-400 text-sm bg-black/50 px-3 py-1 rounded-lg">${quiz.questions.length} أسئلة</span>
                 </div>
-                <form id="activeQuizForm" onsubmit="submitQuiz(event, '${quiz.id}')" class="space-y-8">
+                <form id="activeQuizForm" onsubmit="submitQuiz(event, '${quiz.id}')" class="space-y-6">
             `;
 
             quiz.questions.forEach((q, qIndex) => {
                 html += `
-                <div class="bg-black/40 p-5 md:p-6 rounded-2xl border border-white/5">
-                    <h4 class="font-bold text-lg md:text-xl mb-5 text-white leading-relaxed"><span class="text-blue-400 mr-2">${qIndex + 1}.</span>${q.questionText}</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div class="bg-black/40 p-4 md:p-5 rounded-xl border border-white/5">
+                    <h4 class="font-semibold text-base md:text-lg mb-4 text-white leading-relaxed"><span class="text-blue-500 mr-2">${qIndex + 1}.</span>${q.questionText}</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 `;
-
                 q.options.forEach((opt, optIndex) => {
                     const letters = ['أ', 'ب', 'ج', 'د'];
                     html += `
                     <label class="quiz-option cursor-pointer group">
                         <input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden">
-                        <div class="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-white/10 group-hover:bg-white/10 transition-all h-full">
-                            <div class="w-8 h-8 rounded-full bg-black/50 border border-white/20 flex items-center justify-center text-sm font-bold text-gray-400 group-hover:text-white shrink-0">
+                        <div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-blue-500/50 transition-all h-full">
+                            <div class="w-6 h-6 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:text-white shrink-0">
                                 ${letters[optIndex]}
                             </div>
-                            <span class="text-gray-200 text-sm md:text-base">${opt}</span>
+                            <span class="text-gray-300 text-sm md:text-base leading-relaxed">${opt}</span>
                         </div>
                     </label>
                     `;
                 });
-
                 html += `</div></div>`;
             });
 
             html += `
-                <div class="flex flex-col md:flex-row gap-4 pt-6 mt-8 border-t border-white/10">
-                    <button type="submit" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-500/20 text-lg">تسليم الإجابات</button>
-                    <button type="button" onclick="closeQuizModal()" class="md:w-32 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-red-500/20 hover:text-red-400 hover:border-red-500/30 transition-colors">إلغاء</button>
+                <div class="flex flex-col md:flex-row gap-3 pt-4 border-t border-white/10">
+                    <button type="submit" id="btnSubmitQuiz" class="flex-1 bg-blue-600 text-white font-bold py-3 md:py-4 rounded-xl hover:bg-blue-500 transition-colors text-sm md:text-base">تسليم الإجابات</button>
+                    <button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-3 md:py-4 rounded-xl hover:bg-white/5 transition-colors text-sm md:text-base">إلغاء</button>
                 </div>
             </form>`;
 
@@ -290,56 +276,75 @@
             document.getElementById('quizModal').classList.remove('hidden');
         }
 
-        // 🔥 برمجة تصحيح الاختبار وحساب النسبة 🔥
-        function submitQuiz(event, quizId) {
+        async function submitQuiz(event, quizId) {
             event.preventDefault();
+            const btn = document.getElementById('btnSubmitQuiz');
+            btn.innerText = "جاري التصحيح..."; btn.disabled = true;
+
             const quiz = window.availableQuizzes.find(q => q.id === quizId);
             const form = event.target;
             let score = 0;
 
-            // تصحيح الإجابات
             quiz.questions.forEach((q, qIndex) => {
                 const selectedOpt = parseInt(form.elements[`q_${qIndex}`].value);
-                if (selectedOpt === q.correctAnswer) {
-                    score++;
-                }
+                if (selectedOpt === q.correctAnswer) score++;
             });
 
-            // حساب النسبة المئوية
             const percentage = Math.round((score / quiz.questions.length) * 100);
 
-            // تحديد الرسالة والألوان حسب النتيجة
-            let msg = ''; let emoji = ''; let colorClass = '';
-            if (percentage >= 85) { msg = 'ممتاز جداً! أنت دحيح حقيقي.'; emoji = '🏆'; colorClass = 'text-green-400'; }
-            else if (percentage >= 65) { msg = 'جيد، ولكن يمكنك تحقيق الأفضل!'; emoji = '👍'; colorClass = 'text-yellow-400'; }
-            else { msg = 'تحتاج إلى مراجعة الدروس بتركيز أكثر.'; emoji = '📚'; colorClass = 'text-red-400'; }
+            try {
+                // إرسال النتيجة للسيرفر عشان الامتحان يتقفل على الطالب
+                await fetch('/api/student/submit-quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: currentUser.email, 
+                        studentName: currentUser.name, 
+                        grade: currentUser.grade, 
+                        quizId: quizId, 
+                        score: score, 
+                        percentage: percentage 
+                    })
+                });
 
-            // شاشة النتيجة النهائية
-            const resultHtml = `
-                <div class="text-center py-10 px-4 animate-[fadeIn_0.5s_ease-in-out]">
-                    <div class="text-7xl mb-6 transform hover:scale-110 transition-transform">${emoji}</div>
-                    <h2 class="text-3xl font-black text-white mb-2">نتيجتك في الاختبار:</h2>
-                    <div class="text-7xl font-black ${colorClass} mb-4 drop-shadow-lg">${percentage}%</div>
-                    <p class="text-xl text-gray-300 mb-6">${msg}</p>
-                    <div class="inline-block bg-white/5 border border-white/10 rounded-xl px-6 py-3 text-gray-400 mb-10">
-                        أجبت بشكل صحيح على <span class="text-white font-bold">${score}</span> من أصل <span class="text-white font-bold">${quiz.questions.length}</span> أسئلة.
+                // تصميم شاشة النتيجة الرسمية
+                let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
+                
+                const resultHtml = `
+                    <div class="text-center py-8 px-2 md:px-4">
+                        <div class="w-20 h-20 mx-auto mb-6 rounded-full border-4 border-white/10 flex items-center justify-center shadow-[0_0_40px_rgba(59,130,246,0.2)]">
+                            <span class="text-3xl">📋</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-2">تم إنهاء الاختبار بنجاح</h2>
+                        <p class="text-gray-400 text-sm mb-6">نتيجتك في هذا التقييم</p>
+                        
+                        <div class="text-5xl md:text-6xl font-black ${colorClass} mb-8 drop-shadow-md" dir="ltr">${percentage}%</div>
+                        
+                        <div class="bg-black/30 border border-white/5 rounded-xl p-4 text-gray-300 text-sm max-w-sm mx-auto mb-8 flex justify-between px-6">
+                            <span>الإجابات الصحيحة:</span>
+                            <span class="font-bold text-white" dir="ltr">${score} / ${quiz.questions.length}</span>
+                        </div>
+
+                        <button onclick="closeAndRefresh()" class="w-full max-w-sm mx-auto bg-white/10 border border-white/10 text-white font-bold py-3 md:py-4 rounded-xl hover:bg-white/20 transition-colors text-sm md:text-base block">إغلاق وتحديث الصفحة</button>
                     </div>
-                    <button onclick="closeQuizModal()" class="w-full bg-blue-500 border border-blue-400 text-white font-bold py-4 rounded-xl hover:bg-blue-400 transition-colors text-lg shadow-lg shadow-blue-500/20">العودة للوحة التحكم</button>
-                </div>
-            `;
+                `;
 
-            document.getElementById('quizModalContent').innerHTML = resultHtml;
-            // يمكنك هنا مستقبلاً كتابة كود يرسل النتيجة للسيرفر لحفظها في ملف الطالب
+                document.getElementById('quizModalContent').innerHTML = resultHtml;
+            } catch (err) {
+                alert("حدث خطأ أثناء حفظ نتيجتك، تأكد من اتصال الإنترنت.");
+                btn.innerText = "تسليم الإجابات"; btn.disabled = false;
+            }
         }
 
-        function closeQuizModal() {
-            document.getElementById('quizModal').classList.add('hidden');
+        function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); }
+        
+        function closeAndRefresh() {
+            closeQuizModal();
+            fetchDashboardData(currentUser.email, currentUser.grade); // تحديث عشان زرار الامتحان يتقفل
         }
 
-        function logout() {
-            localStorage.removeItem('dahih_user');
-            window.location.replace("/logina.html");
-        }
+        function logout() { localStorage.removeItem('dahih_user'); window.location.replace("/logina.html"); }
     </script>
 </body>
 </html>
+
