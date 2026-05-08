@@ -224,19 +224,3 @@ const db = usersCollection.s.db;
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
-وجيبه كامل هذا
-{
-"name": "eld7e7-platform",
-"version": "1.0.0",
-"main": "server.js",
-"scripts": {
-"start": "node server.js"
-},
-"dependencies": {
-"express": "^4.18.2",
-"cors": "^2.8.5",
-"mongodb": "^6.5.0",
-"jsonwebtoken": "^9.0.2"
-}
-    }
