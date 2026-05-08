@@ -161,6 +161,24 @@ app.post('/api/admin/update-points', async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
+// 🔥 المسار الجديد: إضافة درجات الاختبار للدفعة 🔥
+app.post('/api/admin/add-test-scores', async (req, res) => {
+    try {
+        const { role, grade, testName, scores } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+        
+        const db = usersCollection.s.db; 
+        const contentCollection = db.collection('curriculum_content');
+        
+        await contentCollection.updateOne(
+            { grade: grade },
+            { $push: { tests: { testName: testName, scores: scores, date: new Date() } } },
+            { upsert: true }
+        );
+        res.status(200).json({ message: "تم إضافة درجات الاختبار بنجاح" });
+    } catch (error) { res.status(500).json({ message: "خطأ في الإضافة" }); }
+});
+
 // ==========================================
 // 3️⃣ مسارات خاصة بالـ Dashboard بتاعة الطالب
 // ==========================================
@@ -173,19 +191,15 @@ app.post('/api/check-status', async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// 🔥 المسار السحري لجلب بيانات الطالب ومحتوى الدفعة بتاعته 🔥
 app.post('/api/student/dashboard-data', async (req, res) => {
     try {
         const { email, grade } = req.body;
-        
-        // 1. نجيب نقط الطالب المحدثة
         const user = await usersCollection.findOne({ email: email });
         const studentPoints = user ? (user.points || 0) : 0;
 
-        // 2. نجيب المحتوى الخاص بدفعته بس
         const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
-        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [] };
+        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [] };
 
         res.status(200).json({ studentPoints, content });
     } catch (error) {
@@ -193,5 +207,4 @@ app.post('/api/student/dashboard-data', async (req, res) => {
     }
 });
 
-// أي مسار تاني يرجع للصفحة الرئيسية
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
