@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
-const redis = require('redis');
+const { Redis } = require('@upstash/redis'); // ✅ بدل redis القديم
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cookieParser = require('cookie-parser');
@@ -29,15 +29,15 @@ app.set('trust proxy', 1);
 app.use(helmet());
 
 app.use(cors({
-    origin: process.env.CLIENT_URL, // 🔥 مهم جداً
+    origin: process.env.CLIENT_URL,
     credentials: true
 }));
 
-app.use(express.json({ limit: "10kb" })); // منع payload كبير (DoS protection)
+app.use(express.json({ limit: "10kb" }));
 app.use(cookieParser());
 
 // ===============================
-// RATE LIMIT (LOGIN)
+// RATE LIMIT
 // ===============================
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -57,15 +57,15 @@ async function startServer() {
         usersCollection = db.collection('users');
         auditCollection = db.collection('audit_logs');
 
-        redisClient = redis.createClient({
-            url: process.env.REDIS_URL
+        // ===============================
+        // ✅ UPSTASH REDIS (FIXED)
+        // ===============================
+        redisClient = new Redis({
+            url: process.env.UPSTASH_REDIS_REST_URL,
+            token: process.env.UPSTASH_REDIS_REST_TOKEN,
         });
 
-        redisClient.on('error', (err) => console.log("Redis error:", err));
-
-        await redisClient.connect();
-
-        console.log("✅ DB + Redis Connected");
+        console.log("✅ DB + Upstash Redis Connected");
 
         app.listen(PORT, () => {
             console.log(`🚀 Server running on ${PORT}`);
@@ -96,7 +96,7 @@ async function signRefreshToken(userId) {
     );
 
     await redisClient.set(`refresh:${userId}`, token, {
-        EX: 7 * 24 * 60 * 60
+        ex: 7 * 24 * 60 * 60
     });
 
     return token;
@@ -179,13 +179,13 @@ app.post('/api/login', loginLimiter, async (req, res) => {
 
         return res.json({ message: "Logged in" });
 
-    } catch (err) {
+    } catch {
         return res.status(500).json({ message: "Server error" });
     }
 });
 
 // ===============================
-// REFRESH TOKEN (ROTATION)
+// REFRESH TOKEN
 // ===============================
 app.post('/api/refresh', async (req, res) => {
     const token = req.cookies.refreshToken;
@@ -196,6 +196,7 @@ app.post('/api/refresh', async (req, res) => {
         const userId = decoded.sub;
 
         const saved = await redisClient.get(`refresh:${userId}`);
+
         if (saved !== token) {
             return res.status(401).json({ message: "Session invalid" });
         }
@@ -261,9 +262,6 @@ app.post('/api/logout', authenticate, async (req, res) => {
 // ===============================
 process.on('SIGINT', async () => {
     console.log("Shutting down...");
-
-    if (redisClient) await redisClient.quit();
-    if (db?.client) await db.client.close();
 
     process.exit(0);
 });
