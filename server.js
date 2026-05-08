@@ -93,7 +93,7 @@ function auditLog(action, actor, ip) { console.log(`🚨 [AUDIT] ${action} by ${
 
 function hashPassword(password, salt) {
     const useSalt = salt || crypto.randomBytes(16).toString('hex');
-    const hash = crypto.pbkdf2Sync(password, useSalt, 10000, 64, 'sha512').toString('hex'); // خففنا الدورات لتقليل الحمل على السيرفر المجاني
+    const hash = crypto.pbkdf2Sync(password, useSalt, 10000, 64, 'sha512').toString('hex'); // خففنا الدورات
     return { hash, salt: useSalt };
 }
 function verifyPassword(password, storedHash, storedSalt) {
@@ -121,12 +121,7 @@ async function startServer() {
         sessionsCollection = dbInstance.collection('sessions');
         achievementsCollection = dbInstance.collection('achievements');
 
-        // 🔥 فهارس أساسية فقط لا غير! (يحل مشكلة OutOfDiskSpace)
-        await Promise.all([
-            usersCollection.createIndex({ email: 1 }),
-            sessionsCollection.createIndex({ token: 1 }, { unique: true }),
-            sessionsCollection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
-        ]).catch(e => console.log("⚠️ Index creation warning (Safe to ignore if space is tight):", e.message));
+        // ⚠️ تم حذف إنشاء الفهارس (Indexes) نهائياً لحل مشكلة المساحة في الخطة المجانية!
 
         console.log("✅ تم الاتصال بمونجو.. السيرفر الخفيف جاهز!");
         app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));
