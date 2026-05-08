@@ -11,7 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Readex Pro', sans-serif; }
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
         .bg-animated-gradient {
             background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
             background-size: 400% 400%;
@@ -19,18 +19,9 @@
         }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        .glass-panel { 
-            background: rgba(255, 255, 255, 0.03); 
-            border: 1px solid rgba(255, 255, 255, 0.08); 
-            backdrop-filter: blur(12px); 
-        }
+        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-color: rgba(255, 255, 255, 0.2); }
         
-        .card-hover:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(234, 179, 8, 0.1);
-            border-color: rgba(234, 179, 8, 0.3);
-        }
-
         /* تنسيقات الراديو (خيارات الامتحان) */
         .quiz-option input[type="radio"]:checked + div { border-color: #3b82f6; background-color: rgba(59, 130, 246, 0.1); }
         
@@ -40,30 +31,31 @@
         .icon-rotate { transition: transform 0.3s ease; }
         .icon-rotate.collapsed { transform: rotate(180deg); }
 
-        /* 🔥 أنيميشن شاشة النتيجة الخرافي 🔥 */
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            70% { transform: scale(1.1); opacity: 1; }
+        /* 🔥 أنيميشن شاشة النتيجة الناعم والاحترافي 🔥 */
+        @keyframes smoothPop {
+            0% { transform: scale(0.9); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
         }
-        @keyframes slideUpFade {
-            0% { transform: translateY(40px); opacity: 0; }
+        @keyframes smoothSlideUp {
+            0% { transform: translateY(15px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
         }
-        @keyframes scoreGlow {
-            0% { filter: drop-shadow(0 0 10px currentColor); }
-            50% { filter: drop-shadow(0 0 25px currentColor); }
-            100% { filter: drop-shadow(0 0 10px currentColor); }
+        @keyframes softGlowPulse {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
         }
-        .animate-pop-in { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        .animate-slide-up { opacity: 0; animation: slideUpFade 0.6s ease-out forwards; }
-        .animate-glow { animation: scoreGlow 2s infinite ease-in-out; }
         
+        /* كلاسات التطبيق باستخدام منحنى (Cubic-Bezier) فائق النعومة */
+        .animate-pop-in { animation: smoothPop 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .animate-slide-up { opacity: 0; animation: smoothSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .animate-soft-pulse { animation: softGlowPulse 3s ease-in-out infinite; }
+        
+        /* توقيت التدرج المريح للعين */
         .delay-100 { animation-delay: 100ms; }
+        .delay-150 { animation-delay: 150ms; }
         .delay-200 { animation-delay: 200ms; }
+        .delay-250 { animation-delay: 250ms; }
         .delay-300 { animation-delay: 300ms; }
-        .delay-400 { animation-delay: 400ms; }
-        .delay-500 { animation-delay: 500ms; }
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-blue-500 selection:text-white relative">
@@ -338,35 +330,37 @@
                     })
                 });
 
-                // 🔥 تحديد الألوان حسب النتيجة للحركات الديناميكية 🔥
+                // 🔥 ألوان ديناميكية هادئة ورسمية حسب النتيجة 🔥
                 let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
-                let bgGlow = percentage >= 85 ? 'bg-green-500/20' : (percentage >= 50 ? 'bg-blue-500/20' : 'bg-red-500/20');
-                let borderGlow = percentage >= 85 ? 'border-green-400/50' : (percentage >= 50 ? 'border-blue-400/50' : 'border-red-400/50');
+                let bgGlow = percentage >= 85 ? 'bg-green-500/10' : (percentage >= 50 ? 'bg-blue-500/10' : 'bg-red-500/10');
+                let borderClass = percentage >= 85 ? 'border-green-400/40' : (percentage >= 50 ? 'border-blue-400/40' : 'border-red-400/40');
                 
-                // HTML الخاص بشاشة النتيجة مع كلاسات الأنيميشن الجديدة
+                // أيقونة SVG رسمية للنتيجة (علامة صح)
+                const successIcon = `<svg class="w-10 h-10 md:w-12 md:h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                
+                // HTML الخاص بشاشة النتيجة مع تأثيرات (Smooth Staggering Animations)
                 const resultHtml = `
                     <div class="text-center py-6 md:py-10 px-2 md:px-6 overflow-hidden">
                         
-                        <div class="w-20 h-20 md:w-24 md:h-24 mx-auto mb-6 rounded-full border-4 ${borderGlow} flex items-center justify-center bg-black/50 animate-pop-in relative">
-                            <span class="text-4xl md:text-5xl">📋</span>
-                            <div class="absolute inset-0 rounded-full border-4 border-white/10 animate-ping"></div>
+                        <div class="w-20 h-20 md:w-24 md:h-24 mx-auto mb-6 rounded-full border border-white/10 flex items-center justify-center bg-black/50 animate-pop-in relative shadow-lg shadow-black/50">
+                            ${successIcon}
                         </div>
                         
-                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم إنهاء الاختبار بنجاح</h2>
-                        <p class="text-gray-400 text-sm md:text-base mb-8 animate-slide-up delay-200">النتيجة النهائية المعتمدة</p>
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم إنهاء الاختبار</h2>
+                        <p class="text-gray-400 text-sm md:text-base mb-8 animate-slide-up delay-150">النتيجة النهائية المعتمدة لك</p>
                         
-                        <div class="relative inline-block animate-slide-up delay-300 mb-8 md:mb-10 w-full">
-                            <div class="absolute inset-0 ${bgGlow} blur-3xl rounded-full"></div>
-                            <div class="text-7xl md:text-8xl font-black ${colorClass} animate-glow relative z-10" dir="ltr">${percentage}%</div>
+                        <div class="relative inline-block animate-slide-up delay-200 mb-8 md:mb-10 w-full">
+                            <div class="absolute inset-0 ${bgGlow} blur-2xl rounded-full animate-soft-pulse"></div>
+                            <div class="text-7xl md:text-8xl font-black ${colorClass} relative z-10" dir="ltr">${percentage}%</div>
                         </div>
                         
-                        <div class="bg-black/40 border border-white/10 rounded-2xl p-4 md:p-5 text-gray-300 text-sm md:text-base max-w-sm mx-auto mb-8 md:mb-10 flex justify-between px-6 md:px-8 animate-slide-up delay-400 shadow-inner">
-                            <span>الإجابات الصحيحة:</span>
-                            <span class="font-black text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span>
+                        <div class="bg-black/40 border border-white/5 rounded-2xl p-4 md:p-5 text-gray-300 text-sm md:text-base max-w-sm mx-auto mb-8 md:mb-10 flex justify-between items-center px-6 md:px-8 animate-slide-up delay-250">
+                            <span class="font-medium text-gray-400">الإجابات الصحيحة</span>
+                            <span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span>
                         </div>
 
-                        <button onclick="closeAndRefresh()" class="w-full max-w-sm mx-auto bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold py-4 rounded-xl hover:from-blue-500 hover:to-blue-400 transition-all text-sm md:text-base block animate-slide-up delay-500 shadow-lg shadow-blue-500/20 transform hover:scale-105">
-                            إغلاق وتحديث الصفحة
+                        <button onclick="closeAndRefresh()" class="w-full max-w-sm mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base block animate-slide-up delay-300">
+                            العودة للوحة التحكم
                         </button>
                     </div>
                 `;
