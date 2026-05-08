@@ -18,8 +18,8 @@
 </head>
 <body class="flex h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
 
-    <aside class="w-64 glass-panel h-full flex flex-col border-l border-white/10 shrink-0">
-        <div class="p-6 border-b border-white/10">
+    <aside class="w-64 glass-panel h-full flex flex-col border-l border-white/10 shrink-0 overflow-y-auto">
+        <div class="p-6 border-b border-white/10 shrink-0">
             <div class="text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
             <p class="text-xs text-gray-400 mt-1">لوحة التحكم</p>
         </div>
@@ -27,12 +27,13 @@
         <nav class="flex-grow py-4 flex flex-col gap-2">
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">نظرة عامة</button>
             <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">التقديمات الحالية</button>
-            <button onclick="switchTab('students')" id="btn-students" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">رصيد الطلاب</button>
+            <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">قائمة الطلاب</button>
+            <button onclick="switchTab('students')" id="btn-students" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">تقييم الطلاب</button>
             <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">درجات الاختبارات</button>
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn w-full text-right px-6 py-4 font-medium text-gray-300 hover:bg-white/5 transition-all">المحتوى والأسئلة</button>
         </nav>
 
-        <div class="p-4 border-t border-white/10">
+        <div class="p-4 border-t border-white/10 shrink-0">
             <button onclick="logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3 rounded-xl text-sm font-bold transition-colors">تسجيل الخروج</button>
         </div>
     </aside>
@@ -51,18 +52,43 @@
 
         <div id="tab-requests" class="tab-content">
             <h1 class="text-3xl font-bold mb-2">التقديمات الحالية</h1>
-            <p class="text-gray-400 mb-8">راجع بيانات الطلاب الجدد وقم بقبولهم.</p>
+            <p class="text-gray-400 mb-8">راجع بيانات الطلاب الجدد بكامل تفاصيلهم.</p>
             <div id="pendingRequestsContainer" class="glass-panel rounded-2xl p-6 min-h-[300px]"></div>
         </div>
 
+        <div id="tab-students-list" class="tab-content">
+            <h1 class="text-3xl font-bold mb-2">قائمة الطلاب المعتمدين 👥</h1>
+            <p class="text-gray-400 mb-8">اختر الدفعة لتعرف عدد الطلاب وأسمائهم وبيانات التواصل.</p>
+            <div class="glass-panel rounded-2xl p-6 max-w-4xl">
+                <select id="listGradeSelect" onchange="fetchStudentsByGrade()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6">
+                    <option value="" disabled selected>اختر الصف لعرض قائمة الطلاب...</option>
+                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                </select>
+                <div id="studentsListContainer" class="space-y-4">
+                    <p class="text-gray-500 text-sm text-center py-10">يرجى اختيار الصف من القائمة أعلاه.</p>
+                </div>
+            </div>
+        </div>
+
         <div id="tab-students" class="tab-content">
-            <h1 class="text-3xl font-bold mb-2">رصيد الطلاب</h1>
-            <p class="text-gray-400 mb-8">أضف نقاط للطلاب لرفع رصيدهم.</p>
+            <h1 class="text-3xl font-bold mb-2">تقييم الطلاب</h1>
+            <p class="text-gray-400 mb-8">أضف تقييم للطالب ليظهر له كنسبة مئوية.</p>
             <div class="glass-panel rounded-2xl p-6 max-w-2xl">
                 <form id="pointsForm" class="space-y-5">
                     <div><label class="block text-sm text-gray-400 mb-2">إيميل الطالب</label><input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" dir="ltr"></div>
-                    <div><label class="block text-sm text-gray-400 mb-2">النقاط المضافة</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500"></div>
-                    <button type="submit" id="savePointsBtn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-400">تحديث</button>
+                    <div><label class="block text-sm text-gray-400 mb-2">التقييم (%)</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500" placeholder="مثال: 85"></div>
+                    <button type="submit" id="savePointsBtn" class="w-full bg-blue-500 text-white font-bold py-3 rounded-xl hover:bg-blue-400">تحديث التقييم</button>
                     <p id="pointsMsg" class="text-sm text-center hidden mt-2"></p>
                 </form>
             </div>
@@ -82,6 +108,12 @@
                             <label class="block text-sm text-gray-400 mb-2">الدفعة</label>
                             <select id="testGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer">
                                 <option value="" disabled selected>اختر الصف...</option>
+                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
                                 <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
                                 <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
                                 <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
@@ -115,8 +147,14 @@
             <div class="glass-panel rounded-2xl p-6 max-w-2xl">
                 <form id="contentForm" class="space-y-5">
                     <div>
-                        <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none">
+                        <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none cursor-pointer">
                             <option value="" disabled selected>اختر الصف...</option>
+                            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
                             <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
                             <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
                             <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
@@ -126,7 +164,7 @@
                         </select>
                     </div>
                     <div>
-                        <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none">
+                        <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none cursor-pointer">
                             <option value="point">نقطة هامة في المنهج</option>
                             <option value="question">سؤال متوقع بالحل</option>
                         </select>
@@ -156,10 +194,119 @@
             else document.getElementById('adminWelcomeName').innerText = user.name || "إدارة";
         }
 
-        async function fetchStats() { /* نفس الكود */ }
-        async function fetchPendingRequests() { /* نفس الكود */ }
-        async function updateStudentStatus(email, newStatus, reason = '') { /* نفس الكود */ }
-        function rejectStudent(email) { /* نفس الكود */ }
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/admin/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role })
+                });
+                const data = await res.json();
+                document.getElementById('stats-students').innerText = data.studentsCount || 0;
+                document.getElementById('stats-pending').innerText = data.pendingCount || 0;
+            } catch (err) { console.error("Error:", err); }
+        }
+
+        // 🔥 التقديمات الحالية: التعديل لإظهار كل التفاصيل للادارة 🔥
+        async function fetchPendingRequests() {
+            const container = document.getElementById('pendingRequestsContainer');
+            container.innerHTML = '<p class="text-yellow-500 text-center mt-10 animate-pulse">جاري جلب التقديمات...</p>';
+            try {
+                const res = await fetch('/api/admin/pending', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role })
+                });
+                const students = await res.json();
+                if (students.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center mt-10">لا توجد تقديمات قيد المراجعة حالياً.</p>';
+                    return;
+                }
+                let html = '<div class="space-y-6">';
+                students.forEach(st => {
+                    const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`;
+                    html += `
+                    <div class="bg-black/30 border border-white/10 rounded-xl p-6 flex flex-col gap-5 hover:border-yellow-500/50 transition-all">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 class="font-bold text-xl text-yellow-500 mb-2">${fullName}</h4>
+                                <p class="text-sm text-gray-400 mt-1">البريد الإلكتروني: <span class="text-white">${st.email}</span></p>
+                                <p class="text-sm text-gray-400 mt-1">الجنس: <span class="text-white">${st.gender || 'غير محدد'}</span></p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-400">المرحلة: <span class="text-white font-bold">${st.grade}</span></p>
+                                <p class="text-sm text-gray-400 mt-1">رقم الطالب: <span class="text-white" dir="ltr">${st.phone}</span></p>
+                                <p class="text-sm text-gray-400 mt-1">رقم ولي الأمر: <span class="text-white" dir="ltr">${st.parent_phone || 'غير متوفر'}</span></p>
+                            </div>
+                        </div>
+                        <div class="flex gap-3 w-full border-t border-white/10 pt-4">
+                            <button onclick="updateStudentStatus('${st.email}', 'accepted')" class="flex-1 bg-green-500/10 text-green-400 border border-green-500/30 px-6 py-3 rounded-lg hover:bg-green-500 hover:text-white transition-all font-bold">قبول الطالب</button>
+                            <button onclick="rejectStudent('${st.email}')" class="flex-1 bg-red-500/10 text-red-400 border border-red-500/30 px-6 py-3 rounded-lg hover:bg-red-500 hover:text-white transition-all font-bold">رفض الطلب</button>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500 text-center mt-10">❌ حدث خطأ في الاتصال.</p>';
+            }
+        }
+
+        // 🔥 الدالة الجديدة لجلب قائمة الطلاب المقبولين حسب الدفعة 🔥
+        async function fetchStudentsByGrade() {
+            const grade = document.getElementById('listGradeSelect').value;
+            const container = document.getElementById('studentsListContainer');
+            container.innerHTML = '<p class="text-yellow-500 text-center py-10 animate-pulse">جاري جلب الطلاب...</p>';
+            try {
+                const res = await fetch('/api/admin/students-by-grade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, grade: grade })
+                });
+                const students = await res.json();
+                if (students.length === 0) {
+                    container.innerHTML = `<p class="text-gray-500 text-center py-10">لا يوجد طلاب مقبولين في <strong>${grade}</strong> حالياً.</p>`;
+                    return;
+                }
+                
+                let html = `<div class="mb-4 inline-block bg-yellow-500/20 text-yellow-500 px-4 py-2 rounded-lg font-bold text-sm">العدد الإجمالي: ${students.length} طالب/طالبة</div>`;
+                html += '<div class="space-y-3">';
+                students.forEach(st => {
+                    const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`;
+                    html += `
+                    <div class="bg-black/40 border border-white/5 rounded-xl p-4 flex flex-col md:flex-row justify-between items-start md:items-center hover:border-yellow-500/30 transition-all gap-4">
+                        <div>
+                            <h4 class="font-bold text-white text-lg">${fullName}</h4>
+                            <p class="text-xs text-gray-400 mt-1">${st.email} <span class="mx-2">|</span> <span class="text-yellow-500">تقييم: ${st.points || 0}%</span></p>
+                        </div>
+                        <div class="text-sm text-gray-400 flex flex-col gap-1 text-right md:text-left">
+                            <span>طالب: <span class="text-white" dir="ltr">${st.phone}</span></span>
+                            <span>ولي أمر: <span class="text-white" dir="ltr">${st.parent_phone || '-'}</span></span>
+                        </div>
+                    </div>`;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = '<p class="text-red-500 text-center py-10">❌ حدث خطأ في الاتصال بقاعدة البيانات.</p>';
+            }
+        }
+
+        async function updateStudentStatus(email, newStatus, reason = '') {
+            try {
+                const res = await fetch('/api/admin/update-status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, studentEmail: email, newStatus, reason })
+                });
+                if (res.ok) { fetchPendingRequests(); fetchStats(); }
+            } catch (err) { alert("مشكلة في الاتصال بالسيرفر"); }
+        }
+
+        function rejectStudent(email) {
+            const reason = prompt("اكتب سبب الرفض (سيظهر للطالب):");
+            if (reason !== null) updateStudentStatus(email, 'rejected', reason);
+        }
         
         function toggleContentFields() {
             const type = document.getElementById('contentType').value;
@@ -167,7 +314,6 @@
             else { document.getElementById('pointField').classList.add('hidden'); document.getElementById('questionFields').classList.remove('hidden'); }
         }
 
-        // دالة إضافة خانة جديدة للاسم والدرجة
         function addScoreRow() {
             const container = document.getElementById('scoresContainer');
             const row = document.createElement('div');
@@ -180,7 +326,6 @@
             container.appendChild(row);
         }
 
-        // إرسال درجات الاختبار للسيرفر
         document.getElementById('testsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('saveTestBtn');
@@ -225,16 +370,86 @@
             }
         });
 
-        // باقي الأحداث
-        document.getElementById('contentForm').addEventListener('submit', async (e) => { /* الكود القديم */ });
-        document.getElementById('pointsForm').addEventListener('submit', async (e) => { /* الكود القديم */ });
+        document.getElementById('contentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveContentBtn');
+            const msg = document.getElementById('contentMsg');
+            btn.innerText = "جاري الحفظ..."; btn.disabled = true;
+
+            const grade = document.getElementById('contentGrade').value;
+            const type = document.getElementById('contentType').value;
+            
+            let payload = { role: user.role, grade: grade, type: type };
+            if (type === 'point') payload.pointText = document.getElementById('pointText').value;
+            else {
+                payload.questionText = document.getElementById('questionText').value;
+                payload.questionHint = document.getElementById('questionHint').value;
+            }
+
+            try {
+                const res = await fetch('/api/admin/add-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    msg.innerText = "✅ تم الإضافة بنجاح!";
+                    msg.className = "text-green-400 text-sm text-center block mt-2";
+                    document.getElementById('pointText').value = '';
+                    document.getElementById('questionText').value = '';
+                    document.getElementById('questionHint').value = '';
+                } else throw new Error();
+            } catch (err) {
+                msg.innerText = "❌ حدث خطأ.";
+                msg.className = "text-red-400 text-sm text-center block mt-2";
+            } finally {
+                btn.innerText = "حفظ ونشر للطلاب"; btn.disabled = false;
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        });
+        
+        document.getElementById('pointsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('savePointsBtn');
+            const msg = document.getElementById('pointsMsg');
+            btn.innerText = "جاري التحديث..."; btn.disabled = true;
+
+            const email = document.getElementById('studentEmail').value;
+            const points = parseInt(document.getElementById('pointsAmount').value);
+
+            try {
+                const res = await fetch('/api/admin/update-points', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, studentEmail: email, points: points })
+                });
+                if (res.ok) {
+                    msg.innerText = "✅ تم تحديث التقييم بنجاح!"; 
+                    msg.className = "text-green-400 text-sm text-center block mt-2";
+                    document.getElementById('pointsForm').reset();
+                } else throw new Error();
+            } catch (err) {
+                msg.innerText = "❌ حدث خطأ، تأكد من إيميل الطالب.";
+                msg.className = "text-red-400 text-sm text-center block mt-2";
+            } finally {
+                btn.innerText = "تحديث التقييم"; 
+                btn.disabled = false;
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        });
 
         function switchTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabId}`).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('active');
+
+            if(tabId === 'requests') fetchPendingRequests();
+            if(tabId === 'dashboard') fetchStats();
+            // لو فتح تاب قائمة الطلاب، نفضي القائمة القديمة لو حابب
         }
+
+        fetchStats();
 
         function logout() {
             localStorage.removeItem('dahih_user');
