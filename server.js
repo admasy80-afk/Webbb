@@ -2,41 +2,29 @@ require('dotenv').config();
 
 const express = require('express');
 const path = require('path');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient } = require('mongodb');
 const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// رابط الداتا بيس الخاص بك (Railway) مع حل مشكلة الاتصال (authSource=admin)
-const MONGO_URI = process.env.MONGO_URL || "mongodb://mongo:iWteUaeFERklPvvTTVixFSuaHHfoUlMw@turntable.proxy.rlwy.net:21742/dahih_db?authSource=admin";
-
 // ==========================================
-// ⚙️ إعدادات السيرفر والحماية الخارقة (Zero Dependencies)
+// ⚙️ إعدادات السيرفر والحماية الأساسية
 // ==========================================
 app.set('trust proxy', true);
-app.disable('x-powered-by'); // إخفاء هوية السيرفر عن المخترقين
-app.use(express.json({ limit: '1mb' })); // تقليل الـ Payload لـ 1 ميجا لمنع هجمات الـ DoS
+app.disable('x-powered-by');
+app.use(express.json({ limit: '5mb' })); 
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d', etag: true }));
 
-// 🔥 Strict Security Headers & CORS
+// 🔥 Security Headers
 app.use((req, res, next) => {
-    // CORS مدمج لحماية الـ API
-    res.setHeader('Access-Control-Allow-Origin', '*'); // يفضل في الإنتاج وضع رابط موقعك الفعلي بدل *
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-session-token');
-    
-    // Security Headers لمنع ثغرات XSS و Clickjacking
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY'); // أقوى من SAMEORIGIN
+    res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    
-    if (req.method === 'OPTIONS') return res.status(200).end();
     next();
 });
 
-// 🔥 تنظيف المدخلات الصارم (NoSQL Injection & Prototype Pollution Protection)
+// 🔥 تنظيف المدخلات (NoSQL Injection Protection)
 function sanitizeInput(obj, depth = 0) {
     if (depth > 5) return obj;
     if (obj === null || obj === undefined) return obj;
@@ -48,8 +36,7 @@ function sanitizeInput(obj, depth = 0) {
     if (typeof obj === 'object') {
         const cleaned = {};
         for (const key of Object.keys(obj)) {
-            if (key.startsWith('$') || key.includes('.')) continue; // رفض مفاتيح مونجو المشبوهة
-            if (key === '__proto__' || key === 'constructor') continue; // حماية Prototype
+            if (key.startsWith('$') || key.includes('.')) continue;
             cleaned[key] = sanitizeInput(obj[key], depth + 1);
         }
         return cleaned;
@@ -62,43 +49,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// 🔥 نظام Rate Limiting ذكي لمنع هجمات الـ Brute Force
-const rateLimiter = new Map();
-app.use((req, res, next) => {
-    const ip = req.ip || req.connection.remoteAddress;
-    const now = Date.now();
-    if (!rateLimiter.has(ip)) {
-        rateLimiter.set(ip, { count: 1, resetAt: now + 60000 });
-    } else {
-        const bucket = rateLimiter.get(ip);
-        if (now > bucket.resetAt) {
-            bucket.count = 1; bucket.resetAt = now + 60000;
-        } else {
-            bucket.count++;
-            if (bucket.count > 100) return res.status(429).json({ message: "🛑 تم حظر الـ IP مؤقتاً بسبب كثرة الطلبات" });
-        }
-    }
-    next();
-});
-setInterval(() => {
-    const now = Date.now();
-    for (const [ip, bucket] of rateLimiter.entries()) { if (now > bucket.resetAt) rateLimiter.delete(ip); }
-}, 60000);
-
-// 🔥 الكاش السريع في الذاكرة
-const cache = new Map();
-function getCache(key) {
-    const entry = cache.get(key);
-    if (!entry) return null;
-    if (Date.now() > entry.expiresAt) { cache.delete(key); return null; }
-    return entry.value;
-}
-function setCache(key, value, ttl = 30000) { cache.set(key, { value, expiresAt: Date.now() + ttl }); }
-function clearCache(prefix) {
-    for (const key of cache.keys()) { if (key.startsWith(prefix)) cache.delete(key); }
-}
-
-// 🔥 التشفير الآمن ضد هجمات الـ Timing Attacks
+// 🔥 أدوات التشفير والتوكن
 function generateSessionToken() { return crypto.randomBytes(48).toString('hex'); }
 function hashPassword(password, salt) {
     const useSalt = salt || crypto.randomBytes(16).toString('hex');
@@ -108,28 +59,35 @@ function hashPassword(password, salt) {
 function verifyPassword(password, storedHash, storedSalt) {
     if (!storedSalt) return password === storedHash;
     const { hash } = hashPassword(password, storedSalt);
-    // Timing Safe Equal تمنع الهاكرز من تخمين الباسورد عن طريق قياس سرعة استجابة السيرفر
     return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(storedHash, 'hex'));
 }
 
 // ==========================================
-// 🚀 إعدادات قاعدة البيانات 
+// 🚀 إعدادات قاعدة البيانات (بطريقتك اللي اشتغلت 100%)
 // ==========================================
 let dbInstance, usersCollection, contentCollection, sessionsCollection;
 
 async function startServer() {
     try {
-        const client = new MongoClient(MONGO_URI);
-        await client.connect();
-        dbInstance = client.db('dahih_db');
-        usersCollection = dbInstance.collection('users');
-        contentCollection = dbInstance.collection('curriculum_content');
-        sessionsCollection = dbInstance.collection('sessions');
+        // استخدمنا طريقتك بالنص اللي نفعت مع Railway
+        const uri = process.env.MONGO_URL || "mongodb://mongo:iWteUaeFERklPvvTTVixFSuaHHfoUlMw@turntable.proxy.rlwy.net:21742";
+        
+        if (uri) {
+            const client = new MongoClient(uri);
+            await client.connect();
+            dbInstance = client.db('dahih_db');
+            usersCollection = dbInstance.collection('users');
+            contentCollection = dbInstance.collection('curriculum_content');
+            sessionsCollection = dbInstance.collection('sessions');
+            console.log("✅ تم الاتصال بمونجو بنجاح.. السيرفر جاهز ومأمن الآن 🛡️");
+        } else {
+            console.error("❌ الرابط غير موجود!");
+        }
 
-        console.log("✅ تم الاتصال بمونجو Railway بنجاح.. السيرفر الخارق جاهز!");
-        app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));
-    } catch (err) {
-        console.error("❌ فشل الاتصال بقاعدة البيانات:", err); process.exit(1);
+        app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));  
+    } catch (err) {  
+        console.error("❌ فشل الاتصال بقاعدة البيانات:", err);  
+        process.exit(1);  
     }
 }
 startServer();
@@ -138,37 +96,33 @@ startServer();
 // 🛡️ Middlewares التحقق (حراس الأمن)
 // ==========================================
 function ensureDB(req, res, next) {
-    if (!usersCollection) return res.status(503).json({ message: "السيرفر قيد التشغيل.. انتظر لحظات" });
+    if (!usersCollection) return res.status(503).json({ message: "السيرفر لسه بيسخن.. حاول كمان ثواني" });
     next();
 }
 
-// 1. حارس أمن الإدارة (Admin Bouncer)
 async function requireAdmin(req, res, next) {
     try {
-        const token = req.body.sessionToken || req.headers['x-session-token'] || req.headers.authorization;
-        if (!token) return res.status(401).json({ message: "غير مصرح لك: التوكن مفقود" });
+        const token = req.body.sessionToken || req.headers['x-session-token'];
+        if (!token) return res.status(401).json({ message: "تسجيل الدخول مطلوب.. التوكن مفقود" });
 
         const session = await sessionsCollection.findOne({ token, expiresAt: { $gt: new Date() } });
         if (!session || (session.role !== 'dev' && session.role !== 'owner')) {
-            console.warn(`🚨 [HACK ATTEMPT] محاولة دخول للإدارة مرفوضة من IP: ${req.ip}`);
             return res.status(403).json({ message: "غير مصرح لك بالدخول للإدارة" });
         }
-        
         req.adminSession = session; 
         next();
     } catch (e) { res.status(500).json({ message: "خطأ داخلي" }); }
 }
 
-// 2. حارس أمن الطلاب (Student Bouncer - يمنع سرقة بيانات طلاب آخرين)
 async function requireAuth(req, res, next) {
     try {
-        const token = req.body.sessionToken || req.headers['x-session-token'] || req.headers.authorization;
+        const token = req.body.sessionToken || req.headers['x-session-token'];
         if (!token) return res.status(401).json({ message: "الرجاء تسجيل الدخول أولاً" });
 
         const session = await sessionsCollection.findOne({ token, expiresAt: { $gt: new Date() } });
         if (!session) return res.status(401).json({ message: "انتهت صلاحية الجلسة" });
         
-        req.userSession = session; // السيرفر يثق في هذه البيانات فقط
+        req.userSession = session; 
         next();
     } catch (e) { res.status(500).json({ message: "خطأ داخلي" }); }
 }
@@ -179,8 +133,6 @@ async function requireAuth(req, res, next) {
 app.post('/api/saveUser', ensureDB, async (req, res) => {
     try {
         const data = req.body;
-        
-        // حسابات الإدارة
         const isDev = data.identifier === "nullbrodidyouknow@gmail.com" && data.password === "T9@qL7!zR4#pX2vK8";
         const isOwner = data.identifier === "owner@owner.com" && data.password === "123456asdW#";
 
@@ -189,19 +141,15 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
             const userRole = isDev ? "dev" : "owner";
             const token = generateSessionToken();
             
-            await sessionsCollection.insertOne({ 
-                token, email: data.identifier, role: userRole, 
-                createdAt: new Date(), expiresAt: new Date(Date.now() + 7 * 24 * 3600000) 
-            });
+            await sessionsCollection.insertOne({ token, email: data.identifier, role: userRole, createdAt: new Date(), expiresAt: new Date(Date.now() + 7 * 24 * 3600000) });
             
             return res.status(200).json({ 
                 message: `أهلاً بك يا ${roleName} 👑`, 
                 userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" },
-                sessionToken: token
+                sessionToken: token 
             });
         }
 
-        // تسجيل دخول طالب
         if (data.identifier) {
             const user = await usersCollection.findOne({ $or: [{ email: data.identifier }, { phone: data.identifier }] });
             if (!user) return res.status(401).json({ message: "خطأ في بيانات الدخول" });
@@ -210,10 +158,7 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
             if (!passwordMatch) return res.status(401).json({ message: "خطأ في بيانات الدخول" });
 
             const token = generateSessionToken();
-            await sessionsCollection.insertOne({ 
-                token, email: user.email, role: 'student', grade: user.grade, // حفظ الصف في الجلسة
-                createdAt: new Date(), expiresAt: new Date(Date.now() + 7 * 24 * 3600000) 
-            });
+            await sessionsCollection.insertOne({ token, email: user.email, role: 'student', grade: user.grade, createdAt: new Date(), expiresAt: new Date(Date.now() + 7 * 24 * 3600000) });
 
             return res.status(200).json({ 
                 message: "تم الدخول ✓", 
@@ -222,7 +167,6 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
             });
         }
 
-        // إنشاء حساب طالب جديد
         if (data.first_name) {
             if (!data.email || !data.password) return res.status(400).json({ message: "بيانات ناقصة" });
             const existing = await usersCollection.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });
@@ -230,7 +174,6 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
 
             const { hash, salt } = hashPassword(data.password);
             data.password = hash; data.passwordSalt = salt;
-            
             data.status = "pending"; data.rejection_reason = ""; data.role = "student"; data.points = 0;
             await usersCollection.insertOne(data);
             
@@ -245,15 +188,9 @@ app.post('/api/saveUser', ensureDB, async (req, res) => {
 // ==========================================
 app.post('/api/admin/stats', ensureDB, requireAdmin, async (req, res) => {
     try {
-        const cached = getCache('admin_stats');
-        if (cached) return res.status(200).json(cached);
-
         const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });
         const pendingCount = await usersCollection.countDocuments({ role: "student", status: "pending" });
-        const result = { studentsCount, pendingCount, questionsCount: "نشط" };
-        
-        setCache('admin_stats', result, 15000);
-        res.status(200).json(result);
+        res.status(200).json({ studentsCount, pendingCount, questionsCount: "نشط" });
     } catch (e) { res.status(500).json({ message: "خطأ" }); }
 });
 
@@ -266,9 +203,7 @@ app.post('/api/admin/pending', ensureDB, requireAdmin, async (req, res) => {
 
 app.post('/api/admin/update-status', ensureDB, requireAdmin, async (req, res) => {
     try {
-        const { studentEmail, newStatus, reason } = req.body;
-        await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { status: newStatus, rejection_reason: reason || "" } });
-        clearCache('admin_stats');
+        await usersCollection.updateOne({ email: req.body.studentEmail.trim() }, { $set: { status: req.body.newStatus, rejection_reason: req.body.reason || "" } });
         res.status(200).json({ message: "تم التحديث" });
     } catch (e) { res.status(500).json({ message: "خطأ" }); }
 });
@@ -282,11 +217,10 @@ app.post('/api/admin/students-by-grade', ensureDB, requireAdmin, async (req, res
 
 app.post('/api/admin/add-content', ensureDB, requireAdmin, async (req, res) => {
     try {
-        const { grade, type, pointText, questionText, questionHint } = req.body;
-        if (type === 'point') {
-            await contentCollection.updateOne({ grade }, { $push: { points: pointText } }, { upsert: true });
+        if (req.body.type === 'point') {
+            await contentCollection.updateOne({ grade: req.body.grade }, { $push: { points: req.body.pointText } }, { upsert: true });
         } else {
-            await contentCollection.updateOne({ grade }, { $push: { questions: { question: questionText, hint: questionHint } } }, { upsert: true });
+            await contentCollection.updateOne({ grade: req.body.grade }, { $push: { questions: { question: req.body.questionText, hint: req.body.questionHint } } }, { upsert: true });
         }
         res.status(200).json({ message: "تمت الإضافة" });
     } catch (e) { res.status(500).json({ message: "خطأ" }); }
@@ -309,46 +243,34 @@ app.post('/api/admin/add-test-scores', ensureDB, requireAdmin, async (req, res) 
 // ==========================================
 // 3️⃣ مسارات الطالب (محمية بـ requireAuth)
 // ==========================================
-
-// مسار فحص الحالة (تركناه بدون توكن للسماح بفحص الحظر قبل تسجيل الدخول)
 app.post('/api/check-status', ensureDB, async (req, res) => {
     try {
         const user = await usersCollection.findOne({ email: req.body.email });
         if (user) {
-            if(user.banned) return res.status(200).json({ status: "banned", reason: user.banReason });
             res.status(200).json({ status: user.status || "pending", reason: user.rejection_reason || "" });
         } else res.status(404).json({ message: "حساب غير موجود" });
     } catch (e) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// 🔥 هذا المسار كان به ثغرة IDOR.. الآن هو آمن تماماً!
 app.post('/api/student/dashboard-data', ensureDB, requireAuth, async (req, res) => {
     try {
-        // نعتمد على الإيميل الموجود في التوكن الآمن، وليس المُرسل من العميل!
         const secureEmail = req.userSession.email; 
         const secureGrade = req.userSession.grade;
 
         const user = await usersCollection.findOne({ email: secureEmail });
         const studentPoints = user ? (user.points || 0) : 0;
-        
         const content = await contentCollection.findOne({ grade: secureGrade }) || { points: [], questions: [], tests: [] };  
+        
         res.status(200).json({ studentPoints, content });
     } catch (error) { res.status(500).json({ message: "خطأ في جلب البيانات" }); }
 });
 
-// ==========================================
-// 🌐 معالج الأخطاء العام والتنظيف
-// ==========================================
-// إخفاء الأخطاء الداخلية (Stack Trace) عن المستخدمين
-app.use((err, req, res, next) => {
-    console.error("Internal Server Error:", err);
-    res.status(500).json({ message: "حدث خطأ غير متوقع في الخادم" });
-});
-
-// تنظيف الجلسات المنتهية كل ساعة للحفاظ على المساحة
+// تنظيف الجلسات القديمة للحفاظ على مساحة الداتا بيس
 setInterval(async () => { 
     if (sessionsCollection) await sessionsCollection.deleteMany({ expiresAt: { $lt: new Date() } }); 
 }, 3600000);
 
+// ==========================================
+// 🌐 الشاشة الرئيسية
+// ==========================================
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
