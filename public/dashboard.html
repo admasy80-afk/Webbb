@@ -8,20 +8,12 @@
     <meta http-equiv="Expires" content="0">
     
     <title>لوحة الطالب | منصة الدحيح</title>
-    <script src="[cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap)" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
         
-        body { 
-            font-family: 'Readex Pro', sans-serif; 
-            background-color: #070b19;
-            overflow-x: hidden;
-        }
-        
-        /* تأثير التدرج الخلفي */
+        /* تأثير التدرج الخلفي (مخفف لتقليل استهلاك المعالج) */
         .bg-animated-gradient {
             background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
             background-size: 200% 200%;
@@ -37,390 +29,46 @@
             -webkit-backdrop-filter: blur(10px);
         }
         
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        /* 🔥 نظام الأزرار الخارق - أنيميشن مفرط النعومة 🔥 */
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        
-        .btn-ultra {
-            position: relative;
-            overflow: hidden;
-            isolation: isolate;
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        letter-spacing 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            transform-origin: center;
-            will-change: transform, box-shadow;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden;
-            transform: translateZ(0);
+        .card-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; }
+        .card-hover:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 24px rgba(0,0,0,0.4); 
+            border-color: rgba(255, 255, 255, 0.1); 
         }
         
-        /* تأثير الـ Shine اللامع المتحرك */
-        .btn-ultra::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -150%;
-            width: 80%;
-            height: 100%;
-            background: linear-gradient(
-                100deg,
-                transparent 0%,
-                transparent 30%,
-                rgba(255, 255, 255, 0.15) 50%,
-                transparent 70%,
-                transparent 100%
-            );
-            transition: left 0.9s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 1;
-            pointer-events: none;
-        }
-        
-        .btn-ultra:hover::before {
-            left: 150%;
-        }
-        
-        /* تأثير الانتشار من المركز */
-        .btn-ultra::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-                        height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: 0;
-            pointer-events: none;
-        }
-        
-        .btn-ultra:hover::after {
-            width: 400px;
-            height: 400px;
-        }
-        
-        .btn-ultra > * {
-            position: relative;
-            z-index: 2;
-        }
-        
-        /* الزر الذهبي الأساسي */
-        .btn-gold {
-            background: linear-gradient(135deg, #eab308 0%, #f59e0b 50%, #eab308 100%);
-            background-size: 200% 200%;
-            background-position: 0% 50%;
-            box-shadow: 
-                0 4px 14px rgba(234, 179, 8, 0.25),
-                0 1px 3px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-        
-        .btn-gold:hover {
-            background-position: 100% 50%;
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 
-                0 12px 30px rgba(234, 179, 8, 0.45),
-                0 4px 10px rgba(234, 179, 8, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-gold:active {
-            transform: translateY(-1px) scale(0.98);
-            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        /* الزر الشفاف */
-        .btn-ghost {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 
-                0 2px 8px rgba(0, 0, 0, 0.1),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
-        }
-        
-        .btn-ghost:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px) scale(1.01);
-            box-shadow: 
-                0 8px 20px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-        }
-        
-        .btn-ghost:active {
-            transform: translateY(0) scale(0.98);
-            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        /* زر تسجيل الخروج */
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.05);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-            color: #f87171;
-            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-danger::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            transform: scaleX(0);
-            transform-origin: right;
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            z-index: -1;
-        }
-        
-        .btn-danger:hover {
-            color: white;
-            border-color: #dc2626;
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(220, 38, 38, 0.3);
-            letter-spacing: 0.5px;
-        }
-        
-        .btn-danger:hover::before {
-            transform: scaleX(1);
-            transform-origin: left;
-        }
-        
-        .btn-danger:active {
-            transform: translateY(0) scale(0.97);
-            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        /* 🔥 خيارات الاختبار التفاعلية الخارقة 🔥 */
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        
-        .quiz-option {
-            display: block;
-            position: relative;
-        }
-        
-        .quiz-option > div {
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            overflow: hidden;
-            will-change: transform;
-        }
-        
-        .quiz-option:hover > div {
-            transform: translateX(-4px) scale(1.01);
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
-        }
-        
-        .quiz-option:active > div {
-            transform: translateX(-2px) scale(0.99);
-            transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        .quiz-option .option-letter {
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        .quiz-option:hover .option-letter {
-            background: rgba(234, 179, 8, 0.15);
-            border-color: rgba(234, 179, 8, 0.4);
-            color: #eab308;
-            transform: scale(1.1) rotate(-5deg);
-        }
-        
+        /* تنسيقات الراديو (خيارات الامتحان) */
         .quiz-option input[type="radio"]:checked + div { 
             border-color: #eab308; 
-            background-color: rgba(234, 179, 8, 0.12);
-            transform: translateX(-6px) scale(1.02);
-            box-shadow: 
-                0 8px 24px rgba(234, 179, 8, 0.2),
-                inset 0 0 0 1px rgba(234, 179, 8, 0.3);
+            background-color: rgba(234, 179, 8, 0.1); 
         }
         
-        .quiz-option input[type="radio"]:checked + div .option-letter {
-            background: #eab308;
-            border-color: #eab308;
-            color: black;
-            transform: scale(1.15) rotate(0deg);
-            box-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
-        }
-        
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        /* 🔥 السحب والإفلات والكروت 🔥 */
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        
-        .card-hover { 
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), 
-                        box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            will-change: transform;
-        }
-        .card-hover:hover { 
-            transform: translateY(-5px) scale(1.005); 
-            box-shadow: 0 16px 32px rgba(0,0,0,0.4); 
-            border-color: rgba(255, 255, 255, 0.12); 
-        }
-        
-        /* قسم قابل للطي بسلاسة فائقة */
-        .section-content { 
-            transition: max-height 0.7s cubic-bezier(0.16, 1, 0.3, 1), 
-                        opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        padding 0.5s cubic-bezier(0.16, 1, 0.3, 1); 
-            overflow: hidden; 
-            opacity: 1; 
-        }
-        .section-content.collapsed { 
-            max-height: 0 !important; 
-            opacity: 0; 
-            padding-top: 0 !important; 
-            padding-bottom: 0 !important; 
-        }
-        
-        .icon-rotate { 
-            transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
-                        color 0.4s ease;
-            will-change: transform;
-        }
+        /* حركات السحب والإفلات */
+        .section-content { transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease; overflow: hidden; opacity: 1; }
+        .section-content.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none; }
+        .icon-rotate { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .icon-rotate.collapsed { transform: rotate(180deg); }
-        
-        /* رأس القسم القابل للضغط */
-        .section-header {
-            transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .section-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            width: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #eab308, transparent);
-            transform: translateX(-50%);
-            transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        .section-header:hover::after {
-            width: 80%;
-        }
-        
-        .section-header:hover .icon-rotate {
-            color: #eab308;
-        }
-        
-        /* كروت داخلية بحركة ناعمة */
-        .inner-card {
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        border-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        box-shadow 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            will-change: transform;
-        }
-        
-        .inner-card:hover {
-            transform: translateY(-3px) scale(1.005);
-            border-color: rgba(234, 179, 8, 0.25);
-            background: rgba(0, 0, 0, 0.4);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        /* عداد النقاط النابض */
-        .points-display {
-            background: linear-gradient(135deg, #eab308, #f59e0b, #eab308);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 4s ease-in-out infinite;
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        @keyframes shimmer {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-        }
-        
-        .points-display:hover {
-            transform: scale(1.05);
-        }
-        
-        /* أنيميشن النقاط (الـ Bullet) */
-        .point-bullet {
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        color 0.4s ease;
-        }
-        
-        .point-item:hover .point-bullet {
-            transform: scale(1.3) rotate(45deg);
-            color: #fbbf24;
-        }
-        
-        .point-item {
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        .point-item:hover {
-            transform: translateX(-6px);
-            padding-right: 6px;
-        }
-        
-        /* صف نتائج الاختبارات */
-        .score-row {
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        
-        .score-row:hover {
-            transform: translateX(-4px);
-            background: rgba(234, 179, 8, 0.05) !important;
-            padding-right: 12px !important;
-        }
-        
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        /* 🔥 أنيميشن شاشة النتيجة 🔥 */
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        
+
+        /* 🔥 أنيميشن شاشة النتيجة (فائق النعومة بفضل GPU Acceleration) 🔥 */
         @keyframes ultraSmoothPop {
-            0% { transform: scale(0.85) translateY(20px); opacity: 0; }
-            60% { transform: scale(1.05) translateY(-3px); opacity: 1; }
+            0% { transform: scale(0.9) translateY(20px); opacity: 0; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
         }
         @keyframes ultraSmoothSlideUp {
-            0% { transform: translateY(25px); opacity: 0; }
+            0% { transform: translateY(20px); opacity: 0; }
             100% { transform: translateY(0); opacity: 1; }
         }
         @keyframes softFloat {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-        @keyframes pulseGlow {
-            0%, 100% { box-shadow: 0 0 30px rgba(234, 179, 8, 0.2); }
-            50% { box-shadow: 0 0 50px rgba(234, 179, 8, 0.4); }
+            50% { transform: translateY(-8px); }
         }
         
         .animate-pop-in { 
-            animation: ultraSmoothPop 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+            animation: ultraSmoothPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
             will-change: transform, opacity;
         }
         .animate-slide-up { 
             opacity: 0; 
-            animation: ultraSmoothSlideUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+            animation: ultraSmoothSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
             will-change: transform, opacity;
         }
         .animate-float {
@@ -428,172 +76,24 @@
             will-change: transform;
         }
         
+        /* توقيت التدرج المريح للعين */
         .delay-100 { animation-delay: 100ms; }
         .delay-150 { animation-delay: 150ms; }
         .delay-200 { animation-delay: 200ms; }
         .delay-250 { animation-delay: 250ms; }
         .delay-300 { animation-delay: 300ms; }
-        .delay-400 { animation-delay: 400ms; }
-        
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        /* 🔥 شعار وعناصر التنقل 🔥 */
-        /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-        
-        .logo-text {
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        letter-spacing 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            cursor: default;
-        }
-        
-        .logo-text:hover {
-            transform: scale(1.05);
-            letter-spacing: 1px;
-        }
-        
-        .logo-dot {
-            display: inline-block;
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        color 0.4s ease;
-        }
-        
-        .logo-text:hover .logo-dot {
-            transform: scale(1.5) rotate(180deg);
-            color: #fbbf24;
-        }
-        
-        /* البطاقة الترحيبية */
-        .welcome-name {
-            display: inline-block;
-            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-                        text-shadow 0.5s ease;
-        }
-        
-        .welcome-name:hover {
-            transform: scale(1.05);
-            text-shadow: 0 0 30px rgba(234, 179, 8, 0.5);
-        }
-        
-        .grade-badge {
-            transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-                        border-color 0.4s ease,
-                        background-color 0.4s ease;
-            cursor: default;
-        }
-        
-        .grade-badge:hover {
-            transform: translateY(-2px) scale(1.03);
-            border-color: rgba(234, 179, 8, 0.4);
-            background: rgba(234, 179, 8, 0.05);
-        }
-        
-        /* المودال - دخول ناعم */
-        .modal-enter {
-            animation: modalFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        @keyframes modalFadeIn {
-            from { opacity: 0; backdrop-filter: blur(0px); }
-            to { opacity: 1; backdrop-filter: blur(16px); }
-        }
-        
-        .modal-content-enter {
-            animation: modalContentIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        @keyframes modalContentIn {
-            from { transform: scale(0.95) translateY(20px); opacity: 0; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        
-        /* أنيميشن دخول الكروت تدريجياً */
-        @keyframes cardSlideIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .card-enter {
-            opacity: 0;
-            animation: cardSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        
-        /* شريط التمرير المخصص */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(234, 179, 8, 0.3);
-            border-radius: 4px;
-            transition: background 0.3s ease;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(234, 179, 8, 0.5);
-        }
         
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* مؤشر التحميل الناعم */
-        @keyframes pulse-soft {
-            0%, 100% { opacity: 0.4; }
-            50% { opacity: 0.8; }
-        }
-        .loading-pulse {
-            animation: pulse-soft 1.5s ease-in-out infinite;
-        }
-        
-        /* نبض الأيقونة في شاشة النتيجة */
-        @keyframes iconPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.08); }
-        }
-        
-        .icon-pulse {
-            animation: iconPulse 2s ease-in-out infinite;
-        }
-        
-        /* تأثير الضغط الخارق */
-        .press-effect {
-            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-        .press-effect:active {
-            transform: scale(0.96);
-        }
-        
-        /* خط أصفر سفلي متحرك للأقسام */
-        .accent-line {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .accent-line::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, #eab308, transparent);
-            background-size: 200% 100%;
-            animation: lineFlow 3s ease-in-out infinite;
-        }
-        
-        @keyframes lineFlow {
-            0%, 100% { background-position: 200% 0; }
-            50% { background-position: -200% 0; }
-        }
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
 
     <nav class="w-full glass-panel sticky top-0 z-50 border-b border-white/10 shrink-0">
         <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
-            <div class="logo-text text-2xl font-black text-white tracking-tight">الدحيح<span class="logo-dot text-yellow-500">.</span></div>
-            <button onclick="logout()" class="btn-ultra btn-danger text-xs md:text-sm px-4 py-2 rounded-xl font-bold">
-                <span>تسجيل الخروج</span>
+            <div class="text-2xl font-black text-white tracking-tight">الدحيح<span class="text-yellow-500">.</span></div>
+            <button onclick="logout()" class="text-xs md:text-sm text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl transition-colors font-bold">
+                تسجيل الخروج
             </button>
         </div>
     </nav>
@@ -602,13 +102,13 @@
         <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
         <div class="absolute bottom-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
         
-        <div class="glass-panel rounded-2xl md:rounded-[2rem] p-6 md:p-10 mb-6 md:mb-8 border-t-[3px] border-t-yellow-500 relative overflow-hidden accent-line card-enter">
+        <div class="glass-panel rounded-2xl md:rounded-[2rem] p-6 md:p-10 mb-6 md:mb-8 border-t-[3px] border-t-yellow-500 relative overflow-hidden">
             <div class="relative z-10">
-                <div class="grade-badge inline-block bg-white/5 border border-white/10 text-gray-300 text-xs md:text-sm font-bold px-4 py-1.5 rounded-full mb-4">
+                <div class="inline-block bg-white/5 border border-white/10 text-gray-300 text-xs md:text-sm font-bold px-4 py-1.5 rounded-full mb-4">
                     المرحلة: <span id="studentGrade" class="text-white">جاري التحميل...</span>
                 </div>
                 <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight mb-2 text-white">
-                    مرحباً بك، <span id="studentName" class="welcome-name text-yellow-500">...</span>
+                    مرحباً بك، <span id="studentName" class="text-yellow-500">...</span>
                 </h1>
                 <p class="text-gray-400 font-light text-sm md:text-base">نرجو لك التوفيق في مسيرتك التعليمية.</p>
             </div>
@@ -618,44 +118,44 @@
 
             <div class="lg:col-span-2 space-y-6 md:space-y-8">
                 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 card-enter" style="animation-delay: 100ms;">
-                    <div class="section-header p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10" onclick="toggleSection('quizzesSection', 'quizIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('quizzesSection', 'quizIcon')">
                         <h2 class="text-xl font-bold text-white">الاختبارات الإلكترونية المتاحة</h2>
                         <svg id="quizIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="quizzesSection" class="section-content max-h-[2000px] p-5 md:p-6 bg-black/20">
+                    <div id="quizzesSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
                         <div id="onlineQuizzesContainer" class="space-y-4">
-                            <p class="text-gray-500 text-sm text-center loading-pulse">جاري التحميل...</p>
+                            <p class="text-gray-500 text-sm text-center">جاري التحميل...</p>
                         </div>
                     </div>
                 </section>
 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 card-enter" style="animation-delay: 200ms;">
-                    <div class="section-header p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10" onclick="toggleSection('pointsSection', 'pointsIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('pointsSection', 'pointsIcon')">
                         <h2 class="text-xl font-bold text-white">أهم نقاط المنهج</h2>
                         <svg id="pointsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="pointsSection" class="section-content max-h-[2000px] p-5 md:p-6 bg-black/20">
+                    <div id="pointsSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
                         <div id="pointsContainer" class="min-h-[50px] flex flex-col justify-center"></div>
                     </div>
                 </section>
 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 card-enter" style="animation-delay: 300ms;">
-                    <div class="section-header p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10" onclick="toggleSection('questionsSection', 'questionsIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('questionsSection', 'questionsIcon')">
                         <h2 class="text-xl font-bold text-white">أهم الأسئلة المقالية</h2>
                         <svg id="questionsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="questionsSection" class="section-content max-h-[3000px] p-5 md:p-6 bg-black/20">
+                    <div id="questionsSection" class="section-content max-h-[2000px] p-5 md:p-6 bg-black/20">
                         <div id="questionsContainer" class="space-y-4"></div>
                     </div>
                 </section>
 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 card-enter" style="animation-delay: 400ms;">
-                    <div class="section-header p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10" onclick="toggleSection('testsSection', 'testsIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('testsSection', 'testsIcon')">
                         <h2 class="text-xl font-bold text-white">نتائج الاختبارات الورقية</h2>
                         <svg id="testsIcon" class="w-5 h-5 text-gray-400 icon-rotate collapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="testsSection" class="section-content max-h-[2000px] collapsed p-5 md:p-6 bg-black/20">
+                    <div id="testsSection" class="section-content max-h-[1000px] collapsed p-5 md:p-6 bg-black/20">
                         <div id="testsContainer" class="space-y-4"></div>
                     </div>
                 </section>
@@ -663,10 +163,10 @@
             </div>
 
             <div class="space-y-6 md:space-y-8">
-                <section class="glass-panel rounded-2xl p-6 border-t-[3px] border-t-yellow-500 card-enter" style="animation-delay: 150ms;">
+                <section class="glass-panel rounded-2xl p-6 border-t-[3px] border-t-yellow-500">
                     <h2 class="text-lg font-bold text-white mb-4 text-center md:text-right">التقييم المستمر</h2>
-                    <div class="bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center border border-white/5 py-10 inner-card">
-                        <span id="studentPointsDisplay" class="points-display text-6xl font-black drop-shadow-md" dir="ltr">0%</span>
+                    <div class="bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center border border-white/5 py-10">
+                        <span id="studentPointsDisplay" class="text-6xl font-black text-yellow-500 drop-shadow-md" dir="ltr">0%</span>
                         <p class="text-sm text-gray-400 mt-4 text-center">النسبة المئوية لتقييم الأداء العام.</p>
                     </div>
                 </section>
@@ -675,8 +175,8 @@
         </div>
     </main>
 
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden items-center justify-center p-4 backdrop-blur-lg">
-        <div class="modal-content-enter bg-[#0b1021] border border-white/10 w-full max-w-3xl rounded-2xl md:rounded-[2rem] p-5 md:p-8 max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/80">
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-lg transition-opacity">
+        <div class="bg-[#0b1021] border border-white/10 w-full max-w-3xl rounded-2xl md:rounded-[2rem] p-5 md:p-8 max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/80">
             <div id="quizModalContent"></div>
         </div>
     </div>
@@ -708,26 +208,6 @@
             }
         }
 
-        // عداد رقمي متحرك ناعم
-        function animateCounter(element, target, duration = 1500) {
-            const start = 0;
-            const startTime = performance.now();
-            
-            function update(currentTime) {
-                const elapsed = currentTime - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-                const current = Math.round(start + (target - start) * easeOut);
-                element.innerText = current + '%';
-                
-                if (progress < 1) {
-                    requestAnimationFrame(update);
-                }
-            }
-            
-            requestAnimationFrame(update);
-        }
-
         async function fetchDashboardData(email, grade) {
             try {
                 const res = await fetch('/api/student/dashboard-data', {
@@ -738,27 +218,23 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    
-                    // عداد متحرك للنقاط
-                    const pointsEl = document.getElementById('studentPointsDisplay');
-                    animateCounter(pointsEl, data.studentPoints || 0);
-                    
+                    document.getElementById('studentPointsDisplay').innerText = (data.studentPoints || 0) + '%';
                     window.availableQuizzes = data.content.quizzes || [];
                     
                     const qzContainer = document.getElementById('onlineQuizzesContainer');
                     if (window.availableQuizzes.length > 0) {
                         let qzHTML = '';
-                        window.availableQuizzes.slice().reverse().forEach((quiz, idx) => {
+                        window.availableQuizzes.slice().reverse().forEach(quiz => {
                             const studentResult = quiz.results ? quiz.results.find(r => r.email === email) : null;
                             qzHTML += `
-                            <div class="inner-card card-enter bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4" style="animation-delay: ${idx * 80}ms;">
+                            <div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-yellow-500/30">
                                 <div>
                                     <h3 class="font-bold text-base md:text-lg text-white">${quiz.title}</h3>
                                     <p class="text-xs md:text-sm text-gray-400 mt-1">يحتوي على ${quiz.questions.length} أسئلة.</p>
                                 </div>
                                 ${studentResult 
-                                    ? `<div class="bg-white/5 border border-white/10 text-gray-300 px-6 py-2 rounded-lg text-sm text-center w-full md:w-auto font-bold press-effect">تم الإنجاز بنسبة ${studentResult.percentage}%</div>`
-                                    : `<button onclick="openQuizModal('${quiz.id}')" class="btn-ultra btn-gold w-full md:w-auto text-black font-bold px-6 py-2.5 rounded-lg text-sm"><span>بدء الاختبار</span></button>`
+                                    ? `<div class="bg-white/5 border border-white/10 text-gray-300 px-6 py-2 rounded-lg text-sm text-center w-full md:w-auto font-bold">تم الإنجاز بنسبة ${studentResult.percentage}%</div>`
+                                    : `<button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-yellow-500 text-black font-bold px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors text-sm shadow-md">بدء الاختبار</button>`
                                 }
                             </div>`;
                         });
@@ -770,7 +246,7 @@
                     const pContainer = document.getElementById('pointsContainer');
                     if (data.content.points && data.content.points.length > 0) {
                         let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
-                        data.content.points.forEach((point, idx) => pHTML += `<li class="point-item card-enter flex items-start gap-3 rounded-lg" style="animation-delay: ${idx * 60}ms;"><span class="point-bullet text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
+                        data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
                         pHTML += '</ul>';
                         pContainer.innerHTML = pHTML;
                         pContainer.classList.remove('justify-center');
@@ -781,7 +257,7 @@
                         let qHTML = '';
                         data.content.questions.forEach((q, idx) => {
                             qHTML += `
-                            <div class="inner-card card-enter bg-black/30 border border-white/5 rounded-xl p-4" style="animation-delay: ${idx * 70}ms;">
+                            <div class="bg-black/30 border border-white/5 rounded-xl p-4 card-hover">
                                 <h3 class="font-bold text-sm md:text-base text-white mb-2"><span class="text-gray-500 mr-2">${idx + 1}.</span> ${q.question}</h3>
                                 <p class="text-gray-400 text-sm leading-relaxed border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold ml-2">الإجابة:</span>${q.hint}</p>
                             </div>`;
@@ -792,13 +268,13 @@
                     const tContainer = document.getElementById('testsContainer');
                     if (data.content.tests && data.content.tests.length > 0) {
                         let tHTML = '';
-                        data.content.tests.slice().reverse().forEach((test, testIdx) => {
-                            tHTML += `<div class="inner-card card-enter bg-black/30 border border-white/5 rounded-xl p-4 md:p-5" style="animation-delay: ${testIdx * 100}ms;"><h3 class="font-bold text-yellow-500 mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
+                        data.content.tests.slice().reverse().forEach(test => {
+                            tHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5"><h3 class="font-bold text-yellow-500 mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
                             let sortedScores = test.scores.sort((a, b) => b.score - a.score);
                             sortedScores.forEach((s, index) => {
                                 let highlight = index < 3 ? 'text-white font-bold bg-white/5 border border-white/5' : 'text-gray-400';
                                 let rank = index < 3 ? ['الأول', 'الثاني', 'الثالث'][index] : index + 1;
-                                tHTML += `<div class="score-row flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
+                                tHTML += `<div class="flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
                             });
                             tHTML += `</div></div>`;
                         });
@@ -822,7 +298,7 @@
 
             quiz.questions.forEach((q, qIndex) => {
                 html += `
-                <div class="inner-card bg-black/40 p-4 md:p-5 rounded-xl border border-white/5 card-enter" style="animation-delay: ${qIndex * 60}ms;">
+                <div class="bg-black/40 p-4 md:p-5 rounded-xl border border-white/5">
                     <h4 class="font-semibold text-base md:text-lg mb-4 text-white leading-relaxed"><span class="text-yellow-500 mr-2">${qIndex + 1}.</span>${q.questionText}</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 `;
@@ -831,8 +307,8 @@
                     html += `
                     <label class="quiz-option cursor-pointer group">
                         <input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden">
-                        <div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 h-full">
-                            <div class="option-letter w-7 h-7 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
+                        <div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-yellow-500/50 transition-all h-full">
+                            <div class="w-6 h-6 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:text-white shrink-0 transition-colors group-hover:bg-black/80">
                                 ${letters[optIndex]}
                             </div>
                             <span class="text-gray-300 text-sm md:text-base leading-relaxed">${opt}</span>
@@ -845,22 +321,19 @@
 
             html += `
                 <div class="flex flex-col md:flex-row gap-3 pt-4 border-t border-white/10">
-                    <button type="submit" id="btnSubmitQuiz" class="btn-ultra btn-gold flex-1 text-black font-bold py-3 md:py-4 rounded-xl text-sm md:text-base"><span>إنهاء وتسليم الإجابات</span></button>
-                    <button type="button" onclick="closeQuizModal()" class="btn-ultra btn-ghost md:w-32 text-gray-300 font-bold py-3 md:py-4 rounded-xl text-sm md:text-base"><span>إلغاء</span></button>
+                    <button type="submit" id="btnSubmitQuiz" class="flex-1 bg-yellow-500 text-black font-bold py-3 md:py-4 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base shadow-md">إنهاء وتسليم الإجابات</button>
+                    <button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-3 md:py-4 rounded-xl hover:bg-white/5 transition-colors text-sm md:text-base">إلغاء</button>
                 </div>
             </form>`;
 
             document.getElementById('quizModalContent').innerHTML = html;
-            const modal = document.getElementById('quizModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex', 'modal-enter');
+            document.getElementById('quizModal').classList.remove('hidden');
         }
 
         async function submitQuiz(event, quizId) {
             event.preventDefault();
             const btn = document.getElementById('btnSubmitQuiz');
-            btn.innerHTML = "<span>جاري التصحيح...</span>"; 
-            btn.disabled = true;
+            btn.innerText = "جاري التصحيح..."; btn.disabled = true;
 
             const quiz = window.availableQuizzes.find(q => q.id === quizId);
             const form = event.target;
@@ -887,12 +360,15 @@
                     })
                 });
 
+                // 🔥 ألوان ديناميكية راقية جداً حسب النتيجة مع تأثير Glow خفيف عن طريق box-shadow 🔥
                 let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
                 let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.2)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.2)' : 'rgba(248, 113, 113, 0.2)');
                 let borderColor = percentage >= 85 ? 'border-green-400/30' : (percentage >= 50 ? 'border-blue-400/30' : 'border-red-400/30');
                 
-                const successIcon = `<svg class="w-10 h-10 md:w-12 md:h-12 ${colorClass} icon-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[w3.org](http://www.w3.org/2000/svg)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
+                // أيقونة فخمة (Checkmark) 
+                const successIcon = `<svg class="w-10 h-10 md:w-12 md:h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
                 
+                // شاشة النتيجة بأداء (60fps) وبدون أي إيموجي
                 const resultHtml = `
                     <div class="text-center py-6 md:py-10 px-2 md:px-6 overflow-hidden flex flex-col items-center">
                         
@@ -904,7 +380,7 @@
                         <p class="text-gray-400 text-sm md:text-base mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p>
                         
                         <div class="inline-block animate-slide-up delay-200 mb-8 md:mb-10">
-                            <div id="resultPercentage" class="text-7xl md:text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">0%</div>
+                            <div class="text-7xl md:text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div>
                         </div>
                         
                         <div class="bg-black/30 border border-white/5 rounded-2xl p-4 md:p-5 text-gray-300 text-sm md:text-base w-full max-w-xs mx-auto mb-8 md:mb-10 flex justify-between items-center px-6 md:px-8 animate-slide-up delay-250">
@@ -912,32 +388,20 @@
                             <span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span>
                         </div>
 
-                        <button onclick="closeAndRefresh()" class="btn-ultra btn-ghost w-full max-w-xs mx-auto text-white font-bold py-4 rounded-xl text-sm md:text-base block animate-slide-up delay-300">
-                            <span>العودة للوحة التحكم</span>
+                        <button onclick="closeAndRefresh()" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base block animate-slide-up delay-300">
+                            العودة للوحة التحكم
                         </button>
                     </div>
                 `;
 
                 document.getElementById('quizModalContent').innerHTML = resultHtml;
-                
-                // عداد متحرك للنتيجة
-                setTimeout(() => {
-                    const resultEl = document.getElementById('resultPercentage');
-                    if (resultEl) animateCounter(resultEl, percentage, 1800);
-                }, 400);
-                
             } catch (err) {
                 alert("حدث خطأ أثناء إرسال نتيجتك، يرجى المحاولة مرة أخرى.");
-                btn.innerHTML = "<span>تسليم الإجابات</span>"; 
-                btn.disabled = false;
+                btn.innerText = "تسليم الإجابات"; btn.disabled = false;
             }
         }
 
-        function closeQuizModal() { 
-            const modal = document.getElementById('quizModal');
-            modal.classList.add('hidden'); 
-            modal.classList.remove('flex', 'modal-enter');
-        }
+        function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); }
         
         function closeAndRefresh() {
             closeQuizModal();
