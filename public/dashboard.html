@@ -11,39 +11,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Readex Pro', sans-serif; 
-            background-color: #070b19; 
-        }
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
         
-        /* 🔥 الأنيميشن الجديد الناعم جداً باستخدام GPU 🔥 */
-        @keyframes smoothBlobMove1 {
-            0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(-30px, 40px, 0) scale(1.1); }
+        /* تأثير التدرج الخلفي (مخفف لتقليل استهلاك المعالج) */
+        .bg-animated-gradient {
+            background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 20s ease-in-out infinite;
         }
-        @keyframes smoothBlobMove2 {
-            0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-            50% { transform: translate3d(30px, -40px, 0) scale(1.1); }
-        }
-
-        .blob-blue {
-            animation: smoothBlobMove1 15s ease-in-out infinite;
-            will-change: transform;
-        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        .blob-yellow {
-            animation: smoothBlobMove2 18s ease-in-out infinite;
-            will-change: transform;
-        }
-        
-        /* البانل الزجاجي (تم تخفيفه ليكون أسرع على الجوال) */
+        /* البانل الزجاجي */
         .glass-panel { 
             background: rgba(255, 255, 255, 0.02); 
             border: 1px solid rgba(255, 255, 255, 0.05); 
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px);
-            /* إجبار المتصفح على معالجة العنصر كطبقة منفصلة */
-            transform: translateZ(0);
+            backdrop-filter: blur(10px); 
+            -webkit-backdrop-filter: blur(10px);
         }
         
         .card-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; }
@@ -53,39 +36,39 @@
             border-color: rgba(255, 255, 255, 0.1); 
         }
         
-        /* تنسيقات الراديو */
+        /* تنسيقات الراديو (خيارات الامتحان) */
         .quiz-option input[type="radio"]:checked + div { 
             border-color: #eab308; 
             background-color: rgba(234, 179, 8, 0.1); 
         }
         
         /* حركات السحب والإفلات */
-        .section-content { transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; overflow: hidden; opacity: 1; }
+        .section-content { transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease; overflow: hidden; opacity: 1; }
         .section-content.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none; }
         .icon-rotate { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .icon-rotate.collapsed { transform: rotate(180deg); }
 
-        /* أنيميشن شاشة النتيجة */
+        /* 🔥 أنيميشن شاشة النتيجة (فائق النعومة بفضل GPU Acceleration) 🔥 */
         @keyframes ultraSmoothPop {
-            0% { transform: scale(0.9) translate3d(0, 20px, 0); opacity: 0; }
-            100% { transform: scale(1) translate3d(0, 0, 0); opacity: 1; }
+            0% { transform: scale(0.9) translateY(20px); opacity: 0; }
+            100% { transform: scale(1) translateY(0); opacity: 1; }
         }
         @keyframes ultraSmoothSlideUp {
-            0% { transform: translate3d(0, 20px, 0); opacity: 0; }
-            100% { transform: translate3d(0, 0, 0); opacity: 1; }
+            0% { transform: translateY(20px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
         }
         @keyframes softFloat {
-            0%, 100% { transform: translate3d(0, 0, 0); }
-            50% { transform: translate3d(0, -8px, 0); }
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
         }
         
         .animate-pop-in { 
-            animation: ultraSmoothPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+            animation: ultraSmoothPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
             will-change: transform, opacity;
         }
         .animate-slide-up { 
             opacity: 0; 
-            animation: ultraSmoothSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
+            animation: ultraSmoothSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
             will-change: transform, opacity;
         }
         .animate-float {
@@ -93,6 +76,7 @@
             will-change: transform;
         }
         
+        /* توقيت التدرج المريح للعين */
         .delay-100 { animation-delay: 100ms; }
         .delay-150 { animation-delay: 150ms; }
         .delay-200 { animation-delay: 200ms; }
@@ -103,7 +87,7 @@
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-[#070b19] text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative overflow-x-hidden">
+<body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
 
     <nav class="w-full glass-panel sticky top-0 z-50 border-b border-white/10 shrink-0">
         <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
@@ -115,8 +99,8 @@
     </nav>
 
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 relative">
-        <div class="blob-blue fixed top-[-10%] right-[-5%] w-72 h-72 md:w-[30rem] md:h-[30rem] bg-blue-600/15 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-        <div class="blob-yellow fixed bottom-[-10%] left-[-5%] w-72 h-72 md:w-[30rem] md:h-[30rem] bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+        <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
         
         <div class="glass-panel rounded-2xl md:rounded-[2rem] p-6 md:p-10 mb-6 md:mb-8 border-t-[3px] border-t-yellow-500 relative overflow-hidden">
             <div class="relative z-10">
@@ -159,5 +143,277 @@
                 <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
                     <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('questionsSection', 'questionsIcon')">
                         <h2 class="text-xl font-bold text-white">أهم الأسئلة المقالية</h2>
-                        <svg id="questionsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="
+                        <svg id="questionsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div id="questionsSection" class="section-content max-h-[2000px] p-5 md:p-6 bg-black/20">
+                        <div id="questionsContainer" class="space-y-4"></div>
+                    </div>
+                </section>
+
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('testsSection', 'testsIcon')">
+                        <h2 class="text-xl font-bold text-white">نتائج الاختبارات الورقية</h2>
+                        <svg id="testsIcon" class="w-5 h-5 text-gray-400 icon-rotate collapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div id="testsSection" class="section-content max-h-[1000px] collapsed p-5 md:p-6 bg-black/20">
+                        <div id="testsContainer" class="space-y-4"></div>
+                    </div>
+                </section>
+
+            </div>
+
+            <div class="space-y-6 md:space-y-8">
+                <section class="glass-panel rounded-2xl p-6 border-t-[3px] border-t-yellow-500">
+                    <h2 class="text-lg font-bold text-white mb-4 text-center md:text-right">التقييم المستمر</h2>
+                    <div class="bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center border border-white/5 py-10">
+                        <span id="studentPointsDisplay" class="text-6xl font-black text-yellow-500 drop-shadow-md" dir="ltr">0%</span>
+                        <p class="text-sm text-gray-400 mt-4 text-center">النسبة المئوية لتقييم الأداء العام.</p>
+                    </div>
+                </section>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-lg transition-opacity">
+        <div class="bg-[#0b1021] border border-white/10 w-full max-w-3xl rounded-2xl md:rounded-[2rem] p-5 md:p-8 max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/80">
+            <div id="quizModalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        const userDataStr = localStorage.getItem('dahih_user');
+        window.availableQuizzes = []; 
+        let currentUser = null;
+        
+        if (!userDataStr) {
+            window.location.replace("/logina.html");
+        } else {
+            currentUser = JSON.parse(userDataStr);
+            const firstName = currentUser.name ? currentUser.name.split(' ')[0] : "طالب";
+            document.getElementById('studentName').innerText = firstName;
+            document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
+            fetchDashboardData(currentUser.email, currentUser.grade);
+        }
+
+        function toggleSection(sectionId, iconId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById(iconId);
+            section.classList.toggle('collapsed');
+            icon.classList.toggle('collapsed');
+            if(section.classList.contains('collapsed')) {
+                section.style.maxHeight = '0px';
+            } else {
+                section.style.maxHeight = section.scrollHeight + 500 + 'px'; 
+            }
+        }
+
+        async function fetchDashboardData(email, grade) {
+            try {
+                const res = await fetch('/api/student/dashboard-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, grade: grade })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('studentPointsDisplay').innerText = (data.studentPoints || 0) + '%';
+                    window.availableQuizzes = data.content.quizzes || [];
+                    
+                    const qzContainer = document.getElementById('onlineQuizzesContainer');
+                    if (window.availableQuizzes.length > 0) {
+                        let qzHTML = '';
+                        window.availableQuizzes.slice().reverse().forEach(quiz => {
+                            const studentResult = quiz.results ? quiz.results.find(r => r.email === email) : null;
+                            qzHTML += `
+                            <div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-yellow-500/30">
+                                <div>
+                                    <h3 class="font-bold text-base md:text-lg text-white">${quiz.title}</h3>
+                                    <p class="text-xs md:text-sm text-gray-400 mt-1">يحتوي على ${quiz.questions.length} أسئلة.</p>
+                                </div>
+                                ${studentResult 
+                                    ? `<div class="bg-white/5 border border-white/10 text-gray-300 px-6 py-2 rounded-lg text-sm text-center w-full md:w-auto font-bold">تم الإنجاز بنسبة ${studentResult.percentage}%</div>`
+                                    : `<button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-yellow-500 text-black font-bold px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors text-sm shadow-md">بدء الاختبار</button>`
+                                }
+                            </div>`;
+                        });
+                        qzContainer.innerHTML = qzHTML;
+                    } else {
+                        qzContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لا توجد اختبارات إلكترونية حالياً.</p>';
+                    }
+
+                    const pContainer = document.getElementById('pointsContainer');
+                    if (data.content.points && data.content.points.length > 0) {
+                        let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
+                        data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
+                        pHTML += '</ul>';
+                        pContainer.innerHTML = pHTML;
+                        pContainer.classList.remove('justify-center');
+                    } else pContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">لا توجد ملاحظات من المعلم.</p>';
+
+                    const qContainer = document.getElementById('questionsContainer');
+                    if (data.content.questions && data.content.questions.length > 0) {
+                        let qHTML = '';
+                        data.content.questions.forEach((q, idx) => {
+                            qHTML += `
+                            <div class="bg-black/30 border border-white/5 rounded-xl p-4 card-hover">
+                                <h3 class="font-bold text-sm md:text-base text-white mb-2"><span class="text-gray-500 mr-2">${idx + 1}.</span> ${q.question}</h3>
+                                <p class="text-gray-400 text-sm leading-relaxed border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold ml-2">الإجابة:</span>${q.hint}</p>
+                            </div>`;
+                        });
+                        qContainer.innerHTML = qHTML;
+                    } else qContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لا توجد أسئلة مقالية.</p>';
+
+                    const tContainer = document.getElementById('testsContainer');
+                    if (data.content.tests && data.content.tests.length > 0) {
+                        let tHTML = '';
+                        data.content.tests.slice().reverse().forEach(test => {
+                            tHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5"><h3 class="font-bold text-yellow-500 mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
+                            let sortedScores = test.scores.sort((a, b) => b.score - a.score);
+                            sortedScores.forEach((s, index) => {
+                                let highlight = index < 3 ? 'text-white font-bold bg-white/5 border border-white/5' : 'text-gray-400';
+                                let rank = index < 3 ? ['الأول', 'الثاني', 'الثالث'][index] : index + 1;
+                                tHTML += `<div class="flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
+                            });
+                            tHTML += `</div></div>`;
+                        });
+                        tContainer.innerHTML = tHTML;
+                    } else tContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لم تُنشر نتائج للاختبارات الورقية.</p>';
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function openQuizModal(quizId) {
+            const quiz = window.availableQuizzes.find(q => q.id === quizId);
+            if (!quiz) return;
+
+            let html = `
+                <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                    <h2 class="text-xl md:text-2xl font-bold text-white">${quiz.title}</h2>
+                    <span class="text-yellow-500 text-sm bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-lg font-bold">${quiz.questions.length} أسئلة</span>
+                </div>
+                <form id="activeQuizForm" onsubmit="submitQuiz(event, '${quiz.id}')" class="space-y-6">
+            `;
+
+            quiz.questions.forEach((q, qIndex) => {
+                html += `
+                <div class="bg-black/40 p-4 md:p-5 rounded-xl border border-white/5">
+                    <h4 class="font-semibold text-base md:text-lg mb-4 text-white leading-relaxed"><span class="text-yellow-500 mr-2">${qIndex + 1}.</span>${q.questionText}</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                `;
+                q.options.forEach((opt, optIndex) => {
+                    const letters = ['أ', 'ب', 'ج', 'د'];
+                    html += `
+                    <label class="quiz-option cursor-pointer group">
+                        <input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden">
+                        <div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-yellow-500/50 transition-all h-full">
+                            <div class="w-6 h-6 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:text-white shrink-0 transition-colors group-hover:bg-black/80">
+                                ${letters[optIndex]}
+                            </div>
+                            <span class="text-gray-300 text-sm md:text-base leading-relaxed">${opt}</span>
+                        </div>
+                    </label>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+
+            html += `
+                <div class="flex flex-col md:flex-row gap-3 pt-4 border-t border-white/10">
+                    <button type="submit" id="btnSubmitQuiz" class="flex-1 bg-yellow-500 text-black font-bold py-3 md:py-4 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base shadow-md">إنهاء وتسليم الإجابات</button>
+                    <button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-3 md:py-4 rounded-xl hover:bg-white/5 transition-colors text-sm md:text-base">إلغاء</button>
+                </div>
+            </form>`;
+
+            document.getElementById('quizModalContent').innerHTML = html;
+            document.getElementById('quizModal').classList.remove('hidden');
+        }
+
+        async function submitQuiz(event, quizId) {
+            event.preventDefault();
+            const btn = document.getElementById('btnSubmitQuiz');
+            btn.innerText = "جاري التصحيح..."; btn.disabled = true;
+
+            const quiz = window.availableQuizzes.find(q => q.id === quizId);
+            const form = event.target;
+            let score = 0;
+
+            quiz.questions.forEach((q, qIndex) => {
+                const selectedOpt = parseInt(form.elements[`q_${qIndex}`].value);
+                if (selectedOpt === q.correctAnswer) score++;
+            });
+
+            const percentage = Math.round((score / quiz.questions.length) * 100);
+
+            try {
+                await fetch('/api/student/submit-quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: currentUser.email, 
+                        studentName: currentUser.name, 
+                        grade: currentUser.grade, 
+                        quizId: quizId, 
+                        score: score, 
+                        percentage: percentage 
+                    })
+                });
+
+                // 🔥 ألوان ديناميكية راقية جداً حسب النتيجة مع تأثير Glow خفيف عن طريق box-shadow 🔥
+                let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
+                let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.2)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.2)' : 'rgba(248, 113, 113, 0.2)');
+                let borderColor = percentage >= 85 ? 'border-green-400/30' : (percentage >= 50 ? 'border-blue-400/30' : 'border-red-400/30');
+                
+                // أيقونة فخمة (Checkmark) 
+                const successIcon = `<svg class="w-10 h-10 md:w-12 md:h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
+                
+                // شاشة النتيجة بأداء (60fps) وبدون أي إيموجي
+                const resultHtml = `
+                    <div class="text-center py-6 md:py-10 px-2 md:px-6 overflow-hidden flex flex-col items-center">
+                        
+                        <div class="w-20 h-20 md:w-24 md:h-24 mb-6 rounded-full border ${borderColor} flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">
+                            ${successIcon}
+                        </div>
+                        
+                        <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2>
+                        <p class="text-gray-400 text-sm md:text-base mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p>
+                        
+                        <div class="inline-block animate-slide-up delay-200 mb-8 md:mb-10">
+                            <div class="text-7xl md:text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div>
+                        </div>
+                        
+                        <div class="bg-black/30 border border-white/5 rounded-2xl p-4 md:p-5 text-gray-300 text-sm md:text-base w-full max-w-xs mx-auto mb-8 md:mb-10 flex justify-between items-center px-6 md:px-8 animate-slide-up delay-250">
+                            <span class="font-medium text-gray-400">الإجابات الصحيحة</span>
+                            <span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span>
+                        </div>
+
+                        <button onclick="closeAndRefresh()" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base block animate-slide-up delay-300">
+                            العودة للوحة التحكم
+                        </button>
+                    </div>
+                `;
+
+                document.getElementById('quizModalContent').innerHTML = resultHtml;
+            } catch (err) {
+                alert("حدث خطأ أثناء إرسال نتيجتك، يرجى المحاولة مرة أخرى.");
+                btn.innerText = "تسليم الإجابات"; btn.disabled = false;
+            }
+        }
+
+        function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); }
+        
+        function closeAndRefresh() {
+            closeQuizModal();
+            fetchDashboardData(currentUser.email, currentUser.grade); 
+        }
+
+        function logout() { 
+            localStorage.removeItem('dahih_user'); 
+            localStorage.removeItem('dahih_token'); 
+            window.location.replace("/logina.html"); 
+        }
+    </script>
+</body>
+</html>
 
