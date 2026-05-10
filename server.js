@@ -33,6 +33,29 @@ async function startServer() {
 startServer();
 
 // ==========================================
+// 🧹 نظام التنظيف التلقائي (Garbage Collection) 
+// ==========================================
+// بيشتغل في الخلفية كل ساعة ينظف أي بث معلق بقاله أكتر من 4 ساعات لتوفير الموارد
+setInterval(async () => {
+    if (!usersCollection) return;
+    try {
+        const db = usersCollection.s.db;
+        const contentCollection = db.collection('curriculum_content');
+        
+        // حساب الوقت من 4 ساعات مضت
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+        
+        // مسح البثوث القديمة المعلقة تماماً من الذاكرة
+        await contentCollection.updateMany(
+            { "liveStream.isLive": true, "liveStream.startedAt": { $lt: fourHoursAgo } },
+            { $unset: { "liveStream": "" } }
+        );
+    } catch (e) {
+        console.error("⚠️ خطأ في دورة تنظيف الموارد:", e);
+    }
+}, 60 * 60 * 1000); // يعمل كل 60 دقيقة
+
+// ==========================================
 // 1️⃣ مسارات الطلاب وتسجيل الدخول الأساسية
 // ==========================================
 app.post('/api/saveUser', async (req, res) => {
@@ -212,6 +235,35 @@ app.post('/api/admin/add-mcq-quiz', async (req, res) => {
         );  
         res.status(200).json({ message: "تم نشر الاختبار الإلكتروني للطلاب بنجاح" });  
     } catch (error) { res.status(500).json({ message: "خطأ في الحفظ" }); }
+});
+
+// 🔥 API لتشغيل وإيقاف البث المباشر (مربوط بلوحة الإدارة) 🔥
+app.post('/api/admin/toggle-stream', async (req, res) => {
+    try {
+        const { role, isLive } = req.body; 
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+
+        const db = usersCollection.s.db;   
+        const contentCollection = db.collection('curriculum_content');  
+          
+        if (isLive) {
+            // تفعيل البث وتسجيل وقت البداية للـ Garbage Collection
+            await contentCollection.updateMany(  
+                {}, 
+                { $set: { "liveStream": { isLive: true, startedAt: new Date() } } }
+            );  
+            res.status(200).json({ message: "تم إطلاق البث للطلاب بنجاح" });  
+        } else {
+            // 🧹 التنظيف الشامل: مسح كائن البث بالكامل من الداتا بيز لتوفير المساحة
+            await contentCollection.updateMany(  
+                {}, 
+                { $unset: { "liveStream": "" } }
+            );  
+            res.status(200).json({ message: "تم إيقاف البث وتنظيف الموارد بنجاح" });  
+        }
+    } catch (error) { 
+        res.status(500).json({ message: "خطأ في تحديث حالة البث" }); 
+    }
 });
 
 // 🔥 مسارات الإدارة الإضافية (جلب البيانات والحذف) 🔥
