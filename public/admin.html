@@ -15,12 +15,8 @@
         .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); color: white; }
         .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-right: 4px solid #eab308; }
         
-        /* ستايل خاص لزر البث المباشر */
-        #btn-stream.active { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border-right: 4px solid #ef4444; }
-
         @media (max-width: 767px) {
             .tab-btn.active { border-right: none; border-bottom: 3px solid #eab308; }
-            #btn-stream.active { border-right: none; border-bottom: 3px solid #ef4444; }
         }
 
         .tab-content { display: none; }
@@ -37,6 +33,10 @@
         /* ستايل أيقونة الحذف */
         .trash-icon { transition: all 0.2s ease; cursor: pointer; color: #64748b; }
         .trash-icon:hover { color: #ef4444; transform: scale(1.1); }
+        
+        /* تأثيرات البث */
+        .pulse-live { animation: pulseLive 2s infinite; }
+        @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(234, 179, 8, 0); } 100% { box-shadow: 0 0 0 0 rgba(234, 179, 8, 0); } }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
@@ -51,8 +51,6 @@
         </div>
         
         <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-1 p-2 md:py-4 md:px-0 scrollbar-hide shrink-0">
-            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-bold text-red-400 bg-red-400/5 hover:bg-red-400/10">🔴 استوديو البث</button>
-            
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نظرة عامة</button>
             <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
             <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
@@ -61,6 +59,7 @@
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
             <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار</button>
             <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى والنتائج</button>
+            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-bold text-gray-300">🎥 استوديو البث</button>
         </nav>
 
         <div class="hidden md:block p-4 border-t border-white/10 shrink-0 mt-auto">
@@ -72,23 +71,48 @@
         <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
 
         <div id="tab-stream" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">استوديو البث المباشر 🔴</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">تحكم في البث المباشر للطلاب بجودة عالية وزمن تأخير شبه معدوم.</p>
-            
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-red-500 text-center animate-fade-in-up">
-                <div id="streamStatus" class="text-lg font-bold mb-4 text-yellow-500">⚪ مستعد لبدء الجلسة</div>
-                
-                <video id="localVideo" autoplay muted class="w-full max-w-2xl mx-auto bg-black rounded-xl border border-white/10 mb-6 shadow-lg shadow-red-500/10 aspect-video object-cover"></video>
-                
-                <div class="flex justify-center gap-4">
-                    <button id="startStreamBtn" class="bg-red-600 hover:bg-red-500 text-white font-black py-4 px-10 rounded-xl transition-all shadow-lg shadow-red-600/20 flex items-center gap-2">
-                        <span class="text-xl">🚀</span> بدء البث الحي
-                    </button>
-                    <button id="stopStreamBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-10 rounded-xl transition-all hidden">
-                        إيقاف البث 🛑
-                    </button>
+            <div class="flex justify-between items-center mb-6 md:mb-8">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">استوديو البث التفاعلي</h1>
+                    <p class="text-gray-400">تحكم كامل في الكاميرا والصوت أثناء البث المباشر للطلاب.</p>
                 </div>
-                <p class="text-gray-500 text-xs mt-4">ملاحظة: السيرفر متصل بنظام Hugging Face (Titan Engine)</p>
+                <div id="streamStatusBadge" class="bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-gray-500 block"></span> غير متصل
+                </div>
+            </div>
+            
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl mx-auto border-t-4 border-yellow-500 animate-fade-in-up">
+                
+                <div class="relative w-full aspect-video bg-black rounded-xl border border-white/10 mb-6 overflow-hidden group">
+                    <video id="localVideo" autoplay muted class="w-full h-full object-cover"></video>
+                    <div id="camOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 text-center p-4">
+                        <svg class="w-16 h-16 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <h3 class="text-xl font-bold text-gray-300 mb-2">الكاميرا متوقفة</h3>
+                        <p class="text-gray-500 text-sm">اضغط على "بدء البث" وامنح المتصفح صلاحية التصوير.</p>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4 bg-black/20 p-4 rounded-xl border border-white/5">
+                    
+                    <div class="flex gap-3">
+                        <button id="toggleMicBtn" class="bg-white/10 hover:bg-white/20 text-white p-3 rounded-lg transition-all hidden" title="كتم/تشغيل المايك">
+                            🎤 المايك شغال
+                        </button>
+                        <button id="toggleCamBtn" class="bg-white/10 hover:bg-white/20 text-white p-3 rounded-lg transition-all hidden" title="إيقاف/تشغيل الكاميرا">
+                            📷 الكاميرا شغالة
+                        </button>
+                    </div>
+
+                    <div class="flex gap-4 w-full md:w-auto">
+                        <button id="startStreamBtn" class="w-full md:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-black py-3 px-8 rounded-xl transition-all shadow-lg">
+                            بدء البث المباشر
+                        </button>
+                        <button id="stopStreamBtn" class="w-full md:w-auto bg-red-500 hover:bg-red-400 text-white font-bold py-3 px-8 rounded-xl transition-all shadow-lg hidden">
+                            إنهاء البث 🛑
+                        </button>
+                    </div>
+                </div>
+
             </div>
         </div>
         <div id="tab-dashboard" class="tab-content active">
@@ -327,89 +351,121 @@
             if(tabId === 'dashboard') fetchStats();
         }
 
-        // ==================== سكريبت البث المباشر (Hugging Face Bridge) ====================
-        // الرابط والتوكن الخاص بسيرفرك الخارق
+        // ==================== سكريبت البث المباشر الفعّال ====================
         const WS_URL = "wss://mohepfy10-d7e7.hf.space?token=T9@qL7!zR4#pX2vK8"; 
         
         let streamSocket;
         let mediaRecorder;
         let localStream;
+        let isAudioMuted = false;
+        let isVideoHidden = false;
 
         const videoElement = document.getElementById('localVideo');
+        const camOverlay = document.getElementById('camOverlay');
         const startStreamBtn = document.getElementById('startStreamBtn');
         const stopStreamBtn = document.getElementById('stopStreamBtn');
-        const streamStatusText = document.getElementById('streamStatus');
+        const toggleMicBtn = document.getElementById('toggleMicBtn');
+        const toggleCamBtn = document.getElementById('toggleCamBtn');
+        const streamStatusBadge = document.getElementById('streamStatusBadge');
 
         startStreamBtn.addEventListener('click', async () => {
             try {
-                // فتح الكاميرا والمايك بجودة 720p (الأنسب للبث التعليمي)
+                // محاولة تشغيل الكاميرا والمايك إجبارياً
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { width: 1280, height: 720, frameRate: 30 },
                     audio: true
                 });
-                videoElement.srcObject = localStream;
+                
+                // التأكد من وجود مسار للفيديو والصوت
+                if (localStream.getVideoTracks().length === 0 || localStream.getAudioTracks().length === 0) {
+                    alert("⚠️ تنبيه: يجب تشغيل الكاميرا والمايكروفون معاً لتتمكن من بدء البث المباشر للطلاب!");
+                    return;
+                }
 
-                // الربط مع السيرفر
+                videoElement.srcObject = localStream;
+                camOverlay.classList.add('hidden');
+
+                // إظهار أزرار التحكم
+                toggleMicBtn.classList.remove('hidden');
+                toggleCamBtn.classList.remove('hidden');
+
+                // الربط مع خادم البث
                 streamSocket = new WebSocket(WS_URL);
 
                 streamSocket.onopen = () => {
-                    streamStatusText.innerHTML = "🟢 متصل بالسيرفر الخارق.. جاري البث!";
-                    streamStatusText.className = "text-lg font-bold mb-4 text-green-400";
+                    streamStatusBadge.innerHTML = `<span class="w-3 h-3 rounded-full bg-green-500 block pulse-live"></span> جاري البث`;
+                    streamStatusBadge.className = "bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2";
+                    
                     startStreamBtn.classList.add('hidden');
                     stopStreamBtn.classList.remove('hidden');
 
-                    // تجهيز المشفر (Encoder)
                     mediaRecorder = new MediaRecorder(localStream, {
                         mimeType: 'video/webm; codecs=vp8,opus',
-                        videoBitsPerSecond: 2500000 // 2.5 Mbps
+                        videoBitsPerSecond: 2500000 
                     });
 
-                    // إرسال البيانات فور توفرها
                     mediaRecorder.ondataavailable = (event) => {
                         if (event.data && event.data.size > 0 && streamSocket.readyState === WebSocket.OPEN) {
                             streamSocket.send(event.data);
                         }
                     };
 
-                    mediaRecorder.start(1000); // تقطيع الفيديو لثواني
+                    mediaRecorder.start(1000);
                 };
 
                 streamSocket.onclose = () => {
-                    streamStatusText.innerHTML = "🔌 تم قطع الاتصال بالسيرفر!";
-                    streamStatusText.className = "text-lg font-bold mb-4 text-red-400";
                     stopLiveStream();
-                };
-
-                streamSocket.onerror = (err) => {
-                    console.error("WebSocket Error:", err);
-                    streamStatusText.innerHTML = "❌ خطأ في الاتصال بالسيرفر!";
-                    streamStatusText.className = "text-lg font-bold mb-4 text-red-400";
+                    alert("تم إنهاء جلسة البث أو قطع الاتصال.");
                 };
 
             } catch (err) {
-                console.error("خطأ في الوصول للكاميرا:", err);
-                alert("يرجى إعطاء المتصفح صلاحية الوصول للكاميرا والمايكروفون للبدء في البث.");
+                alert("❌ خطأ: لم نتمكن من الوصول للكاميرا والمايكروفون. تأكد من إعطاء الصلاحيات للمتصفح أولاً.");
+                console.error(err);
+            }
+        });
+
+        // تحكم المايك
+        toggleMicBtn.addEventListener('click', () => {
+            if (localStream) {
+                isAudioMuted = !isAudioMuted;
+                localStream.getAudioTracks()[0].enabled = !isAudioMuted;
+                toggleMicBtn.innerHTML = isAudioMuted ? "🔇 المايك مكتوم" : "🎤 المايك شغال";
+                toggleMicBtn.className = isAudioMuted ? "bg-red-500/20 text-red-400 p-3 rounded-lg transition-all" : "bg-white/10 hover:bg-white/20 text-white p-3 rounded-lg transition-all";
+            }
+        });
+
+        // تحكم الكاميرا
+        toggleCamBtn.addEventListener('click', () => {
+            if (localStream) {
+                isVideoHidden = !isVideoHidden;
+                localStream.getVideoTracks()[0].enabled = !isVideoHidden;
+                toggleCamBtn.innerHTML = isVideoHidden ? "📸 الكاميرا مقفلة" : "📷 الكاميرا شغالة";
+                toggleCamBtn.className = isVideoHidden ? "bg-red-500/20 text-red-400 p-3 rounded-lg transition-all" : "bg-white/10 hover:bg-white/20 text-white p-3 rounded-lg transition-all";
             }
         });
 
         stopStreamBtn.addEventListener('click', stopLiveStream);
 
         function stopLiveStream() {
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
-            }
-            if (streamSocket && streamSocket.readyState === WebSocket.OPEN) {
-                streamSocket.close();
-            }
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if (localStream) localStream.getTracks().forEach(track => track.stop());
+            if (streamSocket && streamSocket.readyState === WebSocket.OPEN) streamSocket.close();
             
             startStreamBtn.classList.remove('hidden');
             stopStreamBtn.classList.add('hidden');
-            streamStatusText.innerHTML = "⚪ مستعد لبدء الجلسة";
-            streamStatusText.className = "text-lg font-bold mb-4 text-yellow-500";
+            toggleMicBtn.classList.add('hidden');
+            toggleCamBtn.classList.add('hidden');
+            camOverlay.classList.remove('hidden');
+            
+            streamStatusBadge.innerHTML = `<span class="w-3 h-3 rounded-full bg-gray-500 block"></span> غير متصل`;
+            streamStatusBadge.className = "bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2";
             videoElement.srcObject = null;
+            
+            // إعادة الأزرار لحالتها الأصلية
+            isAudioMuted = false;
+            isVideoHidden = false;
+            toggleMicBtn.innerHTML = "🎤 المايك شغال";
+            toggleCamBtn.innerHTML = "📷 الكاميرا شغالة";
         }
         // ==================================================================================
 
@@ -513,7 +569,6 @@
         function renderManageContent(grade) {
             const data = currentGradeData;
             
-            // MCQ Quizzes
             let htmlQZ = '';
             if (data.quizzes && data.quizzes.length > 0) {
                 data.quizzes.forEach(q => {
@@ -528,7 +583,6 @@
             } else htmlQZ = '<p class="text-gray-500 text-sm">لا توجد اختبارات.</p>';
             document.getElementById('manageQuizzes').innerHTML = htmlQZ;
 
-            // Tests
             let htmlTS = '';
             if (data.tests && data.tests.length > 0) {
                 data.tests.forEach(t => {
@@ -540,7 +594,6 @@
             } else htmlTS = '<p class="text-gray-500 text-sm">لا توجد سجلات.</p>';
             document.getElementById('manageTests').innerHTML = htmlTS;
 
-            // Questions
             let htmlQS = '';
             if (data.questions && data.questions.length > 0) {
                 data.questions.forEach(q => {
@@ -552,7 +605,6 @@
             } else htmlQS = '<p class="text-gray-500 text-sm">لا توجد أسئلة مقالية.</p>';
             document.getElementById('manageQuestions').innerHTML = htmlQS;
 
-            // Points
             let htmlPT = '';
             if (data.points && data.points.length > 0) {
                 data.points.forEach(p => {
@@ -601,7 +653,6 @@
 
         function closeResultsModal() { document.getElementById('resultsModal').classList.add('hidden'); }
 
-        // --- باني الاختبارات (MCQ) ---
         let questionCounter = 0;
         function addMCQBlock() {
             questionCounter++;
@@ -675,7 +726,6 @@
             }
         });
 
-        // دوال المساعدين
         function addScoreRow() {
             const container = document.getElementById('scoresContainer');
             const row = document.createElement('div');
@@ -699,7 +749,6 @@
 
         function logout() { localStorage.removeItem('dahih_user'); localStorage.removeItem('dahih_token'); window.location.href = "/logina.html"; }
 
-        // تهيئة الصفحة
         document.addEventListener('DOMContentLoaded', () => {
             if(document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
             fetchStats();
