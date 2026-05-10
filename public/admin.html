@@ -15,8 +15,12 @@
         .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); color: white; }
         .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-right: 4px solid #eab308; }
         
+        /* ستايل خاص لزر البث المباشر */
+        #btn-stream.active { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; border-right: 4px solid #ef4444; }
+
         @media (max-width: 767px) {
             .tab-btn.active { border-right: none; border-bottom: 3px solid #eab308; }
+            #btn-stream.active { border-right: none; border-bottom: 3px solid #ef4444; }
         }
 
         .tab-content { display: none; }
@@ -47,6 +51,8 @@
         </div>
         
         <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-1 p-2 md:py-4 md:px-0 scrollbar-hide shrink-0">
+            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-bold text-red-400 bg-red-400/5 hover:bg-red-400/10">🔴 استوديو البث</button>
+            
             <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نظرة عامة</button>
             <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
             <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
@@ -65,6 +71,26 @@
     <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 relative">
         <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
 
+        <div id="tab-stream" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">استوديو البث المباشر 🔴</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">تحكم في البث المباشر للطلاب بجودة عالية وزمن تأخير شبه معدوم.</p>
+            
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-red-500 text-center animate-fade-in-up">
+                <div id="streamStatus" class="text-lg font-bold mb-4 text-yellow-500">⚪ مستعد لبدء الجلسة</div>
+                
+                <video id="localVideo" autoplay muted class="w-full max-w-2xl mx-auto bg-black rounded-xl border border-white/10 mb-6 shadow-lg shadow-red-500/10 aspect-video object-cover"></video>
+                
+                <div class="flex justify-center gap-4">
+                    <button id="startStreamBtn" class="bg-red-600 hover:bg-red-500 text-white font-black py-4 px-10 rounded-xl transition-all shadow-lg shadow-red-600/20 flex items-center gap-2">
+                        <span class="text-xl">🚀</span> بدء البث الحي
+                    </button>
+                    <button id="stopStreamBtn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 px-10 rounded-xl transition-all hidden">
+                        إيقاف البث 🛑
+                    </button>
+                </div>
+                <p class="text-gray-500 text-xs mt-4">ملاحظة: السيرفر متصل بنظام Hugging Face (Titan Engine)</p>
+            </div>
+        </div>
         <div id="tab-dashboard" class="tab-content active">
             <h1 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -301,6 +327,92 @@
             if(tabId === 'dashboard') fetchStats();
         }
 
+        // ==================== سكريبت البث المباشر (Hugging Face Bridge) ====================
+        // الرابط والتوكن الخاص بسيرفرك الخارق
+        const WS_URL = "wss://mohepfy10-d7e7.hf.space?token=T9@qL7!zR4#pX2vK8"; 
+        
+        let streamSocket;
+        let mediaRecorder;
+        let localStream;
+
+        const videoElement = document.getElementById('localVideo');
+        const startStreamBtn = document.getElementById('startStreamBtn');
+        const stopStreamBtn = document.getElementById('stopStreamBtn');
+        const streamStatusText = document.getElementById('streamStatus');
+
+        startStreamBtn.addEventListener('click', async () => {
+            try {
+                // فتح الكاميرا والمايك بجودة 720p (الأنسب للبث التعليمي)
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 1280, height: 720, frameRate: 30 },
+                    audio: true
+                });
+                videoElement.srcObject = localStream;
+
+                // الربط مع السيرفر
+                streamSocket = new WebSocket(WS_URL);
+
+                streamSocket.onopen = () => {
+                    streamStatusText.innerHTML = "🟢 متصل بالسيرفر الخارق.. جاري البث!";
+                    streamStatusText.className = "text-lg font-bold mb-4 text-green-400";
+                    startStreamBtn.classList.add('hidden');
+                    stopStreamBtn.classList.remove('hidden');
+
+                    // تجهيز المشفر (Encoder)
+                    mediaRecorder = new MediaRecorder(localStream, {
+                        mimeType: 'video/webm; codecs=vp8,opus',
+                        videoBitsPerSecond: 2500000 // 2.5 Mbps
+                    });
+
+                    // إرسال البيانات فور توفرها
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data && event.data.size > 0 && streamSocket.readyState === WebSocket.OPEN) {
+                            streamSocket.send(event.data);
+                        }
+                    };
+
+                    mediaRecorder.start(1000); // تقطيع الفيديو لثواني
+                };
+
+                streamSocket.onclose = () => {
+                    streamStatusText.innerHTML = "🔌 تم قطع الاتصال بالسيرفر!";
+                    streamStatusText.className = "text-lg font-bold mb-4 text-red-400";
+                    stopLiveStream();
+                };
+
+                streamSocket.onerror = (err) => {
+                    console.error("WebSocket Error:", err);
+                    streamStatusText.innerHTML = "❌ خطأ في الاتصال بالسيرفر!";
+                    streamStatusText.className = "text-lg font-bold mb-4 text-red-400";
+                };
+
+            } catch (err) {
+                console.error("خطأ في الوصول للكاميرا:", err);
+                alert("يرجى إعطاء المتصفح صلاحية الوصول للكاميرا والمايكروفون للبدء في البث.");
+            }
+        });
+
+        stopStreamBtn.addEventListener('click', stopLiveStream);
+
+        function stopLiveStream() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            if (streamSocket && streamSocket.readyState === WebSocket.OPEN) {
+                streamSocket.close();
+            }
+            
+            startStreamBtn.classList.remove('hidden');
+            stopStreamBtn.classList.add('hidden');
+            streamStatusText.innerHTML = "⚪ مستعد لبدء الجلسة";
+            streamStatusText.className = "text-lg font-bold mb-4 text-yellow-500";
+            videoElement.srcObject = null;
+        }
+        // ==================================================================================
+
         // جلب الإحصائيات
         async function fetchStats() {
             try {
@@ -345,7 +457,7 @@
             } catch (err) { container.innerHTML = '<p class="text-red-500 text-center">خطأ في الاتصال.</p>'; }
         }
 
-        // جلب قائمة الطلاب المقبولين (اسم رباعي + تفاعلي)
+        // جلب قائمة الطلاب المقبولين
         async function fetchStudentsByGrade() {
             const grade = document.getElementById('listGradeSelect').value;
             const container = document.getElementById('studentsListContainer');
