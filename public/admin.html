@@ -63,7 +63,6 @@
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
             <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار</button>
             <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى والنتائج</button>
-            
             <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">استوديو البث المباشر</button>
         </nav>
 
@@ -396,11 +395,14 @@
                 // إعدادات مرنة تمنع أخطاء الموبايل
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { 
-                        width: { ideal: 1280 }, 
-                        height: { ideal: 720 },
+                        width: { ideal: 1280, max: 1920 }, 
+                        height: { ideal: 720, max: 1080 },
                         facingMode: "user" 
                     },
-                    audio: true
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
                 });
                 
                 if (localStream.getVideoTracks().length === 0 || localStream.getAudioTracks().length === 0) {
