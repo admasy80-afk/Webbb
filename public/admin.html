@@ -63,7 +63,7 @@
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
             <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار</button>
             <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى والنتائج</button>
-            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">البث المباشر</button>
+            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">استوديو البث المباشر</button>
         </nav>
 
         <div class="hidden md:block p-4 border-t border-white/10 shrink-0 mt-auto">
@@ -361,7 +361,9 @@
         }
 
         // ==================== سكريبت البث المباشر الفعّال والرسمي ====================
-        const WS_URL = "wss://mohepfy10-d7e7.hf.space?token=T9@qL7!zR4#pX2vK8"; 
+        // الحل الجذري: دالة encodeURIComponent بتمنع أخطاء المتصفح مع الرموز الخاصة زي #
+        const rawToken = "T9@qL7!zR4#pX2vK8";
+        const WS_URL = `wss://mohepfy10-d7e7.hf.space?token=${encodeURIComponent(rawToken)}`; 
         
         let streamSocket;
         let mediaRecorder;
@@ -445,8 +447,12 @@
                 };
 
             } catch (err) {
-                // كشف تفاصيل الخطأ حرفياً لمعرفة السبب إذا فشل
-                alert(`تعذر الوصول للكاميرا أو المايكروفون!\nالسبب التقني: ${err.name} - ${err.message}\nتأكد من عدم وجود تطبيق آخر يستخدم الكاميرا في الخلفية.`);
+                // فصل الخطأ الخاص بالكاميرا عن خطأ السيرفر لتسهيل التتبع
+                if (err.name === "SyntaxError") {
+                    alert(`خطأ في رابط السيرفر:\n${err.message}`);
+                } else {
+                    alert(`تعذر الوصول للكاميرا أو المايكروفون!\nالسبب التقني: ${err.name} - ${err.message}\nتأكد من عدم وجود تطبيق آخر يستخدم الكاميرا في الخلفية.`);
+                }
                 console.error(err);
             }
         });
