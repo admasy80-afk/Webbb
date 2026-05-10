@@ -45,30 +45,33 @@
         
         /* 🔥 أنظمة مشغل البث الاحترافية 🔥 */
         #liveStreamSection {
-            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
             max-height: 0;
             opacity: 0;
             margin-bottom: 0;
             overflow: hidden;
             visibility: hidden;
+            transform: translateY(-20px);
         }
         #liveStreamSection.stream-active {
-            max-height: 900px; /* مساحة كافية للمشغل */
+            max-height: 1200px; 
             opacity: 1;
-            margin-bottom: 1.5rem;
+            margin-bottom: 2rem;
             visibility: visible;
+            transform: translateY(0);
         }
 
         .player-crop-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            padding-top: 56.25%; /* 16:9 */
             overflow: hidden;
-            border-radius: 0.75rem;
+            border-radius: 1.5rem;
             background-color: #000;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* قص حواف تويتش تماماً (Zoom In) */
+        /* زووم ذكي لقص حواف تويتش (اللوجو والترس) */
         .twitch-iframe-container {
             position: absolute;
             top: -12%;
@@ -78,24 +81,16 @@
             z-index: 1;
         }
 
-        /* حاجز الضغطات - يمنع توقف البث عند النقر */
+        /* 🛡️ الدرع الزجاجي لمنع إيقاف الفيديو عند النقر 🛡️ */
         .click-blocker {
             position: absolute;
             inset: 0;
             z-index: 20;
             background: transparent;
-            cursor: default;
         }
 
-        /* زر تكبير الشاشة (شغال 100%) */
-        .fullscreen-wrapper:fullscreen {
-            background-color: #000;
-        }
-        .fullscreen-wrapper:fullscreen .player-crop-wrapper {
-            padding-top: 0;
-            height: 100vh;
-            border-radius: 0;
-        }
+        #fs-wrapper:fullscreen { background: #000; display: flex; align-items: center; justify-content: center; }
+        #fs-wrapper:fullscreen .player-crop-wrapper { border-radius: 0; border: none; width: 100vw; height: 56.25vw; max-height: 100vh; }
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
@@ -129,44 +124,43 @@
 
             <div class="lg:col-span-2 space-y-6 md:space-y-8">
                 
-                <section id="liveStreamSection" class="glass-panel rounded-2xl border-t-[3px] border-t-red-500 shadow-[0_0_40px_rgba(239,68,68,0.15)]">
+                <section id="liveStreamSection" class="glass-panel rounded-[2rem] border-t-[3px] border-t-red-500 shadow-[0_0_50px_rgba(239,68,68,0.15)]">
                     <div class="p-5 md:p-6 flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-red-500/10 to-transparent">
                         <div class="flex items-center gap-3">
-                            <span class="relative flex h-3 w-3 md:h-4 md:w-4">
+                            <span class="relative flex h-3 w-3">
                               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span class="relative inline-flex rounded-full h-3 w-3 md:h-4 md:w-4 bg-red-500"></span>
+                              <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                             </span>
-                            <h2 class="text-lg md:text-xl font-bold text-white">البث المباشر التفاعلي</h2>
+                            <h2 class="text-lg md:text-xl font-bold text-white tracking-tight">البث المباشر التفاعلي</h2>
                         </div>
-                        <span class="text-xs md:text-sm text-red-400 font-bold bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">مباشر الآن</span>
+                        <button onclick="toggleFS()" class="bg-white/5 hover:bg-white/10 p-2.5 rounded-xl border border-white/10 text-gray-400 transition-all">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                        </button>
                     </div>
                     
-                    <div class="p-3 md:p-5 bg-black/60 fullscreen-wrapper" id="fs-wrapper">
-                        <div class="player-crop-wrapper rounded-xl shadow-xl bg-black border border-white/10">
-                            
-                            <div class="absolute top-4 right-4 z-40 bg-black/80 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-white/10 pointer-events-none flex items-center gap-2">
+                    <div class="p-3 md:p-6 bg-black/60" id="fs-wrapper">
+                        <div class="player-crop-wrapper shadow-2xl relative">
+                            <div class="absolute top-6 right-6 z-40 bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 pointer-events-none flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                                <span class="text-white font-bold text-xs md:text-sm tracking-wide">الدحيح LIVE</span>
+                                <span class="text-white font-black text-xs md:text-sm tracking-wide">الدحيح LIVE</span>
                             </div>
 
-                            <button onclick="toggleStudentFullScreen()" class="absolute top-4 left-4 z-40 bg-black/70 hover:bg-black backdrop-blur-md p-2 md:p-2.5 rounded-xl border border-white/10 text-white transition-colors shadow-lg">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                            </button>
-                            
                             <div class="twitch-iframe-container" id="twitch-embed"></div>
-
                             <div class="click-blocker"></div>
 
-                            <div id="unmuteOverlay" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-700 opacity-0 pointer-events-none">
-                                <button id="startAudioBtn" class="bg-red-600 hover:bg-red-500 text-white px-8 py-4 rounded-full font-black shadow-[0_0_30px_rgba(220,38,38,0.5)] flex items-center gap-3 transition-transform transform hover:scale-105 text-sm md:text-base cursor-pointer">
-                                    <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    اضغط هنا للانضمام للبث
+                            <div id="unmuteOverlay" class="absolute inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md transition-all duration-700">
+                                <button id="startLiveBtn" class="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-full font-black shadow-[0_0_40px_rgba(220,38,38,0.6)] flex items-center gap-4 transform hover:scale-110 transition-all">
+                                    <div class="bg-white/20 p-2 rounded-full">
+                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
+                                    </div>
+                                    <span class="text-base md:text-lg">دخول حصة البث المباشر</span>
                                 </button>
                             </div>
-
                         </div>
+                        <p class="text-gray-500 text-[10px] md:text-xs mt-4 text-center">يرجى الضغط على الزر أعلاه لتشغيل الصوت - لا تغادر الصفحة أثناء الشرح.</p>
                     </div>
                 </section>
+
                 <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
                     <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('quizzesSection', 'quizIcon')">
                         <h2 class="text-xl font-bold text-white">الاختبارات الإلكترونية المتاحة</h2>
@@ -244,50 +238,38 @@
             document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
             
             // تهيئة مشغل تويتش عند بداية فتح الصفحة
-            initTwitchPlayer();
+            initTwitch();
             fetchDashboardData(currentUser.email, currentUser.grade);
         }
 
         // ==================== قلب استوديو البث النابض ====================
         let twitchPlayer = null;
 
-        function initTwitchPlayer() {
-            const options = {
-                width: '100%',
-                height: '100%',
-                channel: "moooae2tf",
+        function initTwitch() {
+            if (twitchPlayer) return;
+            twitchPlayer = new Twitch.Player("twitch-embed", {
+                width: '100%', height: '100%', channel: "moooae2tf",
                 parent: ["webbb-production-b681.up.railway.app", "localhost"],
-                controls: false, // بدون أي أزرار أو حواف من تويتش
-                muted: true,     // صامت لضمان التشغيل التلقائي
-                autoplay: true
-            };
-            twitchPlayer = new Twitch.Player("twitch-embed", options);
+                controls: false, muted: true, autoplay: true
+            });
         }
 
         // وظيفة تفعيل الصوت والتشغيل المضمون
-        document.getElementById('startAudioBtn').addEventListener('click', function() {
-            if(twitchPlayer) {
-                twitchPlayer.setMuted(false);
-                twitchPlayer.setVolume(1.0);
-                twitchPlayer.play();
+        document.getElementById('startLiveBtn').addEventListener('click', () => {
+            if(twitchPlayer) { 
+                twitchPlayer.setMuted(false); 
+                twitchPlayer.play(); 
             }
             const overlay = document.getElementById('unmuteOverlay');
-            overlay.classList.add('opacity-0'); // إخفاء ناعم
-            setTimeout(() => overlay.classList.add('pointer-events-none'), 500);
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.classList.add('hidden'), 700);
         });
 
         // زر التكبير
-        function toggleStudentFullScreen() {
-            const fsWrapper = document.getElementById('fs-wrapper');
-            if (!document.fullscreenElement) {
-                if (fsWrapper.requestFullscreen) { fsWrapper.requestFullscreen(); }
-                else if (fsWrapper.webkitRequestFullscreen) { fsWrapper.webkitRequestFullscreen(); } // Safari
-                else if (fsWrapper.msRequestFullscreen) { fsWrapper.msRequestFullscreen(); } // IE11
-            } else {
-                if (document.exitFullscreen) { document.exitFullscreen(); }
-                else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
-                else if (document.msExitFullscreen) { document.msExitFullscreen(); }
-            }
+        function toggleFS() {
+            const el = document.getElementById('fs-wrapper');
+            if (!document.fullscreenElement) el.requestFullscreen().catch(e => {});
+            else document.exitFullscreen();
         }
         // =================================================================
 
@@ -317,13 +299,17 @@
                     const liveSection = document.getElementById('liveStreamSection');
                     const unmuteOverlay = document.getElementById('unmuteOverlay');
                     
-                    if (data.content.liveStream && data.content.liveStream.isLive === true) {
+                    // 🔥 فحص وجود البث بأمان (عشان ما يضربش إيرور لو liveStream ممسوحة) 🔥
+                    const isLive = data.content && data.content.liveStream && data.content.liveStream.isLive === true;
+
+                    if (isLive) {
                         // إظهار القسم
                         if(!liveSection.classList.contains('stream-active')) {
                             liveSection.classList.add('stream-active');
                             
                             // إظهار زر تفعيل الصوت
-                            unmuteOverlay.classList.remove('opacity-0', 'pointer-events-none');
+                            unmuteOverlay.classList.remove('hidden');
+                            unmuteOverlay.style.opacity = '1';
                             
                             // تأكيد تشغيل الفيديو
                             if(twitchPlayer) { twitchPlayer.play(); }
