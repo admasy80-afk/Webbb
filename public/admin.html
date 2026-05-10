@@ -88,7 +88,7 @@
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl mx-auto border-t-4 border-yellow-500 animate-fade-in-up">
                 
                 <div id="videoContainer" class="relative w-full aspect-video bg-[#0a0f1c] rounded-xl border border-white/10 mb-6 overflow-hidden group shadow-xl">
-                    <video id="localVideo" autoplay muted class="w-full h-full object-cover"></video>
+                    <video id="localVideo" autoplay muted playsinline class="w-full h-full object-cover"></video>
                     
                     <div id="camOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#070b19]/90 text-center p-4">
                         <svg class="w-14 h-14 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
@@ -392,27 +392,30 @@
 
         startStreamBtn.addEventListener('click', async () => {
             try {
-                // إعدادات مرنة تمنع أخطاء الموبايل
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        width: { ideal: 1280, max: 1920 }, 
-                        height: { ideal: 720, max: 1080 },
-                        facingMode: "user" 
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true
-                    }
-                });
+                // المحاولة الأولى (كاميرا محددة)
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: true
+                    });
+                } catch (fallbackError) {
+                    console.warn("المحاولة الأولى للكاميرا فشلت، جاري المحاولة بأي إعدادات متاحة:", fallbackError);
+                    // المحاولة الثانية (أي كاميرا وأي مايك متاح بدون شروط)
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: true, 
+                        audio: true 
+                    });
+                }
                 
-                if (localStream.getVideoTracks().length === 0 || localStream.getAudioTracks().length === 0) {
-                    alert("يرجى التأكد من تشغيل الكاميرا والميكروفون للمتابعة.");
-                    return;
+                if (!localStream || localStream.getVideoTracks().length === 0 || localStream.getAudioTracks().length === 0) {
+                    throw new Error("الكاميرا أو الميكروفون غير متوفرين بعد إعطاء الصلاحية.");
                 }
 
+                // الكاميرا اشتغلت، اعرضها
                 videoElement.srcObject = localStream;
                 camOverlay.classList.add('hidden');
 
+                // الاتصال بالسيرفر
                 streamSocket = new WebSocket(WS_URL);
 
                 streamSocket.onopen = () => {
@@ -438,17 +441,18 @@
 
                 streamSocket.onclose = () => {
                     stopLiveStream();
-                    alert("تم إنهاء جلسة الاتصال.");
+                    alert("تم إنهاء جلسة الاتصال بالسيرفر.");
                 };
 
             } catch (err) {
-                alert("تعذر الوصول للكاميرا أو الميكروفون. يرجى إعطاء الصلاحيات للمتصفح.");
+                // كشف تفاصيل الخطأ حرفياً لمعرفة السبب إذا فشل
+                alert(`تعذر الوصول للكاميرا أو المايكروفون!\nالسبب التقني: ${err.name} - ${err.message}\nتأكد من عدم وجود تطبيق آخر يستخدم الكاميرا في الخلفية.`);
                 console.error(err);
             }
         });
 
         toggleMicBtn.addEventListener('click', () => {
-            if (localStream) {
+            if (localStream && localStream.getAudioTracks().length > 0) {
                 isAudioMuted = !isAudioMuted;
                 localStream.getAudioTracks()[0].enabled = !isAudioMuted;
                 toggleMicBtn.className = isAudioMuted ? "bg-red-500/80 hover:bg-red-600 text-white p-2.5 rounded-lg transition-all border border-red-500" : "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
@@ -459,7 +463,7 @@
         });
 
         toggleCamBtn.addEventListener('click', () => {
-            if (localStream) {
+            if (localStream && localStream.getVideoTracks().length > 0) {
                 isVideoHidden = !isVideoHidden;
                 localStream.getVideoTracks()[0].enabled = !isVideoHidden;
                 toggleCamBtn.className = isVideoHidden ? "bg-red-500/80 hover:bg-red-600 text-white p-2.5 rounded-lg transition-all border border-red-500" : "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
@@ -468,8 +472,6 @@
                     `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
             }
         });
-
-        stopStreamBtn.addEventListener('click', stopLiveStream);
 
         function stopLiveStream() {
             if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
@@ -489,6 +491,8 @@
             isVideoHidden = false;
             toggleMicBtn.className = "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
             toggleCamBtn.className = "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
+            toggleMicBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>`;
+            toggleCamBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
         }
         // ==================================================================================
 
