@@ -13,7 +13,7 @@
     <style>
         body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
         
-        /* تأثير التدرج الخلفي (مخفف لتقليل استهلاك المعالج) */
+        /* تأثير التدرج الخلفي */
         .bg-animated-gradient {
             background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
             background-size: 200% 200%;
@@ -21,7 +21,6 @@
         }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        /* البانل الزجاجي */
         .glass-panel { 
             background: rgba(255, 255, 255, 0.02); 
             border: 1px solid rgba(255, 255, 255, 0.05); 
@@ -36,19 +35,16 @@
             border-color: rgba(255, 255, 255, 0.1); 
         }
         
-        /* تنسيقات الراديو (خيارات الامتحان) */
         .quiz-option input[type="radio"]:checked + div { 
             border-color: #eab308; 
             background-color: rgba(234, 179, 8, 0.1); 
         }
         
-        /* حركات السحب والإفلات */
         .section-content { transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease; overflow: hidden; opacity: 1; }
         .section-content.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none; }
         .icon-rotate { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
         .icon-rotate.collapsed { transform: rotate(180deg); }
 
-        /* 🔥 أنيميشن شاشة النتيجة (فائق النعومة بفضل GPU Acceleration) 🔥 */
         @keyframes ultraSmoothPop {
             0% { transform: scale(0.9) translateY(20px); opacity: 0; }
             100% { transform: scale(1) translateY(0); opacity: 1; }
@@ -62,21 +58,10 @@
             50% { transform: translateY(-8px); }
         }
         
-        .animate-pop-in { 
-            animation: ultraSmoothPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
-            will-change: transform, opacity;
-        }
-        .animate-slide-up { 
-            opacity: 0; 
-            animation: ultraSmoothSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; 
-            will-change: transform, opacity;
-        }
-        .animate-float {
-            animation: softFloat 4s ease-in-out infinite;
-            will-change: transform;
-        }
+        .animate-pop-in { animation: ultraSmoothPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform, opacity; }
+        .animate-slide-up { opacity: 0; animation: ultraSmoothSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform, opacity; }
+        .animate-float { animation: softFloat 4s ease-in-out infinite; will-change: transform; }
         
-        /* توقيت التدرج المريح للعين */
         .delay-100 { animation-delay: 100ms; }
         .delay-150 { animation-delay: 150ms; }
         .delay-200 { animation-delay: 200ms; }
@@ -85,6 +70,32 @@
         
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* تأثير اقتصاص المشغل لإخفاء الهوية */
+        .player-crop-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            overflow: hidden;
+            border-radius: 0.75rem;
+            background-color: #000;
+        }
+        .player-crop-wrapper iframe {
+            position: absolute;
+            top: -6%;
+            left: -2%;
+            width: 104%;
+            height: 112%;
+        }
+        /* إطار داخلي فوق الفيديو لإخفاء أي حواف مقصوصة بشكل سيئ */
+        .player-inner-border {
+            position: absolute;
+            inset: 0;
+            border: 4px solid #070b19;
+            border-radius: 0.75rem;
+            pointer-events: none;
+            z-index: 10;
+        }
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
@@ -129,19 +140,27 @@
                         </div>
                         <span class="text-xs md:text-sm text-red-400 font-bold bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">مباشر الآن</span>
                     </div>
+                    
                     <div class="p-3 md:p-5 bg-black/40">
-                        <div class="relative w-full aspect-video rounded-xl overflow-hidden border border-white/10 bg-black">
+                        <div class="player-crop-wrapper border border-white/10 group shadow-xl">
+                            
+                            <div class="absolute top-4 right-4 z-20 bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 pointer-events-none flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                <span class="text-white font-bold text-xs md:text-sm tracking-wide">الدحيح LIVE</span>
+                            </div>
+                            
+                            <div class="player-inner-border"></div>
+
                             <iframe
-                                src="https://player.twitch.tv/?channel=moooae2tf&parent=webbb-production-b681.up.railway.app&parent=localhost&muted=false"
+                                src="https://player.twitch.tv/?channel=moooae2tf&parent=webbb-production-b681.up.railway.app&parent=localhost&muted=false&autoplay=true"
                                 frameborder="0"
                                 allowfullscreen="true"
-                                scrolling="no"
-                                class="w-full h-full absolute inset-0">
+                                scrolling="no">
                             </iframe>
                         </div>
                         <p class="text-gray-500 text-xs md:text-sm mt-4 text-center flex items-center justify-center gap-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            في حال توقف البث، يرجى تحديث الصفحة أو الضغط على زر التشغيل داخل نافذة العرض.
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                            اضغط داخل شاشة العرض لتفعيل الصوت (أمر إلزامي من المتصفح).
                         </p>
                     </div>
                 </section>
@@ -387,34 +406,26 @@
                     })
                 });
 
-                // 🔥 ألوان ديناميكية راقية جداً حسب النتيجة مع تأثير Glow خفيف عن طريق box-shadow 🔥
                 let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
                 let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.2)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.2)' : 'rgba(248, 113, 113, 0.2)');
                 let borderColor = percentage >= 85 ? 'border-green-400/30' : (percentage >= 50 ? 'border-blue-400/30' : 'border-red-400/30');
                 
-                // أيقونة فخمة (Checkmark) 
                 const successIcon = `<svg class="w-10 h-10 md:w-12 md:h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
                 
-                // شاشة النتيجة بأداء (60fps) وبدون أي إيموجي
                 const resultHtml = `
                     <div class="text-center py-6 md:py-10 px-2 md:px-6 overflow-hidden flex flex-col items-center">
-                        
                         <div class="w-20 h-20 md:w-24 md:h-24 mb-6 rounded-full border ${borderColor} flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">
                             ${successIcon}
                         </div>
-                        
                         <h2 class="text-2xl md:text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2>
                         <p class="text-gray-400 text-sm md:text-base mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p>
-                        
                         <div class="inline-block animate-slide-up delay-200 mb-8 md:mb-10">
                             <div class="text-7xl md:text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div>
                         </div>
-                        
                         <div class="bg-black/30 border border-white/5 rounded-2xl p-4 md:p-5 text-gray-300 text-sm md:text-base w-full max-w-xs mx-auto mb-8 md:mb-10 flex justify-between items-center px-6 md:px-8 animate-slide-up delay-250">
                             <span class="font-medium text-gray-400">الإجابات الصحيحة</span>
                             <span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span>
                         </div>
-
                         <button onclick="closeAndRefresh()" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base block animate-slide-up delay-300">
                             العودة للوحة التحكم
                         </button>
