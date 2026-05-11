@@ -163,16 +163,37 @@ app.post('/api/admin/update-points', async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
+// 🔥 تحديث نظام البث لاستهداف دفعة محددة 🔥
 app.post('/api/admin/toggle-stream', async (req, res) => {
     try {
-        const { role, isLive } = req.body; 
+        const { role, isLive, grade } = req.body; 
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
+        
+        // منع تشغيل البث إذا لم يتم تحديد دفعة
+        if (isLive && !grade) return res.status(400).json({ message: "يجب تحديد الدفعة أولاً!" });
+
         const db = usersCollection.s.db;   
         const contentCollection = db.collection('curriculum_content');  
-        if (isLive) await contentCollection.updateMany({}, { $set: { "liveStream": { isLive: true, startedAt: new Date() } } });  
-        else await contentCollection.updateMany({}, { $unset: { "liveStream": "" } });  
-        res.status(200).json({ message: "تم تحديث حالة البث" });
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+          
+        if (isLive) {
+            // تفعيل البث لدفعة واحدة فقط
+            await contentCollection.updateOne(
+                { grade: grade }, 
+                { $set: { "liveStream": { isLive: true, startedAt: new Date() } } },
+                { upsert: true }
+            );  
+            res.status(200).json({ message: "تم إطلاق البث للدفعة المحددة بنجاح" });  
+        } else {
+            // إيقاف البث عن الدفعة
+            await contentCollection.updateOne(
+                { grade: grade }, 
+                { $unset: { "liveStream": "" } }
+            );  
+            res.status(200).json({ message: "تم إيقاف البث بنجاح" });  
+        }
+    } catch (error) { 
+        res.status(500).json({ message: "خطأ في تحديث حالة البث" }); 
+    }
 });
 
 // ==========================================
@@ -204,3 +225,4 @@ app.post('/api/student/submit-quiz', async (req, res) => {
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
