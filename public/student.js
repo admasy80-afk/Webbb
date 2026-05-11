@@ -5,7 +5,8 @@ const userDataStr = localStorage.getItem('dahih_user');
 window.availableQuizzes = []; 
 let currentUser = null;
 let livePlayer = null; 
-let isTwitchOnline = false; // 🔥 متغير جديد لمعرفة هل تويتش لقط البث فعلاً أم لا
+let isTwitchOnline = false; 
+let wasLiveOnServer = false; // 🔥 السر الجديد: تتبع حالة السيرفر لتشغيل البث كالصاروخ
 
 if (!userDataStr) {
     window.location.replace("/logina.html");
@@ -18,21 +19,25 @@ if (!userDataStr) {
     if (nameEl) nameEl.innerText = firstName;
     if (gradeEl) gradeEl.innerText = currentUser.grade || "الصف غير محدد";
     
-    initLiveStream();
     fetchDashboardData();
     setInterval(fetchDashboardData, 2000); 
 }
 
-// ==================== إعدادات المشغل (مخفي تماماً) ====================
-function initLiveStream() {
-    if (livePlayer) return;
-    
-    if (!document.getElementById("stream-container")) return;
+// ==================== إعدادات المشغل (النسخة الصاروخية) ====================
 
+function rebootTwitchPlayer() {
+    const container = document.getElementById("stream-container");
+    if (!container) return;
+
+    // 1. نسف المشغل القديم (لإلغاء أي كاش أو نوم عميق لتويتش)
+    container.innerHTML = "";
+    isTwitchOnline = false;
+
+    // 2. بناء المشغل من الصفر (يجبر تويتش على جلب البث فوراً في نفس اللحظة)
     const options = {
         width: '100%', height: '100%', 
-        channel: "moooae2tf", // تأكد أن هذا هو اسم قناتك بالضبط
-        parent: [window.location.hostname, "localhost"], // 🔥 قراءة الدومين تلقائياً لمنع الحظر
+        channel: "moooae2tf", 
+        parent: [window.location.hostname || "localhost"], 
         controls: false, 
         muted: true, autoplay: true
     };
@@ -99,27 +104,22 @@ function toggleStudentFullScreen() {
     }
 }
 
-function forceShowStream() {
+function forceShowStream(isNewStream = false) {
     const section = document.getElementById('liveStreamSection');
     if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
+    }
+    
+    if (isNewStream) {
+        // 🔥 إظهار شاشة التحميل وبناء المشغل من الصفر
+        const loadOverlay = document.getElementById('loadingOverlay');
+        const unmuteOverlay = document.getElementById('unmuteOverlay');
+        if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
         
-        if (!isTwitchOnline) {
-            const loadOverlay = document.getElementById('loadingOverlay');
-            const unmuteOverlay = document.getElementById('unmuteOverlay');
-            if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
-            if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
-        }
-        
-        if(livePlayer) {
-            // 🔥 الصدمة الكهربائية: إجبار تويتش على الاستيقاظ وجلب البث فوراً 🔥
-            setTimeout(() => {
-                if (!isTwitchOnline) {
-                    livePlayer.setChannel("moooae2tf");
-                    livePlayer.play();
-                }
-            }, 1000);
-        }
+        rebootTwitchPlayer();
+    } else if (livePlayer && !isTwitchOnline) {
+        livePlayer.play();
     }
 }
 
@@ -127,10 +127,13 @@ function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
     if(section && section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
-        if(livePlayer) {
-            livePlayer.pause();
-            livePlayer.setMuted(true);
-        }
+        
+        // 🔥 تدمير المشغل نهائياً لتوفير إنترنت الطالب ورامات جهازه
+        const container = document.getElementById("stream-container");
+        if(container) container.innerHTML = "";
+        livePlayer = null;
+        isTwitchOnline = false;
+        
         if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
     }
 }
@@ -156,9 +159,21 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
+            // 🔥 المنطق الذكي لتشغيل المشغل مرة واحدة فقط عند بدء البث
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
-            if (isLiveOnServer) { forceShowStream(); } 
-            else { forceHideStream(); }
+            
+            if (isLiveOnServer && !wasLiveOnServer) {
+                // المستر لسه فاتح البث حالا -> انسف الكاش وابني المشغل فوراً
+                forceShowStream(true);
+            } else if (isLiveOnServer) {
+                // البث شغال من بدري -> أظهر الشاشة بس
+                forceShowStream(false);
+            } else {
+                // البث مقفول -> اخفي الشاشة ودمر المشغل
+                forceHideStream();
+            }
+            
+            wasLiveOnServer = isLiveOnServer; // تحديث الحالة
 
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             if (pointsDisplay) pointsDisplay.innerText = (data.studentPoints || 0) + '%';
@@ -304,4 +319,3 @@ function logout() {
     localStorage.removeItem('dahih_token'); 
     window.location.replace("/logina.html"); 
 }
-
