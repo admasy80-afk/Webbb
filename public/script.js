@@ -14,7 +14,6 @@ else {
 
 let currentGradeData = null;
 
-// دالة تبديل التبويبات
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -25,7 +24,7 @@ function switchTab(tabId) {
     if(tabId === 'dashboard') fetchStats();
 }
 
-// ==================== سكريبت البث المباشر (الإصدار النهائي والمدمر للأخطاء) ====================
+// ==================== سكريبت البث المباشر (الإصدار المحصن ضد الفصل) ====================
 const rawToken = "TmV68hFTctxYq"; 
 const WS_URL = `wss://mohepfy10-d7e7.hf.space/?token=${encodeURIComponent(rawToken)}`; 
 
@@ -46,10 +45,8 @@ const toggleCamBtn = document.getElementById('toggleCamBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const streamStatusBadge = document.getElementById('streamStatusBadge');
 
-// ملائمة الشاشة الافتراضية
 videoElement.style.objectFit = "cover";
 
-// أداة ملء الشاشة 
 fullscreenBtn.addEventListener('click', async () => {
     try {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -65,29 +62,19 @@ fullscreenBtn.addEventListener('click', async () => {
             if (document.exitFullscreen) { document.exitFullscreen(); }
             else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
         }
-    } catch (err) {
-        console.warn("Fullscreen error:", err);
-    }
+    } catch (err) { console.warn("Fullscreen error:", err); }
 });
 
-// بدء البث
 startStreamBtn.addEventListener('click', async () => {
     if (isLive) return;
     
-    startStreamBtn.innerHTML = `<span class="animate-pulse">جاري تجهيز الاستوديو...</span>`;
+    startStreamBtn.innerHTML = `<span class="animate-pulse">جاري الاتصال بالسيرفر...</span>`;
     startStreamBtn.disabled = true;
 
     try {
         const advancedConstraints = {
-            video: { 
-                width: { ideal: 1280 }, 
-                height: { ideal: 720 },
-                facingMode: "user" 
-            },
-            audio: {
-                echoCancellation: true,    
-                noiseSuppression: true     
-            }
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+            audio: { echoCancellation: true, noiseSuppression: true }
         };
 
         try {
@@ -111,10 +98,20 @@ startStreamBtn.addEventListener('click', async () => {
             startStreamBtn.classList.add('hidden');
             stopStreamBtn.classList.remove('hidden');
 
-            mediaRecorder = new MediaRecorder(localStream, {
-                mimeType: 'video/webm; codecs=vp8,opus',
-                videoBitsPerSecond: 2500000 
-            });
+            // 🔥 فحص ذكي للصيغ المدعومة لمنع رفض السيرفر للفيديو
+            let options = { videoBitsPerSecond: 2000000 }; 
+            if (MediaRecorder.isTypeSupported('video/webm; codecs=vp8,opus')) {
+                options.mimeType = 'video/webm; codecs=vp8,opus';
+            } else if (MediaRecorder.isTypeSupported('video/webm; codecs=vp9,opus')) {
+                options.mimeType = 'video/webm; codecs=vp9,opus';
+            } else if (MediaRecorder.isTypeSupported('video/webm')) {
+                options.mimeType = 'video/webm';
+            } else {
+                // ترك المتصفح يختار الأفضل لو webm غير مدعوم بالكامل
+                options.mimeType = ''; 
+            }
+
+            mediaRecorder = new MediaRecorder(localStream, options);
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0 && streamSocket && streamSocket.readyState === WebSocket.OPEN) {
@@ -122,9 +119,10 @@ startStreamBtn.addEventListener('click', async () => {
                 }
             };
 
-            mediaRecorder.start(1000);
+            // 🔥 إرسال البيانات كل 250 ملي ثانية (السر وراء منع الانقطاع بعد ثانيتين)
+            mediaRecorder.start(250);
 
-            // إرسال الإشارة للسيرفر
+            // إرسال الإشارة للطلاب
             fetch('/api/admin/toggle-stream', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
@@ -132,12 +130,20 @@ startStreamBtn.addEventListener('click', async () => {
             }).catch(e => console.error(e));
         };
 
-        streamSocket.onclose = () => {
-            if (isLive) stopLiveStream(); 
+        streamSocket.onclose = (event) => {
+            console.log("WebSocket closed with code:", event.code);
+            if (isLive) {
+                alert("تم قطع الاتصال بالسيرفر! (تأكد من مفتاح تويتش أو جودة الإنترنت)");
+                stopLiveStream(); 
+            }
         };
         
-        streamSocket.onerror = () => {
-            if (!isLive) { alert("تعذر الاتصال بسيرفر البث."); stopLiveStream(); }
+        streamSocket.onerror = (error) => {
+            console.error("WebSocket Error:", error);
+            if (!isLive) { 
+                alert("تعذر الاتصال بسيرفر Hugging Face."); 
+                stopLiveStream(); 
+            }
         };
 
     } catch (err) {
@@ -147,20 +153,17 @@ startStreamBtn.addEventListener('click', async () => {
     }
 });
 
-// 🛑 إغلاق البث (النسخة المدمرة القسرية)
 stopStreamBtn.addEventListener('click', stopLiveStream);
 
 function stopLiveStream() {
     if (!isLive) return;
     isLive = false;
     
-    // 1. إيقاف المسجل فوراً
     if (mediaRecorder && mediaRecorder.state !== 'inactive') {
         try { mediaRecorder.stop(); } catch(e){}
     }
     mediaRecorder = null;
 
-    // 2. تدمير اتصال الـ WebSocket فوراً
     if (streamSocket) {
         streamSocket.onclose = null; 
         streamSocket.onerror = null;
@@ -168,15 +171,11 @@ function stopLiveStream() {
     }
     streamSocket = null;
 
-    // 3. فصل الكاميرا والمايك من الهاردوير (إطفاء اللمبة)
     if (localStream) {
-        localStream.getTracks().forEach(track => {
-            track.stop(); 
-        });
+        localStream.getTracks().forEach(track => { track.stop(); });
     }
     localStream = null;
 
-    // 4. تفريغ مشغل الفيديو
     if (videoElement) {
         videoElement.pause();
         videoElement.removeAttribute('src');
@@ -184,7 +183,6 @@ function stopLiveStream() {
         videoElement.srcObject = null;
     }
 
-    // 5. تحديث الواجهة فوراً
     startStreamBtn.innerHTML = "بدء البث المباشر";
     startStreamBtn.disabled = false;
     startStreamBtn.classList.remove('hidden');
@@ -194,7 +192,6 @@ function stopLiveStream() {
     streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-gray-500 block"></span> النظام في وضع الاستعداد`;
     streamStatusBadge.className = "bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3 transition-all";
     
-    // إعادة ضبط الأزرار الجانبية
     isAudioMuted = false;
     isVideoHidden = false;
     toggleMicBtn.classList.remove('bg-red-500');
@@ -208,7 +205,6 @@ function stopLiveStream() {
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(()=>{});
     }
 
-    // 6. إرسال أمر الإيقاف للسيرفر (في الخلفية بدون تعطيل الواجهة)
     fetch('/api/admin/toggle-stream', { 
         method: 'POST', 
         headers: {'Content-Type': 'application/json'}, 
@@ -238,7 +234,7 @@ toggleCamBtn.addEventListener('click', () => {
 });
 // ==================================================================================
 
-// جلب الإحصائيات
+// بقية الكود كما هو (الإحصائيات، الطلاب، الاختبارات...)
 async function fetchStats() {
     try {
         const res = await fetch('/api/admin/stats', {
@@ -252,7 +248,6 @@ async function fetchStats() {
     } catch (err) {}
 }
 
-// جلب طلبات التسجيل الجديدة
 async function fetchPendingRequests() {
     const container = document.getElementById('pendingRequestsContainer');
     container.innerHTML = '<p class="text-gray-500 text-center py-10">جاري جلب الطلبات...</p>';
@@ -282,7 +277,6 @@ async function fetchPendingRequests() {
     } catch (err) { container.innerHTML = '<p class="text-red-500 text-center">خطأ في الاتصال.</p>'; }
 }
 
-// جلب قائمة الطلاب المقبولين
 async function fetchStudentsByGrade() {
     const grade = document.getElementById('listGradeSelect').value;
     const container = document.getElementById('studentsListContainer');
@@ -313,7 +307,6 @@ async function fetchStudentsByGrade() {
     } catch (err) { container.innerHTML = '<p class="text-red-500 text-center col-span-full">خطأ في الاتصال.</p>'; }
 }
 
-// إدارة المحتوى (جلب البيانات)
 async function fetchGradeContent() {
     const grade = document.getElementById('manageGradeSelect').value;
     const container = document.getElementById('manageContainer');
@@ -522,4 +515,3 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     fetchStats();
 });
-
