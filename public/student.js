@@ -11,59 +11,76 @@ if (!userDataStr) {
 } else {
     currentUser = JSON.parse(userDataStr);
     const firstName = currentUser.name ? currentUser.name.split(' ')[0] : "طالب";
-    document.getElementById('studentName').innerText = firstName;
-    document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
+    
+    // 🛡️ حماية وتأمين العناصر قبل تحديثها
+    const nameEl = document.getElementById('studentName');
+    const gradeEl = document.getElementById('studentGrade');
+    if (nameEl) nameEl.innerText = firstName;
+    if (gradeEl) gradeEl.innerText = currentUser.grade || "الصف غير محدد";
     
     initLiveStream();
     fetchDashboardData();
-    // 🔥 تم تسريع التحديث ليكون كل ثانيتين بدل 5 ثواني لاستجابة صاروخية
+    // 🔥 تسريع التحديث ليكون كل ثانيتين بدل 5 لضمان استجابة صاروخية للبث والاختبارات
     setInterval(fetchDashboardData, 2000); 
 }
 
 // ==================== إعدادات المشغل (مخفي تماماً) ====================
 function initLiveStream() {
     if (livePlayer) return;
+    
+    // 🛡️ التأكد من وجود حاوية البث قبل تهيئة المشغل لمنع انهيار الكود
+    if (!document.getElementById("stream-container")) return;
+
     const options = {
         width: '100%', height: '100%', channel: "moooae2tf",
         parent: ["webbb-production-b681.up.railway.app", "localhost"],
-        controls: false, // إخفاء كل أزرار التحكم الخاصة بالمشغل الأصلي
+        controls: false, // إخفاء أزرار التحكم
         muted: true, autoplay: true
     };
     
-    // تعريف المشغل داخل الحاوية الجديدة المخفية
     livePlayer = new Twitch.Player("stream-container", options);
 
     livePlayer.addEventListener(Twitch.Player.ONLINE, () => {
-        document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
-        document.getElementById('unmuteOverlay').classList.remove('opacity-0', 'pointer-events-none');
+        const loadOverlay = document.getElementById('loadingOverlay');
+        const unmuteOverlay = document.getElementById('unmuteOverlay');
+        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
+        if (unmuteOverlay) unmuteOverlay.classList.remove('opacity-0', 'pointer-events-none');
     });
     
     livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
-        document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
+        const loadOverlay = document.getElementById('loadingOverlay');
+        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
     });
     
-    // 🔥 تم إيقاف إخفاء البث من طرف تويتش لمنع التعارض أثناء التحميل
     livePlayer.addEventListener(Twitch.Player.OFFLINE, () => {
-        // بدلاً من الإخفاء، نظهر فقط شاشة التحميل إذا كان السيرفر يقول أن البث مستمر
         const section = document.getElementById('liveStreamSection');
         if(section && section.classList.contains('stream-active')) {
-            document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none');
+            const loadOverlay = document.getElementById('loadingOverlay');
+            if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
         }
     });
 }
 
-document.getElementById('startLiveBtn').addEventListener('click', () => {
-    if(livePlayer) { 
-        livePlayer.setMuted(false); 
-        livePlayer.setVolume(1.0); 
-        livePlayer.play(); 
-    }
-    document.getElementById('unmuteOverlay').classList.add('opacity-0', 'pointer-events-none');
-    document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); 
-});
+// 🛡️ حماية الزر من التسبب في خطأ إن لم يكن موجوداً
+const startLiveBtn = document.getElementById('startLiveBtn');
+if (startLiveBtn) {
+    startLiveBtn.addEventListener('click', () => {
+        if(livePlayer) { 
+            livePlayer.setMuted(false); 
+            livePlayer.setVolume(1.0); 
+            livePlayer.play(); 
+        }
+        const unmuteOverlay = document.getElementById('unmuteOverlay');
+        const loadOverlay = document.getElementById('loadingOverlay');
+        if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
+        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none'); 
+    });
+}
 
 function toggleStudentFullScreen() {
     const fsWrapper = document.getElementById('fs-wrapper');
+    if (!fsWrapper) return;
+    
     if (!document.fullscreenElement) {
         if(fsWrapper.requestFullscreen) {
             fsWrapper.requestFullscreen().then(() => {
@@ -84,22 +101,24 @@ function toggleStudentFullScreen() {
 // 🔥 دالة الإظهار الفوري
 function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
-    if(!section.classList.contains('stream-active')) {
+    if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
-        document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none');
-        document.getElementById('unmuteOverlay').classList.add('opacity-0', 'pointer-events-none');
-        if(livePlayer) livePlayer.play(); // إجبار المشغل على العمل لو كان متوقف
+        const loadOverlay = document.getElementById('loadingOverlay');
+        const unmuteOverlay = document.getElementById('unmuteOverlay');
+        if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
+        if(livePlayer) livePlayer.play(); // إجبار المشغل
     }
 }
 
 // 🔥 دالة الإخفاء الفوري
 function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
-    if(section.classList.contains('stream-active')) {
+    if(section && section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
         if(livePlayer) {
             livePlayer.pause();
-            livePlayer.setMuted(true); // كتم الصوت احتياطياً
+            livePlayer.setMuted(true);
         }
         if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
     }
@@ -108,12 +127,15 @@ function forceHideStream() {
 function toggleSection(sectionId, iconId) {
     const section = document.getElementById(sectionId);
     const icon = document.getElementById(iconId);
+    if (!section || !icon) return;
+    
     section.classList.toggle('collapsed');
     icon.classList.toggle('collapsed');
     if(section.classList.contains('collapsed')) { section.style.maxHeight = '0px'; } 
     else { section.style.maxHeight = section.scrollHeight + 500 + 'px'; }
 }
 
+// 🔥 القلب النابض للصفحة (مؤمن بالكامل ضد الانهيار)
 async function fetchDashboardData() {
     try {
         const res = await fetch('/api/student/dashboard-data', {
@@ -124,71 +146,86 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
-            // 🔥 هذا هو المتحكم الوحيد الآن في ظهور وإخفاء البث
+            // 1. تحديث البث
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
             if (isLiveOnServer) { forceShowStream(); } 
             else { forceHideStream(); }
 
-            document.getElementById('studentPointsDisplay').innerText = (data.studentPoints || 0) + '%';
+            // 2. تحديث النقاط العلوية
+            const pointsDisplay = document.getElementById('studentPointsDisplay');
+            if (pointsDisplay) pointsDisplay.innerText = (data.studentPoints || 0) + '%';
+
             window.availableQuizzes = data.content?.quizzes || [];
             
+            // 3. تحديث الاختبارات
             const qzContainer = document.getElementById('onlineQuizzesContainer');
-            if (window.availableQuizzes.length > 0) {
-                let qzHTML = '';
-                window.availableQuizzes.slice().reverse().forEach(quiz => {
-                    const studentResult = quiz.results ? quiz.results.find(r => r.email === currentUser.email) : null;
-                    qzHTML += `
-                    <div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-yellow-500/30">
-                        <div><h3 class="font-bold text-base md:text-lg text-white">${quiz.title}</h3><p class="text-xs md:text-sm text-gray-400 mt-1">يحتوي على ${quiz.questions.length} أسئلة.</p></div>
-                        ${studentResult 
-                            ? `<div class="bg-white/5 border border-white/10 text-gray-300 px-6 py-2 rounded-lg text-sm text-center w-full md:w-auto font-bold">تم الإنجاز بنسبة ${studentResult.percentage}%</div>`
-                            : `<button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-yellow-500 text-black font-bold px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors text-sm shadow-md">بدء الاختبار</button>`
-                        }
-                    </div>`;
-                });
-                qzContainer.innerHTML = qzHTML;
-                qzContainer.classList.remove('text-center', 'text-gray-500');
-            } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
-
-            const pContainer = document.getElementById('pointsContainer');
-            if (data.content?.points && data.content.points.length > 0) {
-                let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
-                data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
-                pHTML += '</ul>';
-                pContainer.innerHTML = pHTML;
-                pContainer.classList.remove('text-center', 'text-gray-500');
-            } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
-
-            const qContainer = document.getElementById('questionsContainer');
-            if (data.content?.questions && data.content.questions.length > 0) {
-                let qHTML = '';
-                data.content.questions.forEach((q, idx) => {
-                    qHTML += `
-                    <div class="bg-black/30 border border-white/5 rounded-xl p-4 card-hover">
-                        <h3 class="font-bold text-sm md:text-base text-white mb-2"><span class="text-gray-500 mr-2">${idx + 1}.</span> ${q.question}</h3>
-                        <p class="text-gray-400 text-sm leading-relaxed border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold ml-2">الإجابة:</span>${q.hint}</p>
-                    </div>`;
-                });
-                qContainer.innerHTML = qHTML;
-                qContainer.classList.remove('text-center', 'text-gray-500');
-            } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
-
-            const tContainer = document.getElementById('testsContainer');
-            if (data.content?.tests && data.content.tests.length > 0) {
-                let tHTML = '';
-                data.content.tests.slice().reverse().forEach(test => {
-                    tHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5"><h3 class="font-bold text-yellow-500 mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
-                    let sortedScores = test.scores.sort((a, b) => b.score - a.score);
-                    sortedScores.forEach((s, index) => {
-                        let highlight = index < 3 ? 'text-white font-bold bg-white/5 border border-white/5' : 'text-gray-400';
-                        let rank = index < 3 ? ['الأول', 'الثاني', 'الثالث'][index] : index + 1;
-                        tHTML += `<div class="flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
+            if (qzContainer) {
+                if (window.availableQuizzes.length > 0) {
+                    let qzHTML = '';
+                    window.availableQuizzes.slice().reverse().forEach(quiz => {
+                        const studentResult = quiz.results ? quiz.results.find(r => r.email === currentUser.email) : null;
+                        qzHTML += `
+                        <div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-yellow-500/30">
+                            <div><h3 class="font-bold text-base md:text-lg text-white">${quiz.title}</h3><p class="text-xs md:text-sm text-gray-400 mt-1">يحتوي على ${quiz.questions.length} أسئلة.</p></div>
+                            ${studentResult 
+                                ? `<div class="bg-white/5 border border-white/10 text-gray-300 px-6 py-2 rounded-lg text-sm text-center w-full md:w-auto font-bold">تم الإنجاز بنسبة ${studentResult.percentage}%</div>`
+                                : `<button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-yellow-500 text-black font-bold px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors text-sm shadow-md">بدء الاختبار</button>`
+                            }
+                        </div>`;
                     });
-                    tHTML += `</div></div>`;
-                });
-                tContainer.innerHTML = tHTML;
-                tContainer.classList.remove('text-center', 'text-gray-500');
-            } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
+                    qzContainer.innerHTML = qzHTML;
+                    qzContainer.classList.remove('text-center', 'text-gray-500');
+                } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
+            }
+
+            // 4. تحديث ملاحظات المنهج
+            const pContainer = document.getElementById('pointsContainer');
+            if (pContainer) {
+                if (data.content?.points && data.content.points.length > 0) {
+                    let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
+                    data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
+                    pHTML += '</ul>';
+                    pContainer.innerHTML = pHTML;
+                    pContainer.classList.remove('text-center', 'text-gray-500');
+                } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
+            }
+
+            // 5. تحديث الأسئلة المقالية
+            const qContainer = document.getElementById('questionsContainer');
+            if (qContainer) {
+                if (data.content?.questions && data.content.questions.length > 0) {
+                    let qHTML = '';
+                    data.content.questions.forEach((q, idx) => {
+                        qHTML += `
+                        <div class="bg-black/30 border border-white/5 rounded-xl p-4 card-hover">
+                            <h3 class="font-bold text-sm md:text-base text-white mb-2"><span class="text-gray-500 mr-2">${idx + 1}.</span> ${q.question}</h3>
+                            <p class="text-gray-400 text-sm leading-relaxed border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold ml-2">الإجابة:</span>${q.hint}</p>
+                        </div>`;
+                    });
+                    qContainer.innerHTML = qHTML;
+                    qContainer.classList.remove('text-center', 'text-gray-500');
+                } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
+            }
+
+            // 6. تحديث نتائج الاختبارات الورقية
+            const tContainer = document.getElementById('testsContainer');
+            if (tContainer) {
+                if (data.content?.tests && data.content.tests.length > 0) {
+                    let tHTML = '';
+                    data.content.tests.slice().reverse().forEach(test => {
+                        tHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5"><h3 class="font-bold text-yellow-500 mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
+                        let sortedScores = test.scores.sort((a, b) => b.score - a.score);
+                        sortedScores.forEach((s, index) => {
+                            let highlight = index < 3 ? 'text-white font-bold bg-white/5 border border-white/5' : 'text-gray-400';
+                            let rank = index < 3 ? ['الأول', 'الثاني', 'الثالث'][index] : index + 1;
+                            tHTML += `<div class="flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
+                        });
+                        tHTML += `</div></div>`;
+                    });
+                    tContainer.innerHTML = tHTML;
+                    tContainer.classList.remove('text-center', 'text-gray-500');
+                } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
+            }
         }
     } catch (err) { console.log(err); }
 }
@@ -196,6 +233,10 @@ async function fetchDashboardData() {
 function openQuizModal(quizId) {
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
     if (!quiz) return;
+
+    const modalContent = document.getElementById('quizModalContent');
+    const modal = document.getElementById('quizModal');
+    if (!modalContent || !modal) return;
 
     let html = `<div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h2 class="text-xl md:text-2xl font-bold text-white">${quiz.title}</h2><span class="text-yellow-500 text-sm bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-lg font-bold">${quiz.questions.length} أسئلة</span></div><form id="activeQuizForm" onsubmit="submitQuiz(event, '${quiz.id}')" class="space-y-6">`;
 
@@ -210,14 +251,14 @@ function openQuizModal(quizId) {
 
     html += `<div class="flex flex-col md:flex-row gap-3 pt-4 border-t border-white/10"><button type="submit" id="btnSubmitQuiz" class="flex-1 bg-yellow-500 text-black font-bold py-3 md:py-4 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base shadow-md">إنهاء وتسليم الإجابات</button><button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-3 md:py-4 rounded-xl hover:bg-white/5 transition-colors text-sm md:text-base">إلغاء</button></div></form>`;
 
-    document.getElementById('quizModalContent').innerHTML = html;
-    document.getElementById('quizModal').classList.remove('hidden');
+    modalContent.innerHTML = html;
+    modal.classList.remove('hidden');
 }
 
 async function submitQuiz(event, quizId) {
     event.preventDefault();
     const btn = document.getElementById('btnSubmitQuiz');
-    btn.innerText = "جاري التصحيح..."; btn.disabled = true;
+    if (btn) { btn.innerText = "جاري التصحيح..."; btn.disabled = true; }
 
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
     const form = event.target;
@@ -239,10 +280,23 @@ async function submitQuiz(event, quizId) {
         let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.2)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.2)' : 'rgba(248, 113, 113, 0.2)');
         const successIcon = `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
         
-        document.getElementById('quizModalContent').innerHTML = `<div class="text-center py-10 px-6 overflow-hidden flex flex-col items-center"><div class="w-24 h-24 mb-6 rounded-full border border-white/10 flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">${successIcon}</div><h2 class="text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2><p class="text-gray-400 mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p><div class="inline-block animate-slide-up delay-200 mb-10"><div class="text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div></div><div class="bg-black/30 border border-white/5 rounded-2xl p-5 text-gray-300 w-full max-w-xs mx-auto mb-10 flex justify-between items-center px-8 animate-slide-up delay-250"><span class="font-medium text-gray-400">الإجابات الصحيحة</span><span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span></div><button onclick="closeQuizModal(); fetchDashboardData();" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors block animate-slide-up delay-300">العودة للوحة التحكم</button></div>`;
-    } catch (err) { alert("حدث خطأ، حاول مجدداً."); btn.innerText = "تسليم الإجابات"; btn.disabled = false; }
+        const modalContent = document.getElementById('quizModalContent');
+        if (modalContent) {
+            modalContent.innerHTML = `<div class="text-center py-10 px-6 overflow-hidden flex flex-col items-center"><div class="w-24 h-24 mb-6 rounded-full border border-white/10 flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">${successIcon}</div><h2 class="text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2><p class="text-gray-400 mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p><div class="inline-block animate-slide-up delay-200 mb-10"><div class="text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div></div><div class="bg-black/30 border border-white/5 rounded-2xl p-5 text-gray-300 w-full max-w-xs mx-auto mb-10 flex justify-between items-center px-8 animate-slide-up delay-250"><span class="font-medium text-gray-400">الإجابات الصحيحة</span><span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span></div><button onclick="closeQuizModal(); fetchDashboardData();" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors block animate-slide-up delay-300">العودة للوحة التحكم</button></div>`;
+        }
+    } catch (err) { 
+        alert("حدث خطأ، حاول مجدداً."); 
+        if (btn) { btn.innerText = "تسليم الإجابات"; btn.disabled = false; }
+    }
 }
 
-function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); }
-function logout() { localStorage.removeItem('dahih_user'); localStorage.removeItem('dahih_token'); window.location.replace("/logina.html"); }
+function closeQuizModal() { 
+    const modal = document.getElementById('quizModal');
+    if (modal) modal.classList.add('hidden'); 
+}
 
+function logout() { 
+    localStorage.removeItem('dahih_user'); 
+    localStorage.removeItem('dahih_token'); 
+    window.location.replace("/logina.html"); 
+}
