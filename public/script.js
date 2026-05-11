@@ -14,7 +14,6 @@ else {
 
 let currentGradeData = null;
 
-// دالة تبديل التبويبات
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -25,16 +24,19 @@ function switchTab(tabId) {
     if(tabId === 'dashboard') fetchStats();
 }
 
-// ==================== سكريبت البث المباشر (الإصدار المحصن ضد الفصل) ====================
+// ==================== سكريبت البث المباشر (الإصدار الاحترافي V3) ====================
 const rawToken = "TmV68hFTctxYq"; 
 const WS_URL = `wss://mohepfy10-d7e7.hf.space/?token=${encodeURIComponent(rawToken)}`; 
 
 let streamSocket = null;
 let mediaRecorder = null;
 let localStream = null;
+let masterStream = null; // نستخدم ماستر ستريم عشان نبدل الكاميرا بدون ما يقطع البث
 let isAudioMuted = false;
 let isVideoHidden = false;
 let isLive = false; 
+let activeStreamGrade = null; // لتخزين الدفعة التي يتم البث لها
+let currentFacingMode = "user"; // الكاميرا الأمامية افتراضياً
 
 const videoContainer = document.getElementById('videoContainer');
 const videoElement = document.getElementById('localVideo');
@@ -51,14 +53,9 @@ videoElement.style.objectFit = "cover";
 fullscreenBtn.addEventListener('click', async () => {
     try {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-            if (videoContainer.requestFullscreen) {
-                await videoContainer.requestFullscreen();
-            } else if (videoContainer.webkitRequestFullscreen) { 
-                await videoContainer.webkitRequestFullscreen();
-            } 
-            if (screen.orientation && screen.orientation.lock) {
-                try { await screen.orientation.lock('landscape'); } catch (e) {}
-            }
+            if (videoContainer.requestFullscreen) { await videoContainer.requestFullscreen(); } 
+            else if (videoContainer.webkitRequestFullscreen) { await videoContainer.webkitRequestFullscreen(); } 
+            if (screen.orientation && screen.orientation.lock) { try { await screen.orientation.lock('landscape'); } catch (e) {} }
         } else {
             if (document.exitFullscreen) { document.exitFullscreen(); }
             else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
@@ -69,37 +66,55 @@ fullscreenBtn.addEventListener('click', async () => {
 startStreamBtn.addEventListener('click', async () => {
     if (isLive) return;
     
+    // التحقق من تحديد الدفعة
+    const gradeSelect = document.getElementById('streamGradeSelect');
+    if (!gradeSelect || !gradeSelect.value) {
+        alert("⚠️ يا مستر، لازم تختار الدفعة من القائمة قبل تشغيل البث!");
+        return;
+    }
+    activeStreamGrade = gradeSelect.value;
+    
     startStreamBtn.innerHTML = `<span class="animate-pulse">جاري الاتصال بالسيرفر...</span>`;
     startStreamBtn.disabled = true;
 
     try {
         const advancedConstraints = {
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
-            audio: { echoCancellation: true, noiseSuppression: true }
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: currentFacingMode },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, sampleRate: 48000 }
         };
 
         try {
             localStream = await navigator.mediaDevices.getUserMedia(advancedConstraints);
         } catch (fallbackError) {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode }, audio: true });
         }
         
         if (!localStream) throw new Error("لم يتم العثور على كاميرا أو مايك.");
 
-        videoElement.srcObject = localStream;
+        // 🔥 استخدام Master Stream لضمان القدرة على تبديل الكاميرا وقت البث 🔥
+        masterStream = new MediaStream();
+        localStream.getTracks().forEach(t => masterStream.addTrack(t));
+        
+        videoElement.srcObject = masterStream;
         camOverlay.classList.add('hidden');
+
+        // 🔥 حل مشكلة انعكاس الشاشة (يمين/يسار) 🔥
+        if (currentFacingMode === "user") {
+            videoElement.style.transform = "scaleX(-1)"; // عكس الكاميرا الأمامية لتصبح كمرآة طبيعية
+        } else {
+            videoElement.style.transform = "scaleX(1)"; // الكاميرا الخلفية تظل كما هي
+        }
 
         streamSocket = new WebSocket(WS_URL);
 
         streamSocket.onopen = async () => {
             isLive = true;
-            streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-red-500 block pulse-live shadow-[0_0_10px_red]"></span> البث مباشر الآن`;
+            streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-red-500 block pulse-live shadow-[0_0_10px_red]"></span> البث مباشر لـ ${activeStreamGrade}`;
             streamStatusBadge.className = "bg-red-900/30 border border-red-500/50 text-red-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3 transition-all";
             
             startStreamBtn.classList.add('hidden');
             stopStreamBtn.classList.remove('hidden');
 
-            // 🔥 فحص ذكي للصيغ المدعومة لمنع رفض السيرفر للفيديو
             let options = { videoBitsPerSecond: 2000000 }; 
             if (MediaRecorder.isTypeSupported('video/webm; codecs=vp8,opus')) {
                 options.mimeType = 'video/webm; codecs=vp8,opus';
@@ -108,11 +123,10 @@ startStreamBtn.addEventListener('click', async () => {
             } else if (MediaRecorder.isTypeSupported('video/webm')) {
                 options.mimeType = 'video/webm';
             } else {
-                // ترك المتصفح يختار الأفضل لو webm غير مدعوم بالكامل
                 options.mimeType = ''; 
             }
 
-            mediaRecorder = new MediaRecorder(localStream, options);
+            mediaRecorder = new MediaRecorder(masterStream, options);
 
             mediaRecorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0 && streamSocket && streamSocket.readyState === WebSocket.OPEN) {
@@ -120,28 +134,24 @@ startStreamBtn.addEventListener('click', async () => {
                 }
             };
 
-            // 🔥 إرسال البيانات كل 250 ملي ثانية (السر وراء منع الانقطاع بعد ثانيتين)
             mediaRecorder.start(250);
 
-            // إرسال الإشارة للطلاب
+            // إرسال الإشارة للسيرفر باستهداف الدفعة المحددة
             fetch('/api/admin/toggle-stream', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
-                body: JSON.stringify({ role: user.role, isLive: true }) 
+                body: JSON.stringify({ role: user.role, isLive: true, grade: activeStreamGrade }) 
             }).catch(e => console.error(e));
         };
 
-        // 🔥 تم تحديث هذا الجزء لطباعة السبب الدقيق للإغلاق 🔥
         streamSocket.onclose = (event) => {
-            console.log("WebSocket closed. Code:", event.code, "Reason:", event.reason);
             if (isLive) {
-                alert(`انقطع الاتصال بالسيرفر!\nكود الإغلاق: ${event.code}\nالسبب: ${event.reason || 'السيرفر أغلق الاتصال فجأة بدون سبب محدد'}\n(تأكد من Logs السيرفر لمعرفة السبب التقني)`);
+                alert(`انقطع الاتصال بالسيرفر!\nكود الإغلاق: ${event.code}\nالسبب: ${event.reason || 'السيرفر أغلق الاتصال فجأة'}`);
                 stopLiveStream(); 
             }
         };
         
         streamSocket.onerror = (error) => {
-            console.error("WebSocket Error:", error);
             if (!isLive) { 
                 alert("تعذر الاتصال بسيرفر Hugging Face."); 
                 stopLiveStream(); 
@@ -177,12 +187,18 @@ function stopLiveStream() {
         localStream.getTracks().forEach(track => { track.stop(); });
     }
     localStream = null;
+    
+    if (masterStream) {
+        masterStream.getTracks().forEach(track => { track.stop(); });
+    }
+    masterStream = null;
 
     if (videoElement) {
         videoElement.pause();
         videoElement.removeAttribute('src');
         videoElement.load();
         videoElement.srcObject = null;
+        videoElement.style.transform = "scaleX(1)"; // إرجاع العكس
     }
 
     startStreamBtn.innerHTML = "بدء البث المباشر";
@@ -210,7 +226,7 @@ function stopLiveStream() {
     fetch('/api/admin/toggle-stream', { 
         method: 'POST', 
         headers: {'Content-Type': 'application/json'}, 
-        body: JSON.stringify({ role: user.role, isLive: false }) 
+        body: JSON.stringify({ role: user.role, isLive: false, grade: activeStreamGrade }) 
     }).catch(e => {});
 }
 
@@ -234,9 +250,50 @@ toggleCamBtn.addEventListener('click', () => {
         videoElement.style.opacity = isVideoHidden ? "0" : "1"; 
     }
 });
+
+// 🔥 دالة تبديل الكاميرا (أمامية/خلفية) أثناء البث 🔥
+async function switchCameraLive() {
+    if (!masterStream || !localStream) return;
+    const oldAudioTracks = localStream.getAudioTracks();
+    const oldVideoTracks = localStream.getVideoTracks();
+
+    try {
+        const newStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: currentFacingMode },
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+
+        // تبديل مسار الفيديو دون إيقاف التسجيل
+        masterStream.removeTrack(oldVideoTracks[0]);
+        oldVideoTracks[0].stop();
+        masterStream.addTrack(newStream.getVideoTracks()[0]);
+
+        // تبديل مسار الصوت
+        masterStream.removeTrack(oldAudioTracks[0]);
+        oldAudioTracks[0].stop();
+        masterStream.addTrack(newStream.getAudioTracks()[0]);
+
+        localStream = newStream; // تحديث المرجع
+
+        // إصلاح انعكاس المرآة
+        if (currentFacingMode === "user") {
+            videoElement.style.transform = "scaleX(-1)";
+        } else {
+            videoElement.style.transform = "scaleX(1)";
+        }
+
+        // الحفاظ على حالة كتم الصوت أو إخفاء الصورة
+        localStream.getAudioTracks()[0].enabled = !isAudioMuted;
+        localStream.getVideoTracks()[0].enabled = !isVideoHidden;
+
+    } catch(e) { 
+        alert("تعذر تبديل الكاميرا. تأكد من إعطاء الصلاحيات."); 
+    }
+}
+
 // ==================================================================================
 
-// بقية الكود كما هو (الإحصائيات، الطلاب، الاختبارات...)
+// بقية دوال لوحة الإدارة 
 async function fetchStats() {
     try {
         const res = await fetch('/api/admin/stats', {
@@ -513,8 +570,41 @@ function toggleContentFields() {
 
 function logout() { localStorage.removeItem('dahih_user'); localStorage.removeItem('dahih_token'); window.location.href = "/logina.html"; }
 
+// 🔥 الحقن البرمجي لقائمة الدفعة وزر تبديل الكاميرا 🔥
 document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     fetchStats();
+
+    // 1. إضافة قائمة الدفعة فوق زر البث
+    if (startStreamBtn && !document.getElementById('streamGradeSelect')) {
+        const selectHTML = `
+        <select id="streamGradeSelect" class="w-full bg-black/40 border-2 border-yellow-500 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-400 mb-4 font-bold shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+            <option value="">-- 🛑 حدد الدفعة التي سيظهر لها البث 🛑 --</option>
+            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+        </select>`;
+        startStreamBtn.insertAdjacentHTML('beforebegin', selectHTML);
+    }
+
+    // 2. إضافة زر تبديل الكاميرا بجانب أزرار المايك والكاميرا
+    if (toggleCamBtn && !document.getElementById('switchCamBtn')) {
+        const switchHTML = `
+        <button id="switchCamBtn" title="تبديل الكاميرا (أمامية/خلفية)" class="bg-white/10 hover:bg-white/20 p-2.5 rounded-xl border border-white/10 text-white transition-colors backdrop-blur-md shadow-lg">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+        </button>`;
+        toggleCamBtn.insertAdjacentHTML('afterend', switchHTML);
+        
+        document.getElementById('switchCamBtn').addEventListener('click', async () => {
+            currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+            if (isLive) {
+                await switchCameraLive();
+            } else {
+                alert(`تم تحديد الكاميرا ${currentFacingMode === 'user' ? 'الأمامية' : 'الخلفية'}. ستعمل عند بدء البث.`);
+            }
+        });
+    }
 });
 
