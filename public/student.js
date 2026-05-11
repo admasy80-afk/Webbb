@@ -29,7 +29,8 @@ if (!userDataStr) {
 // ==================== إعدادات المشغل (الحل الجذري Iframe) ====================
 function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
-    const container = document.getElementById("stream-container");
+    // 🔥 هنا كان السر! عدلناها لـ twitch-embed عشان تطابق الـ HTML حقك
+    const container = document.getElementById("twitch-embed"); 
     
     if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
@@ -37,14 +38,9 @@ function forceShowStream() {
     
     // إذا لم يكن الإطار موجوداً، نقوم بإنشائه
     if (container && container.innerHTML.trim() === "") {
-        
-        // 🔥 السر هنا: وضعنا رابط موقعك الخاص على Railway بشكل صريح
         const myDomain = "webbb-production-b681.up.railway.app";
-        
-        // إخبار تويتش أن هذا الموقع مسموح له بعرض البث
         const parentParams = `&parent=${myDomain}&parent=localhost`;
         
-        // إنشاء الإطار
         container.innerHTML = `<iframe 
             src="https://player.twitch.tv/?channel=moooae2tf${parentParams}&autoplay=true&muted=false" 
             height="100%" 
@@ -59,29 +55,18 @@ function forceShowStream() {
 
 function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
-    const container = document.getElementById("stream-container");
+    // 🔥 وهنا كمان تم التعديل
+    const container = document.getElementById("twitch-embed"); 
     
     if(section && section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
         
-        // تفريغ الإطار لإيقاف البث وتوفير الإنترنت عند الإخفاء
         if (container) {
             container.innerHTML = ""; 
         }
         
         if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
     }
-}
-
-// زر تشغيل البث (لم يعد له حاجة فعلية لأن تويتش سيظهر أزراره الخاصة، لكن تركناه تحسباً)
-const startLiveBtn = document.getElementById('startLiveBtn');
-if (startLiveBtn) {
-    startLiveBtn.addEventListener('click', () => {
-        const loadOverlay = document.getElementById('loadingOverlay');
-        const unmuteOverlay = document.getElementById('unmuteOverlay');
-        if (loadOverlay) loadOverlay.style.display = 'none';
-        if (unmuteOverlay) unmuteOverlay.style.display = 'none';
-    });
 }
 
 function toggleStudentFullScreen() {
@@ -126,7 +111,6 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
-            // تحديث حالة البث
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
             if (isLiveOnServer) { forceShowStream(); } 
             else { forceHideStream(); }
@@ -275,4 +259,3 @@ function logout() {
     localStorage.removeItem('dahih_token'); 
     window.location.replace("/logina.html"); 
 }
-
