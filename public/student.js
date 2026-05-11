@@ -35,18 +35,24 @@ function forceShowStream() {
         section.classList.add('stream-active');
     }
     
-    // إذا لم يكن الإطار موجوداً، نقوم بإنشائه مباشرة (بدون استخدام مكتبة تويتش المعقدة)
+    // إذا لم يكن الإطار موجوداً، نقوم بإنشائه
     if (container && container.innerHTML.trim() === "") {
-        let currentHost = window.location.hostname || "localhost";
         
-        // بناء Iframe مباشر لا يمكن أن يعلق
+        // 🔥 السر هنا: وضعنا رابط موقعك الخاص على Railway بشكل صريح
+        const myDomain = "webbb-production-b681.up.railway.app";
+        
+        // إخبار تويتش أن هذا الموقع مسموح له بعرض البث
+        const parentParams = `&parent=${myDomain}&parent=localhost`;
+        
+        // إنشاء الإطار
         container.innerHTML = `<iframe 
-            src="https://player.twitch.tv/?channel=moooae2tf&parent=${currentHost}&parent=localhost&autoplay=true&muted=false" 
+            src="https://player.twitch.tv/?channel=moooae2tf${parentParams}&autoplay=true&muted=false" 
             height="100%" 
             width="100%" 
             allowfullscreen="true" 
             scrolling="no" 
-            frameborder="0">
+            frameborder="0"
+            style="border: none;">
         </iframe>`;
     }
 }
