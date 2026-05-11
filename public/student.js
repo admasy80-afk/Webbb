@@ -16,7 +16,8 @@ if (!userDataStr) {
     
     initLiveStream();
     fetchDashboardData();
-    setInterval(fetchDashboardData, 5000); 
+    // 🔥 تم تسريع التحديث ليكون كل ثانيتين بدل 5 ثواني لاستجابة صاروخية
+    setInterval(fetchDashboardData, 2000); 
 }
 
 // ==================== إعدادات المشغل (مخفي تماماً) ====================
@@ -36,11 +37,19 @@ function initLiveStream() {
         document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
         document.getElementById('unmuteOverlay').classList.remove('opacity-0', 'pointer-events-none');
     });
+    
     livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
         document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
     });
     
-    livePlayer.addEventListener(Twitch.Player.OFFLINE, forceHideStream);
+    // 🔥 تم إيقاف إخفاء البث من طرف تويتش لمنع التعارض أثناء التحميل
+    livePlayer.addEventListener(Twitch.Player.OFFLINE, () => {
+        // بدلاً من الإخفاء، نظهر فقط شاشة التحميل إذا كان السيرفر يقول أن البث مستمر
+        const section = document.getElementById('liveStreamSection');
+        if(section && section.classList.contains('stream-active')) {
+            document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none');
+        }
+    });
 }
 
 document.getElementById('startLiveBtn').addEventListener('click', () => {
@@ -72,21 +81,27 @@ function toggleStudentFullScreen() {
     }
 }
 
+// 🔥 دالة الإظهار الفوري
 function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
     if(!section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
         document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none');
         document.getElementById('unmuteOverlay').classList.add('opacity-0', 'pointer-events-none');
+        if(livePlayer) livePlayer.play(); // إجبار المشغل على العمل لو كان متوقف
     }
 }
 
+// 🔥 دالة الإخفاء الفوري
 function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
     if(section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
-        if(livePlayer) livePlayer.pause();
-        if(document.fullscreenElement) document.exitFullscreen();
+        if(livePlayer) {
+            livePlayer.pause();
+            livePlayer.setMuted(true); // كتم الصوت احتياطياً
+        }
+        if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
     }
 }
 
@@ -109,6 +124,7 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
+            // 🔥 هذا هو المتحكم الوحيد الآن في ظهور وإخفاء البث
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
             if (isLiveOnServer) { forceShowStream(); } 
             else { forceHideStream(); }
