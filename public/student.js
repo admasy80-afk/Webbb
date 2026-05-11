@@ -4,7 +4,8 @@ const trashSVG = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox
 const userDataStr = localStorage.getItem('dahih_user');
 window.availableQuizzes = []; 
 let currentUser = null;
-let livePlayer = null; // تم تغيير المسمى لإخفاء هوية المشغل
+let livePlayer = null; 
+let isTwitchOnline = false; // 🔥 متغير جديد لمعرفة هل تويتش لقط البث فعلاً أم لا
 
 if (!userDataStr) {
     window.location.replace("/logina.html");
@@ -12,7 +13,6 @@ if (!userDataStr) {
     currentUser = JSON.parse(userDataStr);
     const firstName = currentUser.name ? currentUser.name.split(' ')[0] : "طالب";
     
-    // 🛡️ حماية وتأمين العناصر قبل تحديثها
     const nameEl = document.getElementById('studentName');
     const gradeEl = document.getElementById('studentGrade');
     if (nameEl) nameEl.innerText = firstName;
@@ -20,7 +20,6 @@ if (!userDataStr) {
     
     initLiveStream();
     fetchDashboardData();
-    // 🔥 تسريع التحديث ليكون كل ثانيتين بدل 5 لضمان استجابة صاروخية للبث والاختبارات
     setInterval(fetchDashboardData, 2000); 
 }
 
@@ -28,19 +27,20 @@ if (!userDataStr) {
 function initLiveStream() {
     if (livePlayer) return;
     
-    // 🛡️ التأكد من وجود حاوية البث قبل تهيئة المشغل لمنع انهيار الكود
     if (!document.getElementById("stream-container")) return;
 
     const options = {
-        width: '100%', height: '100%', channel: "moooae2tf",
-        parent: ["webbb-production-b681.up.railway.app", "localhost"],
-        controls: false, // إخفاء أزرار التحكم
+        width: '100%', height: '100%', 
+        channel: "moooae2tf", // تأكد أن هذا هو اسم قناتك بالضبط
+        parent: [window.location.hostname, "localhost"], // 🔥 قراءة الدومين تلقائياً لمنع الحظر
+        controls: false, 
         muted: true, autoplay: true
     };
     
     livePlayer = new Twitch.Player("stream-container", options);
 
     livePlayer.addEventListener(Twitch.Player.ONLINE, () => {
+        isTwitchOnline = true;
         const loadOverlay = document.getElementById('loadingOverlay');
         const unmuteOverlay = document.getElementById('unmuteOverlay');
         if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
@@ -48,11 +48,13 @@ function initLiveStream() {
     });
     
     livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
+        isTwitchOnline = true;
         const loadOverlay = document.getElementById('loadingOverlay');
         if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
     });
     
     livePlayer.addEventListener(Twitch.Player.OFFLINE, () => {
+        isTwitchOnline = false;
         const section = document.getElementById('liveStreamSection');
         if(section && section.classList.contains('stream-active')) {
             const loadOverlay = document.getElementById('loadingOverlay');
@@ -61,7 +63,6 @@ function initLiveStream() {
     });
 }
 
-// 🛡️ حماية الزر من التسبب في خطأ إن لم يكن موجوداً
 const startLiveBtn = document.getElementById('startLiveBtn');
 if (startLiveBtn) {
     startLiveBtn.addEventListener('click', () => {
@@ -98,20 +99,30 @@ function toggleStudentFullScreen() {
     }
 }
 
-// 🔥 دالة الإظهار الفوري
 function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
     if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
-        const loadOverlay = document.getElementById('loadingOverlay');
-        const unmuteOverlay = document.getElementById('unmuteOverlay');
-        if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
-        if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
-        if(livePlayer) livePlayer.play(); // إجبار المشغل
+        
+        if (!isTwitchOnline) {
+            const loadOverlay = document.getElementById('loadingOverlay');
+            const unmuteOverlay = document.getElementById('unmuteOverlay');
+            if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
+            if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
+        }
+        
+        if(livePlayer) {
+            // 🔥 الصدمة الكهربائية: إجبار تويتش على الاستيقاظ وجلب البث فوراً 🔥
+            setTimeout(() => {
+                if (!isTwitchOnline) {
+                    livePlayer.setChannel("moooae2tf");
+                    livePlayer.play();
+                }
+            }, 1000);
+        }
     }
 }
 
-// 🔥 دالة الإخفاء الفوري
 function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
     if(section && section.classList.contains('stream-active')) {
@@ -135,7 +146,6 @@ function toggleSection(sectionId, iconId) {
     else { section.style.maxHeight = section.scrollHeight + 500 + 'px'; }
 }
 
-// 🔥 القلب النابض للصفحة (مؤمن بالكامل ضد الانهيار)
 async function fetchDashboardData() {
     try {
         const res = await fetch('/api/student/dashboard-data', {
@@ -146,18 +156,15 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
-            // 1. تحديث البث
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
             if (isLiveOnServer) { forceShowStream(); } 
             else { forceHideStream(); }
 
-            // 2. تحديث النقاط العلوية
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             if (pointsDisplay) pointsDisplay.innerText = (data.studentPoints || 0) + '%';
 
             window.availableQuizzes = data.content?.quizzes || [];
             
-            // 3. تحديث الاختبارات
             const qzContainer = document.getElementById('onlineQuizzesContainer');
             if (qzContainer) {
                 if (window.availableQuizzes.length > 0) {
@@ -178,7 +185,6 @@ async function fetchDashboardData() {
                 } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
             }
 
-            // 4. تحديث ملاحظات المنهج
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
@@ -190,7 +196,6 @@ async function fetchDashboardData() {
                 } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
             }
 
-            // 5. تحديث الأسئلة المقالية
             const qContainer = document.getElementById('questionsContainer');
             if (qContainer) {
                 if (data.content?.questions && data.content.questions.length > 0) {
@@ -207,7 +212,6 @@ async function fetchDashboardData() {
                 } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
             }
 
-            // 6. تحديث نتائج الاختبارات الورقية
             const tContainer = document.getElementById('testsContainer');
             if (tContainer) {
                 if (data.content?.tests && data.content.tests.length > 0) {
@@ -300,3 +304,4 @@ function logout() {
     localStorage.removeItem('dahih_token'); 
     window.location.replace("/logina.html"); 
 }
+
