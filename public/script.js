@@ -25,16 +25,16 @@ function switchTab(tabId) {
     if(tabId === 'dashboard') fetchStats();
 }
 
-// ==================== سكريبت البث المباشر (الإصدار الاحترافي V3) ====================
+// ==================== سكريبت البث المباشر (الإصدار النهائي والمدمر للأخطاء) ====================
 const rawToken = "TmV68hFTctxYq"; 
 const WS_URL = `wss://mohepfy10-d7e7.hf.space/?token=${encodeURIComponent(rawToken)}`; 
 
-let streamSocket;
-let mediaRecorder;
-let localStream;
+let streamSocket = null;
+let mediaRecorder = null;
+let localStream = null;
 let isAudioMuted = false;
 let isVideoHidden = false;
-let isLive = false; // لمنع التكرار
+let isLive = false; 
 
 const videoContainer = document.getElementById('videoContainer');
 const videoElement = document.getElementById('localVideo');
@@ -46,34 +46,24 @@ const toggleCamBtn = document.getElementById('toggleCamBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const streamStatusBadge = document.getElementById('streamStatusBadge');
 
-// 💡 ضبط ذكي للكاميرا بناءً على الجهاز (لابتوب/بي سي = Contain, موبايل = Cover)
-function adjustVideoFit() {
-    videoElement.style.objectFit = window.innerWidth > 768 ? "contain" : "cover";
-}
-window.addEventListener('resize', adjustVideoFit);
-adjustVideoFit();
+// ملائمة الشاشة الافتراضية
+videoElement.style.objectFit = "cover";
 
-// 💡 أداة ملء الشاشة المتوافقة مع جميع المتصفحات (حتى الآيفون وسفاري)
+// أداة ملء الشاشة 
 fullscreenBtn.addEventListener('click', async () => {
     try {
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
             if (videoContainer.requestFullscreen) {
                 await videoContainer.requestFullscreen();
-            } else if (videoContainer.webkitRequestFullscreen) { /* Safari */
+            } else if (videoContainer.webkitRequestFullscreen) { 
                 await videoContainer.webkitRequestFullscreen();
-            } else if (videoContainer.msRequestFullscreen) { /* IE11 */
-                await videoContainer.msRequestFullscreen();
-            }
-            
-            // محاولة إجبار الوضع العرضي للجوالات لتجربة مشاهدة أفضل
+            } 
             if (screen.orientation && screen.orientation.lock) {
                 try { await screen.orientation.lock('landscape'); } catch (e) {}
             }
         } else {
             if (document.exitFullscreen) { document.exitFullscreen(); }
             else if (document.webkitExitFullscreen) { document.webkitExitFullscreen(); }
-            
-            if (screen.orientation && screen.orientation.unlock) { screen.orientation.unlock(); }
         }
     } catch (err) {
         console.warn("Fullscreen error:", err);
@@ -84,30 +74,25 @@ fullscreenBtn.addEventListener('click', async () => {
 startStreamBtn.addEventListener('click', async () => {
     if (isLive) return;
     
-    // تغيير حالة الزر لـ "جاري التحميل" لتجربة مستخدم أفضل
-    const originalBtnText = startStreamBtn.innerHTML;
     startStreamBtn.innerHTML = `<span class="animate-pulse">جاري تجهيز الاستوديو...</span>`;
     startStreamBtn.disabled = true;
 
     try {
-        // 💡 إعدادات احترافية للصوت والصورة (دعم PC + Laptop + Mobile)
         const advancedConstraints = {
             video: { 
-                width: { ideal: 1920, min: 1280 }, // دقة HD أو Full HD
-                height: { ideal: 1080, min: 720 },
+                width: { ideal: 1280 }, 
+                height: { ideal: 720 },
                 facingMode: "user" 
             },
             audio: {
-                echoCancellation: true,    // منع الصدى
-                noiseSuppression: true,    // عزل الضوضاء
-                autoGainControl: true      // توازن الصوت
+                echoCancellation: true,    
+                noiseSuppression: true     
             }
         };
 
         try {
             localStream = await navigator.mediaDevices.getUserMedia(advancedConstraints);
         } catch (fallbackError) {
-            console.warn("الإعدادات العالية غير مدعومة، جاري تشغيل الإعدادات الافتراضية...");
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         }
         
@@ -116,7 +101,6 @@ startStreamBtn.addEventListener('click', async () => {
         videoElement.srcObject = localStream;
         camOverlay.classList.add('hidden');
 
-        // الاتصال بسيرفر البث
         streamSocket = new WebSocket(WS_URL);
 
         streamSocket.onopen = async () => {
@@ -133,79 +117,103 @@ startStreamBtn.addEventListener('click', async () => {
             });
 
             mediaRecorder.ondataavailable = (event) => {
-                if (event.data && event.data.size > 0 && streamSocket.readyState === WebSocket.OPEN) {
+                if (event.data && event.data.size > 0 && streamSocket && streamSocket.readyState === WebSocket.OPEN) {
                     streamSocket.send(event.data);
                 }
             };
 
             mediaRecorder.start(1000);
 
-            // إشعار الطلاب ببدء البث
-            try {
-                await fetch('/api/admin/toggle-stream', { 
-                    method: 'POST', 
-                    headers: {'Content-Type': 'application/json'}, 
-                    body: JSON.stringify({ role: user.role, isLive: true }) 
-                });
-            } catch (e) { console.error("فشل إشعار الطلاب:", e); }
+            // إرسال الإشارة للسيرفر
+            fetch('/api/admin/toggle-stream', { 
+                method: 'POST', 
+                headers: {'Content-Type': 'application/json'}, 
+                body: JSON.stringify({ role: user.role, isLive: true }) 
+            }).catch(e => console.error(e));
         };
 
         streamSocket.onclose = () => {
-            if (isLive) { alert("انقطع الاتصال بسيرفر البث!"); stopLiveStream(); }
+            if (isLive) stopLiveStream(); 
         };
         
         streamSocket.onerror = () => {
-            if (!isLive) { alert("السيرفر غير متاح حالياً، تأكد من تشغيله."); stopLiveStream(); }
+            if (!isLive) { alert("تعذر الاتصال بسيرفر البث."); stopLiveStream(); }
         };
 
     } catch (err) {
-        alert(`فشل بدء البث! الرجاء السماح بالوصول للكاميرا والمايك.\nالخطأ: ${err.message}`);
-        startStreamBtn.innerHTML = originalBtnText;
+        alert(`فشل بدء البث! تأكد من صلاحيات الكاميرا.\n${err.message}`);
+        startStreamBtn.innerHTML = "بدء البث المباشر";
         startStreamBtn.disabled = false;
     }
 });
 
+// 🛑 إغلاق البث (النسخة المدمرة القسرية)
 stopStreamBtn.addEventListener('click', stopLiveStream);
 
-async function stopLiveStream() {
+function stopLiveStream() {
+    if (!isLive) return;
     isLive = false;
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-    if (localStream) localStream.getTracks().forEach(track => track.stop());
-    if (streamSocket && streamSocket.readyState === WebSocket.OPEN) streamSocket.close();
     
-    // الخروج من الشاشة الكاملة لو كانت مفعلة
-    if (document.fullscreenElement || document.webkitFullscreenElement) {
-        if (document.exitFullscreen) document.exitFullscreen();
-        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    // 1. إيقاف المسجل فوراً
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        try { mediaRecorder.stop(); } catch(e){}
     }
-    
-    // استعادة الواجهة
+    mediaRecorder = null;
+
+    // 2. تدمير اتصال الـ WebSocket فوراً
+    if (streamSocket) {
+        streamSocket.onclose = null; 
+        streamSocket.onerror = null;
+        streamSocket.close();
+    }
+    streamSocket = null;
+
+    // 3. فصل الكاميرا والمايك من الهاردوير (إطفاء اللمبة)
+    if (localStream) {
+        localStream.getTracks().forEach(track => {
+            track.stop(); 
+        });
+    }
+    localStream = null;
+
+    // 4. تفريغ مشغل الفيديو
+    if (videoElement) {
+        videoElement.pause();
+        videoElement.removeAttribute('src');
+        videoElement.load();
+        videoElement.srcObject = null;
+    }
+
+    // 5. تحديث الواجهة فوراً
     startStreamBtn.innerHTML = "بدء البث المباشر";
     startStreamBtn.disabled = false;
     startStreamBtn.classList.remove('hidden');
     stopStreamBtn.classList.add('hidden');
     camOverlay.classList.remove('hidden');
-    videoElement.style.opacity = "1";
     
     streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-gray-500 block"></span> النظام في وضع الاستعداد`;
     streamStatusBadge.className = "bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3 transition-all";
-    videoElement.srcObject = null;
     
-    // إعادة تعيين أزرار المايك والكاميرا
+    // إعادة ضبط الأزرار الجانبية
     isAudioMuted = false;
     isVideoHidden = false;
     toggleMicBtn.classList.remove('bg-red-500');
     toggleCamBtn.classList.remove('bg-red-500');
     toggleMicBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>`;
     toggleCamBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
+    videoElement.style.opacity = "1";
 
-    try {
-        await fetch('/api/admin/toggle-stream', { 
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ role: user.role, isLive: false }) 
-        });
-    } catch (e) {}
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+        if (document.exitFullscreen) document.exitFullscreen().catch(()=>{});
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen().catch(()=>{});
+    }
+
+    // 6. إرسال أمر الإيقاف للسيرفر (في الخلفية بدون تعطيل الواجهة)
+    fetch('/api/admin/toggle-stream', { 
+        method: 'POST', 
+        headers: {'Content-Type': 'application/json'}, 
+        body: JSON.stringify({ role: user.role, isLive: false }) 
+    }).catch(e => {});
 }
 
 toggleMicBtn.addEventListener('click', () => {
