@@ -29,6 +29,25 @@ if (!userDataStr) {
 
 // ==================== إعدادات المشغل والواجهة الخاصة ====================
 
+// 🌟 الدالة اللي تأخر كشف الغطاء لحد ما تويتش يجهز 🌟
+window.revealStream = function() {
+    const btn = document.getElementById('enterStreamBtn');
+    if(!btn) return;
+    
+    // نغير شكل الزر لـ "تحميل" ونمنع الطالب يضغط عليه مرة ثانية
+    btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري جلب إشارة الفيديو...`;
+    btn.disabled = true;
+
+    // نعطي تويتش 8 ثواني عشان يخفي شاشته البيضاء ويبدأ البث الفعلي
+    setTimeout(() => {
+        const overlay = document.getElementById('dahih-custom-overlay');
+        if(overlay) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.style.display = 'none', 500);
+        }
+    }, 8000); 
+};
+
 function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
     const container = document.getElementById("twitch-embed"); 
@@ -42,17 +61,17 @@ function forceShowStream() {
         const myDomain = "webbb-production-b681.up.railway.app";
         const parentParams = `&parent=${myDomain}&parent=localhost`;
         
-        // 🌟 واجهة الدحيح الاحترافية (Overlay) 🌟
+        // 🌟 واجهة الدحيح الاحترافية (متطابقة مع ألوان المنصة) 🌟
         const customOverlayHTML = `
-        <div id="dahih-custom-overlay" class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-[#070b19] backdrop-blur-md transition-opacity duration-500 rounded-xl md:rounded-[1.5rem]">
-            <div class="bg-black/40 border border-white/10 p-6 md:p-8 rounded-2xl text-center shadow-[0_0_40px_rgba(234,179,8,0.15)] w-[85%] max-w-sm">
-                <div class="w-16 h-16 mx-auto bg-black/60 border-2 border-yellow-500 rounded-full flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse">
-                    <svg class="w-8 h-8 text-yellow-500 pl-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <div id="dahih-custom-overlay" class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-[#070b19] transition-opacity duration-500 rounded-xl md:rounded-[1.5rem]">
+            <div class="glass-panel border border-white/5 p-6 md:p-8 rounded-2xl text-center w-[85%] max-w-sm border-t-[3px] border-t-yellow-500">
+                <div class="w-14 h-14 mx-auto bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-4 animate-pulse">
+                    <svg class="w-6 h-6 text-yellow-500 pl-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
-                <h3 class="text-xl md:text-2xl font-black text-white mb-2 tracking-tight">منصة الدحيح</h3>
-                <p class="text-gray-400 text-xs md:text-sm mb-6 leading-relaxed">المستر متواجد الآن.. هل أنت جاهز للحصة؟</p>
-                <button onclick="document.getElementById('dahih-custom-overlay').style.opacity='0'; setTimeout(()=>document.getElementById('dahih-custom-overlay').style.display='none', 500);" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-3 md:py-4 px-6 rounded-xl transition-all shadow-lg text-sm md:text-base transform hover:scale-105">
-                    دخول البث المباشر
+                <h3 class="text-lg md:text-xl font-bold text-white mb-2">منصة الدحيح</h3>
+                <p class="text-gray-400 text-xs md:text-sm mb-6">يوجد بث مباشر يعمل الان</p>
+                <button id="enterStreamBtn" onclick="revealStream()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-6 rounded-xl transition-colors text-sm md:text-base flex items-center justify-center">
+                    دخول الحصة
                 </button>
             </div>
         </div>`;
