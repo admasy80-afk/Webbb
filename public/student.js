@@ -1,7 +1,10 @@
+// أيقونة سلة المهملات SVG الرسمية
+const trashSVG = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
+
 const userDataStr = localStorage.getItem('dahih_user');
 window.availableQuizzes = []; 
 let currentUser = null;
-let twitchPlayer = null;
+let livePlayer = null; // تم تغيير المسمى لإخفاء هوية المشغل
 
 if (!userDataStr) {
     window.location.replace("/logina.html");
@@ -11,36 +14,40 @@ if (!userDataStr) {
     document.getElementById('studentName').innerText = firstName;
     document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
     
-    initTwitchPlayer();
+    initLiveStream();
     fetchDashboardData();
     setInterval(fetchDashboardData, 5000); 
 }
 
-function initTwitchPlayer() {
-    if (twitchPlayer) return;
+// ==================== إعدادات المشغل (مخفي تماماً) ====================
+function initLiveStream() {
+    if (livePlayer) return;
     const options = {
         width: '100%', height: '100%', channel: "moooae2tf",
         parent: ["webbb-production-b681.up.railway.app", "localhost"],
-        controls: false, muted: true, autoplay: true
+        controls: false, // إخفاء كل أزرار التحكم الخاصة بالمشغل الأصلي
+        muted: true, autoplay: true
     };
-    twitchPlayer = new Twitch.Player("twitch-embed", options);
+    
+    // تعريف المشغل داخل الحاوية الجديدة المخفية
+    livePlayer = new Twitch.Player("stream-container", options);
 
-    twitchPlayer.addEventListener(Twitch.Player.ONLINE, () => {
+    livePlayer.addEventListener(Twitch.Player.ONLINE, () => {
         document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
         document.getElementById('unmuteOverlay').classList.remove('opacity-0', 'pointer-events-none');
     });
-    twitchPlayer.addEventListener(Twitch.Player.PLAYING, () => {
+    livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
         document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
     });
     
-    twitchPlayer.addEventListener(Twitch.Player.OFFLINE, forceHideStream);
+    livePlayer.addEventListener(Twitch.Player.OFFLINE, forceHideStream);
 }
 
 document.getElementById('startLiveBtn').addEventListener('click', () => {
-    if(twitchPlayer) { 
-        twitchPlayer.setMuted(false); 
-        twitchPlayer.setVolume(1.0); 
-        twitchPlayer.play(); 
+    if(livePlayer) { 
+        livePlayer.setMuted(false); 
+        livePlayer.setVolume(1.0); 
+        livePlayer.play(); 
     }
     document.getElementById('unmuteOverlay').classList.add('opacity-0', 'pointer-events-none');
     document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); 
@@ -78,7 +85,7 @@ function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
     if(section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
-        if(twitchPlayer) twitchPlayer.pause();
+        if(livePlayer) livePlayer.pause();
         if(document.fullscreenElement) document.exitFullscreen();
     }
 }
