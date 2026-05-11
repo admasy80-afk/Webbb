@@ -6,7 +6,6 @@ window.availableQuizzes = [];
 let currentUser = null;
 let livePlayer = null; 
 let isTwitchOnline = false; 
-let retryInterval = null; 
 
 if (!userDataStr) {
     window.location.replace("/logina.html");
@@ -38,45 +37,40 @@ function initLiveStream() {
     const options = {
         width: '100%', height: '100%', 
         channel: "moooae2tf", 
-        parent: [window.location.hostname, "localhost"], 
+        // أضفت الـ IP الخاص بالـ Localhost تحسباً لأي اختبارات محلية
+        parent: [window.location.hostname, "localhost", "127.0.0.1"], 
         controls: false, 
         muted: true, autoplay: true
     };
     
     livePlayer = new Twitch.Player("stream-container", options);
 
+    // 🔥 الحل السحري هنا: بمجرد أن يجهز إطار تويتش، نخفي شاشة التحميل تبعنا فوراً!
+    livePlayer.addEventListener(Twitch.Player.READY, () => {
+        console.log("[Twitch Debug] المشغل أصبح READY - جاهز للعمل.");
+        const loadOverlay = document.getElementById('loadingOverlay');
+        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
+        
+        // إعطاء أمر تشغيل مبدئي صامت
+        livePlayer.play();
+    });
+
     livePlayer.addEventListener(Twitch.Player.ONLINE, () => {
-        console.log("[Twitch Debug] حدث ONLINE: البث متصل الآن من طرف تويتش.");
+        console.log("[Twitch Debug] حدث ONLINE: البث متصل الآن.");
         isTwitchOnline = true;
         
-        if (retryInterval) { 
-            console.log("[Twitch Debug] إيقاف مؤقت الإلحاح لأن البث أصبح ONLINE.");
-            clearInterval(retryInterval); 
-            retryInterval = null; 
-        }
-        
-        console.log("[Twitch Debug] إرسال أمر التشغيل livePlayer.play()...");
-        livePlayer.play(); 
-        
-        const loadOverlay = document.getElementById('loadingOverlay');
+        // إظهار زر "فك الكتم" للطالب لأن تويتش يمنع الصوت التلقائي
         const unmuteOverlay = document.getElementById('unmuteOverlay');
-        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
         if (unmuteOverlay) unmuteOverlay.classList.remove('opacity-0', 'pointer-events-none');
     });
     
     livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
-        console.log("[Twitch Debug] حدث PLAYING: الفيديو يشتغل الآن بنجاح على الشاشة.");
+        console.log("[Twitch Debug] حدث PLAYING: الفيديو يشتغل الآن على الشاشة.");
         isTwitchOnline = true;
-        if (retryInterval) { 
-            clearInterval(retryInterval); 
-            retryInterval = null; 
-        }
-        const loadOverlay = document.getElementById('loadingOverlay');
-        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
     });
     
     livePlayer.addEventListener(Twitch.Player.OFFLINE, () => {
-        console.log("[Twitch Debug] حدث OFFLINE: البث غير متصل أو تم إغلاقه.");
+        console.log("[Twitch Debug] حدث OFFLINE: البث متوقف حالياً.");
         isTwitchOnline = false;
     });
 }
@@ -84,16 +78,14 @@ function initLiveStream() {
 const startLiveBtn = document.getElementById('startLiveBtn');
 if (startLiveBtn) {
     startLiveBtn.addEventListener('click', () => {
-        console.log("[Twitch Debug] تم النقر على زر فك كتم الصوت (Unmute).");
+        console.log("[Twitch Debug] تم النقر على زر التشغيل والصوت.");
         if(livePlayer) { 
             livePlayer.setMuted(false); 
             livePlayer.setVolume(1.0); 
             livePlayer.play(); 
         }
         const unmuteOverlay = document.getElementById('unmuteOverlay');
-        const loadOverlay = document.getElementById('loadingOverlay');
         if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
-        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none'); 
     });
 }
 
@@ -122,27 +114,11 @@ function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
     if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
-        console.log("[Twitch Debug] إظهار قسم البث المباشر في الصفحة.");
-    }
-    
-    if (!isTwitchOnline) {
-        const loadOverlay = document.getElementById('loadingOverlay');
-        if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
+        console.log("[Twitch Debug] تم إظهار قسم البث المباشر.");
         
-        if (!retryInterval && livePlayer) {
-            console.log("[Twitch Debug] محاولة التشغيل الأولى، المشغل ليس أونلاين بعد.");
-            livePlayer.play(); 
-            
-            retryInterval = setInterval(() => {
-                if (!isTwitchOnline && livePlayer) {
-                    console.log("[Twitch Debug] (مؤقت الإلحاح): محاولة التشغيل مجدداً بعد 5 ثواني...");
-                    livePlayer.play(); 
-                } else {
-                    console.log("[Twitch Debug] (مؤقت الإلحاح): إيقاف المؤقت (البث اشتغل).");
-                    clearInterval(retryInterval);
-                    retryInterval = null;
-                }
-            }, 5000); 
+        // إذا كان المشغل جاهزاً لكنه غير متصل، نطلب منه المحاولة
+        if (livePlayer && !isTwitchOnline) {
+            livePlayer.play();
         }
     }
 }
@@ -152,11 +128,6 @@ function forceHideStream() {
     if(section && section.classList.contains('stream-active')) {
         console.log("[Twitch Debug] إخفاء قسم البث المباشر وإيقاف المشغل.");
         section.classList.remove('stream-active');
-        
-        if (retryInterval) {
-            clearInterval(retryInterval);
-            retryInterval = null;
-        }
         
         if(livePlayer) {
             livePlayer.pause();
@@ -187,7 +158,7 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
-            // تحديث حالة البث
+            // تحديث حالة البث بناءً على السيرفر
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
             if (isLiveOnServer) { forceShowStream(); } 
             else { forceHideStream(); }
@@ -264,7 +235,7 @@ async function fetchDashboardData() {
             }
         }
     } catch (err) { 
-        console.error("[Twitch Debug] حدث خطأ أثناء جلب بيانات السيرفر (fetchDashboardData):", err);
+        console.error("[Twitch Debug] حدث خطأ في الاتصال بالسيرفر:", err);
     }
 }
 
