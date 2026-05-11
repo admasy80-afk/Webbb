@@ -140,48 +140,43 @@
 
             <div class="lg:col-span-2 space-y-6 md:space-y-8">
                 
-                <section id="liveStreamSection" class="glass-panel rounded-2xl md:rounded-[2rem] border-t-red-500 shadow-[0_0_50px_rgba(239,68,68,0.15)]">
+                <section id="liveStreamSection" class="glass-panel rounded-2xl md:rounded-[2rem] border-t-red-500 shadow-[0_0_40px_rgba(239,68,68,0.15)]">
                     <div class="p-5 md:p-6 flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-red-500/10 to-transparent">
                         <div class="flex items-center gap-3">
                             <span class="relative flex h-3 w-3 md:h-4 md:w-4">
                               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                               <span class="relative inline-flex rounded-full h-3 w-3 md:h-4 md:w-4 bg-red-500"></span>
                             </span>
-                            <h2 class="text-lg md:text-xl font-bold text-white tracking-tight">البث المباشر</h2>
+                            <h2 class="text-lg md:text-xl font-bold text-white">البث المباشر التفاعلي</h2>
                         </div>
                         <button onclick="toggleStudentFullScreen()" class="bg-white/5 hover:bg-white/10 p-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white transition-colors shadow-lg" title="تكبير الشاشة">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                         </button>
                     </div>
                     
-                    <div class="p-3 md:p-6 bg-black/60 fullscreen-wrapper" id="fs-wrapper">
-                        <div class="player-crop-wrapper shadow-2xl relative">
+                    <div class="p-3 md:p-5 bg-black/60 fullscreen-wrapper" id="fs-wrapper">
+                        <div class="player-crop-wrapper rounded-xl shadow-xl bg-black border border-white/10">
                             
-                            <div class="absolute top-6 right-6 z-40 bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 pointer-events-none flex items-center gap-2">
+                            <div class="absolute top-4 right-4 z-40 bg-black/80 backdrop-blur-md px-3 py-1.5 md:px-4 md:py-2 rounded-xl border border-white/10 pointer-events-none flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                                <span class="text-white font-black text-xs md:text-sm tracking-wide">الدحيح LIVE</span>
+                                <span class="text-white font-bold text-xs md:text-sm tracking-wide">الدحيح LIVE</span>
                             </div>
 
                             <div class="twitch-iframe-container" id="twitch-embed"></div>
-                            
                             <div class="click-blocker"></div>
 
-                            <div id="loadingOverlay" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#070b19] transition-opacity duration-500">
-                                <div class="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.3)]"></div>
-                                <p class="text-gray-300 font-bold text-sm md:text-base animate-pulse">جاري جلب إشارة البث...</p>
-                            </div>
-
-                            <div id="unmuteOverlay" class="absolute inset-0 z-40 flex items-center justify-center bg-black/90 backdrop-blur-md transition-all duration-500 opacity-0 pointer-events-none">
-                                <button id="startLiveBtn" class="bg-red-600 hover:bg-red-500 text-white px-8 py-4 md:px-10 md:py-5 rounded-full font-black shadow-[0_0_40px_rgba(220,38,38,0.6)] flex items-center gap-3 transform hover:scale-105 transition-all text-sm md:text-base cursor-pointer">
+                            <div id="unmuteOverlay" class="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm transition-opacity duration-500 opacity-0 pointer-events-none">
+                                <button id="startAudioBtn" class="bg-red-600 hover:bg-red-500 text-white px-8 py-4 rounded-full font-black shadow-[0_0_30px_rgba(220,38,38,0.5)] flex items-center gap-3 transition-transform transform hover:scale-105 text-sm md:text-base cursor-pointer">
                                     <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                     دخول الحصة المباشرة
                                 </button>
                             </div>
 
                         </div>
-                        <p class="text-gray-500 text-xs md:text-sm mt-4 text-center">بث مباشر - يرجى عدم قفل الشاشة أثناء الشرح.</p>
+                        <p class="text-gray-500 text-xs md:text-sm mt-4 text-center">يرجى الضغط على الزر أعلاه لتفعيل الصوت - ولا تغادر الصفحة أثناء الشرح.</p>
                     </div>
                 </section>
+
                 <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
                     <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('quizzesSection', 'quizIcon')">
                         <h2 class="text-xl font-bold text-white">الاختبارات الإلكترونية المتاحة</h2>
@@ -265,7 +260,7 @@
             setInterval(fetchDashboardData, 5000); 
         }
 
-        // ==================== قلب استوديو البث (محمي ومستقر) ====================
+        // ==================== قلب استوديو البث (سريع وخالي من المشاكل) ====================
         function initTwitchPlayer() {
             if (twitchPlayer) return;
             const options = {
@@ -274,38 +269,26 @@
                 controls: false, muted: true, autoplay: true
             };
             twitchPlayer = new Twitch.Player("twitch-embed", options);
-
-            // بمجرد وصول البث، يتم إخفاء شاشة التحميل وإظهار زر الدخول
-            twitchPlayer.addEventListener(Twitch.Player.ONLINE, () => {
-                document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
-                document.getElementById('unmuteOverlay').classList.remove('opacity-0', 'pointer-events-none');
-            });
-            twitchPlayer.addEventListener(Twitch.Player.PLAYING, () => {
-                document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
-            });
-            
-            // إخفاء الستارة فورا عند إغلاق البث من تويتش
-            twitchPlayer.addEventListener(Twitch.Player.OFFLINE, forceHideStream);
         }
 
-        // زر تفعيل الصوت وبدء المشاهدة
-        document.getElementById('startLiveBtn').addEventListener('click', () => {
-            if(twitchPlayer) { 
-                twitchPlayer.setMuted(false); 
-                twitchPlayer.setVolume(1.0); 
-                twitchPlayer.play(); 
+        document.getElementById('startAudioBtn').addEventListener('click', function() {
+            if(twitchPlayer) {
+                twitchPlayer.setMuted(false);
+                twitchPlayer.setVolume(1.0);
+                twitchPlayer.play();
             }
-            document.getElementById('unmuteOverlay').classList.add('opacity-0', 'pointer-events-none');
-            document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none'); // أمان إضافي
+            const overlay = document.getElementById('unmuteOverlay');
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('pointer-events-none'), 500);
         });
 
-        // زر التكبير الذكي (يدعم دوران الشاشة في الموبايل)
+        // زر التكبير الذكي (يقلب الشاشة بالعرض في الموبايل)
         function toggleStudentFullScreen() {
             const fsWrapper = document.getElementById('fs-wrapper');
             if (!document.fullscreenElement) {
                 if(fsWrapper.requestFullscreen) {
                     fsWrapper.requestFullscreen().then(() => {
-                        try { screen.orientation.lock('landscape'); } catch (e) {} // إجبار الموبايل على وضع العرض
+                        try { screen.orientation.lock('landscape'); } catch (e) {}
                     });
                 } else if(fsWrapper.webkitRequestFullscreen) {
                     fsWrapper.webkitRequestFullscreen();
@@ -323,9 +306,8 @@
             const section = document.getElementById('liveStreamSection');
             if(!section.classList.contains('stream-active')) {
                 section.classList.add('stream-active');
-                // إظهار شاشة التحميل أولاً حتى يستجيب تويتش
-                document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none');
-                document.getElementById('unmuteOverlay').classList.add('opacity-0', 'pointer-events-none');
+                document.getElementById('unmuteOverlay').classList.remove('opacity-0', 'pointer-events-none');
+                if(twitchPlayer) twitchPlayer.play();
             }
         }
 
@@ -347,7 +329,6 @@
             else { section.style.maxHeight = section.scrollHeight + 500 + 'px'; }
         }
 
-        // ==================== الرادار الأساسي لجلب كل البيانات ====================
         async function fetchDashboardData() {
             try {
                 const res = await fetch('/api/student/dashboard-data', {
@@ -358,15 +339,18 @@
                 if (res.ok) {
                     const data = await res.json();
                     
-                    // 1. تحديث البث المباشر (استجابة فورية)
-                    const isLiveOnServer = data.content?.liveStream?.isLive === true;
-                    if (isLiveOnServer) { forceShowStream(); } 
-                    else { forceHideStream(); }
+                    // =======================================================
+                    // 🔥 كشف البث من السيرفر وعرضه وإخفاؤه بسرعة 🔥
+                    // =======================================================
+                    if (data.content?.liveStream?.isLive === true) {
+                        forceShowStream(); 
+                    } else { 
+                        forceHideStream(); 
+                    }
 
-                    // 2. تحديث التقييم العام
+                    // تحديث باقي المحتوى في الخلفية بسلاسة
                     document.getElementById('studentPointsDisplay').innerText = (data.studentPoints || 0) + '%';
                     
-                    // 3. تحديث الاختبارات الإلكترونية
                     window.availableQuizzes = data.content?.quizzes || [];
                     const qzContainer = document.getElementById('onlineQuizzesContainer');
                     if (window.availableQuizzes.length > 0) {
@@ -386,7 +370,6 @@
                         qzContainer.classList.remove('text-center', 'text-gray-500');
                     } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
 
-                    // 4. تحديث النقاط الهامة
                     const pContainer = document.getElementById('pointsContainer');
                     if (data.content?.points && data.content.points.length > 0) {
                         let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
@@ -396,7 +379,6 @@
                         pContainer.classList.remove('text-center', 'text-gray-500');
                     } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
 
-                    // 5. تحديث الأسئلة المقالية
                     const qContainer = document.getElementById('questionsContainer');
                     if (data.content?.questions && data.content.questions.length > 0) {
                         let qHTML = '';
@@ -411,7 +393,6 @@
                         qContainer.classList.remove('text-center', 'text-gray-500');
                     } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
 
-                    // 6. تحديث نتائج الورقي
                     const tContainer = document.getElementById('testsContainer');
                     if (data.content?.tests && data.content.tests.length > 0) {
                         let tHTML = '';
@@ -429,7 +410,7 @@
                         tContainer.classList.remove('text-center', 'text-gray-500');
                     } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
                 }
-            } catch (err) { console.log(err); }
+            } catch (err) { console.error(err); }
         }
 
         // ==================== نظام فتح الاختبار ====================
