@@ -12,7 +12,7 @@
     <script src="https://player.twitch.tv/js/embed/v1.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; overflow-x: hidden; }
         
         .bg-animated-gradient {
             background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
@@ -22,56 +22,59 @@
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
         .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
-        .card-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.4); border-color: rgba(255, 255, 255, 0.1); }
         
+        /* تأثيرات النعومة الفائقة (Ultra Smooth) */
+        .card-hover { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .card-hover:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.5); border-color: rgba(234, 179, 8, 0.3); background-color: rgba(255, 255, 255, 0.05); }
         .quiz-option input[type="radio"]:checked + div { border-color: #eab308; background-color: rgba(234, 179, 8, 0.1); }
         
-        .section-content { transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease; overflow: hidden; opacity: 1; }
-        .section-content.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none; }
-        .icon-rotate { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .icon-rotate.collapsed { transform: rotate(180deg); }
-
-        @keyframes ultraSmoothPop { 0% { transform: scale(0.9) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
-        @keyframes ultraSmoothSlideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
-        @keyframes softFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        /* طي وفتح الأقسام بسلاسة الحرير */
+        .section-content { transition: max-height 0.8s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.5s ease; overflow: hidden; opacity: 1; }
+        .section-content.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; margin: 0; border: none; }
         
-        .animate-pop-in { animation: ultraSmoothPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform, opacity; }
-        .animate-slide-up { opacity: 0; animation: ultraSmoothSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform, opacity; }
+        /* حركات الظهور المتتابعة (Staggering) */
+        @keyframes slideUpFade { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+        .stagger-1 { animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards; opacity: 0; }
+        .stagger-2 { animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; opacity: 0; }
+        .stagger-3 { animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; opacity: 0; }
+        .stagger-4 { animation: slideUpFade 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards; opacity: 0; }
+
+        @keyframes softFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         .animate-float { animation: softFloat 4s ease-in-out infinite; will-change: transform; }
         
         .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
         
-        /* 🔥 أنظمة مشغل البث الاحترافية 🔥 */
+        /* 🔥 نظام الستارة المطورة للبث المباشر 🔥 */
         #liveStreamSection {
-            transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: all 1s cubic-bezier(0.25, 1, 0.5, 1);
             max-height: 0;
             opacity: 0;
             margin-bottom: 0;
             overflow: hidden;
-            visibility: hidden;
-            transform: translateY(-20px);
+            border-top-width: 0px;
+            pointer-events: none;
+            transform: translateY(-30px) scale(0.95);
         }
         #liveStreamSection.stream-active {
             max-height: 1200px; 
             opacity: 1;
             margin-bottom: 2rem;
-            visibility: visible;
-            transform: translateY(0);
+            border-top-width: 3px;
+            pointer-events: auto;
+            transform: translateY(0) scale(1);
         }
 
         .player-crop-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 */
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
             overflow: hidden;
             border-radius: 1.5rem;
             background-color: #000;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
         
-        /* زووم ذكي لقص حواف تويتش (اللوجو والترس) */
+        /* الإخفاء الجذري لتويتش */
         .twitch-iframe-container {
             position: absolute;
             top: -12%;
@@ -81,19 +84,13 @@
             z-index: 1;
         }
 
-        /* 🛡️ الدرع الزجاجي لمنع إيقاف الفيديو عند النقر 🛡️ */
-        .click-blocker {
-            position: absolute;
-            inset: 0;
-            z-index: 20;
-            background: transparent;
-        }
+        .click-blocker { position: absolute; inset: 0; z-index: 10; background: transparent; }
 
-        #fs-wrapper:fullscreen { background: #000; display: flex; align-items: center; justify-content: center; }
-        #fs-wrapper:fullscreen .player-crop-wrapper { border-radius: 0; border: none; width: 100vw; height: 56.25vw; max-height: 100vh; }
+        #fs-wrapper:fullscreen { background-color: #000; display: flex; align-items: center; justify-content: center; padding: 0; }
+        #fs-wrapper:fullscreen .player-crop-wrapper { padding-top: 0; height: 100vh; width: 100vw; border-radius: 0; border: none; }
     </style>
 </head>
-<body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
+<body class="bg-animated-gradient text-white min-h-screen flex flex-col relative">
 
     <nav class="w-full glass-panel sticky top-0 z-50 border-b border-white/10 shrink-0">
         <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
@@ -105,10 +102,10 @@
     </nav>
 
     <main class="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 relative">
-        <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-        <div class="absolute bottom-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+        <div class="absolute top-0 right-0 w-64 h-64 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+        <div class="absolute bottom-0 left-0 w-64 h-64 bg-yellow-500/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
         
-        <div class="glass-panel rounded-2xl md:rounded-[2rem] p-6 md:p-10 mb-6 md:mb-8 border-t-[3px] border-t-yellow-500 relative overflow-hidden">
+        <div class="glass-panel rounded-2xl md:rounded-[2rem] p-6 md:p-10 mb-6 md:mb-8 border-t-[3px] border-t-yellow-500 relative overflow-hidden stagger-1">
             <div class="relative z-10">
                 <div class="inline-block bg-white/5 border border-white/10 text-gray-300 text-xs md:text-sm font-bold px-4 py-1.5 rounded-full mb-4">
                     المرحلة: <span id="studentGrade" class="text-white">جاري التحميل...</span>
@@ -124,93 +121,98 @@
 
             <div class="lg:col-span-2 space-y-6 md:space-y-8">
                 
-                <section id="liveStreamSection" class="glass-panel rounded-[2rem] border-t-[3px] border-t-red-500 shadow-[0_0_50px_rgba(239,68,68,0.15)]">
+                <section id="liveStreamSection" class="glass-panel rounded-3xl border-t-red-500 shadow-[0_0_50px_rgba(239,68,68,0.15)]">
                     <div class="p-5 md:p-6 flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-red-500/10 to-transparent">
                         <div class="flex items-center gap-3">
-                            <span class="relative flex h-3 w-3">
+                            <span class="relative flex h-3 w-3 md:h-4 md:w-4">
                               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                              <span class="relative inline-flex rounded-full h-3 w-3 md:h-4 md:w-4 bg-red-500"></span>
                             </span>
                             <h2 class="text-lg md:text-xl font-bold text-white tracking-tight">البث المباشر التفاعلي</h2>
                         </div>
-                        <button onclick="toggleFS()" class="bg-white/5 hover:bg-white/10 p-2.5 rounded-xl border border-white/10 text-gray-400 transition-all">
+                        <button onclick="toggleStudentFullScreen()" class="bg-white/5 hover:bg-white/10 p-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white transition-colors shadow-lg">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                         </button>
                     </div>
                     
-                    <div class="p-3 md:p-6 bg-black/60" id="fs-wrapper">
+                    <div class="p-3 md:p-5 bg-black/60 fullscreen-wrapper" id="fs-wrapper">
                         <div class="player-crop-wrapper shadow-2xl relative">
+                            
                             <div class="absolute top-6 right-6 z-40 bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 pointer-events-none flex items-center gap-2">
                                 <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
                                 <span class="text-white font-black text-xs md:text-sm tracking-wide">الدحيح LIVE</span>
                             </div>
 
                             <div class="twitch-iframe-container" id="twitch-embed"></div>
+                            
                             <div class="click-blocker"></div>
 
-                            <div id="unmuteOverlay" class="absolute inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md transition-all duration-700">
-                                <button id="startLiveBtn" class="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-full font-black shadow-[0_0_40px_rgba(220,38,38,0.6)] flex items-center gap-4 transform hover:scale-110 transition-all">
-                                    <div class="bg-white/20 p-2 rounded-full">
-                                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
+                            <div id="loadingOverlay" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#070b19] transition-opacity duration-700">
+                                <div class="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.3)]"></div>
+                                <p class="text-gray-300 font-bold text-sm md:text-base animate-pulse">جاري جلب إشارة البث المباشر...</p>
+                            </div>
+
+                            <div id="unmuteOverlay" class="absolute inset-0 z-40 flex items-center justify-center bg-black/90 backdrop-blur-sm transition-all duration-700 opacity-0 pointer-events-none">
+                                <button id="startLiveBtn" class="bg-red-600 hover:bg-red-500 text-white px-8 py-4 md:px-10 md:py-5 rounded-full font-black shadow-[0_0_40px_rgba(220,38,38,0.6)] flex items-center gap-3 transform hover:scale-105 transition-all text-sm md:text-base group">
+                                    <div class="bg-white/20 p-2 rounded-full group-hover:bg-white/30 transition-colors">
+                                        <svg class="w-6 h-6 animate-pulse" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
                                     </div>
-                                    <span class="text-base md:text-lg">دخول حصة البث المباشر</span>
+                                    دخول الحصة المباشرة
                                 </button>
                             </div>
+
                         </div>
-                        <p class="text-gray-500 text-[10px] md:text-xs mt-4 text-center">يرجى الضغط على الزر أعلاه لتشغيل الصوت - لا تغادر الصفحة أثناء الشرح.</p>
+                        <p class="text-gray-500 text-xs md:text-sm mt-4 text-center">يرجى عدم مغادرة الصفحة أثناء الشرح المباشر.</p>
                     </div>
                 </section>
-
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
-                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('quizzesSection', 'quizIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 stagger-2">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('quizzesSection')">
                         <h2 class="text-xl font-bold text-white">الاختبارات الإلكترونية المتاحة</h2>
-                        <svg id="quizIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="quizzesSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
-                        <div id="onlineQuizzesContainer" class="space-y-4">
-                            <p class="text-gray-500 text-sm text-center">جاري التحميل...</p>
-                        </div>
+                    <div id="quizzesSection" class="section-content max-h-[1500px] p-5 md:p-6 bg-black/20">
+                        <div id="onlineQuizzesContainer" class="space-y-4 text-center text-gray-500">جاري التحميل...</div>
                     </div>
                 </section>
 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
-                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('pointsSection', 'pointsIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 stagger-3">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('pointsSection')">
                         <h2 class="text-xl font-bold text-white">أهم نقاط المنهج</h2>
-                        <svg id="pointsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="pointsSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
-                        <div id="pointsContainer" class="min-h-[50px] flex flex-col justify-center"></div>
+                    <div id="pointsSection" class="section-content max-h-[1500px] p-5 md:p-6 bg-black/20">
+                        <div id="pointsContainer" class="text-center text-gray-500">جاري التحميل...</div>
                     </div>
                 </section>
 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
-                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('questionsSection', 'questionsIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 stagger-4">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('questionsSection')">
                         <h2 class="text-xl font-bold text-white">أهم الأسئلة المقالية</h2>
-                        <svg id="questionsIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
                     <div id="questionsSection" class="section-content max-h-[2000px] p-5 md:p-6 bg-black/20">
-                        <div id="questionsContainer" class="space-y-4"></div>
+                        <div id="questionsContainer" class="space-y-4 text-center text-gray-500">جاري التحميل...</div>
                     </div>
                 </section>
 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
-                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('testsSection', 'testsIcon')">
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500 stagger-4">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('testsSection')">
                         <h2 class="text-xl font-bold text-white">نتائج الاختبارات الورقية</h2>
-                        <svg id="testsIcon" class="w-5 h-5 text-gray-400 icon-rotate collapsed" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </div>
-                    <div id="testsSection" class="section-content max-h-[1000px] collapsed p-5 md:p-6 bg-black/20">
-                        <div id="testsContainer" class="space-y-4"></div>
+                    <div id="testsSection" class="section-content max-h-[1500px] p-5 md:p-6 bg-black/20">
+                        <div id="testsContainer" class="space-y-4 text-center text-gray-500">جاري التحميل...</div>
                     </div>
                 </section>
 
             </div>
 
-            <div class="space-y-6 md:space-y-8">
+            <div class="space-y-6 md:space-y-8 stagger-2">
                 <section class="glass-panel rounded-2xl p-6 border-t-[3px] border-t-yellow-500">
                     <h2 class="text-lg font-bold text-white mb-4 text-center md:text-right">التقييم المستمر</h2>
                     <div class="bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center border border-white/5 py-10">
-                        <span id="studentPointsDisplay" class="text-6xl font-black text-yellow-500 drop-shadow-md" dir="ltr">0%</span>
-                        <p class="text-sm text-gray-400 mt-4 text-center">النسبة المئوية لتقييم الأداء العام.</p>
+                        <span id="studentPointsDisplay" class="text-6xl font-black text-yellow-500 drop-shadow-md animate-float" dir="ltr">0%</span>
+                        <p class="text-sm text-gray-400 mt-6 text-center">النسبة المئوية لتقييم الأداء العام.</p>
                     </div>
                 </section>
             </div>
@@ -218,8 +220,8 @@
         </div>
     </main>
 
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-lg transition-opacity">
-        <div class="bg-[#0b1021] border border-white/10 w-full max-w-3xl rounded-2xl md:rounded-[2rem] p-5 md:p-8 max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/80">
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-lg transition-opacity duration-300">
+        <div class="bg-[#0b1021] border border-white/10 w-full max-w-3xl rounded-[2rem] p-6 md:p-8 max-h-[90vh] overflow-y-auto shadow-2xl shadow-black">
             <div id="quizModalContent"></div>
         </div>
     </div>
@@ -228,177 +230,195 @@
         const userDataStr = localStorage.getItem('dahih_user');
         window.availableQuizzes = []; 
         let currentUser = null;
+        let twitchPlayer = null;
+        let isVideoReallyPlaying = false;
         
         if (!userDataStr) {
             window.location.replace("/logina.html");
         } else {
             currentUser = JSON.parse(userDataStr);
-            const firstName = currentUser.name ? currentUser.name.split(' ')[0] : "طالب";
-            document.getElementById('studentName').innerText = firstName;
+            document.getElementById('studentName').innerText = currentUser.name.split(' ')[0];
             document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
             
-            // تهيئة مشغل تويتش عند بداية فتح الصفحة
-            initTwitch();
-            fetchDashboardData(currentUser.email, currentUser.grade);
+            initTwitchPlayer();
+            fetchDashboardData();
+            setInterval(fetchDashboardData, 8000); 
         }
 
-        // ==================== قلب استوديو البث النابض ====================
-        let twitchPlayer = null;
-
-        function initTwitch() {
+        // ==================== المعمارية الذكية للبث ====================
+        function initTwitchPlayer() {
             if (twitchPlayer) return;
-            twitchPlayer = new Twitch.Player("twitch-embed", {
+            const options = {
                 width: '100%', height: '100%', channel: "moooae2tf",
                 parent: ["webbb-production-b681.up.railway.app", "localhost"],
                 controls: false, muted: true, autoplay: true
+            };
+            twitchPlayer = new Twitch.Player("twitch-embed", options);
+
+            // بمجرد ما الفيديو يشتغل بجد، هنشيل طبقة التحميل ونظهر زرار الدخول
+            twitchPlayer.addEventListener(Twitch.Player.PLAYING, () => {
+                isVideoReallyPlaying = true;
+                document.getElementById('loadingOverlay').classList.add('opacity-0', 'pointer-events-none');
+                
+                // إظهار زرار الصوت لو لسه صامت
+                if (twitchPlayer.getMuted()) {
+                    document.getElementById('unmuteOverlay').classList.remove('opacity-0', 'pointer-events-none');
+                }
             });
         }
 
-        // وظيفة تفعيل الصوت والتشغيل المضمون
+        function forceShowStream() {
+            const section = document.getElementById('liveStreamSection');
+            if(!section.classList.contains('stream-active')) {
+                section.classList.add('stream-active');
+                
+                // إعادة ضبط الطبقات (طبقة التحميل تظهر تغطي تويتش)
+                document.getElementById('loadingOverlay').classList.remove('opacity-0', 'pointer-events-none');
+                document.getElementById('unmuteOverlay').classList.add('opacity-0', 'pointer-events-none');
+                isVideoReallyPlaying = false;
+                
+                if(twitchPlayer) twitchPlayer.play();
+            } else if (!isVideoReallyPlaying && twitchPlayer) {
+                // لو القسم مفتوح بس لسه محملش، اطلب منه يشتغل
+                twitchPlayer.play();
+            }
+        }
+
+        function forceHideStream() {
+            const section = document.getElementById('liveStreamSection');
+            if(section.classList.contains('stream-active')) {
+                section.classList.remove('stream-active');
+                if(twitchPlayer) twitchPlayer.pause();
+                if(document.fullscreenElement) document.exitFullscreen();
+                isVideoReallyPlaying = false;
+            }
+        }
+
         document.getElementById('startLiveBtn').addEventListener('click', () => {
             if(twitchPlayer) { 
                 twitchPlayer.setMuted(false); 
-                twitchPlayer.play(); 
+                twitchPlayer.setVolume(1.0); 
             }
             const overlay = document.getElementById('unmuteOverlay');
             overlay.style.opacity = '0';
-            setTimeout(() => overlay.classList.add('hidden'), 700);
+            setTimeout(() => overlay.classList.add('pointer-events-none'), 700);
         });
 
-        // زر التكبير
-        function toggleFS() {
-            const el = document.getElementById('fs-wrapper');
-            if (!document.fullscreenElement) el.requestFullscreen().catch(e => {});
-            else document.exitFullscreen();
+        function toggleStudentFullScreen() {
+            const fsWrapper = document.getElementById('fs-wrapper');
+            if (!document.fullscreenElement) {
+                if(fsWrapper.requestFullscreen) fsWrapper.requestFullscreen();
+                else if(fsWrapper.webkitRequestFullscreen) fsWrapper.webkitRequestFullscreen();
+            } else { document.exitFullscreen(); }
         }
-        // =================================================================
 
-        function toggleSection(sectionId, iconId) {
+        function toggleSection(sectionId) {
             const section = document.getElementById(sectionId);
-            const icon = document.getElementById(iconId);
             section.classList.toggle('collapsed');
-            icon.classList.toggle('collapsed');
-            if(section.classList.contains('collapsed')) { section.style.maxHeight = '0px'; } 
-            else { section.style.maxHeight = section.scrollHeight + 500 + 'px'; }
+            if(section.classList.contains('collapsed')) section.style.maxHeight = '0px'; 
+            else section.style.maxHeight = section.scrollHeight + 500 + 'px'; 
         }
 
-        async function fetchDashboardData(email, grade) {
+        // ==================== قلب المنصة ====================
+        async function fetchDashboardData() {
             try {
                 const res = await fetch('/api/student/dashboard-data', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: email, grade: grade })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: currentUser.email, grade: currentUser.grade })
                 });
 
                 if (res.ok) {
                     const data = await res.json();
                     
-                    // =======================================================
-                    // 🔥 كشف البث من السيرفر وعرضه بأنيميشن سحري 🔥
-                    // =======================================================
-                    const liveSection = document.getElementById('liveStreamSection');
-                    const unmuteOverlay = document.getElementById('unmuteOverlay');
-                    
-                    // 🔥 فحص وجود البث بأمان (عشان ما يضربش إيرور لو liveStream ممسوحة) 🔥
-                    const isLive = data.content && data.content.liveStream && data.content.liveStream.isLive === true;
-
-                    if (isLive) {
-                        // إظهار القسم
-                        if(!liveSection.classList.contains('stream-active')) {
-                            liveSection.classList.add('stream-active');
-                            
-                            // إظهار زر تفعيل الصوت
-                            unmuteOverlay.classList.remove('hidden');
-                            unmuteOverlay.style.opacity = '1';
-                            
-                            // تأكيد تشغيل الفيديو
-                            if(twitchPlayer) { twitchPlayer.play(); }
-                        }
+                    // 1. استشعار البث المباشر
+                    if (data.content?.liveStream?.isLive === true) {
+                        forceShowStream(); 
                     } else {
-                        // إخفاء القسم بشكل ناعم
-                        if(liveSection.classList.contains('stream-active')) {
-                            liveSection.classList.remove('stream-active');
-                            if(twitchPlayer) { twitchPlayer.pause(); } // إيقاف التحميل
-                            
-                            // الخروج من وضع ملء الشاشة إذا كان البث قفل
-                            if (document.fullscreenElement) { document.exitFullscreen(); }
-                        }
+                        forceHideStream();
                     }
-                    // =======================================================
 
+                    // 2. تحديث التقييم العام
                     document.getElementById('studentPointsDisplay').innerText = (data.studentPoints || 0) + '%';
-                    window.availableQuizzes = data.content.quizzes || [];
                     
+                    // 3. الاختبارات الإلكترونية
+                    window.availableQuizzes = data.content?.quizzes || [];
                     const qzContainer = document.getElementById('onlineQuizzesContainer');
                     if (window.availableQuizzes.length > 0) {
                         let qzHTML = '';
                         window.availableQuizzes.slice().reverse().forEach(quiz => {
-                            const studentResult = quiz.results ? quiz.results.find(r => r.email === email) : null;
+                            const result = quiz.results ? quiz.results.find(r => r.email === currentUser.email) : null;
                             qzHTML += `
-                            <div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:border-yellow-500/30">
-                                <div><h3 class="font-bold text-base md:text-lg text-white">${quiz.title}</h3><p class="text-xs md:text-sm text-gray-400 mt-1">يحتوي على ${quiz.questions.length} أسئلة.</p></div>
-                                ${studentResult 
-                                    ? `<div class="bg-white/5 border border-white/10 text-gray-300 px-6 py-2 rounded-lg text-sm text-center w-full md:w-auto font-bold">تم الإنجاز بنسبة ${studentResult.percentage}%</div>`
-                                    : `<button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-yellow-500 text-black font-bold px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors text-sm shadow-md">بدء الاختبار</button>`
-                                }
+                            <div class="card-hover bg-black/40 border border-white/5 rounded-2xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 transition-all">
+                                <div><h3 class="font-bold text-lg text-white">${quiz.title}</h3><p class="text-xs text-gray-500 mt-1">${quiz.questions.length} أسئلة</p></div>
+                                ${result ? `<div class="bg-white/5 text-green-400 font-black px-6 py-2.5 rounded-xl text-sm">درجتك: ${result.percentage}%</div>` : `<button onclick="openQuizModal('${quiz.id}')" class="w-full md:w-auto bg-yellow-500 text-black font-bold px-8 py-2.5 rounded-xl text-sm shadow-md">بدء الامتحان</button>`}
                             </div>`;
                         });
                         qzContainer.innerHTML = qzHTML;
-                    } else { qzContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
+                        qzContainer.classList.remove('text-center', 'text-gray-500');
+                    } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
 
+                    // 4. النقاط الهامة
                     const pContainer = document.getElementById('pointsContainer');
-                    if (data.content.points && data.content.points.length > 0) {
-                        let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
-                        data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
-                        pHTML += '</ul>';
-                        pContainer.innerHTML = pHTML;
-                        pContainer.classList.remove('justify-center');
-                    } else pContainer.innerHTML = '<p class="text-gray-500 text-sm text-center">لا توجد ملاحظات من المعلم.</p>';
+                    if (data.content?.points && data.content.points.length > 0) {
+                        let pHTML = '<ul class="space-y-4 text-gray-300 text-sm md:text-base p-2">';
+                        data.content.points.forEach(p => pHTML += `<li class="flex items-start gap-4 card-hover bg-black/20 p-4 rounded-xl border border-white/5"><span class="text-yellow-500 mt-1 flex-shrink-0">■</span><p class="leading-relaxed">${p}</p></li>`);
+                        pContainer.innerHTML = pHTML + '</ul>';
+                        pContainer.classList.remove('text-center', 'text-gray-500');
+                    } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
 
+                    // 5. الأسئلة المقالية
                     const qContainer = document.getElementById('questionsContainer');
-                    if (data.content.questions && data.content.questions.length > 0) {
+                    if (data.content?.questions && data.content.questions.length > 0) {
                         let qHTML = '';
                         data.content.questions.forEach((q, idx) => {
-                            qHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 card-hover"><h3 class="font-bold text-sm md:text-base text-white mb-2"><span class="text-gray-500 mr-2">${idx + 1}.</span> ${q.question}</h3><p class="text-gray-400 text-sm leading-relaxed border-t border-white/10 pt-2"><span class="text-yellow-500 font-bold ml-2">الإجابة:</span>${q.hint}</p></div>`;
+                            qHTML += `
+                            <div class="card-hover bg-black/40 border border-white/5 rounded-xl p-5 mb-4 transition-all">
+                                <h3 class="font-bold text-base text-white mb-3 flex gap-2"><span class="text-yellow-500">Q:</span> ${q.question}</h3>
+                                <p class="text-gray-400 text-sm leading-relaxed border-t border-white/10 pt-3 flex gap-2"><span class="text-green-500 font-bold">A:</span>${q.hint}</p>
+                            </div>`;
                         });
                         qContainer.innerHTML = qHTML;
-                    } else qContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لا توجد أسئلة مقالية.</p>';
+                        qContainer.classList.remove('text-center', 'text-gray-500');
+                    } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
 
+                    // 6. نتائج الاختبارات الورقية
                     const tContainer = document.getElementById('testsContainer');
-                    if (data.content.tests && data.content.tests.length > 0) {
+                    if (data.content?.tests && data.content.tests.length > 0) {
                         let tHTML = '';
                         data.content.tests.slice().reverse().forEach(test => {
-                            tHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5"><h3 class="font-bold text-yellow-500 mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
+                            tHTML += `<div class="card-hover bg-black/40 border border-white/5 rounded-2xl p-5 mb-4 transition-all"><h3 class="font-black text-yellow-500 mb-4 border-b border-white/10 pb-3">${test.testName}</h3><div class="space-y-2">`;
                             let sortedScores = test.scores.sort((a, b) => b.score - a.score);
                             sortedScores.forEach((s, index) => {
-                                let highlight = index < 3 ? 'text-white font-bold bg-white/5 border border-white/5' : 'text-gray-400';
-                                let rank = index < 3 ? ['الأول', 'الثاني', 'الثالث'][index] : index + 1;
-                                tHTML += `<div class="flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
+                                let highlight = index < 3 ? 'text-white font-bold bg-gradient-to-r from-yellow-500/20 to-transparent border border-yellow-500/30' : 'text-gray-400 bg-black/30 border border-white/5';
+                                let rank = index < 3 ? ['🥇 الأول', '🥈 الثاني', '🥉 الثالث'][index] : index + 1;
+                                tHTML += `<div class="flex justify-between items-center p-3 rounded-xl ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-12 inline-block text-right text-xs">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
                             });
                             tHTML += `</div></div>`;
                         });
                         tContainer.innerHTML = tHTML;
-                    } else tContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">لم تُنشر نتائج للاختبارات الورقية.</p>';
+                        tContainer.classList.remove('text-center', 'text-gray-500');
+                    } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
                 }
-            } catch (err) { console.error(err); }
+            } catch (err) { console.log(err); }
         }
 
+        // ==================== نظام فتح الاختبار ====================
         function openQuizModal(quizId) {
             const quiz = window.availableQuizzes.find(q => q.id === quizId);
             if (!quiz) return;
 
-            let html = `<div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h2 class="text-xl md:text-2xl font-bold text-white">${quiz.title}</h2><span class="text-yellow-500 text-sm bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-lg font-bold">${quiz.questions.length} أسئلة</span></div><form id="activeQuizForm" onsubmit="submitQuiz(event, '${quiz.id}')" class="space-y-6">`;
+            let html = `<div class="flex justify-between items-center mb-8 border-b border-white/10 pb-5"><h2 class="text-2xl font-bold text-white">${quiz.title}</h2><span class="text-yellow-500 text-sm bg-yellow-500/10 border border-yellow-500/20 px-4 py-1.5 rounded-xl font-black">${quiz.questions.length} أسئلة</span></div><form id="activeQuizForm" onsubmit="submitQuiz(event, '${quiz.id}')" class="space-y-8">`;
 
             quiz.questions.forEach((q, qIndex) => {
-                html += `<div class="bg-black/40 p-4 md:p-5 rounded-xl border border-white/5"><h4 class="font-semibold text-base md:text-lg mb-4 text-white leading-relaxed"><span class="text-yellow-500 mr-2">${qIndex + 1}.</span>${q.questionText}</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+                html += `<div class="bg-black/50 p-6 rounded-2xl border border-white/10 shadow-lg"><h4 class="font-bold text-lg mb-6 text-white leading-relaxed flex gap-3"><span class="text-yellow-500 bg-yellow-500/10 w-8 h-8 flex items-center justify-center rounded-lg shrink-0">${qIndex + 1}</span>${q.questionText}</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
                 q.options.forEach((opt, optIndex) => {
                     const letters = ['أ', 'ب', 'ج', 'د'];
-                    html += `<label class="quiz-option cursor-pointer group"><input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden"><div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-yellow-500/50 transition-all h-full"><div class="w-6 h-6 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:text-white shrink-0 transition-colors group-hover:bg-black/80">${letters[optIndex]}</div><span class="text-gray-300 text-sm md:text-base leading-relaxed">${opt}</span></div></label>`;
+                    html += `<label class="quiz-option cursor-pointer group"><input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden"><div class="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-yellow-500/50 transition-all h-full"><div class="w-8 h-8 rounded-lg bg-black/50 border border-white/20 flex items-center justify-center text-sm font-bold text-gray-400 group-hover:text-white shrink-0 transition-colors group-hover:bg-black/80">${letters[optIndex]}</div><span class="text-gray-300 text-base leading-relaxed">${opt}</span></div></label>`;
                 });
                 html += `</div></div>`;
             });
 
-            html += `<div class="flex flex-col md:flex-row gap-3 pt-4 border-t border-white/10"><button type="submit" id="btnSubmitQuiz" class="flex-1 bg-yellow-500 text-black font-bold py-3 md:py-4 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base shadow-md">إنهاء وتسليم الإجابات</button><button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-3 md:py-4 rounded-xl hover:bg-white/5 transition-colors text-sm md:text-base">إلغاء</button></div></form>`;
+            html += `<div class="flex flex-col md:flex-row gap-4 pt-6 border-t border-white/10"><button type="submit" id="btnSubmitQuiz" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-transform transform hover:scale-[1.02] shadow-xl">إنهاء وتسليم الإجابات</button><button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-4 rounded-xl hover:bg-white/10 transition-colors">إلغاء</button></div></form>`;
 
             document.getElementById('quizModalContent').innerHTML = html;
             document.getElementById('quizModal').classList.remove('hidden');
@@ -414,8 +434,7 @@
             let score = 0;
 
             quiz.questions.forEach((q, qIndex) => {
-                const selectedOpt = parseInt(form.elements[`q_${qIndex}`].value);
-                if (selectedOpt === q.correctAnswer) score++;
+                if (parseInt(form.elements[`q_${qIndex}`].value) === q.correctAnswer) score++;
             });
 
             const percentage = Math.round((score / quiz.questions.length) * 100);
@@ -428,21 +447,14 @@
 
                 let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
                 let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.2)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.2)' : 'rgba(248, 113, 113, 0.2)');
-                let borderColor = percentage >= 85 ? 'border-green-400/30' : (percentage >= 50 ? 'border-blue-400/30' : 'border-red-400/30');
-                const successIcon = `<svg class="w-10 h-10 md:w-12 md:h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
+                const successIcon = `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
                 
-                const resultHtml = `<div class="text-center py-6 md:py-10 px-2 md:px-6 overflow-hidden flex flex-col items-center"><div class="w-20 h-20 md:w-24 md:h-24 mb-6 rounded-full border ${borderColor} flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">${successIcon}</div><h2 class="text-2xl md:text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2><p class="text-gray-400 text-sm md:text-base mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p><div class="inline-block animate-slide-up delay-200 mb-8 md:mb-10"><div class="text-7xl md:text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div></div><div class="bg-black/30 border border-white/5 rounded-2xl p-4 md:p-5 text-gray-300 text-sm md:text-base w-full max-w-xs mx-auto mb-8 md:mb-10 flex justify-between items-center px-6 md:px-8 animate-slide-up delay-250"><span class="font-medium text-gray-400">الإجابات الصحيحة</span><span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span></div><button onclick="closeAndRefresh()" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors text-sm md:text-base block animate-slide-up delay-300">العودة للوحة التحكم</button></div>`;
-                document.getElementById('quizModalContent').innerHTML = resultHtml;
-            } catch (err) { alert("حدث خطأ أثناء إرسال نتيجتك، يرجى المحاولة مرة أخرى."); btn.innerText = "تسليم الإجابات"; btn.disabled = false; }
+                document.getElementById('quizModalContent').innerHTML = `<div class="text-center py-12 px-6 overflow-hidden flex flex-col items-center"><div class="w-24 h-24 mb-6 rounded-full border border-white/10 flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">${successIcon}</div><h2 class="text-3xl font-black text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2><p class="text-gray-400 mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة في النظام</p><div class="inline-block animate-slide-up delay-200 mb-10"><div class="text-8xl font-black ${colorClass}" style="text-shadow: 0 0 40px ${shadowColor};" dir="ltr">${percentage}%</div></div><div class="bg-black/40 border border-white/10 rounded-2xl p-6 text-gray-300 w-full max-w-sm mx-auto mb-10 flex justify-between items-center px-8 animate-slide-up delay-250"><span class="font-medium text-gray-400">الإجابات الصحيحة</span><span class="font-bold text-white text-xl" dir="ltr">${score} / ${quiz.questions.length}</span></div><button onclick="closeQuizModal(); fetchDashboardData();" class="w-full max-w-sm mx-auto bg-white/10 border border-white/20 text-white font-bold py-4 rounded-xl hover:bg-white/20 transition-colors block animate-slide-up delay-300">العودة للوحة التحكم</button></div>`;
+            } catch (err) { alert("حدث خطأ، حاول مجدداً."); btn.innerText = "إنهاء وتسليم الإجابات"; btn.disabled = false; }
         }
 
         function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); }
-        function closeAndRefresh() { closeQuizModal(); fetchDashboardData(currentUser.email, currentUser.grade); }
-        function logout() { localStorage.removeItem('dahih_user'); localStorage.removeItem('dahih_token'); window.location.replace("/logina.html"); }
-
-        // التحديث للتحقق من البث المستمر يعمل كل 15 ثانية لسرعة الاستجابة
-        setInterval(() => { if(currentUser) fetchDashboardData(currentUser.email, currentUser.grade); }, 15000);
-
+        function logout() { localStorage.removeItem('dahih_user'); window.location.replace("/logina.html"); }
     </script>
 </body>
 </html>
