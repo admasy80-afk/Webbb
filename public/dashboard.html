@@ -73,25 +73,17 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        /* زووم 110% لقص حواف تويتش (اللوجو والترس) */
+        /* تم إصلاح القياسات لضمان عمل النقر بنسبة 100% */
         .twitch-iframe-container {
             position: absolute;
-            top: -12%;
-            left: -5%;
-            width: 110%;
-            height: 124%;
-            z-index: 1;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
         }
 
-        /* 🛡️ الدرع الزجاجي لمنع إيقاف الفيديو عند النقر 🛡️ */
-        .click-blocker {
-            position: absolute;
-            inset: 0;
-            z-index: 20;
-            background: transparent;
-        }
-
-        /* 📱 زر تكبير الشاشة (شغال 100% زي يوتيوب) 📱 */
+        /* 📱 زر تكبير الشاشة 📱 */
         #fs-wrapper:fullscreen {
             background-color: #000;
             width: 100vw;
@@ -163,25 +155,17 @@
                             </div>
 
                             <div class="twitch-iframe-container" id="twitch-embed"></div>
-                            
-                            <div class="click-blocker"></div>
 
                             <div id="loadingOverlay" class="absolute inset-0 z-30 flex flex-col items-center justify-center bg-[#070b19] transition-opacity duration-500">
                                 <div class="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.3)]"></div>
                                 <p class="text-gray-300 font-bold text-sm md:text-base animate-pulse">جاري جلب إشارة البث...</p>
                             </div>
 
-                            <div id="unmuteOverlay" class="absolute inset-0 z-40 flex items-center justify-center bg-black/90 backdrop-blur-md transition-all duration-500 opacity-0 pointer-events-none">
-                                <button id="startLiveBtn" class="bg-red-600 hover:bg-red-500 text-white px-8 py-4 md:px-10 md:py-5 rounded-full font-black shadow-[0_0_40px_rgba(220,38,38,0.6)] flex items-center gap-3 transform hover:scale-105 transition-all text-sm md:text-base cursor-pointer">
-                                    <svg class="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                    دخول الحصة المباشرة
-                                </button>
-                            </div>
-
                         </div>
                         <p class="text-gray-500 text-xs md:text-sm mt-4 text-center">بث مباشر - يرجى عدم قفل الشاشة أثناء الشرح.</p>
                     </div>
                 </section>
+
                 <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
                     <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('quizzesSection', 'quizIcon')">
                         <h2 class="text-xl font-bold text-white">الاختبارات الإلكترونية المتاحة</h2>
@@ -248,4 +232,3 @@
     <script src="student.js"></script>
 </body>
 </html>
-
