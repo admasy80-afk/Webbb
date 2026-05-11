@@ -3,358 +3,807 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-    
-    <title>لوحة الطالب | منصة الدحيح</title>
+    <title>لوحة التحكم | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://player.twitch.tv/js/embed/v1.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
+        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
         
-        .bg-animated-gradient {
-            background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
-            background-size: 200% 200%;
-            animation: gradientMove 20s ease-in-out infinite;
-        }
-        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        /* توحيد ستايل الأزرار النشطة */
+        .tab-btn { transition: all 0.3s ease; position: relative; }
+        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); color: white; }
+        .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-right: 4px solid #eab308; }
         
-        .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
-        
-        /* 🔥 نظام الستارة الجديد (Stealth Mode) لكسر حماية المتصفح 🔥 */
-        #liveStreamSection {
-            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-            max-height: 0;
-            opacity: 0;
-            margin-bottom: 0;
-            overflow: hidden;
-            border-top-width: 0px;
-            pointer-events: none; /* لمنع الطالب من الضغط على شيء مخفي */
-        }
-        #liveStreamSection.stream-active {
-            max-height: 1200px; 
-            opacity: 1;
-            margin-bottom: 2rem;
-            border-top-width: 3px;
-            pointer-events: auto; /* تفعيل الضغط بعد الظهور */
+        @media (max-width: 767px) {
+            .tab-btn.active { border-right: none; border-bottom: 3px solid #eab308; }
         }
 
-        .player-crop-wrapper {
-            position: relative;
-            width: 100%;
-            padding-top: 56.25%; /* 16:9 */
-            overflow: hidden;
-            border-radius: 1.5rem;
-            background-color: #000;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         
-        /* زووم 110% لقص حواف تويتش (اللوجو والترس) */
-        .twitch-iframe-container {
-            position: absolute;
-            top: -12%;
-            left: -5%;
-            width: 110%;
-            height: 124%;
-            z-index: 1;
-        }
-
-        /* 🛡️ الدرع الزجاجي لمنع إيقاف الفيديو عند النقر 🛡️ */
-        .click-blocker {
-            position: absolute;
-            inset: 0;
-            z-index: 20;
-            background: transparent;
-        }
-
-        #fs-wrapper:fullscreen { background: #000; display: flex; align-items: center; justify-content: center; }
-        #fs-wrapper:fullscreen .player-crop-wrapper { border-radius: 0; border: none; width: 100vw; height: 56.25vw; max-height: 100vh; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
         
-        /* تأثيرات باقي اللوحة */
-        .card-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; }
-        .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.4); border-color: rgba(255, 255, 255, 0.1); }
-        .section-content { transition: max-height 0.5s ease, opacity 0.4s ease; overflow: hidden; }
-        .section-content.collapsed { max-height: 0 !important; opacity: 0; padding: 0; border: none; }
+        select option { background-color: #0f172a; color: white; }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ستايل أيقونة الحذف */
+        .trash-icon { transition: all 0.2s ease; cursor: pointer; color: #64748b; }
+        .trash-icon:hover { color: #ef4444; transform: scale(1.1); }
+        
+        /* تأثيرات البث */
+        .pulse-live { animation: pulseLive 2s infinite; }
+        @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+        
+        /* دعم ملء الشاشة للفيديو */
+        #videoContainer:fullscreen { background-color: #000; display: flex; align-items: center; justify-content: center; }
+        #videoContainer:fullscreen video { height: 100vh; width: 100vw; object-fit: contain; border: none; border-radius: 0; }
     </style>
 </head>
-<body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
+<body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
 
-    <nav class="w-full glass-panel sticky top-0 z-50 border-b border-white/10 shrink-0">
-        <div class="max-w-7xl mx-auto px-4 md:px-8 py-4 flex justify-between items-center">
-            <div class="text-2xl font-black text-white tracking-tight">الدحيح<span class="text-yellow-500">.</span></div>
-            <button onclick="logout()" class="text-xs md:text-sm text-red-400 border border-red-500/20 hover:bg-red-500 hover:text-white px-4 py-2 rounded-xl transition-colors font-bold">
-                تسجيل الخروج
-            </button>
+    <aside class="w-full md:w-72 glass-panel h-auto md:h-full flex flex-col border-b md:border-b-0 md:border-l border-white/10 shrink-0 z-10 md:overflow-y-auto">
+        <div class="p-4 md:p-6 border-b border-white/10 shrink-0 flex justify-between items-center">
+            <div>
+                <div class="text-xl md:text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
+                <p class="text-xs text-gray-400 mt-1">إدارة المنصة</p>
+            </div>
+            <button onclick="logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors">خروج</button>
         </div>
-    </nav>
-
-    <main class="flex-grow w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8 relative">
         
-        <section id="liveStreamSection" class="glass-panel rounded-[2rem] border-t-red-500 shadow-[0_0_50px_rgba(239,68,68,0.15)]">
-            <div class="p-5 md:p-6 flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-red-500/10 to-transparent">
-                <div class="flex items-center gap-3">
-                    <span class="relative flex h-3 w-3">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </span>
-                    <h2 class="text-lg md:text-xl font-bold text-white tracking-tight">البث المباشر التفاعلي</h2>
+        <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-1 p-2 md:py-4 md:px-0 scrollbar-hide shrink-0">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نظرة عامة</button>
+            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
+            <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
+            <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
+            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
+            <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
+            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار</button>
+            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى والنتائج</button>
+            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">البث المباشر</button>
+        </nav>
+
+        <div class="hidden md:block p-4 border-t border-white/10 shrink-0 mt-auto">
+            <button onclick="logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3 rounded-xl text-sm font-bold transition-all">تسجيل الخروج</button>
+        </div>
+    </aside>
+
+    <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 relative">
+        <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+
+        <div id="tab-stream" class="tab-content">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">البث المباشر</h1>
+                    <p class="text-gray-400 text-sm">اضغط لبدء البث المباشر علي الزر أدناه.</p>
                 </div>
-                <button onclick="toggleStudentFullScreen()" class="bg-white/5 hover:bg-white/10 p-2.5 rounded-xl border border-white/10 text-gray-400 transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                </button>
+                <div id="streamStatusBadge" class="bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3">
+                    <span class="w-2.5 h-2.5 rounded-full bg-gray-500 block"></span> النظام في وضع الاستعداد
+                </div>
             </div>
             
-            <div class="p-3 md:p-6 bg-black/60" id="fs-wrapper">
-                <div class="player-crop-wrapper shadow-2xl relative">
-                    <div class="absolute top-6 right-6 z-40 bg-black/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 pointer-events-none flex items-center gap-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                        <span class="text-white font-black text-xs md:text-sm tracking-wide">الدحيح LIVE</span>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl mx-auto border-t-4 border-yellow-500 animate-fade-in-up">
+                
+                <div id="videoContainer" class="relative w-full aspect-video bg-[#0a0f1c] rounded-xl border border-white/10 mb-6 overflow-hidden group shadow-xl">
+                    <video id="localVideo" autoplay muted playsinline class="w-full h-full object-cover"></video>
+                    
+                    <div id="camOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#070b19]/90 text-center p-4">
+                        <svg class="w-14 h-14 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <h3 class="text-lg font-bold text-gray-300 mb-2">الكاميرا في وضع الإيقاف</h3>
+                        <p class="text-gray-500 text-xs">يرجى بدء البث ومنح الصلاحيات لعرض المعاينة.</p>
                     </div>
 
-                    <div class="twitch-iframe-container" id="twitch-embed"></div>
-
-                    <div class="click-blocker"></div>
-
-                    <div id="unmuteOverlay" class="absolute inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md transition-all duration-700">
-                        <button id="startLiveBtn" class="bg-red-600 hover:bg-red-500 text-white px-10 py-5 rounded-full font-black shadow-[0_0_40px_rgba(220,38,38,0.6)] flex items-center gap-4 transform hover:scale-110 transition-all group">
-                            <div class="bg-white/20 p-2 rounded-full group-hover:bg-white/30 transition-colors">
-                                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"></path></svg>
-                            </div>
-                            <span class="text-base md:text-lg">دخول الحصة المباشرة</span>
+                    <div id="videoControlsOverlay" class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div class="flex gap-2">
+                            <button id="toggleMicBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="كتم/تشغيل المايك">
+                                <svg id="micIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                            </button>
+                            <button id="toggleCamBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="إيقاف/تشغيل الكاميرا">
+                                <svg id="camIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </button>
+                        </div>
+                        <button id="fullscreenBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="ملء الشاشة">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                         </button>
                     </div>
                 </div>
-                <p class="text-gray-500 text-xs md:text-sm mt-4 text-center">بث مباشر - يرجى عدم قفل الشاشة أثناء الشرح.</p>
-            </div>
-        </section>
-        <div class="glass-panel rounded-[2rem] p-6 md:p-10 mb-8 border-t-[3px] border-t-yellow-500 relative overflow-hidden">
-            <h1 class="text-3xl md:text-5xl font-black mb-2 text-white">مرحباً بك، <span id="stName" class="text-yellow-500">...</span></h1>
-            <p class="text-gray-400 font-light text-sm md:text-base" id="stGrade">جاري تحميل بياناتك...</p>
-        </div>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-            <div class="lg:col-span-2 space-y-6 md:space-y-8">
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
-                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10" onclick="toggleSection('quizzesSection')">
-                        <h2 class="text-xl font-bold text-white">الاختبارات الإلكترونية المتاحة</h2>
-                    </div>
-                    <div id="quizzesSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
-                        <div id="qzContainer" class="space-y-4 text-center text-gray-500">جاري التحميل...</div>
-                    </div>
-                </section>
                 
-                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
-                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10" onclick="toggleSection('pointsSection')">
-                        <h2 class="text-xl font-bold text-white">أهم نقاط المنهج</h2>
-                    </div>
-                    <div id="pointsSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
-                        <div id="pointsContainer" class="text-center text-gray-500">لا توجد ملاحظات.</div>
-                    </div>
-                </section>
-            </div>
+                <div class="flex justify-center border-t border-white/5 pt-6 mt-2">
+                    <button id="startStreamBtn" class="w-full md:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-10 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        بدء البث المباشر
+                    </button>
+                    <button id="stopStreamBtn" class="w-full md:w-auto bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-10 rounded-xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+                        إنهاء البث الحالي
+                    </button>
+                </div>
 
-            <div class="space-y-6 md:space-y-8">
-                <section class="glass-panel rounded-2xl p-6 border-t-[3px] border-t-yellow-500">
-                    <h2 class="text-lg font-bold text-white mb-4 text-center md:text-right">التقييم المستمر</h2>
-                    <div class="bg-black/40 rounded-xl p-4 flex flex-col items-center justify-center border border-white/5 py-10">
-                        <span id="studentPointsDisplay" class="text-6xl font-black text-yellow-500 drop-shadow-md" dir="ltr">0%</span>
-                        <p class="text-sm text-gray-400 mt-4 text-center">النسبة المئوية للأداء.</p>
-                    </div>
-                </section>
             </div>
         </div>
+        <div id="tab-dashboard" class="tab-content active">
+            <h1 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-500 transition-transform hover:scale-[1.02]"><p class="text-gray-400 text-sm mb-1">الطلاب المقبولين</p><h3 id="stats-students" class="text-3xl font-black text-white">0</h3></div>
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-blue-500 transition-transform hover:scale-[1.02]"><p class="text-gray-400 text-sm mb-1">طلبات قيد المراجعة</p><h3 id="stats-pending" class="text-3xl font-black text-blue-400">0</h3></div>
+            </div>
+        </div>
+
+        <div id="tab-requests" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">طلبات التسجيل</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">مراجعة بيانات الطلاب الجدد.</p>
+            <div id="pendingRequestsContainer" class="space-y-4 min-h-[300px]"></div>
+        </div>
+
+        <div id="tab-students-list" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">قائمة الطلاب الحاليين</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">عرض بيانات الطلاب المسجلين بالاسم الرباعي.</p>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl">
+                <select id="listGradeSelect" onchange="fetchStudentsByGrade()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
+                    <option value="" disabled selected>اختر الصف لعرض الطلاب...</option>
+                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                </select>
+                <div id="studentsListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p class="text-gray-500 text-sm text-center py-10 col-span-full">يرجى اختيار الصف لعرض البيانات.</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-students" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">التقييم المستمر</h1>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl">
+                <form id="pointsForm" class="space-y-5">
+                    <div><label class="block text-sm text-gray-400 mb-2">بريد الطالب</label><input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" dir="ltr"></div>
+                    <div><label class="block text-sm text-gray-400 mb-2">النسبة المئوية (%)</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base"></div>
+                    <button type="submit" id="savePointsBtn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-500 transition-colors">تحديث التقييم</button>
+                    <p id="pointsMsg" class="text-sm text-center hidden mt-2"></p>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-tests" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">نتائج الاختبارات الورقية</h1>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl">
+                <form id="testsForm" class="space-y-5">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><input type="text" id="testName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار"></div>
+                        <div>
+                            <select id="testGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base">
+                                <option value="" disabled selected>اختر الصف...</option>
+                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="scoresContainer" class="space-y-3"></div>
+                    <button type="button" onclick="addScoreRow()" class="w-full bg-white/5 border border-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base">+ إضافة اسم طالب ودرجته</button>
+                    <button type="submit" id="saveTestBtn" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10">نشر النتائج للطلاب</button>
+                    <p id="testMsg" class="text-sm text-center hidden mt-2"></p>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-content" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى والأسئلة المقالية</h1>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl">
+                <form id="contentForm" class="space-y-5">
+                    <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base">
+                        <option value="" disabled selected>اختر الصف...</option>
+                        <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                        <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                        <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                        <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                        <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                        <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                        <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                    </select>
+                    <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base">
+                        <option value="point">نقطة هامة في المنهج</option>
+                        <option value="question">سؤال متوقع بالحل</option>
+                    </select>
+                    <div id="pointField"><textarea id="pointText" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="اكتب الملاحظة هنا..."></textarea></div>
+                    <div id="questionFields" class="hidden space-y-5"><textarea id="questionText" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="نص السؤال المقالي..."></textarea><textarea id="questionHint" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base" placeholder="الإجابة النموذجية..."></textarea></div>
+                    <button type="submit" id="saveContentBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all">نشر المحتوى</button>
+                    <p id="contentMsg" class="text-sm text-center hidden mt-2"></p>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-quiz" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إنشاء اختبار إلكتروني</h1>
+            <p class="text-gray-400 mb-6">يمكنك إضافة أي عدد من الأسئلة مع تحديد الإجابة الصحيحة لكل سؤال.</p>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
+                <form id="quizForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
+                        <select id="quizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
+                            <option value="" disabled selected>الدفعة المستهدفة...</option>
+                            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                        </select>
+                        <input type="text" id="quizTitle" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار الشامل">
+                    </div>
+
+                    <div id="dynamicQuestionsContainer" class="space-y-6 mt-6"></div>
+
+                    <div class="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-6 mt-4">
+                        <button type="button" onclick="addMCQBlock()" class="flex-1 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base flex items-center justify-center gap-2">
+                            + إضافة سؤال جديد
+                        </button>
+                        <button type="submit" id="saveQuizBtn" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/10">نشر الاختبار للطلاب</button>
+                    </div>
+                    <p id="quizMsg" class="text-sm text-center hidden mt-2 font-bold"></p>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-manage" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة المحتوى والمتابعة</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">استعرض نتائج الطلاب في الاختبارات الإلكترونية واحذف المحتوى القديم.</p>
+            
+            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl">
+                <select id="manageGradeSelect" onchange="fetchGradeContent()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
+                    <option value="" disabled selected>اختر الصف لعرض بياناته...</option>
+                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                </select>
+
+                <div id="manageContainer" class="hidden space-y-8">
+                    <section>
+                        <h2 class="text-xl font-bold text-yellow-500 border-b border-white/10 pb-2 mb-4">الاختبارات الإلكترونية (MCQ)</h2>
+                        <div id="manageQuizzes" class="space-y-3"></div>
+                    </section>
+                    
+                    <section>
+                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">درجات الاختبارات الورقية</h2>
+                        <div id="manageTests" class="space-y-3"></div>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">الأسئلة المقالية</h2>
+                        <div id="manageQuestions" class="space-y-3"></div>
+                    </section>
+
+                    <section>
+                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">أهم نقاط المنهج</h2>
+                        <div id="managePoints" class="space-y-3"></div>
+                    </section>
+                </div>
+                
+                <p id="manageLoading" class="text-gray-500 text-center py-10 hidden">جاري جلب البيانات من السيرفر...</p>
+            </div>
+        </div>
+
     </main>
 
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-lg transition-opacity">
-        <div class="bg-[#0b1021] border border-white/10 w-full max-w-3xl rounded-2xl md:rounded-[2rem] p-5 md:p-8 max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/80">
-            <div id="quizModalContent"></div>
+    <div id="resultsModal" class="fixed inset-0 z-[100] bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-md">
+        <div class="bg-gray-900 border border-white/10 w-full max-w-3xl rounded-[2rem] p-6 max-h-[85vh] overflow-y-auto relative">
+            <button onclick="closeResultsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/5 rounded-full w-10 h-10 flex items-center justify-center font-bold">X</button>
+            <h2 id="resultsModalTitle" class="text-2xl font-bold text-yellow-500 mb-6 pr-8">نتائج الطلاب</h2>
+            <div id="resultsModalContent" class="space-y-3"></div>
         </div>
     </div>
 
     <script>
+        // أيقونة سلة المهملات SVG الرسمية
+        const trashSVG = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
+
         const userDataStr = localStorage.getItem('dahih_user');
-        window.availableQuizzes = []; 
-        let currentUser = null;
-        let twitchPlayer = null;
-        
-        if (!userDataStr) { window.location.replace("/logina.html"); } 
+        let user = null;
+        let sessionToken = null;
+        if (!userDataStr) window.location.href = "/logina.html";
         else {
-            currentUser = JSON.parse(userDataStr);
-            document.getElementById('stName').innerText = currentUser.name.split(' ')[0];
-            document.getElementById('stGrade').innerText = "المرحلة: " + (currentUser.grade || "عام");
-            
-            // تهيئة المشغل فوراً في الخلفية
-            initTwitchPlayer();
-            fetchDashboardData();
-            
-            // الرادار يعمل كل 8 ثواني لضمان اللقط السريع
-            setInterval(fetchDashboardData, 8000); 
+            user = JSON.parse(userDataStr);
+            sessionToken = user.token || localStorage.getItem('dahih_token') || ""; 
+            if (user.role !== 'dev' && user.role !== 'owner') window.location.href = "/dashboard.html";
+            else document.getElementById('adminWelcomeName').innerText = user.name || "إدارة";
         }
 
-        // ==================== قلب استوديو البث (المزدوج) ====================
-        function initTwitchPlayer() {
-            if (twitchPlayer) return;
-            const options = {
-                width: '100%', height: '100%', channel: "moooae2tf",
-                parent: ["webbb-production-b681.up.railway.app", "localhost"],
-                controls: false, muted: true, autoplay: true
-            };
-            twitchPlayer = new Twitch.Player("twitch-embed", options);
+        let currentGradeData = null;
 
-            // الاعتماد المباشر على تويتش في حال تأخر السيرفر
-            twitchPlayer.addEventListener(Twitch.Player.PLAYING, forceShowStream);
-            twitchPlayer.addEventListener(Twitch.Player.ONLINE, forceShowStream);
+        // دالة تبديل التبويبات
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+            document.getElementById(`btn-${tabId}`).classList.add('active');
+
+            if(tabId === 'requests') fetchPendingRequests();
+            if(tabId === 'dashboard') fetchStats();
         }
 
-        function forceShowStream() {
-            const section = document.getElementById('liveStreamSection');
-            if(!section.classList.contains('stream-active')) {
-                section.classList.add('stream-active');
+        // ==================== سكريبت البث المباشر الفعّال والرسمي ====================
+        // الحل الجذري: دالة encodeURIComponent بتمنع أخطاء المتصفح مع الرموز الخاصة زي #
+        const rawToken = "T9@qL7!zR4#pX2vK8";
+        const WS_URL = `wss://mohepfy10-d7e7.hf.space?token=${encodeURIComponent(rawToken)}`; 
+        
+        let streamSocket;
+        let mediaRecorder;
+        let localStream;
+        let isAudioMuted = false;
+        let isVideoHidden = false;
+
+        const videoContainer = document.getElementById('videoContainer');
+        const videoElement = document.getElementById('localVideo');
+        const camOverlay = document.getElementById('camOverlay');
+        const startStreamBtn = document.getElementById('startStreamBtn');
+        const stopStreamBtn = document.getElementById('stopStreamBtn');
+        const toggleMicBtn = document.getElementById('toggleMicBtn');
+        const toggleCamBtn = document.getElementById('toggleCamBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const streamStatusBadge = document.getElementById('streamStatusBadge');
+
+        // أداة ملء الشاشة
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                videoContainer.requestFullscreen().catch(err => {
+                    alert(`تعذر تكبير الشاشة: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
             }
-        }
-
-        function forceHideStream() {
-            const section = document.getElementById('liveStreamSection');
-            if(section.classList.contains('stream-active')) {
-                section.classList.remove('stream-active');
-                if(twitchPlayer) twitchPlayer.pause();
-                if(document.fullscreenElement) document.exitFullscreen();
-            }
-        }
-
-        // تفعيل الصوت عند الدخول
-        document.getElementById('startLiveBtn').addEventListener('click', () => {
-            if(twitchPlayer) { twitchPlayer.setMuted(false); twitchPlayer.setVolume(1.0); twitchPlayer.play(); }
-            const overlay = document.getElementById('unmuteOverlay');
-            overlay.style.opacity = '0';
-            setTimeout(() => overlay.classList.add('hidden', 'pointer-events-none'), 700);
         });
 
-        // زر ملء الشاشة
-        function toggleStudentFullScreen() {
-            const fsWrapper = document.getElementById('fs-wrapper');
-            if (!document.fullscreenElement) {
-                if(fsWrapper.requestFullscreen) fsWrapper.requestFullscreen();
-                else if(fsWrapper.webkitRequestFullscreen) fsWrapper.webkitRequestFullscreen();
-            } else { document.exitFullscreen(); }
-        }
-
-        // طي وفتح الأقسام
-        function toggleSection(sectionId) {
-            const section = document.getElementById(sectionId);
-            section.classList.toggle('collapsed');
-            if(section.classList.contains('collapsed')) section.style.maxHeight = '0px'; 
-            else section.style.maxHeight = section.scrollHeight + 500 + 'px'; 
-        }
-
-        // جلب البيانات واستشعار السيرفر
-        async function fetchDashboardData() {
+        startStreamBtn.addEventListener('click', async () => {
             try {
-                const res = await fetch('/api/student/dashboard-data', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: currentUser.email, grade: currentUser.grade })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    
-                    // التحديث من السيرفر كدعم إضافي
-                    const isLiveOnServer = data.content?.liveStream?.isLive === true;
-                    if (isLiveOnServer) { forceShowStream(); } 
-                    else {
-                        // لو السيرفر قال مفيش بث، وتويتش كمان مقفول، اخفي الشاشة
-                        if(twitchPlayer && twitchPlayer.getPlaybackStats) {
-                            // نتأكد إن تويتش فعلاً مش شغال قبل ما نخفيها
-                            if(twitchPlayer.getPlayerState() !== "PLAYING") forceHideStream();
-                        } else { forceHideStream(); }
-                    }
-
-                    // تحديث الإحصائيات
-                    document.getElementById('studentPointsDisplay').innerText = (data.studentPoints || 0) + '%';
-                    window.availableQuizzes = data.content?.quizzes || [];
-                    
-                    // رسم الاختبارات
-                    const qzContainer = document.getElementById('qzContainer');
-                    if (window.availableQuizzes.length > 0) {
-                        let qzHTML = '';
-                        window.availableQuizzes.slice().reverse().forEach(quiz => {
-                            const result = quiz.results ? quiz.results.find(r => r.email === currentUser.email) : null;
-                            qzHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 transition-all hover:border-yellow-500/30">
-                                <div><h3 class="font-bold text-lg text-white">${quiz.title}</h3><p class="text-xs text-gray-500 mt-1">${quiz.questions.length} أسئلة</p></div>
-                                ${result ? `<div class="bg-white/5 text-green-400 font-black px-6 py-2 rounded-xl text-sm">درجتك: ${result.percentage}%</div>` : `<button onclick="openQuizModal('${quiz.id}')" class="bg-yellow-500 text-black font-bold px-8 py-2 rounded-xl text-sm shadow-md">بدء الامتحان</button>`}
-                            </div>`;
-                        });
-                        qzContainer.innerHTML = qzHTML;
-                    } else { qzContainer.innerHTML = '<p class="text-center text-gray-500">لا توجد اختبارات إلكترونية حالياً.</p>'; }
-
-                    // رسم الملاحظات
-                    const pContainer = document.getElementById('pointsContainer');
-                    if (data.content?.points && data.content.points.length > 0) {
-                        let pHTML = '<ul class="space-y-3 text-gray-300 text-sm md:text-base">';
-                        data.content.points.forEach(p => pHTML += `<li class="flex items-start gap-3"><span class="text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${p}</p></li>`);
-                        pContainer.innerHTML = pHTML + '</ul>';
-                        pContainer.classList.remove('text-center', 'text-gray-500');
-                    }
+                // المحاولة الأولى (كاميرا محددة)
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                        audio: true
+                    });
+                } catch (fallbackError) {
+                    console.warn("المحاولة الأولى للكاميرا فشلت، جاري المحاولة بأي إعدادات متاحة:", fallbackError);
+                    // المحاولة الثانية (أي كاميرا وأي مايك متاح بدون شروط)
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: true, 
+                        audio: true 
+                    });
                 }
-            } catch (err) { console.log(err); }
-        }
-
-        // ==================== نظام فتح الاختبار ====================
-        function openQuizModal(quizId) {
-            const quiz = window.availableQuizzes.find(q => q.id === quizId);
-            if (!quiz) return;
-
-            let html = `<div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><h2 class="text-xl md:text-2xl font-bold text-white">${quiz.title}</h2><span class="text-yellow-500 text-sm bg-yellow-500/10 border border-yellow-500/20 px-3 py-1 rounded-lg font-bold">${quiz.questions.length} أسئلة</span></div><form id="activeQuizForm" onsubmit="submitQuiz(event, '${quiz.id}')" class="space-y-6">`;
-
-            quiz.questions.forEach((q, qIndex) => {
-                html += `<div class="bg-black/40 p-4 md:p-5 rounded-xl border border-white/5"><h4 class="font-semibold text-base md:text-lg mb-4 text-white leading-relaxed"><span class="text-yellow-500 mr-2">${qIndex + 1}.</span>${q.questionText}</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
-                q.options.forEach((opt, optIndex) => {
-                    const letters = ['أ', 'ب', 'ج', 'د'];
-                    html += `<label class="quiz-option cursor-pointer group"><input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden"><div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-yellow-500/50 transition-all h-full"><div class="w-6 h-6 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:text-white shrink-0 transition-colors group-hover:bg-black/80">${letters[optIndex]}</div><span class="text-gray-300 text-sm md:text-base leading-relaxed">${opt}</span></div></label>`;
-                });
-                html += `</div></div>`;
-            });
-
-            html += `<div class="flex flex-col md:flex-row gap-3 pt-4 border-t border-white/10"><button type="submit" id="btnSubmitQuiz" class="flex-1 bg-yellow-500 text-black font-bold py-3 md:py-4 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base shadow-md">إنهاء وتسليم الإجابات</button><button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-3 md:py-4 rounded-xl hover:bg-white/5 transition-colors text-sm md:text-base">إلغاء</button></div></form>`;
-
-            document.getElementById('quizModalContent').innerHTML = html;
-            document.getElementById('quizModal').classList.remove('hidden');
-        }
-
-        async function submitQuiz(event, quizId) {
-            event.preventDefault();
-            const btn = document.getElementById('btnSubmitQuiz');
-            btn.innerText = "جاري التصحيح..."; btn.disabled = true;
-
-            const quiz = window.availableQuizzes.find(q => q.id === quizId);
-            const form = event.target;
-            let score = 0;
-
-            quiz.questions.forEach((q, qIndex) => {
-                if (parseInt(form.elements[`q_${qIndex}`].value) === q.correctAnswer) score++;
-            });
-
-            const percentage = Math.round((score / quiz.questions.length) * 100);
-
-            try {
-                await fetch('/api/student/submit-quiz', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: currentUser.email, studentName: currentUser.name, grade: currentUser.grade, quizId: quizId, score: score, percentage: percentage })
-                });
-
-                let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
-                let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.2)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.2)' : 'rgba(248, 113, 113, 0.2)');
-                const successIcon = `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
                 
-                document.getElementById('quizModalContent').innerHTML = `<div class="text-center py-10 px-6 overflow-hidden flex flex-col items-center"><div class="w-24 h-24 mb-6 rounded-full border border-white/10 flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">${successIcon}</div><h2 class="text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2><p class="text-gray-400 mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p><div class="inline-block animate-slide-up delay-200 mb-10"><div class="text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div></div><div class="bg-black/30 border border-white/5 rounded-2xl p-5 text-gray-300 w-full max-w-xs mx-auto mb-10 flex justify-between items-center px-8 animate-slide-up delay-250"><span class="font-medium text-gray-400">الإجابات الصحيحة</span><span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span></div><button onclick="closeQuizModal(); fetchDashboardData();" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors block animate-slide-up delay-300">العودة للوحة التحكم</button></div>`;
-            } catch (err) { alert("حدث خطأ، حاول مجدداً."); btn.innerText = "تسليم الإجابات"; btn.disabled = false; }
+                if (!localStream || localStream.getVideoTracks().length === 0 || localStream.getAudioTracks().length === 0) {
+                    throw new Error("الكاميرا أو الميكروفون غير متوفرين بعد إعطاء الصلاحية.");
+                }
+
+                // الكاميرا اشتغلت، اعرضها
+                videoElement.srcObject = localStream;
+                camOverlay.classList.add('hidden');
+
+                // الاتصال بالسيرفر
+                streamSocket = new WebSocket(WS_URL);
+
+                streamSocket.onopen = async () => {
+                    streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-green-500 block pulse-live"></span> البث قيد التشغيل`;
+                    streamStatusBadge.className = "bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3";
+                    
+                    startStreamBtn.classList.add('hidden');
+                    stopStreamBtn.classList.remove('hidden');
+
+                    mediaRecorder = new MediaRecorder(localStream, {
+                        mimeType: 'video/webm; codecs=vp8,opus',
+                        videoBitsPerSecond: 2500000 
+                    });
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data && event.data.size > 0 && streamSocket.readyState === WebSocket.OPEN) {
+                            streamSocket.send(event.data);
+                        }
+                    };
+
+                    mediaRecorder.start(1000);
+
+                    // 🔥 إضافة إرسال إشارة السيرفر هنا لفتح الشاشة عند الطلاب 🔥
+                    try {
+                        await fetch('/api/admin/toggle-stream', { 
+                            method: 'POST', 
+                            headers: {'Content-Type': 'application/json'}, 
+                            body: JSON.stringify({ role: user.role, isLive: true }) 
+                        });
+                    } catch (e) { console.error("لم يتم إشعار الطلاب:", e); }
+                };
+
+                streamSocket.onclose = () => {
+                    stopLiveStream();
+                    alert("تم إنهاء جلسة الاتصال بالسيرفر.");
+                };
+
+            } catch (err) {
+                // فصل الخطأ الخاص بالكاميرا عن خطأ السيرفر لتسهيل التتبع
+                if (err.name === "SyntaxError") {
+                    alert(`خطأ في رابط السيرفر:\n${err.message}`);
+                } else {
+                    alert(`تعذر الوصول للكاميرا أو المايكروفون!\nالسبب التقني: ${err.name} - ${err.message}\nتأكد من عدم وجود تطبيق آخر يستخدم الكاميرا في الخلفية.`);
+                }
+                console.error(err);
+            }
+        });
+
+        toggleMicBtn.addEventListener('click', () => {
+            if (localStream && localStream.getAudioTracks().length > 0) {
+                isAudioMuted = !isAudioMuted;
+                localStream.getAudioTracks()[0].enabled = !isAudioMuted;
+                toggleMicBtn.className = isAudioMuted ? "bg-red-500/80 hover:bg-red-600 text-white p-2.5 rounded-lg transition-all border border-red-500" : "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
+                toggleMicBtn.innerHTML = isAudioMuted ? 
+                    `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>` : 
+                    `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>`;
+            }
+        });
+
+        toggleCamBtn.addEventListener('click', () => {
+            if (localStream && localStream.getVideoTracks().length > 0) {
+                isVideoHidden = !isVideoHidden;
+                localStream.getVideoTracks()[0].enabled = !isVideoHidden;
+                toggleCamBtn.className = isVideoHidden ? "bg-red-500/80 hover:bg-red-600 text-white p-2.5 rounded-lg transition-all border border-red-500" : "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
+                toggleCamBtn.innerHTML = isVideoHidden ? 
+                    `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>` : 
+                    `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
+            }
+        });
+
+        async function stopLiveStream() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+            if (localStream) localStream.getTracks().forEach(track => track.stop());
+            if (streamSocket && streamSocket.readyState === WebSocket.OPEN) streamSocket.close();
+            if (document.fullscreenElement) document.exitFullscreen();
+            
+            startStreamBtn.classList.remove('hidden');
+            stopStreamBtn.classList.add('hidden');
+            camOverlay.classList.remove('hidden');
+            
+            streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-gray-500 block"></span> النظام في وضع الاستعداد`;
+            streamStatusBadge.className = "bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3";
+            videoElement.srcObject = null;
+            
+            isAudioMuted = false;
+            isVideoHidden = false;
+            toggleMicBtn.className = "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
+            toggleCamBtn.className = "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10";
+            toggleMicBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>`;
+            toggleCamBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
+
+            // 🔥 إضافة إرسال إشارة الإيقاف للسيرفر هنا لإخفاء الشاشة عن الطلاب 🔥
+            try {
+                await fetch('/api/admin/toggle-stream', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ role: user.role, isLive: false }) 
+                });
+            } catch (e) { console.error(e); }
+        }
+        // ==================================================================================
+
+        // جلب الإحصائيات
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/admin/stats', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
+                });
+                const data = await res.json();
+                document.getElementById('stats-students').innerText = data.studentsCount || 0;
+                document.getElementById('stats-pending').innerText = data.pendingCount || 0;
+            } catch (err) {}
         }
 
-        function closeQuizModal() { document.getElementById('quizModal').classList.add('hidden'); }
-        function logout() { localStorage.removeItem('dahih_user'); window.location.replace("/logina.html"); }
+        // جلب طلبات التسجيل الجديدة
+        async function fetchPendingRequests() {
+            const container = document.getElementById('pendingRequestsContainer');
+            container.innerHTML = '<p class="text-gray-500 text-center py-10">جاري جلب الطلبات...</p>';
+            try {
+                const res = await fetch('/api/admin/pending', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
+                });
+                const students = await res.json();
+                if (students.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center mt-10">لا توجد طلبات جديدة.</p>'; return; }
+                let html = '';
+                students.forEach(st => {
+                    const fullName = `${st.first_name} ${st.second_name} ${st.third_name} ${st.last_name}`;
+                    html += `<div class="glass-panel border border-white/5 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in-up">
+                        <div class="text-center md:text-right">
+                            <h4 class="font-bold text-white">${fullName}</h4>
+                            <p class="text-xs text-gray-400 mt-1">${st.email} | ${st.grade}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="updateStudentStatus('${st.email}', 'accepted')" class="bg-green-500/10 text-green-400 px-4 py-2 rounded-lg text-sm font-bold">قبول</button>
+                            <button onclick="rejectStudent('${st.email}')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-lg text-sm font-bold">رفض</button>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch (err) { container.innerHTML = '<p class="text-red-500 text-center">خطأ في الاتصال.</p>'; }
+        }
+
+        // جلب قائمة الطلاب المقبولين
+        async function fetchStudentsByGrade() {
+            const grade = document.getElementById('listGradeSelect').value;
+            const container = document.getElementById('studentsListContainer');
+            container.innerHTML = '<p class="text-gray-500 text-center py-10 col-span-full">جاري تحميل قائمة الطلاب...</p>';
+            try {
+                const res = await fetch('/api/admin/students-by-grade', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
+                });
+                const students = await res.json();
+                if (students.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10 col-span-full">لا يوجد طلاب في هذه الدفعة.</p>`; return; }
+                let html = '';
+                students.forEach(st => {
+                    const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`;
+                    html += `<div class="bg-black/40 border border-white/5 rounded-xl p-4 flex justify-between items-center hover:border-yellow-500/30 transition-all animate-fade-in-up">
+                        <div>
+                            <h4 class="font-bold text-white text-sm md:text-base">${fullName}</h4>
+                            <p class="text-[10px] text-gray-500 mt-1">${st.email}</p>
+                        </div>
+                        <div class="text-left">
+                            <p class="text-yellow-500 text-xs font-bold">${st.points || 0}%</p>
+                            <p class="text-[10px] text-gray-400" dir="ltr">${st.phone}</p>
+                        </div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch (err) { container.innerHTML = '<p class="text-red-500 text-center col-span-full">خطأ في الاتصال.</p>'; }
+        }
+
+        // إدارة المحتوى (جلب البيانات)
+        async function fetchGradeContent() {
+            const grade = document.getElementById('manageGradeSelect').value;
+            const container = document.getElementById('manageContainer');
+            const loading = document.getElementById('manageLoading');
+            container.classList.add('hidden');
+            loading.classList.remove('hidden');
+            try {
+                const res = await fetch('/api/admin/get-grade-content', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
+                });
+                if (res.ok) {
+                    currentGradeData = await res.json();
+                    renderManageContent(grade);
+                    loading.classList.add('hidden');
+                    container.classList.remove('hidden');
+                } else alert("حدث خطأ في الجلب.");
+            } catch (err) { alert("مشكلة في الاتصال."); }
+        }
+
+        function renderManageContent(grade) {
+            const data = currentGradeData;
+            
+            let htmlQZ = '';
+            if (data.quizzes && data.quizzes.length > 0) {
+                data.quizzes.forEach(q => {
+                    htmlQZ += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center group">
+                        <div><p class="font-bold text-white text-lg">${q.title}</p><p class="text-xs text-gray-500 mt-1">المجيبين: ${q.results ? q.results.length : 0}</p></div>
+                        <div class="flex gap-4 items-center">
+                            <button onclick="showQuizResults('${q.id}')" class="bg-blue-600/10 text-blue-400 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all">عرض النتائج</button>
+                            <div onclick="deleteContent('${grade}', 'quiz', '${q.id}')" class="trash-icon">${trashSVG}</div>
+                        </div>
+                    </div>`;
+                });
+            } else htmlQZ = '<p class="text-gray-500 text-sm">لا توجد اختبارات.</p>';
+            document.getElementById('manageQuizzes').innerHTML = htmlQZ;
+
+            let htmlTS = '';
+            if (data.tests && data.tests.length > 0) {
+                data.tests.forEach(t => {
+                    htmlTS += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center">
+                        <p class="font-bold text-white">${t.testName}</p>
+                        <div onclick="deleteContent('${grade}', 'test', '${t.testName}')" class="trash-icon">${trashSVG}</div>
+                    </div>`;
+                });
+            } else htmlTS = '<p class="text-gray-500 text-sm">لا توجد سجلات.</p>';
+            document.getElementById('manageTests').innerHTML = htmlTS;
+
+            let htmlQS = '';
+            if (data.questions && data.questions.length > 0) {
+                data.questions.forEach(q => {
+                    htmlQS += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4">
+                        <p class="text-white text-sm truncate">${q.question}</p>
+                        <div onclick="deleteContent('${grade}', 'question', '${q.question}')" class="trash-icon">${trashSVG}</div>
+                    </div>`;
+                });
+            } else htmlQS = '<p class="text-gray-500 text-sm">لا توجد أسئلة مقالية.</p>';
+            document.getElementById('manageQuestions').innerHTML = htmlQS;
+
+            let htmlPT = '';
+            if (data.points && data.points.length > 0) {
+                data.points.forEach(p => {
+                    htmlPT += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4">
+                        <p class="text-gray-300 text-sm truncate">${p}</p>
+                        <div onclick="deleteContent('${grade}', 'point', '${p}')" class="trash-icon">${trashSVG}</div>
+                    </div>`;
+                });
+            } else htmlPT = '<p class="text-gray-500 text-sm">لا توجد نقاط.</p>';
+            document.getElementById('managePoints').innerHTML = htmlPT;
+        }
+
+        async function deleteContent(grade, itemType, identifier) {
+            if(!confirm("هل أنت متأكد من حذف هذا العنصر؟")) return;
+            try {
+                const res = await fetch('/api/admin/delete-item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade, itemType, identifier })
+                });
+                if (res.ok) fetchGradeContent();
+                else alert("خطأ في الحذف.");
+            } catch (err) { alert("مشكلة اتصال."); }
+        }
+
+        function showQuizResults(quizId) {
+            const quiz = currentGradeData.quizzes.find(q => q.id === quizId);
+            if(!quiz) return;
+            document.getElementById('resultsModalTitle').innerText = quiz.title;
+            const container = document.getElementById('resultsModalContent');
+            if(!quiz.results || quiz.results.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-6">لم يحل أي طالب الاختبار بعد.</p>';
+            } else {
+                let html = '';
+                quiz.results.sort((a,b) => b.percentage - a.percentage).forEach(res => {
+                    let color = res.percentage >= 50 ? 'text-green-400' : 'text-red-400';
+                    html += `<div class="bg-black/40 p-4 rounded-xl flex justify-between items-center border border-white/5">
+                        <div><p class="font-bold text-white text-sm">${res.studentName}</p><p class="text-[10px] text-gray-500">${res.email}</p></div>
+                        <div class="text-left"><p class="font-black ${color}">${res.percentage}%</p></div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            }
+            document.getElementById('resultsModal').classList.remove('hidden');
+        }
+
+        function closeResultsModal() { document.getElementById('resultsModal').classList.add('hidden'); }
+
+        let questionCounter = 0;
+        function addMCQBlock() {
+            questionCounter++;
+            const container = document.getElementById('dynamicQuestionsContainer');
+            const block = document.createElement('div');
+            block.className = 'mcq-block glass-panel p-5 rounded-2xl relative border-l-4 border-l-blue-500 animate-fade-in-up';
+            block.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-blue-400">السؤال رقم ${questionCounter}</h3>
+                    <div onclick="this.parentElement.parentElement.remove()" class="trash-icon">${trashSVG}</div>
+                </div>
+                <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 text-sm mb-4" rows="2" placeholder="اكتب نص السؤال هنا..." required></textarea>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الأول" required></div>
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الثاني" required></div>
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الثالث" required></div>
+                    <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الرابع" required></div>
+                </div>
+                <div class="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center gap-3">
+                    <label class="text-sm font-bold text-green-400 whitespace-nowrap">حدد الإجابة الصحيحة:</label>
+                    <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm">
+                        <option value="0" class="bg-gray-900">الخيار (أ)</option>
+                        <option value="1" class="bg-gray-900">الخيار (ب)</option>
+                        <option value="2" class="bg-gray-900">الخيار (ج)</option>
+                        <option value="3" class="bg-gray-900">الخيار (د)</option>
+                    </select>
+                </div>
+            `;
+            container.appendChild(block);
+        }
+
+        document.getElementById('quizForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('saveQuizBtn');
+            const msg = document.getElementById('quizMsg');
+            const blocks = document.querySelectorAll('.mcq-block');
+            if(blocks.length === 0) { alert("أضف سؤالاً واحداً على الأقل!"); return; }
+            btn.innerText = "جاري النشر..."; btn.disabled = true;
+            const questions = [];
+            blocks.forEach(block => {
+                questions.push({
+                    questionText: block.querySelector('.mcq-q-text').value,
+                    options: [
+                        block.querySelector('.mcq-opt-0').value,
+                        block.querySelector('.mcq-opt-1').value,
+                        block.querySelector('.mcq-opt-2').value,
+                        block.querySelector('.mcq-opt-3').value
+                    ],
+                    correctAnswer: parseInt(block.querySelector('.mcq-correct').value)
+                });
+            });
+            try {
+                const res = await fetch('/api/admin/add-mcq-quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: document.getElementById('quizGrade').value, quizTitle: document.getElementById('quizTitle').value, questionsArray: questions })
+                });
+                if (res.ok) {
+                    msg.innerText = "تم نشر الاختبار بنجاح!";
+                    msg.className = "text-green-400 text-sm text-center block mt-2 font-bold";
+                    document.getElementById('quizForm').reset();
+                    document.getElementById('dynamicQuestionsContainer').innerHTML = '';
+                    questionCounter = 0; addMCQBlock();
+                } else throw new Error();
+            } catch (err) {
+                msg.innerText = "فشل في حفظ الاختبار.";
+                msg.className = "text-red-400 text-sm text-center block mt-2 font-bold";
+            } finally {
+                btn.innerText = "نشر الاختبار للطلاب"; btn.disabled = false;
+                setTimeout(() => msg.classList.add('hidden'), 4000);
+            }
+        });
+
+        function addScoreRow() {
+            const container = document.getElementById('scoresContainer');
+            const row = document.createElement('div');
+            row.className = 'flex gap-2 items-center score-row animate-fade-in-up';
+            row.innerHTML = `<input type="text" placeholder="اسم الطالب" required class="w-3/4 student-name-input bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500"><input type="number" placeholder="الدرجة" required class="w-1/4 student-score-input bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500"><div onclick="this.parentElement.remove()" class="trash-icon">${trashSVG}</div>`;
+            container.appendChild(row);
+        }
+
+        async function updateStudentStatus(email, newStatus, reason = '') {
+            await fetch('/api/admin/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) });
+            fetchPendingRequests(); fetchStats();
+        }
+
+        function rejectStudent(email) { const reason = prompt("سبب الرفض:"); if (reason) updateStudentStatus(email, 'rejected', reason); }
+
+        function toggleContentFields() {
+            const type = document.getElementById('contentType').value;
+            document.getElementById('pointField').classList.toggle('hidden', type !== 'point');
+            document.getElementById('questionFields').classList.toggle('hidden', type === 'point');
+        }
+
+        function logout() { localStorage.removeItem('dahih_user'); localStorage.removeItem('dahih_token'); window.location.href = "/logina.html"; }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if(document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
+            fetchStats();
+        });
     </script>
 </body>
 </html>
-
