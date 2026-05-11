@@ -26,10 +26,9 @@ function switchTab(tabId) {
 }
 
 // ==================== سكريبت البث المباشر الفعّال والرسمي ====================
-// 🔥 تم تحديث الرابط ليتصل بدومين المنصة بشكل ذكي وتلقائي 🔥
-const rawToken = "T9@qL7!zR4#pX2vK8";
-const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-const WS_URL = `${protocol}${window.location.host}/?token=${encodeURIComponent(rawToken)}`; 
+// 🔥 تم التعديل للاتصال المباشر والمضمون بسيرفر Hugging Face 🔥
+const rawToken = "TmV68hFTctxYq"; 
+const WS_URL = `wss://mohepfy10-d7e7.hf.space/?token=${encodeURIComponent(rawToken)}`; 
 
 let streamSocket;
 let mediaRecorder;
@@ -470,4 +469,3 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     fetchStats();
 });
-
