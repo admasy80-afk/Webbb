@@ -31,12 +31,12 @@ const WS_URL = `wss://mohepfy10-d7e7.hf.space/?token=${encodeURIComponent(rawTok
 let streamSocket = null;
 let mediaRecorder = null;
 let localStream = null;
-let masterStream = null; // نستخدم ماستر ستريم عشان نبدل الكاميرا بدون ما يقطع البث
+let masterStream = null; 
 let isAudioMuted = false;
 let isVideoHidden = false;
 let isLive = false; 
-let activeStreamGrade = null; // لتخزين الدفعة التي يتم البث لها
-let currentFacingMode = "user"; // الكاميرا الأمامية افتراضياً
+let activeStreamGrade = null; 
+let currentFacingMode = "user"; 
 
 const videoContainer = document.getElementById('videoContainer');
 const videoElement = document.getElementById('localVideo');
@@ -66,10 +66,9 @@ fullscreenBtn.addEventListener('click', async () => {
 startStreamBtn.addEventListener('click', async () => {
     if (isLive) return;
     
-    // التحقق من تحديد الدفعة
     const gradeSelect = document.getElementById('streamGradeSelect');
     if (!gradeSelect || !gradeSelect.value) {
-        alert("⚠️ يا مستر، لازم تختار الدفعة من القائمة قبل تشغيل البث!");
+        alert("يا مستر لازم تختار الدفعة من القائمة قبل تشغيل البث");
         return;
     }
     activeStreamGrade = gradeSelect.value;
@@ -91,18 +90,16 @@ startStreamBtn.addEventListener('click', async () => {
         
         if (!localStream) throw new Error("لم يتم العثور على كاميرا أو مايك.");
 
-        // 🔥 استخدام Master Stream لضمان القدرة على تبديل الكاميرا وقت البث 🔥
         masterStream = new MediaStream();
         localStream.getTracks().forEach(t => masterStream.addTrack(t));
         
         videoElement.srcObject = masterStream;
         camOverlay.classList.add('hidden');
 
-        // 🔥 حل مشكلة انعكاس الشاشة (يمين/يسار) 🔥
         if (currentFacingMode === "user") {
-            videoElement.style.transform = "scaleX(-1)"; // عكس الكاميرا الأمامية لتصبح كمرآة طبيعية
+            videoElement.style.transform = "scaleX(-1)"; 
         } else {
-            videoElement.style.transform = "scaleX(1)"; // الكاميرا الخلفية تظل كما هي
+            videoElement.style.transform = "scaleX(1)"; 
         }
 
         streamSocket = new WebSocket(WS_URL);
@@ -136,7 +133,6 @@ startStreamBtn.addEventListener('click', async () => {
 
             mediaRecorder.start(250);
 
-            // إرسال الإشارة للسيرفر باستهداف الدفعة المحددة
             fetch('/api/admin/toggle-stream', { 
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'}, 
@@ -198,7 +194,7 @@ function stopLiveStream() {
         videoElement.removeAttribute('src');
         videoElement.load();
         videoElement.srcObject = null;
-        videoElement.style.transform = "scaleX(1)"; // إرجاع العكس
+        videoElement.style.transform = "scaleX(1)"; 
     }
 
     startStreamBtn.innerHTML = "بدء البث المباشر";
@@ -251,7 +247,6 @@ toggleCamBtn.addEventListener('click', () => {
     }
 });
 
-// 🔥 دالة تبديل الكاميرا (أمامية/خلفية) أثناء البث 🔥
 async function switchCameraLive() {
     if (!masterStream || !localStream) return;
     const oldAudioTracks = localStream.getAudioTracks();
@@ -263,26 +258,22 @@ async function switchCameraLive() {
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
 
-        // تبديل مسار الفيديو دون إيقاف التسجيل
         masterStream.removeTrack(oldVideoTracks[0]);
         oldVideoTracks[0].stop();
         masterStream.addTrack(newStream.getVideoTracks()[0]);
 
-        // تبديل مسار الصوت
         masterStream.removeTrack(oldAudioTracks[0]);
         oldAudioTracks[0].stop();
         masterStream.addTrack(newStream.getAudioTracks()[0]);
 
-        localStream = newStream; // تحديث المرجع
+        localStream = newStream; 
 
-        // إصلاح انعكاس المرآة
         if (currentFacingMode === "user") {
             videoElement.style.transform = "scaleX(-1)";
         } else {
             videoElement.style.transform = "scaleX(1)";
         }
 
-        // الحفاظ على حالة كتم الصوت أو إخفاء الصورة
         localStream.getAudioTracks()[0].enabled = !isAudioMuted;
         localStream.getVideoTracks()[0].enabled = !isVideoHidden;
 
@@ -320,15 +311,21 @@ async function fetchPendingRequests() {
         if (students.length === 0) { container.innerHTML = '<p class="text-gray-500 text-center mt-10">لا توجد طلبات جديدة.</p>'; return; }
         let html = '';
         students.forEach(st => {
-            const fullName = `${st.first_name} ${st.second_name} ${st.third_name} ${st.last_name}`;
-            html += `<div class="glass-panel border border-white/5 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in-up">
-                <div class="text-center md:text-right">
-                    <h4 class="font-bold text-white">${fullName}</h4>
-                    <p class="text-xs text-gray-400 mt-1">${st.email} | ${st.grade}</p>
+            const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`.trim();
+            html += `
+            <div class="glass-panel border border-white/5 p-5 rounded-xl flex flex-col justify-between gap-4 animate-fade-in-up hover:border-yellow-500/30 transition-all">
+                <div class="border-b border-white/10 pb-4">
+                    <h4 class="font-bold text-white text-lg mb-3">الاسم: <span class="text-yellow-500">${fullName}</span></h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-300">
+                        <p><span class="font-bold text-gray-500">الدفعة:</span> ${st.grade || 'غير مسجل'}</p>
+                        <p><span class="font-bold text-gray-500">رقم الطالب:</span> <span dir="ltr" class="text-white">${st.phone || 'غير مسجل'}</span></p>
+                        ${st.parent_phone ? `<p><span class="font-bold text-gray-500">ولي الأمر:</span> <span dir="ltr" class="text-white">${st.parent_phone}</span></p>` : ''}
+                        <p><span class="font-bold text-gray-500">الإيميل:</span> <span class="text-white">${st.email || 'غير مسجل'}</span></p>
+                    </div>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="updateStudentStatus('${st.email}', 'accepted')" class="bg-green-500/10 text-green-400 px-4 py-2 rounded-lg text-sm font-bold">قبول</button>
-                    <button onclick="rejectStudent('${st.email}')" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-lg text-sm font-bold">رفض</button>
+                <div class="flex gap-3 justify-end pt-2">
+                    <button onclick="updateStudentStatus('${st.email}', 'accepted')" class="flex-1 md:flex-none bg-green-600 hover:bg-green-500 text-white px-8 py-2.5 rounded-lg text-sm font-bold shadow-lg transition-colors">قبول الطالب</button>
+                    <button onclick="rejectStudent('${st.email}')" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-colors border border-red-500/30">رفض</button>
                 </div>
             </div>`;
         });
@@ -350,15 +347,22 @@ async function fetchStudentsByGrade() {
         if (students.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10 col-span-full">لا يوجد طلاب في هذه الدفعة.</p>`; return; }
         let html = '';
         students.forEach(st => {
-            const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`;
-            html += `<div class="bg-black/40 border border-white/5 rounded-xl p-4 flex justify-between items-center hover:border-yellow-500/30 transition-all animate-fade-in-up">
-                <div>
-                    <h4 class="font-bold text-white text-sm md:text-base">${fullName}</h4>
-                    <p class="text-[10px] text-gray-500 mt-1">${st.email}</p>
-                </div>
-                <div class="text-left">
-                    <p class="text-yellow-500 text-xs font-bold">${st.points || 0}%</p>
-                    <p class="text-[10px] text-gray-400" dir="ltr">${st.phone}</p>
+            const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`.trim();
+            html += `
+            <div class="bg-black/40 border border-white/5 rounded-xl p-5 hover:border-yellow-500/50 transition-all animate-fade-in-up">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-5">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-white text-base md:text-lg mb-3">الاسم: <span class="text-yellow-500">${fullName}</span></h4>
+                        <div class="flex flex-wrap gap-x-6 gap-y-3 text-sm text-gray-400 border-t border-white/5 pt-3">
+                            <p><span class="font-bold text-gray-500">رقم الطالب:</span> <span dir="ltr" class="text-white">${st.phone || 'غير مسجل'}</span></p>
+                            ${st.parent_phone ? `<p><span class="font-bold text-gray-500">ولي الأمر:</span> <span dir="ltr" class="text-white">${st.parent_phone}</span></p>` : ''}
+                            <p><span class="font-bold text-gray-500">الإيميل:</span> <span class="text-white">${st.email}</span></p>
+                        </div>
+                    </div>
+                    <div class="bg-white/5 border border-white/10 px-5 py-3 rounded-xl text-center min-w-[120px] shadow-inner mt-4 md:mt-0 w-full md:w-auto">
+                        <p class="text-gray-400 text-xs mb-1 font-bold">التقييم المستمر</p>
+                        <p class="text-yellow-500 text-2xl font-black" dir="ltr">${st.points || 0}%</p>
+                    </div>
                 </div>
             </div>`;
         });
@@ -575,14 +579,32 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     fetchStats();
 
-    // 1. إضافة قائمة الدفعة فوق زر البث
+    // 1. إضافة قائمة الدفعة فوق زر البث شاملة كل المراحل من الأول الابتدائي إلى الثالث الثانوي
     if (startStreamBtn && !document.getElementById('streamGradeSelect')) {
         const selectHTML = `
-        <select id="streamGradeSelect" class="w-full bg-black/40 border-2 border-yellow-500 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-400 mb-4 font-bold shadow-[0_0_15px_rgba(234,179,8,0.2)]">
-            <option value="">-- 🛑 حدد الدفعة التي سيظهر لها البث 🛑 --</option>
-            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+        <select id="streamGradeSelect" class="w-full bg-black/40 border-2 border-yellow-500 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-400 mb-4 font-bold shadow-[0_0_15px_rgba(234,179,8,0.2)] appearance-none">
+            <option value="" class="text-gray-400">-- 🛑 حدد الدفعة التي سيظهر لها البث 🛑 --</option>
+            
+            <optgroup label="المرحلة الابتدائية" class="bg-gray-900 text-yellow-500 font-black">
+                <option value="الصف الأول الابتدائي" class="text-white font-normal">الصف الأول الابتدائي</option>
+                <option value="الصف الثاني الابتدائي" class="text-white font-normal">الصف الثاني الابتدائي</option>
+                <option value="الصف الثالث الابتدائي" class="text-white font-normal">الصف الثالث الابتدائي</option>
+                <option value="الصف الرابع الابتدائي" class="text-white font-normal">الصف الرابع الابتدائي</option>
+                <option value="الصف الخامس الابتدائي" class="text-white font-normal">الصف الخامس الابتدائي</option>
+                <option value="الصف السادس الابتدائي" class="text-white font-normal">الصف السادس الابتدائي</option>
+            </optgroup>
+
+            <optgroup label="المرحلة الإعدادية" class="bg-gray-900 text-blue-400 font-black">
+                <option value="الصف الأول الإعدادي" class="text-white font-normal">الصف الأول الإعدادي</option>
+                <option value="الصف الثاني الإعدادي" class="text-white font-normal">الصف الثاني الإعدادي</option>
+                <option value="الصف الثالث الإعدادي" class="text-white font-normal">الصف الثالث الإعدادي</option>
+            </optgroup>
+
+            <optgroup label="المرحلة الثانوية" class="bg-gray-900 text-green-400 font-black">
+                <option value="الصف الأول الثانوي" class="text-white font-normal">الصف الأول الثانوي</option>
+                <option value="الصف الثاني الثانوي" class="text-white font-normal">الصف الثاني الثانوي</option>
+                <option value="الصف الثالث الثانوي" class="text-white font-normal">الصف الثالث الثانوي</option>
+            </optgroup>
         </select>`;
         startStreamBtn.insertAdjacentHTML('beforebegin', selectHTML);
     }
@@ -607,3 +629,4 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
