@@ -6,7 +6,7 @@ window.availableQuizzes = [];
 let currentUser = null;
 let livePlayer = null; 
 let isTwitchOnline = false; 
-let wasLiveOnServer = false; // 🔥 السر الجديد: تتبع حالة السيرفر لتشغيل البث كالصاروخ
+let retryInterval = null; // 🔥 السر الجديد: مؤقت الإلحاح على تويتش
 
 if (!userDataStr) {
     window.location.replace("/logina.html");
@@ -19,25 +19,21 @@ if (!userDataStr) {
     if (nameEl) nameEl.innerText = firstName;
     if (gradeEl) gradeEl.innerText = currentUser.grade || "الصف غير محدد";
     
+    initLiveStream();
     fetchDashboardData();
     setInterval(fetchDashboardData, 2000); 
 }
 
-// ==================== إعدادات المشغل (النسخة الصاروخية) ====================
+// ==================== إعدادات المشغل ====================
+function initLiveStream() {
+    if (livePlayer) return; // نبنيه مرة واحدة فقط
+    
+    if (!document.getElementById("stream-container")) return;
 
-function rebootTwitchPlayer() {
-    const container = document.getElementById("stream-container");
-    if (!container) return;
-
-    // 1. نسف المشغل القديم (لإلغاء أي كاش أو نوم عميق لتويتش)
-    container.innerHTML = "";
-    isTwitchOnline = false;
-
-    // 2. بناء المشغل من الصفر (يجبر تويتش على جلب البث فوراً في نفس اللحظة)
     const options = {
         width: '100%', height: '100%', 
         channel: "moooae2tf", 
-        parent: [window.location.hostname || "localhost"], 
+        parent: [window.location.hostname, "localhost"], 
         controls: false, 
         muted: true, autoplay: true
     };
@@ -46,6 +42,12 @@ function rebootTwitchPlayer() {
 
     livePlayer.addEventListener(Twitch.Player.ONLINE, () => {
         isTwitchOnline = true;
+        // 🔥 تويتش صحي! نوقف الإلحاح فوراً
+        if (retryInterval) { clearInterval(retryInterval); retryInterval = null; }
+        
+        // 🔥 التعديل هنا: إجبار المشغل على البدء بمجرد التقاط البث
+        livePlayer.play(); 
+        
         const loadOverlay = document.getElementById('loadingOverlay');
         const unmuteOverlay = document.getElementById('unmuteOverlay');
         if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
@@ -54,17 +56,13 @@ function rebootTwitchPlayer() {
     
     livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
         isTwitchOnline = true;
+        if (retryInterval) { clearInterval(retryInterval); retryInterval = null; }
         const loadOverlay = document.getElementById('loadingOverlay');
         if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
     });
     
     livePlayer.addEventListener(Twitch.Player.OFFLINE, () => {
         isTwitchOnline = false;
-        const section = document.getElementById('liveStreamSection');
-        if(section && section.classList.contains('stream-active')) {
-            const loadOverlay = document.getElementById('loadingOverlay');
-            if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
-        }
     });
 }
 
@@ -104,22 +102,29 @@ function toggleStudentFullScreen() {
     }
 }
 
-function forceShowStream(isNewStream = false) {
+function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
     if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
     }
     
-    if (isNewStream) {
-        // 🔥 إظهار شاشة التحميل وبناء المشغل من الصفر
+    if (!isTwitchOnline) {
         const loadOverlay = document.getElementById('loadingOverlay');
-        const unmuteOverlay = document.getElementById('unmuteOverlay');
         if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
-        if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
         
-        rebootTwitchPlayer();
-    } else if (livePlayer && !isTwitchOnline) {
-        livePlayer.play();
+        // 🔥 خطة "الزن" المعدلة: بدون setChannel عشان ما يرسترش المشغل، مجرد أمر تشغيل
+        if (!retryInterval && livePlayer) {
+            livePlayer.play(); // محاولة فورية للتشغيل
+            
+            retryInterval = setInterval(() => {
+                if (!isTwitchOnline && livePlayer) {
+                    livePlayer.play(); // نطلب التشغيل فقط
+                } else {
+                    clearInterval(retryInterval);
+                    retryInterval = null;
+                }
+            }, 5000); // 5 ثواني عشان المشغل ياخذ وقته يتصل بالسيرفرات بدون ما ينخنق المتصفح
+        }
     }
 }
 
@@ -128,11 +133,15 @@ function forceHideStream() {
     if(section && section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
         
-        // 🔥 تدمير المشغل نهائياً لتوفير إنترنت الطالب ورامات جهازه
-        const container = document.getElementById("stream-container");
-        if(container) container.innerHTML = "";
-        livePlayer = null;
-        isTwitchOnline = false;
+        // إيقاف الإلحاح
+        if (retryInterval) {
+            clearInterval(retryInterval);
+            retryInterval = null;
+        }
+        
+        if(livePlayer) {
+            livePlayer.pause();
+        }
         
         if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
     }
@@ -159,21 +168,10 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
-            // 🔥 المنطق الذكي لتشغيل المشغل مرة واحدة فقط عند بدء البث
+            // تحديث حالة البث
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
-            
-            if (isLiveOnServer && !wasLiveOnServer) {
-                // المستر لسه فاتح البث حالا -> انسف الكاش وابني المشغل فوراً
-                forceShowStream(true);
-            } else if (isLiveOnServer) {
-                // البث شغال من بدري -> أظهر الشاشة بس
-                forceShowStream(false);
-            } else {
-                // البث مقفول -> اخفي الشاشة ودمر المشغل
-                forceHideStream();
-            }
-            
-            wasLiveOnServer = isLiveOnServer; // تحديث الحالة
+            if (isLiveOnServer) { forceShowStream(); } 
+            else { forceHideStream(); }
 
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             if (pointsDisplay) pointsDisplay.innerText = (data.studentPoints || 0) + '%';
@@ -319,3 +317,4 @@ function logout() {
     localStorage.removeItem('dahih_token'); 
     window.location.replace("/logina.html"); 
 }
+
