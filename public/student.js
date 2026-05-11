@@ -6,7 +6,7 @@ window.availableQuizzes = [];
 let currentUser = null;
 let livePlayer = null; 
 let isTwitchOnline = false; 
-let retryInterval = null; // 🔥 السر الجديد: مؤقت الإلحاح على تويتش
+let retryInterval = null; 
 
 if (!userDataStr) {
     window.location.replace("/logina.html");
@@ -26,9 +26,14 @@ if (!userDataStr) {
 
 // ==================== إعدادات المشغل ====================
 function initLiveStream() {
-    if (livePlayer) return; // نبنيه مرة واحدة فقط
+    if (livePlayer) return;
     
-    if (!document.getElementById("stream-container")) return;
+    if (!document.getElementById("stream-container")) {
+        console.error("[Twitch Debug] خطأ: لم يتم العثور على عنصر 'stream-container' في الصفحة.");
+        return;
+    }
+
+    console.log("[Twitch Debug] جاري تهيئة مشغل تويتش...");
 
     const options = {
         width: '100%', height: '100%', 
@@ -41,11 +46,16 @@ function initLiveStream() {
     livePlayer = new Twitch.Player("stream-container", options);
 
     livePlayer.addEventListener(Twitch.Player.ONLINE, () => {
+        console.log("[Twitch Debug] حدث ONLINE: البث متصل الآن من طرف تويتش.");
         isTwitchOnline = true;
-        // 🔥 تويتش صحي! نوقف الإلحاح فوراً
-        if (retryInterval) { clearInterval(retryInterval); retryInterval = null; }
         
-        // 🔥 التعديل هنا: إجبار المشغل على البدء بمجرد التقاط البث
+        if (retryInterval) { 
+            console.log("[Twitch Debug] إيقاف مؤقت الإلحاح لأن البث أصبح ONLINE.");
+            clearInterval(retryInterval); 
+            retryInterval = null; 
+        }
+        
+        console.log("[Twitch Debug] إرسال أمر التشغيل livePlayer.play()...");
         livePlayer.play(); 
         
         const loadOverlay = document.getElementById('loadingOverlay');
@@ -55,13 +65,18 @@ function initLiveStream() {
     });
     
     livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
+        console.log("[Twitch Debug] حدث PLAYING: الفيديو يشتغل الآن بنجاح على الشاشة.");
         isTwitchOnline = true;
-        if (retryInterval) { clearInterval(retryInterval); retryInterval = null; }
+        if (retryInterval) { 
+            clearInterval(retryInterval); 
+            retryInterval = null; 
+        }
         const loadOverlay = document.getElementById('loadingOverlay');
         if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
     });
     
     livePlayer.addEventListener(Twitch.Player.OFFLINE, () => {
+        console.log("[Twitch Debug] حدث OFFLINE: البث غير متصل أو تم إغلاقه.");
         isTwitchOnline = false;
     });
 }
@@ -69,6 +84,7 @@ function initLiveStream() {
 const startLiveBtn = document.getElementById('startLiveBtn');
 if (startLiveBtn) {
     startLiveBtn.addEventListener('click', () => {
+        console.log("[Twitch Debug] تم النقر على زر فك كتم الصوت (Unmute).");
         if(livePlayer) { 
             livePlayer.setMuted(false); 
             livePlayer.setVolume(1.0); 
@@ -106,24 +122,27 @@ function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
     if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
+        console.log("[Twitch Debug] إظهار قسم البث المباشر في الصفحة.");
     }
     
     if (!isTwitchOnline) {
         const loadOverlay = document.getElementById('loadingOverlay');
         if (loadOverlay) loadOverlay.classList.remove('opacity-0', 'pointer-events-none');
         
-        // 🔥 خطة "الزن" المعدلة: بدون setChannel عشان ما يرسترش المشغل، مجرد أمر تشغيل
         if (!retryInterval && livePlayer) {
-            livePlayer.play(); // محاولة فورية للتشغيل
+            console.log("[Twitch Debug] محاولة التشغيل الأولى، المشغل ليس أونلاين بعد.");
+            livePlayer.play(); 
             
             retryInterval = setInterval(() => {
                 if (!isTwitchOnline && livePlayer) {
-                    livePlayer.play(); // نطلب التشغيل فقط
+                    console.log("[Twitch Debug] (مؤقت الإلحاح): محاولة التشغيل مجدداً بعد 5 ثواني...");
+                    livePlayer.play(); 
                 } else {
+                    console.log("[Twitch Debug] (مؤقت الإلحاح): إيقاف المؤقت (البث اشتغل).");
                     clearInterval(retryInterval);
                     retryInterval = null;
                 }
-            }, 5000); // 5 ثواني عشان المشغل ياخذ وقته يتصل بالسيرفرات بدون ما ينخنق المتصفح
+            }, 5000); 
         }
     }
 }
@@ -131,9 +150,9 @@ function forceShowStream() {
 function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
     if(section && section.classList.contains('stream-active')) {
+        console.log("[Twitch Debug] إخفاء قسم البث المباشر وإيقاف المشغل.");
         section.classList.remove('stream-active');
         
-        // إيقاف الإلحاح
         if (retryInterval) {
             clearInterval(retryInterval);
             retryInterval = null;
@@ -244,7 +263,9 @@ async function fetchDashboardData() {
                 } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
             }
         }
-    } catch (err) { console.log(err); }
+    } catch (err) { 
+        console.error("[Twitch Debug] حدث خطأ أثناء جلب بيانات السيرفر (fetchDashboardData):", err);
+    }
 }
 
 function openQuizModal(quizId) {
@@ -317,4 +338,3 @@ function logout() {
     localStorage.removeItem('dahih_token'); 
     window.location.replace("/logina.html"); 
 }
-
