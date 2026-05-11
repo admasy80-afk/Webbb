@@ -5,6 +5,7 @@ const userDataStr = localStorage.getItem('dahih_user');
 window.availableQuizzes = []; 
 let currentUser = null;
 
+// التحقق من تسجيل الدخول
 if (!userDataStr) {
     window.location.replace("/logina.html");
 } else {
@@ -16,7 +17,7 @@ if (!userDataStr) {
     if (nameEl) nameEl.innerText = firstName;
     if (gradeEl) gradeEl.innerText = currentUser.grade || "الصف غير محدد";
     
-    // إخفاء أي طبقات تحميل كانت تسبب المشكلة بشكل نهائي
+    // إخفاء طبقات التحميل فوراً لبدء عرض الواجهة
     const loadOverlay = document.getElementById('loadingOverlay');
     const unmuteOverlay = document.getElementById('unmuteOverlay');
     if (loadOverlay) loadOverlay.style.display = 'none';
@@ -26,23 +27,28 @@ if (!userDataStr) {
     setInterval(fetchDashboardData, 2000); 
 }
 
-// ==================== إعدادات المشغل (الحل الجذري Iframe) ====================
+// ==================== إعدادات المشغل (الحل الجذري المعتمد) ====================
+
 function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
-    // 🔥 هنا كان السر! عدلناها لـ twitch-embed عشان تطابق الـ HTML حقك
     const container = document.getElementById("twitch-embed"); 
     
     if(section && !section.classList.contains('stream-active')) {
         section.classList.add('stream-active');
     }
     
-    // إذا لم يكن الإطار موجوداً، نقوم بإنشائه
+    // إذا كان البث يعمل من السيرفر والحاوية فارغة، ننشئ الـ Iframe
     if (container && container.innerHTML.trim() === "") {
+        // رابط موقعك الرسمي على Railway
         const myDomain = "webbb-production-b681.up.railway.app";
+        
+        // إعدادات تويتش: 
+        // muted=true لضمان التشغيل التلقائي بدون حظر المتصفح
+        // controls=false لمحاولة تقليل أزرار تويتش الظاهرة
         const parentParams = `&parent=${myDomain}&parent=localhost`;
         
         container.innerHTML = `<iframe 
-            src="https://player.twitch.tv/?channel=moooae2tf${parentParams}&autoplay=true&muted=false" 
+            src="https://player.twitch.tv/?channel=moooae2tf${parentParams}&autoplay=true&muted=true&controls=false" 
             height="100%" 
             width="100%" 
             allowfullscreen="true" 
@@ -50,17 +56,25 @@ function forceShowStream() {
             frameborder="0"
             style="border: none;">
         </iframe>`;
+
+        // إخفاء لوحة التحميل بعد 3 ثواني من بدء تحميل البث
+        setTimeout(() => {
+            const loader = document.getElementById('loadingOverlay');
+            if(loader) {
+                loader.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }, 3000);
     }
 }
 
 function forceHideStream() {
     const section = document.getElementById('liveStreamSection');
-    // 🔥 وهنا كمان تم التعديل
     const container = document.getElementById("twitch-embed"); 
     
     if(section && section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
         
+        // تفريغ الحاوية لإيقاف استهلاك البيانات عند إغلاق البث
         if (container) {
             container.innerHTML = ""; 
         }
@@ -90,6 +104,8 @@ function toggleStudentFullScreen() {
     }
 }
 
+// ==================== التعامل مع أقسام الصفحة ====================
+
 function toggleSection(sectionId, iconId) {
     const section = document.getElementById(sectionId);
     const icon = document.getElementById(iconId);
@@ -97,8 +113,11 @@ function toggleSection(sectionId, iconId) {
     
     section.classList.toggle('collapsed');
     icon.classList.toggle('collapsed');
-    if(section.classList.contains('collapsed')) { section.style.maxHeight = '0px'; } 
-    else { section.style.maxHeight = section.scrollHeight + 500 + 'px'; }
+    if(section.classList.contains('collapsed')) { 
+        section.style.maxHeight = '0px'; 
+    } else { 
+        section.style.maxHeight = section.scrollHeight + 500 + 'px'; 
+    }
 }
 
 async function fetchDashboardData() {
@@ -111,15 +130,17 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
+            // إدارة حالة البث بناءً على السيرفر
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
             if (isLiveOnServer) { forceShowStream(); } 
             else { forceHideStream(); }
 
+            // تحديث التقييم
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             if (pointsDisplay) pointsDisplay.innerText = (data.studentPoints || 0) + '%';
 
+            // تحديث الاختبارات
             window.availableQuizzes = data.content?.quizzes || [];
-            
             const qzContainer = document.getElementById('onlineQuizzesContainer');
             if (qzContainer) {
                 if (window.availableQuizzes.length > 0) {
@@ -136,10 +157,12 @@ async function fetchDashboardData() {
                         </div>`;
                     });
                     qzContainer.innerHTML = qzHTML;
-                    qzContainer.classList.remove('text-center', 'text-gray-500');
-                } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
+                } else { 
+                    qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; 
+                }
             }
 
+            // تحديث النقاط (الملاحظات)
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
@@ -147,10 +170,12 @@ async function fetchDashboardData() {
                     data.content.points.forEach(point => pHTML += `<li class="flex items-start gap-3"><span class="text-yellow-500 mt-1.5 text-xs">■</span><p class="leading-relaxed">${point}</p></li>`);
                     pHTML += '</ul>';
                     pContainer.innerHTML = pHTML;
-                    pContainer.classList.remove('text-center', 'text-gray-500');
-                } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
+                } else { 
+                    pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; 
+                }
             }
 
+            // تحديث الأسئلة المقالية
             const qContainer = document.getElementById('questionsContainer');
             if (qContainer) {
                 if (data.content?.questions && data.content.questions.length > 0) {
@@ -163,10 +188,12 @@ async function fetchDashboardData() {
                         </div>`;
                     });
                     qContainer.innerHTML = qHTML;
-                    qContainer.classList.remove('text-center', 'text-gray-500');
-                } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
+                } else { 
+                    qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; 
+                }
             }
 
+            // نتائج الاختبارات الورقية
             const tContainer = document.getElementById('testsContainer');
             if (tContainer) {
                 if (data.content?.tests && data.content.tests.length > 0) {
@@ -182,12 +209,15 @@ async function fetchDashboardData() {
                         tHTML += `</div></div>`;
                     });
                     tContainer.innerHTML = tHTML;
-                    tContainer.classList.remove('text-center', 'text-gray-500');
-                } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
+                } else { 
+                    tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; 
+                }
             }
         }
-    } catch (err) { console.log(err); }
+    } catch (err) { console.log("Error fetching data:", err); }
 }
+
+// ==================== نظام الاختبارات (Quiz Modal) ====================
 
 function openQuizModal(quizId) {
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
@@ -232,7 +262,14 @@ async function submitQuiz(event, quizId) {
     try {
         await fetch('/api/student/submit-quiz', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: currentUser.email, studentName: currentUser.name, grade: currentUser.grade, quizId: quizId, score: score, percentage: percentage })
+            body: JSON.stringify({ 
+                email: currentUser.email, 
+                studentName: currentUser.name, 
+                grade: currentUser.grade, 
+                quizId: quizId, 
+                score: score, 
+                percentage: percentage 
+            })
         });
 
         let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
