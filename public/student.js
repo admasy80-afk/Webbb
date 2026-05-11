@@ -27,7 +27,7 @@ if (!userDataStr) {
     setInterval(fetchDashboardData, 2000); 
 }
 
-// ==================== إعدادات المشغل (الحل الجذري المعتمد) ====================
+// ==================== إعدادات المشغل والواجهة الخاصة ====================
 
 function forceShowStream() {
     const section = document.getElementById('liveStreamSection');
@@ -37,17 +37,27 @@ function forceShowStream() {
         section.classList.add('stream-active');
     }
     
-    // إذا كان البث يعمل من السيرفر والحاوية فارغة، ننشئ الـ Iframe
+    // إذا كان البث يعمل من السيرفر والحاوية فارغة، ننشئ الواجهة والـ Iframe
     if (container && container.innerHTML.trim() === "") {
-        // رابط موقعك الرسمي على Railway
         const myDomain = "webbb-production-b681.up.railway.app";
-        
-        // إعدادات تويتش: 
-        // muted=true لضمان التشغيل التلقائي بدون حظر المتصفح
-        // controls=false لمحاولة تقليل أزرار تويتش الظاهرة
         const parentParams = `&parent=${myDomain}&parent=localhost`;
         
-        container.innerHTML = `<iframe 
+        // 🌟 واجهة الدحيح الاحترافية (Overlay) 🌟
+        const customOverlayHTML = `
+        <div id="dahih-custom-overlay" class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-[#070b19] backdrop-blur-md transition-opacity duration-500 rounded-xl md:rounded-[1.5rem]">
+            <div class="bg-black/40 border border-white/10 p-6 md:p-8 rounded-2xl text-center shadow-[0_0_40px_rgba(234,179,8,0.15)] w-[85%] max-w-sm">
+                <div class="w-16 h-16 mx-auto bg-black/60 border-2 border-yellow-500 rounded-full flex items-center justify-center mb-5 shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse">
+                    <svg class="w-8 h-8 text-yellow-500 pl-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <h3 class="text-xl md:text-2xl font-black text-white mb-2 tracking-tight">منصة الدحيح</h3>
+                <p class="text-gray-400 text-xs md:text-sm mb-6 leading-relaxed">المستر متواجد الآن.. هل أنت جاهز للحصة؟</p>
+                <button onclick="document.getElementById('dahih-custom-overlay').style.opacity='0'; setTimeout(()=>document.getElementById('dahih-custom-overlay').style.display='none', 500);" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-black py-3 md:py-4 px-6 rounded-xl transition-all shadow-lg text-sm md:text-base transform hover:scale-105">
+                    دخول البث المباشر
+                </button>
+            </div>
+        </div>`;
+
+        container.innerHTML = customOverlayHTML + `<iframe 
             src="https://player.twitch.tv/?channel=moooae2tf${parentParams}&autoplay=true&muted=true&controls=false" 
             height="100%" 
             width="100%" 
@@ -57,12 +67,9 @@ function forceShowStream() {
             style="border: none;">
         </iframe>`;
 
-        // إخفاء لوحة التحميل بعد 3 ثواني من بدء تحميل البث
         setTimeout(() => {
             const loader = document.getElementById('loadingOverlay');
-            if(loader) {
-                loader.classList.add('opacity-0', 'pointer-events-none');
-            }
+            if(loader) loader.classList.add('opacity-0', 'pointer-events-none');
         }, 3000);
     }
 }
@@ -73,13 +80,21 @@ function forceHideStream() {
     
     if(section && section.classList.contains('stream-active')) {
         section.classList.remove('stream-active');
-        
-        // تفريغ الحاوية لإيقاف استهلاك البيانات عند إغلاق البث
-        if (container) {
-            container.innerHTML = ""; 
-        }
-        
+        if (container) container.innerHTML = ""; 
         if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    }
+}
+
+// ==================== حل مشكلة الشاشة الكاملة والنص المزعج ====================
+
+// دالة لمعالجة إخفاء وإظهار النص تحت الفيديو
+function handleFullscreenText(isFullscreen) {
+    const fsWrapper = document.getElementById('fs-wrapper');
+    if (fsWrapper) {
+        const warningText = fsWrapper.querySelector('p');
+        if (warningText) {
+            warningText.style.display = isFullscreen ? 'none' : 'block';
+        }
     }
 }
 
@@ -103,6 +118,15 @@ function toggleStudentFullScreen() {
         }
     }
 }
+
+// 🌟 مستمع الأحداث: يشتغل تلقائياً حتى لو الطالب طلع من الشاشة الكاملة بزر ESC
+document.addEventListener('fullscreenchange', () => {
+    handleFullscreenText(!!document.fullscreenElement);
+});
+document.addEventListener('webkitfullscreenchange', () => {
+    handleFullscreenText(!!document.webkitFullscreenElement);
+});
+
 
 // ==================== التعامل مع أقسام الصفحة ====================
 
@@ -295,4 +319,4 @@ function logout() {
     localStorage.removeItem('dahih_user'); 
     localStorage.removeItem('dahih_token'); 
     window.location.replace("/logina.html"); 
-            }
+}
