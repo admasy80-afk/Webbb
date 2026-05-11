@@ -14,6 +14,7 @@ else {
 
 let currentGradeData = null;
 
+// دالة تبديل التبويبات
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -130,10 +131,11 @@ startStreamBtn.addEventListener('click', async () => {
             }).catch(e => console.error(e));
         };
 
+        // 🔥 تم تحديث هذا الجزء لطباعة السبب الدقيق للإغلاق 🔥
         streamSocket.onclose = (event) => {
-            console.log("WebSocket closed with code:", event.code);
+            console.log("WebSocket closed. Code:", event.code, "Reason:", event.reason);
             if (isLive) {
-                alert("تم قطع الاتصال بالسيرفر! (تأكد من مفتاح تويتش أو جودة الإنترنت)");
+                alert(`انقطع الاتصال بالسيرفر!\nكود الإغلاق: ${event.code}\nالسبب: ${event.reason || 'السيرفر أغلق الاتصال فجأة بدون سبب محدد'}\n(تأكد من Logs السيرفر لمعرفة السبب التقني)`);
                 stopLiveStream(); 
             }
         };
@@ -515,3 +517,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     fetchStats();
 });
+
