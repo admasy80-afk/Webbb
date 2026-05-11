@@ -4,8 +4,6 @@ const trashSVG = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox
 const userDataStr = localStorage.getItem('dahih_user');
 window.availableQuizzes = []; 
 let currentUser = null;
-let livePlayer = null; 
-let isTwitchOnline = false; 
 
 if (!userDataStr) {
     window.location.replace("/logina.html");
@@ -18,74 +16,65 @@ if (!userDataStr) {
     if (nameEl) nameEl.innerText = firstName;
     if (gradeEl) gradeEl.innerText = currentUser.grade || "الصف غير محدد";
     
-    initLiveStream();
+    // إخفاء أي طبقات تحميل كانت تسبب المشكلة بشكل نهائي
+    const loadOverlay = document.getElementById('loadingOverlay');
+    const unmuteOverlay = document.getElementById('unmuteOverlay');
+    if (loadOverlay) loadOverlay.style.display = 'none';
+    if (unmuteOverlay) unmuteOverlay.style.display = 'none';
+    
     fetchDashboardData();
     setInterval(fetchDashboardData, 2000); 
 }
 
-// ==================== إعدادات المشغل ====================
-function initLiveStream() {
-    if (livePlayer) return;
+// ==================== إعدادات المشغل (الحل الجذري Iframe) ====================
+function forceShowStream() {
+    const section = document.getElementById('liveStreamSection');
+    const container = document.getElementById("stream-container");
     
-    if (!document.getElementById("stream-container")) {
-        console.error("[Twitch Debug] خطأ: لم يتم العثور على عنصر 'stream-container' في الصفحة.");
-        return;
+    if(section && !section.classList.contains('stream-active')) {
+        section.classList.add('stream-active');
     }
-
-    console.log("[Twitch Debug] جاري تهيئة مشغل تويتش...");
-
-    const options = {
-        width: '100%', height: '100%', 
-        channel: "moooae2tf", 
-        // أضفت الـ IP الخاص بالـ Localhost تحسباً لأي اختبارات محلية
-        parent: [window.location.hostname, "localhost", "127.0.0.1"], 
-        controls: false, 
-        muted: true, autoplay: true
-    };
     
-    livePlayer = new Twitch.Player("stream-container", options);
-
-    // 🔥 الحل السحري هنا: بمجرد أن يجهز إطار تويتش، نخفي شاشة التحميل تبعنا فوراً!
-    livePlayer.addEventListener(Twitch.Player.READY, () => {
-        console.log("[Twitch Debug] المشغل أصبح READY - جاهز للعمل.");
-        const loadOverlay = document.getElementById('loadingOverlay');
-        if (loadOverlay) loadOverlay.classList.add('opacity-0', 'pointer-events-none');
+    // إذا لم يكن الإطار موجوداً، نقوم بإنشائه مباشرة (بدون استخدام مكتبة تويتش المعقدة)
+    if (container && container.innerHTML.trim() === "") {
+        let currentHost = window.location.hostname || "localhost";
         
-        // إعطاء أمر تشغيل مبدئي صامت
-        livePlayer.play();
-    });
-
-    livePlayer.addEventListener(Twitch.Player.ONLINE, () => {
-        console.log("[Twitch Debug] حدث ONLINE: البث متصل الآن.");
-        isTwitchOnline = true;
-        
-        // إظهار زر "فك الكتم" للطالب لأن تويتش يمنع الصوت التلقائي
-        const unmuteOverlay = document.getElementById('unmuteOverlay');
-        if (unmuteOverlay) unmuteOverlay.classList.remove('opacity-0', 'pointer-events-none');
-    });
-    
-    livePlayer.addEventListener(Twitch.Player.PLAYING, () => {
-        console.log("[Twitch Debug] حدث PLAYING: الفيديو يشتغل الآن على الشاشة.");
-        isTwitchOnline = true;
-    });
-    
-    livePlayer.addEventListener(Twitch.Player.OFFLINE, () => {
-        console.log("[Twitch Debug] حدث OFFLINE: البث متوقف حالياً.");
-        isTwitchOnline = false;
-    });
+        // بناء Iframe مباشر لا يمكن أن يعلق
+        container.innerHTML = `<iframe 
+            src="https://player.twitch.tv/?channel=moooae2tf&parent=${currentHost}&parent=localhost&autoplay=true&muted=false" 
+            height="100%" 
+            width="100%" 
+            allowfullscreen="true" 
+            scrolling="no" 
+            frameborder="0">
+        </iframe>`;
+    }
 }
 
+function forceHideStream() {
+    const section = document.getElementById('liveStreamSection');
+    const container = document.getElementById("stream-container");
+    
+    if(section && section.classList.contains('stream-active')) {
+        section.classList.remove('stream-active');
+        
+        // تفريغ الإطار لإيقاف البث وتوفير الإنترنت عند الإخفاء
+        if (container) {
+            container.innerHTML = ""; 
+        }
+        
+        if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    }
+}
+
+// زر تشغيل البث (لم يعد له حاجة فعلية لأن تويتش سيظهر أزراره الخاصة، لكن تركناه تحسباً)
 const startLiveBtn = document.getElementById('startLiveBtn');
 if (startLiveBtn) {
     startLiveBtn.addEventListener('click', () => {
-        console.log("[Twitch Debug] تم النقر على زر التشغيل والصوت.");
-        if(livePlayer) { 
-            livePlayer.setMuted(false); 
-            livePlayer.setVolume(1.0); 
-            livePlayer.play(); 
-        }
+        const loadOverlay = document.getElementById('loadingOverlay');
         const unmuteOverlay = document.getElementById('unmuteOverlay');
-        if (unmuteOverlay) unmuteOverlay.classList.add('opacity-0', 'pointer-events-none');
+        if (loadOverlay) loadOverlay.style.display = 'none';
+        if (unmuteOverlay) unmuteOverlay.style.display = 'none';
     });
 }
 
@@ -110,33 +99,6 @@ function toggleStudentFullScreen() {
     }
 }
 
-function forceShowStream() {
-    const section = document.getElementById('liveStreamSection');
-    if(section && !section.classList.contains('stream-active')) {
-        section.classList.add('stream-active');
-        console.log("[Twitch Debug] تم إظهار قسم البث المباشر.");
-        
-        // إذا كان المشغل جاهزاً لكنه غير متصل، نطلب منه المحاولة
-        if (livePlayer && !isTwitchOnline) {
-            livePlayer.play();
-        }
-    }
-}
-
-function forceHideStream() {
-    const section = document.getElementById('liveStreamSection');
-    if(section && section.classList.contains('stream-active')) {
-        console.log("[Twitch Debug] إخفاء قسم البث المباشر وإيقاف المشغل.");
-        section.classList.remove('stream-active');
-        
-        if(livePlayer) {
-            livePlayer.pause();
-        }
-        
-        if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-    }
-}
-
 function toggleSection(sectionId, iconId) {
     const section = document.getElementById(sectionId);
     const icon = document.getElementById(iconId);
@@ -158,7 +120,7 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
-            // تحديث حالة البث بناءً على السيرفر
+            // تحديث حالة البث
             const isLiveOnServer = data.content?.liveStream?.isLive === true;
             if (isLiveOnServer) { forceShowStream(); } 
             else { forceHideStream(); }
@@ -234,9 +196,7 @@ async function fetchDashboardData() {
                 } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
             }
         }
-    } catch (err) { 
-        console.error("[Twitch Debug] حدث خطأ في الاتصال بالسيرفر:", err);
-    }
+    } catch (err) { console.log(err); }
 }
 
 function openQuizModal(quizId) {
@@ -309,3 +269,4 @@ function logout() {
     localStorage.removeItem('dahih_token'); 
     window.location.replace("/logina.html"); 
 }
+
