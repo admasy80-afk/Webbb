@@ -259,10 +259,10 @@ function renderManageContent(grade) {
     let htmlPubQZ = '';
     if (data.publicQuizzes && data.publicQuizzes.length > 0) {
         data.publicQuizzes.forEach(q => {
-            htmlPubQZ += `<div class="bg-blue-900/10 border border-blue-500/20 p-4 rounded-xl flex justify-between items-center group">
-                <div><p class="font-bold text-white text-lg">${q.title}</p><p class="text-xs text-blue-300 mt-1">الردود: ${q.results ? q.results.length : 0} | عام (برابط)</p></div>
+            htmlPubQZ += `<div class="bg-yellow-900/10 border border-yellow-500/20 p-4 rounded-xl flex justify-between items-center group">
+                <div><p class="font-bold text-white text-lg">${q.title}</p><p class="text-xs text-yellow-300 mt-1">الردود: ${q.results ? q.results.length : 0} | عام (برابط)</p></div>
                 <div class="flex gap-4 items-center">
-                    <button onclick="showDetailedResults('${q.id}', true)" class="bg-blue-600/20 text-blue-400 px-4 py-2 rounded-lg text-xs font-bold hover:bg-blue-600 hover:text-white transition-all">النتائج والتفاصيل</button>
+                    <button onclick="showDetailedResults('${q.id}', true)" class="bg-yellow-600/20 text-yellow-500 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-600 hover:text-black transition-all">النتائج والتفاصيل</button>
                     <div onclick="deleteContent('${grade}', 'publicQuiz', '${q.id}')" class="trash-icon">${trashSVG}</div>
                 </div>
             </div>`;
@@ -277,7 +277,7 @@ function renderManageContent(grade) {
             htmlQZ += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center group">
                 <div><p class="font-bold text-white text-lg">${q.title}</p><p class="text-xs text-gray-500 mt-1">المجيبين: ${q.results ? q.results.length : 0}</p></div>
                 <div class="flex gap-4 items-center">
-                    <button onclick="showDetailedResults('${q.id}', false)" class="bg-yellow-500/10 text-yellow-500 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-500 hover:text-black transition-all">عرض النتائج</button>
+                    <button onclick="showDetailedResults('${q.id}', false)" class="bg-white/10 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-white hover:text-black transition-all">عرض النتائج</button>
                     <div onclick="deleteContent('${grade}', 'quiz', '${q.id}')" class="trash-icon">${trashSVG}</div>
                 </div>
             </div>`;
@@ -325,7 +325,6 @@ async function deleteContent(grade, itemType, identifier) {
 
 // ==================== نافذة النتائج المفصلة (الجديدة) ====================
 function showDetailedResults(quizId, isPublic) {
-    // تحديد المصفوفة المناسبة (اختبار عام أم عادي)
     const arrayToSearch = isPublic ? currentGradeData.publicQuizzes : currentGradeData.quizzes;
     if (!arrayToSearch) return;
 
@@ -340,12 +339,10 @@ function showDetailedResults(quizId, isPublic) {
     } else {
         let html = '';
         
-        // ترتيب تنازلي حسب النسبة
         quiz.results.sort((a,b) => b.percentage - a.percentage).forEach((res, index) => {
             let color = res.percentage >= 85 ? 'text-green-400' : (res.percentage >= 50 ? 'text-blue-400' : 'text-red-400');
             let borderColor = res.percentage >= 50 ? 'border-gray-700' : 'border-red-900/30';
             
-            // بداية كارد الطالب (الرئيسي)
             html += `
             <div class="bg-black/40 rounded-xl border border-white/5 mb-3 overflow-hidden">
                 <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleStudentDetails('detail-${index}')">
@@ -353,7 +350,7 @@ function showDetailedResults(quizId, isPublic) {
                         <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center font-bold text-white">${index + 1}</div>
                         <div>
                             <p class="font-bold text-white text-sm md:text-base">${res.studentName}</p>
-                            <p class="text-xs text-gray-500 mt-1">${res.email} ${res.visitorId ? ' | <span class="text-blue-400" title="بصمة الجهاز">تم التحقق من الجهاز</span>' : ''}</p>
+                            <p class="text-xs text-gray-500 mt-1">${res.email} ${res.visitorId ? ' | <span class="text-yellow-500" title="بصمة الجهاز">تم التحقق من الجهاز</span>' : ''}</p>
                         </div>
                     </div>
                     <div class="text-left flex items-center gap-4">
@@ -365,12 +362,10 @@ function showDetailedResults(quizId, isPublic) {
                     </div>
                 </div>
                 
-                <!-- تفاصيل إجابات الطالب المخفية -->
                 <div id="detail-${index}" class="student-details bg-black/60 px-5 pb-5">
                     <h4 class="text-white font-bold text-sm mb-4 border-b border-white/10 pb-2">مراجعة الإجابات:</h4>
                     <div class="space-y-4">`;
 
-            // رسم كل سؤال وكيف أجاب الطالب
             if (res.userAnswers && res.userAnswers.length > 0) {
                 const letters = ['أ', 'ب', 'ج', 'د'];
                 quiz.questions.forEach((q, qIdx) => {
@@ -407,7 +402,7 @@ function showDetailedResults(quizId, isPublic) {
                 html += `<p class="text-xs text-gray-500">تفاصيل الإجابات غير متوفرة لهذا السجل.</p>`;
             }
 
-            html += `</div></div></div>`; // إغلاق الكارد
+            html += `</div></div></div>`; 
         });
         
         container.innerHTML = html;
@@ -507,21 +502,21 @@ function addPublicMCQBlock() {
     publicQuestionCounter++;
     const container = document.getElementById('dynamicPublicQuestionsContainer');
     const block = document.createElement('div');
-    block.className = 'public-mcq-block glass-panel p-5 rounded-2xl relative border-l-4 border-l-blue-500 animate-fade-in-up';
+    block.className = 'public-mcq-block glass-panel p-5 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up';
     block.innerHTML = `
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-blue-400">السؤال رقم ${publicQuestionCounter}</h3>
+            <h3 class="text-lg font-bold text-yellow-500">السؤال رقم ${publicQuestionCounter}</h3>
             <div onclick="this.parentElement.parentElement.remove()" class="trash-icon">${trashSVG}</div>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 text-sm mb-4" rows="2" placeholder="اكتب نص السؤال هنا..." required></textarea>
+        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm mb-4" rows="2" placeholder="اكتب نص السؤال هنا..." required></textarea>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الأول" required></div>
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الثاني" required></div>
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الثالث" required></div>
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500" placeholder="الخيار الرابع" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الأول" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الثاني" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الثالث" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الرابع" required></div>
         </div>
-        <div class="bg-blue-500/10 border border-blue-500/20 p-3 rounded-xl flex items-center gap-3">
-            <label class="text-sm font-bold text-blue-400 whitespace-nowrap">الإجابة الصحيحة:</label>
+        <div class="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center gap-3">
+            <label class="text-sm font-bold text-green-400 whitespace-nowrap">الإجابة الصحيحة:</label>
             <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm">
                 <option value="0" class="bg-gray-900">أ</option>
                 <option value="1" class="bg-gray-900">ب</option>
@@ -574,7 +569,7 @@ document.getElementById('publicQuizForm').addEventListener('submit', async (e) =
             const data = await res.json();
             // بناء الرابط المباشر
             const domain = window.location.origin;
-            const fullLink = `${domain}/public-quiz.html?id=${data.quizId || Date.now()}`; // fallback
+            const fullLink = `${domain}/public/public-quiz.html?id=${data.quizId || Date.now()}`; 
             
             linkInput.value = fullLink;
             linkArea.classList.remove('hidden');
@@ -582,14 +577,14 @@ document.getElementById('publicQuizForm').addEventListener('submit', async (e) =
             msg.innerText = "تم حفظ الاختبار العام.";
             msg.className = "text-green-400 text-sm text-center block mt-2 font-bold";
             
-            // تنظيف النموذج لتجهيز اختبار جديد
+            // تنظيف النموذج
             document.getElementById('publicQuizForm').reset();
             document.getElementById('dynamicPublicQuestionsContainer').innerHTML = '';
             publicQuestionCounter = 0; addPublicMCQBlock();
             
         } else throw new Error();
     } catch (err) {
-        msg.innerText = "فشل في حفظ الاختبار العام.";
+        msg.innerText = "فشل في حفظ الاختبار العام (تأكد من إعداد السيرفر Node.js).";
         msg.className = "text-red-400 text-sm text-center block mt-2 font-bold";
         msg.classList.remove('hidden');
     } finally {
@@ -603,7 +598,7 @@ function copyPublicLink() {
     input.select();
     input.setSelectionRange(0, 99999); 
     navigator.clipboard.writeText(input.value);
-    alert("تم نسخ الرابط! يمكنك إرساله للطلاب الآن.");
+    alert("تم نسخ الرابط!");
 }
 
 // ==================== الوظائف المشتركة ====================
