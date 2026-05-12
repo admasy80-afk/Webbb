@@ -55,7 +55,7 @@
 
         <div id="errorState" class="hidden text-center py-20 bg-red-500/10 border border-red-500/20 rounded-2xl animate-pop-in">
             <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            <h2 class="text-xl font-bold text-white mb-2">عذراً، لا يمكن الوصول للاختبار</h2>
+            <h2 class="text-xl font-bold text-white mb-2">عذراً، تم حظر الوصول</h2>
             <p id="errorText" class="text-gray-400 text-sm">تأكد من الرابط، أو أنك لم تقم بحل هذا الاختبار من قبل.</p>
         </div>
 
@@ -127,6 +127,13 @@
                 return;
             }
 
+            // 🔥 طبقة الحماية الأولى (فورية من المتصفح) 🔥
+            // تمنع الطالب من فتح صفحة جديدة أو الدخول مرة ثانية من نفس المتصفح
+            if (localStorage.getItem(`dahih_quiz_done_${quizId}`)) {
+                showError("لقد قمت بحل هذا الاختبار مسبقاً من هذا المتصفح ولا يُسمح بالتكرار.");
+                return;
+            }
+
             try {
                 // توليد البصمة
                 const fpPromise = FingerprintJS.load();
@@ -134,22 +141,23 @@
                 const result = await fp.get();
                 deviceFingerprint = result.visitorId;
                 
-                // جلب الاختبار الحقيقي من السيرفر
+                // جلب الاختبار (وإرسال البصمة للسيرفر للتحقق الإضافي)
                 await fetchQuizData();
             } catch (err) {
                 showError("تعذر الاتصال بخوادم الحماية. تأكد من اتصالك بالإنترنت.");
             }
         });
 
-        // 🔥 الاتصال المباشر بالسيرفر لجلب الاختبار 🔥
         async function fetchQuizData() {
             try {
-                const res = await fetch(`/api/public/quiz?id=${quizId}`); 
+                // إرسال البصمة في الرابط عشان السيرفر يمنعه لو مسح المتصفح
+                const res = await fetch(`/api/public/quiz?id=${quizId}&device=${deviceFingerprint}`); 
                 if (res.ok) {
                     currentQuizData = await res.json();
                     renderQuiz();
                 } else {
-                    showError("لا يوجد اختبار بهذا الرابط، أو تم حذفه من قبل الإدارة.");
+                    const errorData = await res.json();
+                    showError(errorData.message || "لا يوجد اختبار بهذا الرابط، أو تم حذفه.");
                 }
             } catch (err) {
                 showError("حدث خطأ أثناء جلب الاختبار. تأكد من الإنترنت.");
@@ -196,7 +204,7 @@
         document.getElementById('publicQuizForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitQuizBtn');
-            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري تصحيح الإجابات...`;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري إرسال وتصحيح الإجابات...`;
             btn.disabled = true;
 
             const form = e.target;
@@ -215,7 +223,7 @@
             const percentage = Math.round((score / currentQuizData.questions.length) * 100);
 
             try {
-                // 🔥 إرسال النتيجة الحقيقية للسيرفر مع بصمة الجهاز 🔥
+                // إرسال النتيجة الحقيقية للسيرفر مع بصمة الجهاز
                 const res = await fetch('/api/student/submit-quiz', {
                     method: 'POST', 
                     headers: { 'Content-Type': 'application/json' },
@@ -224,7 +232,7 @@
                         studentName: studentName, 
                         grade: currentQuizData.grade || "عام", 
                         quizId: currentQuizData.id,
-                        visitorId: deviceFingerprint, 
+                        visitorId: deviceFingerprint, // إرسال البصمة لمنع التكرار
                         score: score, 
                         percentage: percentage,
                         userAnswers: userAnswers
@@ -232,13 +240,17 @@
                 });
 
                 if (res.ok) {
+                    // 🔥 طبقة الحماية الثانية: حفظ الختم في المتصفح بعد النجاح 🔥
+                    localStorage.setItem(`dahih_quiz_done_${quizId}`, "true");
+                    
                     showDetailedResults(studentName, score, currentQuizData.questions.length, percentage, userAnswers);
                 } else {
-                    throw new Error("السيرفر رفض النتيجة");
+                    const errData = await res.json();
+                    throw new Error(errData.message || "عفواً، لقد قمت بحل هذا الاختبار مسبقاً.");
                 }
 
             } catch (err) {
-                alert("حدث خطأ في الإرسال، تأكد من الإنترنت وحاول مجدداً.");
+                alert(err.message || "حدث خطأ في الإرسال، تأكد من الإنترنت وحاول مجدداً.");
                 btn.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> تسليم الإجابات واعتماد النتيجة`;
                 btn.disabled = false;
             }
