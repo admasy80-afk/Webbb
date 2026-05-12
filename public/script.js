@@ -147,9 +147,6 @@ async function stopLiveStream(forced = false) {
     toggleCamBtn.className = "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg border border-white/10";
     toggleCamBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
     
-    // لا تنظف الـ srcObject لتجنب مشاكل الـ UI السريعة، المتصفح سيتكفل بالأمر
-    // videoElement.srcObject = null;
-    
     try {
         await fetch('/api/admin/toggle-stream', { 
             method: 'POST', headers: {'Content-Type': 'application/json'}, 
@@ -298,7 +295,7 @@ function renderManageContent(grade) {
     } else htmlQZ = '<p class="text-gray-500 text-sm py-4">لا توجد اختبارات منصة أساسية حالياً.</p>';
     document.getElementById('manageQuizzes').innerHTML = htmlQZ;
 
-    // البقية (Tests, Questions, Points)
+    // البقية
     let htmlTS = '';
     if (data.tests && data.tests.length > 0) {
         data.tests.forEach(t => {
@@ -362,13 +359,13 @@ function showDetailedResults(quizId, isPublic) {
                     <div class="flex items-center gap-4 truncate">
                         <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center font-bold text-white shrink-0">${index + 1}</div>
                         <div class="truncate">
-                            <p class="font-bold text-white text-sm md:text-base truncate">${res.studentName}</p>
-                            <p class="text-xs text-gray-500 mt-1 truncate">${res.email} ${res.visitorId ? ' | <span class="text-yellow-500" title="بصمة الجهاز المعتمدة">تم التحقق الشامل</span>' : ''}</p>
+                            <p class="font-bold text-white text-sm md:text-base truncate">${res.studentName || 'طالب غير معروف'}</p>
+                            <p class="text-xs text-gray-500 mt-1 truncate">${res.email || ''} ${res.visitorId ? ' | <span class="text-yellow-500" title="بصمة الجهاز المعتمدة">تم التحقق الشامل</span>' : ''}</p>
                         </div>
                     </div>
                     <div class="text-left flex items-center gap-4 shrink-0">
                         <div class="text-center">
-                            <p class="font-black text-xl md:text-2xl ${color}">${res.percentage}%</p>
+                            <p class="font-black text-xl md:text-2xl ${color}">${res.percentage || 0}%</p>
                             <p class="text-[10px] text-gray-400">${res.score} / ${quiz.questions.length}</p>
                         </div>
                         <svg class="w-5 h-5 text-gray-500 transition-transform" id="icon-detail-${index}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -552,7 +549,7 @@ function addPublicMCQBlock() {
 
 // 🔥 الـ 30 سؤال الاحتياطي الجاهز من الصور (Backup MCQ Questions) الشاملة الشاملة 🔥 الشاملة
 const backupQuestions = [
-    {"questionText":"يقول المؤرخ الغربي (إيدرس بل): «إن تاريخ مصر الروماني قصة محزنة من قصص الاستغلال الذي يدل على قصر النظر». في ضوء النص السابق: اتصفت سياسة الرومان في مصر بـ ............ ","options":["إهمال المشروعات الإنتاجية.","استنزاف موارد البلاد.","سوء استغلال الموارد.","محاباة العنصر الإغريقي."],"correctAnswer":1},
+    {"questionText":"يقول المؤرخ الغربي (إيدرس بل): «إن تاريخ مصر الروماني قصة محزنة من قصص الاستغلال الذي يدل على قصر النظر». في ضوء النص السابق: اتصفت سياسة الرومان في مصر بـ ............ ","options":["إهمال المشروعات الإنتاجية.","استنزاف موارد البلاد.","سوء استغلال الموارد.","محاباة العنصر الإغريقي."],"correctAnswer":2},
     {"questionText":"«شعور الأغنياء بالثراء يدفعهم أحيانًا للقفز على السلطة والوصول للحكم». تنطبق العبارة السابقة بشكل واضح على مجتمعي ............ ","options":["أثينا وروما.","إسبرطة ومقدونيا.","فينقييا وقرطاجة.","العراق وكريت."],"correctAnswer":0},
     {"questionText":"«قامت على أرض العراق القديم عدة دول شكلت حضارة بلاد الرافدين». في ضوء العبارة السابقة: المنطقة التي شهدت تأسيس عدة دول في العراق هي المنطقة ............ ","options":["الجنوبية.","الوسطى.","الشمالية.","الغربية."],"correctAnswer":1},
     {"questionText":"كانت أكثر المدن الفينيقية حرصًا وحفاظًا على ممتلكاتها مدينة ............ ","options":["صيدا.","أوغاريت.","جبيل.","صور."],"correctAnswer":3},
@@ -662,7 +659,8 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 role: user.role, sessionToken: sessionToken, 
-                grade: document.getElementById('publicQuizGrade').value, 
+                // وضع fallback "عام" لضمان عدم حفظ الاختبار بدون تصنيف دراسي
+                grade: document.getElementById('publicQuizGrade').value || "عام", 
                 quizTitle: isForced ? "امتحان سريع" : document.getElementById('publicQuizTitle').value, 
                 questionsArray: questionsSourceArray 
             })
