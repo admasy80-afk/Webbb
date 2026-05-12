@@ -323,7 +323,7 @@ async function deleteContent(grade, itemType, identifier) {
     } catch (err) { alert("مشكلة اتصال."); }
 }
 
-// ==================== نافذة النتائج المفصلة (الجديدة) ====================
+// ==================== نافذة النتائج المفصلة ====================
 function showDetailedResults(quizId, isPublic) {
     const arrayToSearch = isPublic ? currentGradeData.publicQuizzes : currentGradeData.quizzes;
     if (!arrayToSearch) return;
@@ -567,9 +567,9 @@ document.getElementById('publicQuizForm').addEventListener('submit', async (e) =
         
         if (res.ok) {
             const data = await res.json();
-            // بناء الرابط المباشر
-            const domain = window.location.origin;
-            const fullLink = `${domain}/public/public-quiz.html?id=${data.quizId || Date.now()}`; 
+            
+            // تم تصحيح الرابط المباشر
+            const fullLink = `https://webbb-production-b681.up.railway.app/public-quiz.html?id=${data.quizId}`; 
             
             linkInput.value = fullLink;
             linkArea.classList.remove('hidden');
@@ -598,7 +598,7 @@ function copyPublicLink() {
     input.select();
     input.setSelectionRange(0, 99999); 
     navigator.clipboard.writeText(input.value);
-    alert("تم نسخ الرابط!");
+    alert("تم نسخ الرابط! يمكنك إرساله للطلاب الآن.");
 }
 
 // ==================== الوظائف المشتركة ====================
@@ -615,3 +615,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
     fetchStats();
 });
+
