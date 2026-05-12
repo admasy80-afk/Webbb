@@ -236,8 +236,8 @@
         </div>
 
         <div id="tab-quiz" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إنشاء اختبار إلكتروني (لطلاب المنصة)</h1>
-            <p class="text-gray-400 mb-6">هذا الاختبار يظهر فقط للطلاب المسجلين بالمنصة في صفوفهم المحددة.</p>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إنشاء اختبار إلكتروني</h1>
+            <p class="text-gray-400 mb-6">هذا الاختبار يظهر فقط للطلاب المسجلين بالمنصة فقط.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
                 <form id="quizForm" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
@@ -274,8 +274,8 @@
 
         <!-- 🔥 التبويب الجديد للاختبار العام 🔥 -->
         <div id="tab-public-quiz" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-blue-400">إنشاء اختبار عام (برابط)</h1>
-            <p class="text-gray-400 mb-6">الاختبار العام يمكن لأي طالب حله من خلال رابط خارجي دون الحاجة لتسجيل حساب.</p>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-blue-400">إنشاء اختبار عام</h1>
+            <p class="text-gray-400 mb-6">الاختبار العام يمكن لأي طالب حله من خلال رابط خارجي .</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-blue-500">
                 <form id="publicQuizForm" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
@@ -311,7 +311,7 @@
                     <!-- حاوية الرابط المباشر (تظهر بعد الحفظ) -->
                     <div id="publicQuizLinkArea" class="hidden mt-6 p-5 bg-green-500/10 border border-green-500/30 rounded-2xl text-center">
                         <p class="text-green-400 font-bold mb-3 text-lg">تم إنشاء الاختبار العام بنجاح!</p>
-                        <p class="text-gray-400 text-sm mb-3">انسخ الرابط التالي وأرسله للطلاب للبدء بالحل:</p>
+                        <p class="text-gray-400 text-sm mb-3">انسخ الرابط التالي من فضلك:</p>
                         <div class="flex flex-col md:flex-row gap-2">
                             <input type="text" id="publicQuizLinkInput" readonly class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-green-300 font-bold outline-none text-center md:text-left" dir="ltr">
                             <button type="button" onclick="copyPublicLink()" class="bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-xl text-sm font-bold transition whitespace-nowrap">نسخ الرابط</button>
@@ -323,7 +323,7 @@
 
         <div id="tab-manage" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة المحتوى والمتابعة</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">استعرض نتائج الطلاب في الاختبارات الإلكترونية واحذف المحتوى القديم.</p>
+            <p class="text-gray-400 mb-6 md:mb-8">استعرض نتائج الطلاب في الاختبارات الإلكترونية .</p>
             
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl">
                 <select id="manageGradeSelect" onchange="fetchGradeContent()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
