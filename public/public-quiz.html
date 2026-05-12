@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار إلكتروني | منصة الدحيح</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- مكتبة البصمة لمعرفة الجهاز حتى في المتصفح الخفي -->
+    <script src="https://openfpcdn.io/fingerprintjs/v4/iife.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; overflow-x: hidden; }
+        
+        .bg-animated-gradient {
+            background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
+            background-size: 200% 200%;
+            animation: gradientMove 20s ease-in-out infinite;
+        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
+        
+        /* الأنيميشن */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+        
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
+        .animate-pop-in { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        @keyframes softFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        .animate-float { animation: softFloat 4s ease-in-out infinite; }
+
+        /* تنسيق الاختيارات وقت الحل */
+        .quiz-option input:checked + div { border-color: #eab308; background-color: rgba(234, 179, 8, 0.1); }
+        .quiz-option input:checked + div > div { background-color: #eab308; color: black; border-color: #eab308; }
+
+        /* تخصيص السكرول */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #070b19; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-animated-gradient min-h-screen selection:bg-yellow-500 selection:text-black relative pb-20">
+    
+    <!-- الخلفية المضيئة -->
+    <div class="fixed top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+    <div class="fixed bottom-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-600/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+
+    <!-- ترويسة الصفحة -->
+    <header class="py-8 text-center animate-fade-in-up">
+        <h1 class="text-3xl md:text-4xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></h1>
+        <p id="quizMainTitle" class="text-gray-400 mt-3 text-lg font-semibold">جاري التجهيز...</p>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 w-full">
+        <!-- شاشة التحميل -->
+        <div id="loadingState" class="text-center py-20">
+            <div class="inline-block w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.3)]"></div>
+            <p id="loadingText" class="text-gray-400 font-bold animate-pulse">جاري التحقق من هوية الجهاز وتجهيز الأسئلة...</p>
+        </div>
+
+        <!-- رسالة الخطأ -->
+        <div id="errorState" class="hidden text-center py-20 bg-red-500/10 border border-red-500/20 rounded-2xl animate-pop-in">
+            <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <h2 class="text-xl font-bold text-white mb-2">عذراً، لا يمكن الوصول للاختبار</h2>
+            <p id="errorText" class="text-gray-400 text-sm">تأكد من الرابط، أو أنك لم تقم بحل هذا الاختبار من قبل.</p>
+        </div>
+
+        <!-- نموذج الاختبار -->
+        <form id="publicQuizForm" class="hidden space-y-6">
+            <!-- بيانات الطالب -->
+            <div class="glass-panel p-5 md:p-8 rounded-2xl border-t-[3px] border-t-blue-500 animate-fade-in-up" style="animation-delay: 0.1s;">
+                <h2 class="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">بياناتك الأساسية</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-300 mb-2">الاسم الرباعي <span class="text-red-500">*</span></label>
+                        <input type="text" id="studentName" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors" placeholder="اكتب اسمك بالكامل...">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-300 mb-2">البريد الإلكتروني <span class="text-red-500">*</span></label>
+                        <input type="email" id="studentEmail" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors" dir="ltr" placeholder="student@example.com">
+                    </div>
+                </div>
+            </div>
+
+            <!-- حاوية الأسئلة -->
+            <div id="questionsContainer" class="space-y-6"></div>
+
+            <!-- زر التسليم -->
+            <div class="pt-6 animate-fade-in-up" style="animation-delay: 0.5s;">
+                <button type="submit" id="submitQuizBtn" class="w-full bg-yellow-500 text-black font-black text-lg py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    تسليم الإجابات واعتماد النتيجة
+                </button>
+            </div>
+        </form>
+
+        <!-- شاشة النتيجة والمراجعة -->
+        <div id="resultState" class="hidden mt-6 space-y-6">
+            
+            <!-- الملخص (النتيجة) -->
+            <div class="glass-panel rounded-[2rem] p-8 md:p-12 text-center relative overflow-hidden animate-pop-in">
+                <div id="resultGlow" class="absolute inset-0 pointer-events-none opacity-20"></div>
+                
+                <div id="resultIconBox" class="w-24 h-24 mx-auto mb-6 rounded-full border flex items-center justify-center relative z-10 animate-float"></div>
+                
+                <h2 class="text-3xl font-bold text-white mb-2 relative z-10">تم تسجيل إجاباتك بنجاح</h2>
+                <p id="resultName" class="text-gray-400 mb-8 text-lg relative z-10"></p>
+                
+                <div class="inline-block mb-8 relative z-10">
+                    <div class="text-sm text-gray-500 mb-2 font-bold uppercase tracking-wider">النتيجة النهائية</div>
+                    <div id="resultPercentage" class="text-7xl md:text-8xl font-black" dir="ltr">0%</div>
+                </div>
+                
+                <div class="bg-black/40 border border-white/5 rounded-2xl p-5 text-gray-300 w-full max-w-sm mx-auto flex justify-between items-center px-8 relative z-10">
+                    <span class="font-medium text-gray-400">الإجابات الصحيحة</span>
+                    <span id="resultScore" class="font-bold text-white text-xl md:text-2xl" dir="ltr">0 / 0</span>
+                </div>
+            </div>
+
+            <!-- مراجعة الأخطاء والصح (زي جوجل فورمز) -->
+            <div class="mt-10 animate-fade-in-up" style="animation-delay: 0.3s;">
+                <h3 class="text-2xl font-bold text-white mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
+                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    مراجعة الإجابات
+                </h3>
+                <div id="answersReviewContainer" class="space-y-4"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const quizId = urlParams.get('id');
+        let currentQuizData = null;
+        let deviceFingerprint = null; // بصمة الجهاز
+
+        const letters = ['أ', 'ب', 'ج', 'د'];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!quizId) {
+                showError("الرابط غير صحيح أو مفقود منه معرف الاختبار.");
+                return;
+            }
+
+            try {
+                // 1. توليد بصمة الجهاز (حتى في المتصفح الخفي)
+                const fpPromise = FingerprintJS.load();
+                const fp = await fpPromise;
+                const result = await fp.get();
+                deviceFingerprint = result.visitorId;
+                
+                // 2. جلب بيانات الاختبار
+                await fetchQuizData();
+            } catch (err) {
+                showError("تعذر الاتصال بخوادم الحماية. تأكد من اتصالك بالإنترنت.");
+            }
+        });
+
+        async function fetchQuizData() {
+            try {
+                // هنا تفحص في السيرفر بتاعك إذا كان الـ deviceFingerprint حل الاختبار ده قبل كده ولا لأ
+                // const res = await fetch(`/api/public/quiz?id=${quizId}&device=${deviceFingerprint}`); 
+                
+                // ⚠️ بيانات وهمية للتجربة (استبدلها بالـ API الحقيقي)
+                setTimeout(() => {
+                    currentQuizData = {
+                        id: quizId,
+                        title: "اختبار الفصل الأول: تاريخ الدولة الحديثة",
+                        grade: "الصف الأول الثانوي",
+                        questions: [
+                            { questionText: "متى تأسست الدولة الحديثة؟", options: ["1920", "1950", "1800", "1900"], correctAnswer: 1 },
+                            { questionText: "من هو القائد الذي قاد معركة التحرير؟", options: ["خالد بن الوليد", "أحمد عرابي", "عمر المختار", "صلاح الدين"], correctAnswer: 1 },
+                            { questionText: "ما هي عاصمة الدولة آنذاك؟", options: ["الأسكندرية", "القاهرة", "طيبة", "منف"], correctAnswer: 1 }
+                        ]
+                    };
+                    renderQuiz();
+                }, 1500); // محاكاة وقت التحميل
+            } catch (err) {
+                showError("حدث خطأ أثناء جلب الاختبار.");
+            }
+        }
+
+        function renderQuiz() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('publicQuizForm').classList.remove('hidden');
+            document.getElementById('quizMainTitle').innerText = currentQuizData.title;
+
+            const container = document.getElementById('questionsContainer');
+            let html = '';
+
+            let delay = 0.2;
+            currentQuizData.questions.forEach((q, qIndex) => {
+                html += `
+                <div class="glass-panel p-5 md:p-8 rounded-2xl border-t-[3px] border-t-yellow-500 animate-fade-in-up" style="animation-delay: ${delay}s;">
+                    <h4 class="font-bold text-lg md:text-xl mb-6 text-white leading-relaxed">
+                        <span class="text-yellow-500 mr-1">${qIndex + 1}.</span> ${q.questionText}
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">`;
+                
+                q.options.forEach((opt, optIndex) => {
+                    html += `
+                        <label class="quiz-option cursor-pointer group h-full">
+                            <input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden">
+                            <div class="flex items-center gap-4 p-4 rounded-xl bg-black/40 border border-white/10 transition-all h-full hover:border-yellow-500/50 hover:bg-white/5">
+                                <div class="w-8 h-8 rounded-lg bg-black/60 border border-white/20 flex items-center justify-center text-sm font-bold text-gray-400 shrink-0 transition-colors group-hover:text-white">
+                                    ${letters[optIndex]}
+                                </div>
+                                <span class="text-gray-200 text-sm md:text-base leading-relaxed group-hover:text-white">${opt}</span>
+                            </div>
+                        </label>`;
+                });
+                
+                html += `</div></div>`;
+                delay += 0.1;
+            });
+
+            container.innerHTML = html;
+        }
+
+        document.getElementById('publicQuizForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitQuizBtn');
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري تصحيح الإجابات...`;
+            btn.disabled = true;
+
+            const form = e.target;
+            const studentName = document.getElementById('studentName').value;
+            const studentEmail = document.getElementById('studentEmail').value;
+            
+            let score = 0;
+            let userAnswers = []; // لحفظ إجابات الطالب للمراجعة
+
+            currentQuizData.questions.forEach((q, qIndex) => {
+                const selected = parseInt(form.elements[`q_${qIndex}`].value);
+                userAnswers.push(selected);
+                if (selected === q.correctAnswer) score++;
+            });
+
+            const percentage = Math.round((score / currentQuizData.questions.length) * 100);
+
+            try {
+                // إرسال البيانات للسيرفر مع البصمة
+                /*
+                await fetch('/api/student/submit-quiz', {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: studentEmail, 
+                        studentName: studentName, 
+                        grade: currentQuizData.grade || "عام", 
+                        quizId: currentQuizData.id,
+                        visitorId: deviceFingerprint, // إرسال البصمة لمنع الغش
+                        score: score, 
+                        percentage: percentage 
+                    })
+                });
+                */
+
+                // محاكاة إرسال
+                setTimeout(() => {
+                    showDetailedResults(studentName, score, currentQuizData.questions.length, percentage, userAnswers);
+                }, 1000);
+
+            } catch (err) {
+                alert("حدث خطأ في الإرسال، تأكد من الإنترنت وحاول مجدداً.");
+                btn.innerText = "تسليم الإجابات واعتماد النتيجة";
+                btn.disabled = false;
+            }
+        });
+
+        function showDetailedResults(name, score, total, percentage, userAnswers) {
+            document.getElementById('publicQuizForm').classList.add('hidden');
+            document.getElementById('resultState').classList.remove('hidden');
+            
+            document.getElementById('resultName').innerText = `شكراً لجهدك يا، ${name}`;
+            document.getElementById('resultScore').innerText = `${score} / ${total}`;
+            
+            const percEl = document.getElementById('resultPercentage');
+            const iconBox = document.getElementById('resultIconBox');
+            const glow = document.getElementById('resultGlow');
+            percEl.innerText = `${percentage}%`;
+
+            let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
+            let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.4)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.4)' : 'rgba(248, 113, 113, 0.4)');
+            let bgClass = percentage >= 85 ? 'bg-green-500/10 border-green-500/30' : (percentage >= 50 ? 'bg-blue-500/10 border-blue-500/30' : 'bg-red-500/10 border-red-500/30');
+            let gradClass = percentage >= 85 ? 'from-green-500/20' : (percentage >= 50 ? 'from-blue-500/20' : 'from-red-500/20');
+            
+            // أيقونة تتغير حسب النسبة
+            let iconSvg = percentage >= 50 
+                ? `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`
+                : `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+
+            percEl.className = `text-7xl md:text-8xl font-black ${colorClass}`;
+            percEl.style.textShadow = `0 0 30px ${shadowColor}`;
+            iconBox.className = `w-24 h-24 mx-auto mb-6 rounded-full border flex items-center justify-center relative z-10 animate-float ${bgClass}`;
+            iconBox.style.boxShadow = `0 0 40px ${shadowColor}`;
+            iconBox.innerHTML = iconSvg;
+            glow.className = `absolute inset-0 pointer-events-none opacity-30 bg-gradient-to-b ${gradClass} to-transparent`;
+
+            // 🔥 بناء مراجعة الأسئلة (Google Forms Style) 🔥
+            const reviewContainer = document.getElementById('answersReviewContainer');
+            let reviewHTML = '';
+
+            currentQuizData.questions.forEach((q, idx) => {
+                const studentAnsIndex = userAnswers[idx];
+                const isCorrect = studentAnsIndex === q.correctAnswer;
+                
+                let borderClass = isCorrect ? 'border-green-500/50' : 'border-red-500/50';
+                let headerColor = isCorrect ? 'text-green-400' : 'text-red-400';
+                let badge = isCorrect 
+                    ? `<span class="bg-green-500/20 text-green-400 text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> إجابة صحيحة</span>` 
+                    : `<span class="bg-red-500/20 text-red-400 text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> إجابة خاطئة</span>`;
+
+                reviewHTML += `
+                <div class="glass-panel p-5 md:p-6 rounded-2xl border-r-4 ${borderClass} mb-4 bg-black/20">
+                    <div class="flex justify-between items-start mb-4">
+                        <h4 class="font-bold text-base md:text-lg text-white leading-relaxed pr-2">
+                            ${idx + 1}. ${q.questionText}
+                        </h4>
+                        ${badge}
+                    </div>
+                    <div class="space-y-3 mt-4">`;
+
+                // طباعة خيارات السؤال مع تلوين إجابة الطالب والإجابة الصحيحة
+                q.options.forEach((opt, optIdx) => {
+                    let optClass = "bg-black/40 border border-white/5 text-gray-400"; // العادي
+                    let optIcon = `<div class="w-6 h-6 rounded bg-black/60 border border-white/10 flex items-center justify-center text-xs font-bold shrink-0">${letters[optIdx]}</div>`;
+                    
+                    if (optIdx === studentAnsIndex && !isCorrect) {
+                        // إجابة الطالب الخاطئة
+                        optClass = "bg-red-500/10 border border-red-500/30 text-red-300";
+                        optIcon = `<div class="w-6 h-6 rounded bg-red-500/20 border border-red-500/50 flex items-center justify-center text-xs font-bold text-red-400 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></div>`;
+                    } else if (optIdx === q.correctAnswer) {
+                        // الإجابة الصحيحة (سواء اختارها الطالب أو لا)
+                        optClass = "bg-green-500/10 border border-green-500/50 text-green-300 font-bold";
+                        optIcon = `<div class="w-6 h-6 rounded bg-green-500/20 border border-green-500/50 flex items-center justify-center text-xs font-bold text-green-400 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
+                    }
+
+                    reviewHTML += `
+                        <div class="flex items-center gap-3 p-3 rounded-xl transition-all ${optClass}">
+                            ${optIcon}
+                            <span class="text-sm md:text-base">${opt}</span>
+                        </div>`;
+                });
+
+                reviewHTML += `</div></div>`;
+            });
+
+            reviewContainer.innerHTML = reviewHTML;
+        }
+
+        function showError(msg) {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+            if(msg) document.getElementById('errorText').innerText = msg;
+        }
+    </script>
+</body>
+</html>
