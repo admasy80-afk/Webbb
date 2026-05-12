@@ -255,7 +255,7 @@ async function fetchGradeContent() {
 function renderManageContent(grade) {
     const data = currentGradeData;
     
-    // 1. الاختبارات العامة (الجديد)
+    // 1. الاختبارات العامة
     let htmlPubQZ = '';
     if (data.publicQuizzes && data.publicQuizzes.length > 0) {
         data.publicQuizzes.forEach(q => {
@@ -270,7 +270,7 @@ function renderManageContent(grade) {
     } else htmlPubQZ = '<p class="text-gray-500 text-sm">لا توجد اختبارات عامة.</p>';
     document.getElementById('managePublicQuizzes').innerHTML = htmlPubQZ;
 
-    // 2. اختبارات المنصة (العادية)
+    // 2. اختبارات المنصة
     let htmlQZ = '';
     if (data.quizzes && data.quizzes.length > 0) {
         data.quizzes.forEach(q => {
@@ -285,7 +285,7 @@ function renderManageContent(grade) {
     } else htmlQZ = '<p class="text-gray-500 text-sm">لا توجد اختبارات.</p>';
     document.getElementById('manageQuizzes').innerHTML = htmlQZ;
 
-    // البقية (Tests, Questions, Points)
+    // البقية
     let htmlTS = '';
     if (data.tests && data.tests.length > 0) {
         data.tests.forEach(t => {
@@ -341,7 +341,6 @@ function showDetailedResults(quizId, isPublic) {
         
         quiz.results.sort((a,b) => b.percentage - a.percentage).forEach((res, index) => {
             let color = res.percentage >= 85 ? 'text-green-400' : (res.percentage >= 50 ? 'text-blue-400' : 'text-red-400');
-            let borderColor = res.percentage >= 50 ? 'border-gray-700' : 'border-red-900/30';
             
             html += `
             <div class="bg-black/40 rounded-xl border border-white/5 mb-3 overflow-hidden">
@@ -568,19 +567,22 @@ document.getElementById('publicQuizForm').addEventListener('submit', async (e) =
         if (res.ok) {
             const data = await res.json();
             
-            // تم تصحيح الرابط المباشر
+            // 1. بناء الرابط المباشر
             const fullLink = `https://webbb-production-b681.up.railway.app/public-quiz.html?id=${data.quizId}`; 
             
+            // 2. تنظيف الفورم الأول قبل ظهور الرابط عشان ميتمسحش تاني
+            document.getElementById('publicQuizForm').reset();
+            document.getElementById('dynamicPublicQuestionsContainer').innerHTML = '';
+            publicQuestionCounter = 0; 
+            addPublicMCQBlock();
+
+            // 3. عرض الرابط بعد التنظيف
             linkInput.value = fullLink;
             linkArea.classList.remove('hidden');
             
             msg.innerText = "تم حفظ الاختبار العام.";
             msg.className = "text-green-400 text-sm text-center block mt-2 font-bold";
-            
-            // تنظيف النموذج
-            document.getElementById('publicQuizForm').reset();
-            document.getElementById('dynamicPublicQuestionsContainer').innerHTML = '';
-            publicQuestionCounter = 0; addPublicMCQBlock();
+            msg.classList.remove('hidden');
             
         } else throw new Error();
     } catch (err) {
@@ -589,6 +591,7 @@ document.getElementById('publicQuizForm').addEventListener('submit', async (e) =
         msg.classList.remove('hidden');
     } finally {
         btn.innerText = "حفظ وتوليد رابط الاختبار"; btn.disabled = false;
+        // إخفاء رسالة النجاح فقط وليس الرابط
         setTimeout(() => msg.classList.add('hidden'), 4000);
     }
 });
@@ -615,4 +618,3 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
     fetchStats();
 });
-
