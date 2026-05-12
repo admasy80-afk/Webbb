@@ -163,30 +163,24 @@ app.post('/api/admin/update-points', async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// 🔥 تحديث نظام البث لاستهداف دفعة محددة 🔥
 app.post('/api/admin/toggle-stream', async (req, res) => {
     try {
         const { role, isLive, grade } = req.body; 
         if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
         
-        // منع تشغيل البث إذا لم يتم تحديد دفعة
-        if (isLive && !grade) return res.status(400).json({ message: "يجب تحديد الدفعة أولاً!" });
-
         const db = usersCollection.s.db;   
         const contentCollection = db.collection('curriculum_content');  
           
         if (isLive) {
-            // تفعيل البث لدفعة واحدة فقط
-            await contentCollection.updateOne(
-                { grade: grade }, 
+            await contentCollection.updateMany(
+                {}, // تحديث البث لجميع الصفوف (يمكنك تعديلها لصف محدد لاحقاً)
                 { $set: { "liveStream": { isLive: true, startedAt: new Date() } } },
                 { upsert: true }
             );  
-            res.status(200).json({ message: "تم إطلاق البث للدفعة المحددة بنجاح" });  
+            res.status(200).json({ message: "تم إطلاق البث بنجاح" });  
         } else {
-            // إيقاف البث عن الدفعة
-            await contentCollection.updateOne(
-                { grade: grade }, 
+            await contentCollection.updateMany(
+                {}, 
                 { $unset: { "liveStream": "" } }
             );  
             res.status(200).json({ message: "تم إيقاف البث بنجاح" });  
@@ -197,32 +191,160 @@ app.post('/api/admin/toggle-stream', async (req, res) => {
 });
 
 // ==========================================
-// 3️⃣ مسارات الطالب والـ Dashboard
+// 🔥 مسارات إدارة وإنشاء الاختبارات الشاملة 🔥
 // ==========================================
+
+// إضافة اختبار منصة داخلي (MCQ)
+app.post('/api/admin/add-mcq-quiz', async (req, res) => {
+    try {
+        const { role, grade, quizTitle, questionsArray } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح" });
+        
+        const quizId = 'quiz_' + Date.now();
+        const db = usersCollection.s.db;
+        const contentCollection = db.collection('curriculum_content');
+        
+        await contentCollection.updateOne(
+            { grade: grade },
+            { $push: { quizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } },
+            { upsert: true }
+        );
+        res.status(200).json({ message: "تمت إضافة الاختبار بنجاح", quizId: quizId });
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
+// إضافة اختبار عام (برابط)
+app.post('/api/admin/add-public-quiz', async (req, res) => {
+    try {
+        const { role, grade, quizTitle, questionsArray } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح" });
+        
+        const quizId = 'pub_' + Date.now(); // تمييز الاختبار العام بـ pub_
+        const db = usersCollection.s.db;
+        const contentCollection = db.collection('curriculum_content');
+        
+        await contentCollection.updateOne(
+            { grade: grade || "عام" },
+            { $push: { publicQuizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } },
+            { upsert: true }
+        );
+        res.status(200).json({ success: true, message: "تمت إضافة الاختبار العام", quizId: quizId });
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
+// جلب المحتوى وعرضه للإدارة
+app.post('/api/admin/get-grade-content', async (req, res) => {
+    try {
+        const { role, grade } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح" });
+        
+        const db = usersCollection.s.db;
+        const contentCollection = db.collection('curriculum_content');
+        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [], publicQuizzes: [] };
+        
+        res.status(200).json(content);
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
+// حذف المحتوى
+app.post('/api/admin/delete-item', async (req, res) => {
+    try {
+        const { role, grade, itemType, identifier } = req.body;
+        if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح" });
+        
+        const db = usersCollection.s.db;
+        const contentCollection = db.collection('curriculum_content');
+        
+        let updateQuery = {};
+        if (itemType === 'point') updateQuery = { $pull: { points: identifier } };
+        else if (itemType === 'question') updateQuery = { $pull: { questions: { question: identifier } } };
+        else if (itemType === 'test') updateQuery = { $pull: { tests: { testName: identifier } } };
+        else if (itemType === 'quiz') updateQuery = { $pull: { quizzes: { id: identifier } } };
+        else if (itemType === 'publicQuiz') updateQuery = { $pull: { publicQuizzes: { id: identifier } } };
+        
+        await contentCollection.updateOne({ grade: grade }, updateQuery);
+        res.status(200).json({ message: "تم الحذف بنجاح" });
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
+// ==========================================
+// 4️⃣ مسارات الطالب، الـ Dashboard، والاختبار العام
+// ==========================================
+
+// جلب بيانات لوحة تحكم الطالب الداخلي
 app.post('/api/student/dashboard-data', async (req, res) => {
     try {
         const { email, grade } = req.body;
         const user = await usersCollection.findOne({ email: email });
         const studentPoints = user ? (user.points || 0) : 0;
+        
         const db = usersCollection.s.db;  
         const contentCollection = db.collection('curriculum_content');  
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
+        
         res.status(200).json({ studentPoints, content });  
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
+// 🔥 جلب بيانات الاختبار العام بناءً على الرابط 🔥
+app.get('/api/public/quiz', async (req, res) => {
+    try {
+        const { id } = req.query;
+        if (!id) return res.status(400).json({ message: "مفقود معرف الاختبار" });
+
+        const db = usersCollection.s.db;
+        const contentCollection = db.collection('curriculum_content');
+        
+        // البحث عن الاختبار في جميع الصفوف
+        const doc = await contentCollection.findOne({ "publicQuizzes.id": id });
+        if (!doc) return res.status(404).json({ message: "الاختبار غير موجود أو تم حذفه" });
+        
+        const quiz = doc.publicQuizzes.find(q => q.id === id);
+        // إرفاق اسم الصف لضمان حفظ النتيجة في المكان الصحيح
+        quiz.grade = doc.grade; 
+        
+        res.status(200).json(quiz);
+    } catch (err) { res.status(500).json({ message: "خطأ في جلب الاختبار" }); }
+});
+
+// 🔥 حفظ نتيجة أي اختبار (سواء داخلي أو عام) 🔥
 app.post('/api/student/submit-quiz', async (req, res) => {
     try {
-        const { email, studentName, grade, quizId, score, percentage } = req.body;
+        // استلام المتغيرات الجديدة (بصمة الجهاز وإجابات الطالب المفصلة)
+        const { email, studentName, grade, quizId, score, percentage, visitorId, userAnswers } = req.body;
+        
         const db = usersCollection.s.db;  
         const contentCollection = db.collection('curriculum_content');
-        await contentCollection.updateOne(
-            { grade: grade, "quizzes.id": quizId },
-            { $push: { "quizzes.$.results": { email, studentName, score, percentage, date: new Date() } } }
-        );
-        res.status(200).json({ message: "تم حفظ النتيجة" });
+        
+        // تجهيز كائن النتيجة
+        const resultObj = { 
+            email, 
+            studentName, 
+            score, 
+            percentage, 
+            visitorId: visitorId || null, 
+            userAnswers: userAnswers || [], 
+            date: new Date() 
+        };
+
+        // التفريق بين الاختبار الداخلي والاختبار العام بناءً على الآي دي
+        if (quizId && quizId.startsWith('pub_')) {
+            // هذا اختبار عام (برابط)
+            await contentCollection.updateOne(
+                { grade: grade, "publicQuizzes.id": quizId },
+                { $push: { "publicQuizzes.$.results": resultObj } }
+            );
+        } else {
+            // هذا اختبار منصة (داخلي)
+            await contentCollection.updateOne(
+                { grade: grade, "quizzes.id": quizId },
+                { $push: { "quizzes.$.results": resultObj } }
+            );
+        }
+        
+        res.status(200).json({ message: "تم حفظ النتيجة واعتمادها بنجاح" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
+// توجيه كل المسارات غير المعرفة لصفحة المنصة الأساسية
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
