@@ -155,36 +155,36 @@ const SysUI = {
         input.addEventListener('keypress', (e) => { if(e.key === 'Enter') close(true); });
     },
     
-    // التحديث السحري لتأثير الاحتفال (آمن وبدون أخطاء Scroll)
+    // أنيميشن الاحتفال المُصلح (لا يسبب Scroll أو تشوه)
     confetti() {
         const wrap = document.createElement('div');
-        // تأمين كامل لمنع أي Scrollbars
-        wrap.style.cssText = 'position: fixed; inset: 0; pointer-events: none; z-index: 99999; overflow: hidden;';
+        // تأمين كامل لمنع أي Scrollbars وحصر الاحتفال داخل الشاشة فقط
+        wrap.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 99999; overflow: hidden;';
         document.body.appendChild(wrap);
         
         const colors = ['#eab308', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#ffffff'];
         
         for (let i = 0; i < 60; i++) {
             const conf = document.createElement('div');
-            conf.className = 'absolute rounded-sm';
-            conf.style.width = (Math.random() * 6 + 4) + 'px';
-            conf.style.height = (Math.random() * 12 + 6) + 'px';
+            conf.className = 'absolute rounded-sm shadow-md';
+            conf.style.width = (Math.random() * 8 + 4) + 'px';
+            conf.style.height = (Math.random() * 16 + 6) + 'px';
             conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
             
-            // البداية من منتصف الشاشة تقريباً للـ pop effect
-            conf.style.left = '50%';
-            conf.style.top = '40%';
+            // البداية من أعلى الشاشة وتوزيع عشوائي بالعرض
+            conf.style.left = (Math.random() * 100) + 'vw';
+            conf.style.top = '-20px';
             
             wrap.appendChild(conf);
             
-            const tx = (Math.random() - 0.5) * window.innerWidth;
-            const ty = window.innerHeight + 50; 
-            const rot = Math.random() * 720;
-            const duration = Math.random() * 2 + 1.5;
+            const tx = (Math.random() - 0.5) * 150; // حركة يمين/يسار خفيفة
+            const ty = window.innerHeight + 50; // السقوط لأسفل الشاشة
+            const rot = Math.random() * 720; // دوران
+            const duration = Math.random() * 2 + 2; // من ثانيتين لـ 4 ثواني للسقوط بنعومة
             
             conf.animate([
-                { transform: 'translate(0, 0) scale(0) rotate(0deg)', opacity: 1 },
-                { transform: `translate(${tx}px, ${ty}px) scale(1) rotate(${rot}deg)`, opacity: 0 }
+                { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+                { transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg)`, opacity: 0.5 }
             ], {
                 duration: duration * 1000,
                 easing: 'cubic-bezier(.37,0,.63,1)',
@@ -192,8 +192,8 @@ const SysUI = {
             });
         }
         
-        // إزالة الحاوية بالكامل بعد انتهاء الأنيميشن
-        setTimeout(() => wrap.remove(), 4000);
+        // مسح الحاوية بعد 5 ثوانٍ لعدم استهلاك الرامات
+        setTimeout(() => wrap.remove(), 5000);
     }
 };
 
