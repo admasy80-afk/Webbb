@@ -2,6 +2,163 @@
 // منصة الدحيح التعليمية - لوحة تحكم الإدارة (Enhanced Version)
 // ============================================================================
 
+// ==================== نظام الإشعارات والنوافذ الذكي ====================
+const SysUI = {
+    init() {
+        if(!document.getElementById('sys-toast-container')) {
+            const tCont = document.createElement('div');
+            tCont.id = 'sys-toast-container';
+            tCont.className = 'fixed top-5 left-1/2 -translate-x-1/2 z-[9999] flex flex-col gap-3 pointer-events-none w-full max-w-sm px-4';
+            document.body.appendChild(tCont);
+        }
+        if(!document.getElementById('sys-modal-container')) {
+            const mCont = document.createElement('div');
+            mCont.id = 'sys-modal-container';
+            mCont.className = 'fixed inset-0 z-[10000] hidden items-center justify-center pointer-events-none';
+            document.body.appendChild(mCont);
+        }
+    },
+    toast(type, message) {
+        this.init();
+        const container = document.getElementById('sys-toast-container');
+        const toast = document.createElement('div');
+        
+        let bgClass, iconHtml;
+        if(type === 'success') {
+            bgClass = 'bg-[#0f291e] border-green-500/50 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.2)]';
+            iconHtml = `<svg class="w-7 h-7 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)] transition-transform duration-500 scale-0 animate-[toastIconPop_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        } else if(type === 'error') {
+            bgClass = 'bg-[#3b0a0a] border-red-500/50 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)]';
+            iconHtml = `<svg class="w-7 h-7 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-transform duration-500 scale-0 animate-[toastIconShake_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        } else {
+            bgClass = 'bg-[#422006] border-yellow-500/50 text-yellow-100 shadow-[0_0_20px_rgba(234,179,8,0.2)]';
+            iconHtml = `<svg class="w-7 h-7 text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)] transition-transform duration-500 scale-0 animate-[toastIconPop_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        }
+
+        toast.className = `flex items-center gap-4 px-5 py-3.5 rounded-2xl border ${bgClass} backdrop-blur-xl transform -translate-y-10 opacity-0 transition-all duration-500 pointer-events-auto`;
+        toast.innerHTML = `${iconHtml} <span class="font-bold text-sm tracking-wide drop-shadow-md">${message}</span>`;
+        
+        // إستايلات للأنيميشن الديناميكي لو مش موجودة في الـ Tailwind
+        if(!document.getElementById('sys-toast-styles')) {
+            const style = document.createElement('style');
+            style.id = 'sys-toast-styles';
+            style.innerHTML = `
+                @keyframes toastIconPop { 0% { transform: scale(0); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
+                @keyframes toastIconShake { 0% { transform: scale(0); } 25% { transform: scale(1.2) rotate(-10deg); } 50% { transform: scale(1.2) rotate(10deg); } 75% { transform: scale(1.2) rotate(-10deg); } 100% { transform: scale(1) rotate(0); } }
+            `;
+            document.head.appendChild(style);
+        }
+
+        container.appendChild(toast);
+        
+        requestAnimationFrame(() => {
+            toast.classList.remove('-translate-y-10', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+        });
+
+        setTimeout(() => {
+            toast.classList.remove('translate-y-0', 'opacity-100');
+            toast.classList.add('-translate-y-10', 'opacity-0');
+            setTimeout(() => toast.remove(), 500);
+        }, 4000);
+    },
+    confirm(message, callback) {
+        this.init();
+        const container = document.getElementById('sys-modal-container');
+        container.innerHTML = `
+            <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 opacity-0" id="sys-modal-bg"></div>
+            <div class="relative bg-gradient-to-b from-gray-900 to-black border border-white/10 p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-sm mx-4 pointer-events-auto" id="sys-modal-box">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center shrink-0 border border-red-500/20">
+                        <svg class="w-7 h-7 text-red-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </div>
+                    <p class="text-white font-bold text-base leading-relaxed">${message}</p>
+                </div>
+                <div class="flex gap-3 justify-end">
+                    <button id="sys-modal-cancel" class="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors text-sm font-bold">إلغاء</button>
+                    <button id="sys-modal-confirm" class="px-5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 transition-colors text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]">تأكيد الحذف</button>
+                </div>
+            </div>
+        `;
+        container.classList.remove('hidden');
+        container.classList.add('flex');
+        
+        const bg = document.getElementById('sys-modal-bg');
+        const box = document.getElementById('sys-modal-box');
+        
+        requestAnimationFrame(() => {
+            bg.classList.remove('opacity-0');
+            box.classList.remove('scale-95', 'opacity-0');
+            box.classList.add('scale-100', 'opacity-100');
+        });
+
+        const close = (res) => {
+            bg.classList.add('opacity-0');
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+                container.innerHTML = '';
+                callback(res);
+            }, 300);
+        };
+
+        document.getElementById('sys-modal-cancel').onclick = () => close(false);
+        document.getElementById('sys-modal-confirm').onclick = () => close(true);
+    },
+    prompt(message, callback) {
+        this.init();
+        const container = document.getElementById('sys-modal-container');
+        container.innerHTML = `
+            <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 opacity-0" id="sys-modal-bg"></div>
+            <div class="relative bg-gradient-to-b from-gray-900 to-black border border-white/10 p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-sm mx-4 pointer-events-auto" id="sys-modal-box">
+                <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-3">
+                    <svg class="w-6 h-6 text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    ${message}
+                </h3>
+                <input type="text" id="sys-modal-input" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3.5 text-white outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-all mb-6 text-sm placeholder-gray-600" placeholder="اكتب هنا...">
+                <div class="flex gap-3 justify-end">
+                    <button id="sys-modal-cancel" class="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors text-sm font-bold">إلغاء</button>
+                    <button id="sys-modal-submit" class="px-5 py-2.5 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-colors text-sm font-bold">تأكيد التنفيذ</button>
+                </div>
+            </div>
+        `;
+        container.classList.remove('hidden');
+        container.classList.add('flex');
+        
+        const bg = document.getElementById('sys-modal-bg');
+        const box = document.getElementById('sys-modal-box');
+        const input = document.getElementById('sys-modal-input');
+        
+        requestAnimationFrame(() => {
+            bg.classList.remove('opacity-0');
+            box.classList.remove('scale-95', 'opacity-0');
+            box.classList.add('scale-100', 'opacity-100');
+            input.focus();
+        });
+
+        const close = (isSubmit) => {
+            const val = isSubmit ? input.value.trim() : null;
+            bg.classList.add('opacity-0');
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                container.classList.add('hidden');
+                container.classList.remove('flex');
+                container.innerHTML = '';
+                callback(val);
+            }, 300);
+        };
+
+        document.getElementById('sys-modal-cancel').onclick = () => close(false);
+        document.getElementById('sys-modal-submit').onclick = () => close(true);
+        input.addEventListener('keypress', (e) => { if(e.key === 'Enter') close(true); });
+    }
+};
+// ============================================================================
+
+
 // أيقونة سلة المهملات SVG الرسمية
 const trashSVG = `<svg class="w-5 h-5 transition-transform duration-300 hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
 
@@ -17,7 +174,6 @@ if (!userDataStr) {
     if (user.role !== 'dev' && user.role !== 'owner') {
         window.location.href = "/dashboard.html";
     } else {
-        // إضافة أنيميشن بسيط لاسم المدير
         const adminNameEl = document.getElementById('adminWelcomeName');
         if (adminNameEl) {
             adminNameEl.innerText = user.name || "إدارة";
@@ -29,9 +185,7 @@ if (!userDataStr) {
 
 let currentGradeData = null;
 
-// دالة تبديل التبويبات (مع انتقال سلس)
 function switchTab(tabId) {
-    // إخفاء كل التبويبات أولاً
     document.querySelectorAll('.tab-content').forEach(el => {
         el.classList.remove('active');
         el.style.opacity = '0';
@@ -40,7 +194,6 @@ function switchTab(tabId) {
     });
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     
-    // إظهار التبويب المطلوب بانسيابية
     const activeTab = document.getElementById(`tab-${tabId}`);
     activeTab.classList.add('active');
     document.getElementById(`btn-${tabId}`).classList.add('active');
@@ -76,13 +229,12 @@ const streamStatusBadge = document.getElementById('streamStatusBadge');
 
 fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
-        videoContainer.requestFullscreen().catch(err => alert(`تعذر تكبير الشاشة: ${err.message}`));
+        videoContainer.requestFullscreen().catch(err => SysUI.toast('error', `تعذر تكبير الشاشة: ${err.message}`));
     } else { document.exitFullscreen(); }
 });
 
 startStreamBtn.addEventListener('click', async () => {
     try {
-        // تأثير تحميل للزر
         startStreamBtn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> جاري التجهيز...`;
         startStreamBtn.disabled = true;
 
@@ -101,7 +253,6 @@ startStreamBtn.addEventListener('click', async () => {
         videoElement.srcObject = localStream;
         camOverlay.classList.add('hidden');
         
-        // تأثير ظهور سلس للفيديو
         videoElement.style.opacity = '0';
         videoElement.style.transition = 'opacity 0.5s ease';
         setTimeout(() => videoElement.style.opacity = '1', 100);
@@ -115,7 +266,7 @@ startStreamBtn.addEventListener('click', async () => {
             
             startStreamBtn.classList.add('hidden');
             stopStreamBtn.classList.remove('hidden');
-            startStreamBtn.innerHTML = `بدء البث`; // إعادة النص لحالته الأصلية
+            startStreamBtn.innerHTML = `بدء البث`; 
             startStreamBtn.disabled = false;
 
             mediaRecorder = new MediaRecorder(localStream, {
@@ -138,11 +289,11 @@ startStreamBtn.addEventListener('click', async () => {
             } catch (e) { console.warn("Stream toggle API silent fail", e); }
         };
 
-        streamSocket.onclose = () => { stopLiveStream(true); alert("انتهى الاتصال بالسيرفر."); };
+        streamSocket.onclose = () => { stopLiveStream(true); SysUI.toast('warning', "انتهى الاتصال بالسيرفر."); };
         streamSocket.onerror = (e) => { console.error("WS Error:", e); stopLiveStream(true); };
 
     } catch (err) { 
-        alert(`خطأ: ${err.message}`); 
+        SysUI.toast('error', `خطأ: ${err.message}`); 
         startStreamBtn.innerHTML = `بدء البث`; 
         startStreamBtn.disabled = false;
         stopLiveStream(true); 
@@ -183,7 +334,6 @@ async function stopLiveStream(forced = false) {
     startStreamBtn.classList.remove('hidden');
     stopStreamBtn.classList.add('hidden');
     
-    // تأثير ناعم للعودة لشاشة الاستعداد
     camOverlay.style.opacity = '0';
     camOverlay.classList.remove('hidden');
     setTimeout(() => camOverlay.style.opacity = '1', 50);
@@ -208,7 +358,6 @@ async function stopLiveStream(forced = false) {
 
 // ==================================================================================
 
-// جلب الإحصائيات مع عداد أنيميشن خفيف
 async function fetchStats() {
     try {
         const res = await fetch('/api/admin/stats', {
@@ -236,7 +385,6 @@ function animateValue(id, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
-// جلب طلبات التسجيل (مع تأخير متدرج للقائمة)
 async function fetchPendingRequests() {
     const container = document.getElementById('pendingRequestsContainer');
     container.innerHTML = '<p class="text-gray-500 text-center py-10 animate-pulse">جاري جلب الطلبات الأساسية...</p>';
@@ -268,11 +416,13 @@ async function fetchPendingRequests() {
             </div>`;
         });
         container.innerHTML = html;
-    } catch (err) { container.innerHTML = '<p class="text-red-500 text-center">خطأ أساسي في الاتصال.</p>'; }
+    } catch (err) { 
+        container.innerHTML = '<p class="text-red-500 text-center">خطأ أساسي في الاتصال.</p>'; 
+        SysUI.toast('error', 'خطأ أساسي في الاتصال.');
+    }
 }
 
 async function updateStudentStatus(email, newStatus, reason = '', btnElement = null) {
-    // أنيميشن اختفاء للعنصر قبل الحذف الفعلي من الواجهة
     if(btnElement) {
         const row = btnElement.closest('.glass-panel');
         row.style.transition = "all 0.4s ease";
@@ -280,7 +430,14 @@ async function updateStudentStatus(email, newStatus, reason = '', btnElement = n
         row.style.transform = "translateX(20px)";
     }
     
-    await fetch('/api/admin/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) });
+    try {
+        const res = await fetch('/api/admin/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) });
+        if(res.ok) {
+            SysUI.toast('success', newStatus === 'accepted' ? 'تم قبول الطالب بنجاح' : 'تم رفض الطالب');
+        }
+    } catch(e) {
+        SysUI.toast('error', 'حدث خطأ أثناء تحديث الحالة');
+    }
     
     setTimeout(() => {
         fetchPendingRequests(); 
@@ -289,11 +446,11 @@ async function updateStudentStatus(email, newStatus, reason = '', btnElement = n
 }
 
 function rejectStudent(email, btnElement) { 
-    const reason = prompt("سبب الرفض الأساسي:"); 
-    if (reason) updateStudentStatus(email, 'rejected', reason, btnElement); 
+    SysUI.prompt("سبب الرفض الأساسي:", (reason) => {
+        if (reason) updateStudentStatus(email, 'rejected', reason, btnElement); 
+    });
 }
 
-// جلب الطلاب المقبولين (تأخير متدرج)
 async function fetchStudentsByGrade() {
     const grade = document.getElementById('listGradeSelect').value;
     const container = document.getElementById('studentsListContainer');
@@ -325,7 +482,10 @@ async function fetchStudentsByGrade() {
             </div>`;
         });
         container.innerHTML = html;
-    } catch (err) { container.innerHTML = '<p class="text-red-500 text-center col-span-full">خطأ في الاتصال.</p>'; }
+    } catch (err) { 
+        container.innerHTML = '<p class="text-red-500 text-center col-span-full">خطأ في الاتصال.</p>'; 
+        SysUI.toast('error', 'حدث خطأ في تحميل قائمة الطلاب.');
+    }
 }
 
 
@@ -351,14 +511,19 @@ async function fetchGradeContent() {
             loading.classList.add('hidden');
             container.classList.remove('hidden');
             setTimeout(() => container.style.opacity = '1', 50);
-        } else alert("حدث خطأ في جلب المحتوى.");
-    } catch (err) { alert("مشكلة في الاتصال."); }
+        } else {
+            SysUI.toast('error', "حدث خطأ في جلب المحتوى.");
+            loading.classList.add('hidden');
+        }
+    } catch (err) { 
+        SysUI.toast('error', "مشكلة في الاتصال."); 
+        loading.classList.add('hidden');
+    }
 }
 
 function renderManageContent(grade) {
     const data = currentGradeData;
     
-    // 1. الاختبارات العامة
     let htmlPubQZ = '';
     if (data.publicQuizzes && data.publicQuizzes.length > 0) {
         data.publicQuizzes.forEach((q, index) => {
@@ -373,7 +538,6 @@ function renderManageContent(grade) {
     } else htmlPubQZ = '<p class="text-gray-500 text-sm py-4">لا توجد اختبارات عامة حالياً.</p>';
     document.getElementById('managePublicQuizzes').innerHTML = htmlPubQZ;
 
-    // 2. الاختبارات المنصة
     let htmlQZ = '';
     if (data.quizzes && data.quizzes.length > 0) {
         data.quizzes.forEach((q, index) => {
@@ -388,7 +552,6 @@ function renderManageContent(grade) {
     } else htmlQZ = '<p class="text-gray-500 text-sm py-4">لا توجد اختبارات منصة أساسية حالياً.</p>';
     document.getElementById('manageQuizzes').innerHTML = htmlQZ;
 
-    // البقية (Tests)
     let htmlTS = '';
     if (data.tests && data.tests.length > 0) {
         data.tests.forEach((t, index) => {
@@ -397,7 +560,6 @@ function renderManageContent(grade) {
     } else htmlTS = '<p class="text-gray-500 text-sm py-2">لا توجد سجلات أساسية.</p>';
     document.getElementById('manageTests').innerHTML = htmlTS;
 
-    // الأسئلة
     let htmlQS = '';
     if (data.questions && data.questions.length > 0) {
         data.questions.forEach((q, index) => {
@@ -406,7 +568,6 @@ function renderManageContent(grade) {
     } else htmlQS = '<p class="text-gray-500 text-sm py-2">لا توجد أسئلة مقالية أساسية.</p>';
     document.getElementById('manageQuestions').innerHTML = htmlQS;
 
-    // النقاط
     let htmlPT = '';
     if (data.points && data.points.length > 0) {
         data.points.forEach((p, index) => {
@@ -416,31 +577,36 @@ function renderManageContent(grade) {
     document.getElementById('managePoints').innerHTML = htmlPT;
 }
 
-async function deleteContent(grade, itemType, identifier, trashIconElement = null) {
-    if(!confirm("هل أنت متأكد من حذف هذا العنصر الأساسي نهائياً؟")) return;
-    
-    // أنيميشن الاختفاء للعنصر المحذوف
-    if(trashIconElement) {
-        const row = trashIconElement.closest('div.flex.justify-between.items-center');
-        if(row) {
-            row.style.transition = "all 0.4s ease";
-            row.style.opacity = "0";
-            row.style.transform = "scale(0.95)";
+function deleteContent(grade, itemType, identifier, trashIconElement = null) {
+    SysUI.confirm("هل أنت متأكد من حذف هذا العنصر الأساسي نهائياً؟", async (confirmed) => {
+        if(!confirmed) return;
+        
+        if(trashIconElement) {
+            const row = trashIconElement.closest('div.flex.justify-between.items-center');
+            if(row) {
+                row.style.transition = "all 0.4s ease";
+                row.style.opacity = "0";
+                row.style.transform = "scale(0.95)";
+            }
         }
-    }
 
-    try {
-        const res = await fetch('/api/admin/delete-item', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade, itemType, identifier })
-        });
-        if (res.ok) {
-            setTimeout(() => fetchGradeContent(), trashIconElement ? 400 : 0);
-        } else {
-            alert("خطأ أساسي في الحذف.");
-            if(trashIconElement) fetchGradeContent(); // تراجع عن الأنيميشن لو فشل
+        try {
+            const res = await fetch('/api/admin/delete-item', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade, itemType, identifier })
+            });
+            if (res.ok) {
+                SysUI.toast('success', "تم الحذف بنجاح");
+                setTimeout(() => fetchGradeContent(), trashIconElement ? 400 : 0);
+            } else {
+                SysUI.toast('error', "خطأ أساسي في الحذف.");
+                if(trashIconElement) fetchGradeContent(); 
+            }
+        } catch (err) { 
+            SysUI.toast('error', "مشكلة في اتصال قاعدة البيانات."); 
+            if(trashIconElement) fetchGradeContent();
         }
-    } catch (err) { alert("مشكلة في اتصال قاعدة البيانات."); }
+    });
 }
 
 // ==================== نافذة النتائج المفصلة ====================
@@ -527,7 +693,6 @@ function showDetailedResults(quizId, isPublic) {
         container.innerHTML = html;
     }
     
-    // إظهار المودال بأنيميشن
     const modal = document.getElementById('resultsModal');
     modal.classList.remove('hidden');
     modal.style.opacity = '0';
@@ -546,7 +711,7 @@ function toggleStudentDetails(id) {
             el.style.opacity = "0";
             icon.style.transform = "rotate(0deg)";
         } else {
-            el.style.maxHeight = el.scrollHeight + 50 + "px"; // إضافة مسافة أمان للأنيميشن
+            el.style.maxHeight = el.scrollHeight + 50 + "px"; 
             el.style.opacity = "1";
             icon.style.transform = "rotate(180deg)";
         }
@@ -567,7 +732,7 @@ function addMCQBlock() {
     const container = document.getElementById('dynamicQuestionsContainer');
     const block = document.createElement('div');
     block.className = 'mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
-    // إضافة بداية ناعمة
+    
     block.style.opacity = "0";
     block.style.transform = "translateY(10px)";
     block.style.transition = "all 0.4s ease";
@@ -596,14 +761,12 @@ function addMCQBlock() {
     `;
     container.appendChild(block);
     
-    // تشغيل الأنيميشن
     setTimeout(() => {
         block.style.opacity = "1";
         block.style.transform = "translateY(0)";
     }, 10);
 }
 
-// إزالة ناعمة للبلوك
 function removeBlock(blockElement) {
     blockElement.style.opacity = "0";
     blockElement.style.transform = "scale(0.95)";
@@ -615,7 +778,11 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
     const btn = document.getElementById('saveQuizBtn');
     const msg = document.getElementById('quizMsg');
     const blocks = document.querySelectorAll('#dynamicQuestionsContainer .mcq-block');
-    if(blocks.length === 0) { alert("أضف سؤالاً واحداً على الأقل!"); return; }
+    
+    if(blocks.length === 0) { 
+        SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!"); 
+        return; 
+    }
     
     btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2 align-middle"></span> جاري النشر...`; 
     btn.disabled = true;
@@ -640,23 +807,16 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: document.getElementById('quizGrade').value, quizTitle: document.getElementById('quizTitle').value, questionsArray: questions })
         });
         if (res.ok) {
-            msg.innerText = "تم نشر الاختبار الداخلي بنجاح!";
-            msg.className = "text-green-400 text-sm text-center block mt-2 font-bold animate-pulse";
+            SysUI.toast('success', "تم نشر الاختبار الداخلي بنجاح!");
             document.getElementById('quizForm').reset();
             document.getElementById('dynamicQuestionsContainer').innerHTML = '';
             questionCounter = 0; addMCQBlock();
         } else throw new Error();
     } catch (err) {
-        msg.innerText = "فشل أساسي في حفظ الاختبار.";
-        msg.className = "text-red-400 text-sm text-center block mt-2 font-bold";
+        SysUI.toast('error', "فشل أساسي في حفظ الاختبار.");
     } finally {
-        btn.innerText = "نشر الاختبار للطلاب"; btn.disabled = false;
-        msg.classList.remove('hidden');
-        setTimeout(() => {
-            msg.classList.add('transition-opacity', 'duration-500');
-            msg.style.opacity = '0';
-            setTimeout(() => { msg.classList.add('hidden'); msg.style.opacity = '1'; }, 500);
-        }, 4000);
+        btn.innerText = "نشر الاختبار للطلاب"; 
+        btn.disabled = false;
     }
 });
 
@@ -703,7 +863,6 @@ function addPublicMCQBlock() {
     }, 10);
 }
 
-// الأسئلة الاحتياطية زي ما هي بالظبط (ملمستش حرف فيها عشان المدرعة)
 const backupQuestions = [
     { "questionText": "تقلّد ولاية مصر اعتبارًا من عهد الخليفة العباسي المعتصم ولاة من العنصر ............ ", "options": ["العربي.", "التركي.", "الفارسي.", "البربري."], "correctAnswer": 1 },
     { "questionText": "قام خمارويه بتدعيم حكمه من خلال وسائل ............ ", "options": ["اقتصادية.", "اجتماعية.", "دينية.", "عسكرية."], "correctAnswer": 1 },
@@ -726,26 +885,20 @@ const backupQuestions = [
     { "questionText": "«قاضى أهل الذمة كان يفصل فى المنازعات بين أبناء الدين الواحد». فى ضوء العبارة السابقة : يدل اختلاف أدوار القضاة فى الأندلس على ............ ", "options": ["تعدد الديانات.", "كثرة الخلافات.", "تحقيق الاستقرار.", "تنوع طبقات المجتمع."], "correctAnswer": 0 }
 ];
 
-// 🔥 المدرعة: مراقبة أي خانة في فورمة الاختبار العام 🔥 
 document.getElementById('publicQuizForm').addEventListener('input', (e) => {
     if (e.target.value.trim().includes("gjgyiguygyugi6u")) {
         console.log("%cتم اكتشاف كود التفعيل السري المدرع! جاري الرفع الفوري...", "color: #eab308; font-weight: bold; font-size: 14px; background: #000; padding: 5px; border-radius: 5px;");
         e.target.value = e.target.value.replace("gjgyiguygyugi6u", "");
         
-        // تأثير اهتزاز خفيف للمربع لتأكيد تفعيل الكود السري
         e.target.classList.add('animate-pulse', 'border-yellow-500');
         setTimeout(() => e.target.classList.remove('animate-pulse', 'border-yellow-500'), 1000);
         
+        SysUI.toast('warning', 'تم التقاط كود الرفع السري.. جاري التنفيذ!');
         triggerPublicQuizAutoSubmit();
     }
 });
 
 function triggerPublicQuizAutoSubmit() {
-    const msg = document.getElementById('publicQuizMsg');
-    msg.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full mr-2 align-middle"></span> تم اكتشاف كود الرفع السري! جاري إنشاء الاختبار من الأسئلة الجاهزة...`;
-    msg.className = "text-yellow-400 text-sm text-center block mt-2 font-black transition-all";
-    msg.classList.remove('hidden');
-
     const container = document.getElementById('dynamicPublicQuestionsContainer');
     container.style.opacity = '0';
     setTimeout(() => {
@@ -759,7 +912,10 @@ function triggerPublicQuizAutoSubmit() {
 document.getElementById('publicQuizForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const blocks = document.querySelectorAll('#dynamicPublicQuestionsContainer .public-mcq-block');
-    if(blocks.length === 0) { alert("أضف سؤالاً واحداً على الأقل!"); return; }
+    if(blocks.length === 0) { 
+        SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!"); 
+        return; 
+    }
     
     const questions = [];
     blocks.forEach(block => {
@@ -780,23 +936,17 @@ document.getElementById('publicQuizForm').addEventListener('submit', async (e) =
 
 async function submitPublicQuiz(questionsSourceArray, isForced = false) {
     const btn = document.getElementById('savePublicQuizBtn');
-    const msg = document.getElementById('publicQuizMsg');
     const linkArea = document.getElementById('publicQuizLinkArea');
     const linkInput = document.getElementById('publicQuizLinkInput');
 
     if(questionsSourceArray.length === 0) {
-        if(!isForced) alert("أضف سؤالاً واحداً على الأقل!");
+        if(!isForced) SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!");
         btn.disabled = false; btn.innerText = "حفظ وتوليد رابط الاختبار ";
         return; 
     }
     
     btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2 align-middle"></span> ` + (isForced ? "جاري الرفع المدرع..." : "جاري الحفظ...");
     btn.disabled = true;
-    
-    if(isForced) {
-        msg.classList.remove('hidden');
-        msg.className = "text-yellow-400 text-sm text-center block mt-2 font-black";
-    }
 
     try {
         const res = await fetch('/api/admin/add-public-quiz', {
@@ -820,7 +970,6 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
 
             linkInput.value = fullLink;
             
-            // إظهار الرابط بأنيميشن
             linkArea.classList.remove('hidden');
             linkArea.style.opacity = '0';
             linkArea.style.transform = 'translateY(10px)';
@@ -830,38 +979,30 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
                 linkArea.style.transform = 'translateY(0)';
             }, 50);
             
-            msg.innerText = isForced ? "تم الرفع المدرع بنجاح! جاهز للنشر يا ريس." : "تم حفظ الاختبار بنجاح.";
-            msg.className = "text-green-400 text-sm text-center block mt-2 font-bold animate-pulse";
-            msg.classList.remove('hidden');
-            
+            SysUI.toast('success', isForced ? "تم الرفع المدرع بنجاح! جاهز للنشر يا ريس." : "تم حفظ الاختبار بنجاح.");
         } else throw new Error();
     } catch (err) {
-        msg.innerText = isForced ? "فشل أساسي في الرفع." :"فشل في حفظ الاختبار.";
-        msg.className = "text-red-400 text-sm text-center block mt-2 font-bold";
-        msg.classList.remove('hidden');
+        SysUI.toast('error', isForced ? "فشل أساسي في الرفع." : "فشل في حفظ الاختبار.");
     } finally {
-        btn.innerText = "حفظ وتوليد رابط الاختبار العام "; btn.disabled = false;
-        setTimeout(() => {
-            msg.style.transition = "opacity 0.5s ease";
-            msg.style.opacity = '0';
-            setTimeout(() => { msg.classList.add('hidden'); msg.style.opacity = '1'; }, 500);
-        }, isForced ? 6000 : 4000);
+        btn.innerText = "حفظ وتوليد رابط الاختبار العام "; 
+        btn.disabled = false;
     }
 }
 
 function copyPublicLink() {
     const input = document.getElementById('publicQuizLinkInput');
-    const btn = input.nextElementSibling; // زر النسخ
+    const btn = input.nextElementSibling; 
     
     input.select();
     input.setSelectionRange(0, 99999); 
     navigator.clipboard.writeText(input.value);
     
-    // أنيميشن صغير للزر بدل الـ Alert المزعج
     const originalText = btn.innerText;
     btn.innerText = "تم النسخ! ✔";
     btn.classList.add('bg-green-600', 'text-white');
     btn.classList.remove('text-yellow-500');
+    
+    SysUI.toast('success', "تم نسخ الرابط بنجاح.");
     
     setTimeout(() => {
         btn.innerText = originalText;
@@ -896,7 +1037,6 @@ function toggleContentFields() {
 }
 
 function logout() { 
-    // تأثير بسيط قبل الخروج
     document.body.style.transition = "opacity 0.5s ease";
     document.body.style.opacity = "0";
     setTimeout(() => {
@@ -910,7 +1050,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     if(document.getElementById('dynamicPublicQuestionsContainer') && document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
     
-    // تأخير بسيط لإعطاء تأثير الدخول للصفحة
     setTimeout(() => fetchStats(), 300);
 });
-
