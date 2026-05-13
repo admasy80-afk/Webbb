@@ -14,7 +14,7 @@ const SysUI = {
         if(!document.getElementById('sys-modal-container')) {
             const mCont = document.createElement('div');
             mCont.id = 'sys-modal-container';
-            mCont.className = 'fixed inset-0 z-[10000] hidden items-center justify-center pointer-events-none';
+            mCont.className = 'fixed inset-0 z-[10000] hidden items-center justify-center pointer-events-none px-4';
             document.body.appendChild(mCont);
         }
     },
@@ -26,17 +26,17 @@ const SysUI = {
         let bgClass, iconHtml;
         if(type === 'success') {
             bgClass = 'bg-[#0f291e] border-green-500/50 text-green-100 shadow-[0_0_20px_rgba(34,197,94,0.2)]';
-            iconHtml = `<svg class="w-7 h-7 text-green-400 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)] transition-transform duration-500 scale-0 animate-[toastIconPop_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            iconHtml = `<svg class="w-7 h-7 text-green-400 shrink-0 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)] transition-transform duration-500 scale-0 animate-[toastIconPop_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
         } else if(type === 'error') {
             bgClass = 'bg-[#3b0a0a] border-red-500/50 text-red-100 shadow-[0_0_20px_rgba(239,68,68,0.2)]';
-            iconHtml = `<svg class="w-7 h-7 text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-transform duration-500 scale-0 animate-[toastIconShake_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            iconHtml = `<svg class="w-7 h-7 text-red-400 shrink-0 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)] transition-transform duration-500 scale-0 animate-[toastIconShake_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
         } else {
             bgClass = 'bg-[#422006] border-yellow-500/50 text-yellow-100 shadow-[0_0_20px_rgba(234,179,8,0.2)]';
-            iconHtml = `<svg class="w-7 h-7 text-yellow-400 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)] transition-transform duration-500 scale-0 animate-[toastIconPop_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            iconHtml = `<svg class="w-7 h-7 text-yellow-400 shrink-0 drop-shadow-[0_0_8px_rgba(234,179,8,0.8)] transition-transform duration-500 scale-0 animate-[toastIconPop_0.5s_ease-out_forwards]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
         }
 
-        toast.className = `flex items-center gap-4 px-5 py-3.5 rounded-2xl border ${bgClass} backdrop-blur-xl transform -translate-y-10 opacity-0 transition-all duration-500 pointer-events-auto`;
-        toast.innerHTML = `${iconHtml} <span class="font-bold text-sm tracking-wide drop-shadow-md">${message}</span>`;
+        toast.className = `flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-3.5 rounded-2xl border ${bgClass} backdrop-blur-xl transform -translate-y-10 opacity-0 transition-all duration-500 pointer-events-auto w-full`;
+        toast.innerHTML = `${iconHtml} <span class="font-bold text-xs sm:text-sm tracking-wide drop-shadow-md">${message}</span>`;
         
         if(!document.getElementById('sys-toast-styles')) {
             const style = document.createElement('style');
@@ -66,16 +66,16 @@ const SysUI = {
         const container = document.getElementById('sys-modal-container');
         container.innerHTML = `
             <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 opacity-0" id="sys-modal-bg"></div>
-            <div class="relative bg-gradient-to-b from-gray-900 to-black border border-white/10 p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-sm mx-4 pointer-events-auto" id="sys-modal-box">
-                <div class="flex items-center gap-4 mb-6">
+            <div class="relative bg-gradient-to-b from-gray-900 to-black border border-white/10 p-5 sm:p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-sm mx-auto pointer-events-auto" id="sys-modal-box">
+                <div class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-right gap-4 mb-6">
                     <div class="w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center shrink-0 border border-red-500/20">
                         <svg class="w-7 h-7 text-red-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </div>
-                    <p class="text-white font-bold text-base leading-relaxed">${message}</p>
+                    <p class="text-white font-bold text-sm sm:text-base leading-relaxed mt-2 sm:mt-0">${message}</p>
                 </div>
-                <div class="flex gap-3 justify-end">
-                    <button id="sys-modal-cancel" class="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors text-sm font-bold">إلغاء</button>
-                    <button id="sys-modal-confirm" class="px-5 py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 transition-colors text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]">تأكيد الحذف</button>
+                <div class="flex flex-col sm:flex-row gap-3 justify-end">
+                    <button id="sys-modal-cancel" class="px-5 py-3 sm:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors text-sm font-bold w-full sm:w-auto">إلغاء</button>
+                    <button id="sys-modal-confirm" class="px-5 py-3 sm:py-2.5 rounded-xl bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-500/30 transition-colors text-sm font-bold shadow-[0_0_15px_rgba(239,68,68,0.2)] hover:shadow-[0_0_20px_rgba(239,68,68,0.4)] w-full sm:w-auto">تأكيد الحذف</button>
                 </div>
             </div>
         `;
@@ -111,15 +111,15 @@ const SysUI = {
         const container = document.getElementById('sys-modal-container');
         container.innerHTML = `
             <div class="absolute inset-0 bg-black/70 backdrop-blur-sm transition-opacity duration-300 opacity-0" id="sys-modal-bg"></div>
-            <div class="relative bg-gradient-to-b from-gray-900 to-black border border-white/10 p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-sm mx-4 pointer-events-auto" id="sys-modal-box">
-                <h3 class="text-white font-bold text-lg mb-4 flex items-center gap-3">
-                    <svg class="w-6 h-6 text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div class="relative bg-gradient-to-b from-gray-900 to-black border border-white/10 p-5 sm:p-6 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-sm mx-auto pointer-events-auto" id="sys-modal-box">
+                <h3 class="text-white font-bold text-base sm:text-lg mb-4 flex items-center gap-3">
+                    <svg class="w-6 h-6 text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     ${message}
                 </h3>
-                <input type="text" id="sys-modal-input" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3.5 text-white outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-all mb-6 text-sm placeholder-gray-600" placeholder="اكتب هنا (اختياري)...">
-                <div class="flex gap-3 justify-end">
-                    <button id="sys-modal-cancel" class="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors text-sm font-bold">إلغاء</button>
-                    <button id="sys-modal-submit" class="px-5 py-2.5 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-colors text-sm font-bold">تأكيد التنفيذ</button>
+                <input type="text" id="sys-modal-input" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3.5 sm:py-3 text-white outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-all mb-6 text-sm placeholder-gray-600" placeholder="اكتب هنا (اختياري)...">
+                <div class="flex flex-col sm:flex-row gap-3 justify-end">
+                    <button id="sys-modal-cancel" class="px-5 py-3 sm:py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors text-sm font-bold w-full sm:w-auto">إلغاء</button>
+                    <button id="sys-modal-submit" class="px-5 py-3 sm:py-2.5 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-colors text-sm font-bold w-full sm:w-auto">تأكيد التنفيذ</button>
                 </div>
             </div>
         `;
@@ -155,10 +155,8 @@ const SysUI = {
         input.addEventListener('keypress', (e) => { if(e.key === 'Enter') close(true); });
     },
     
-    // أنيميشن الاحتفال المُصلح (لا يسبب Scroll أو تشوه)
     confetti() {
         const wrap = document.createElement('div');
-        // تأمين كامل لمنع أي Scrollbars وحصر الاحتفال داخل الشاشة فقط
         wrap.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 99999; overflow: hidden;';
         document.body.appendChild(wrap);
         
@@ -171,16 +169,15 @@ const SysUI = {
             conf.style.height = (Math.random() * 16 + 6) + 'px';
             conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
             
-            // البداية من أعلى الشاشة وتوزيع عشوائي بالعرض
             conf.style.left = (Math.random() * 100) + 'vw';
             conf.style.top = '-20px';
             
             wrap.appendChild(conf);
             
-            const tx = (Math.random() - 0.5) * 150; // حركة يمين/يسار خفيفة
-            const ty = window.innerHeight + 50; // السقوط لأسفل الشاشة
-            const rot = Math.random() * 720; // دوران
-            const duration = Math.random() * 2 + 2; // من ثانيتين لـ 4 ثواني للسقوط بنعومة
+            const tx = (Math.random() - 0.5) * 150; 
+            const ty = window.innerHeight + 50; 
+            const rot = Math.random() * 720; 
+            const duration = Math.random() * 2 + 2; 
             
             conf.animate([
                 { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
@@ -192,7 +189,6 @@ const SysUI = {
             });
         }
         
-        // مسح الحاوية بعد 5 ثوانٍ لعدم استهلاك الرامات
         setTimeout(() => wrap.remove(), 5000);
     }
 };
@@ -228,7 +224,7 @@ const DraftSystem = {
         if(!saveIndicator) {
             saveIndicator = document.createElement('div');
             saveIndicator.id = 'save-indicator';
-            saveIndicator.className = 'fixed bottom-5 left-5 text-gray-500 text-xs flex items-center gap-2 transition-opacity duration-500 opacity-0 bg-black/80 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-md z-40 shadow-lg';
+            saveIndicator.className = 'fixed bottom-5 left-1/2 sm:left-5 -translate-x-1/2 sm:-translate-x-0 text-gray-500 text-xs flex items-center gap-2 transition-opacity duration-500 opacity-0 bg-black/90 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-md z-40 shadow-lg';
             saveIndicator.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم الحفظ مسودة`;
             document.body.appendChild(saveIndicator);
         }
@@ -518,9 +514,9 @@ async function fetchPendingRequests() {
                     <h4 class="font-bold text-white">${fullName}</h4>
                     <p class="text-xs text-gray-400 mt-1">${st.email} | ${st.grade}</p>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="updateStudentStatus('${st.email}', 'accepted', '', this)" class="bg-green-500/10 text-green-400 px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-500/20 transition-all active:scale-95">قبول</button>
-                    <button onclick="rejectStudent('${st.email}', this)" class="bg-red-500/10 text-red-400 px-4 py-2 rounded-lg text-sm font-bold hover:bg-red-500/20 transition-all active:scale-95">رفض</button>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button onclick="updateStudentStatus('${st.email}', 'accepted', '', this)" class="w-full md:w-auto bg-green-500/10 text-green-400 px-4 py-2.5 md:py-2 rounded-lg text-sm font-bold hover:bg-green-500/20 transition-all active:scale-95">قبول</button>
+                    <button onclick="rejectStudent('${st.email}', this)" class="w-full md:w-auto bg-red-500/10 text-red-400 px-4 py-2.5 md:py-2 rounded-lg text-sm font-bold hover:bg-red-500/20 transition-all active:scale-95">رفض</button>
                 </div>
             </div>`;
         });
@@ -638,11 +634,11 @@ function renderManageContent(grade) {
     let htmlPubQZ = '';
     if (data.publicQuizzes && data.publicQuizzes.length > 0) {
         data.publicQuizzes.forEach((q, index) => {
-            htmlPubQZ += `<div id="pubQz-${q.id}" class="bg-yellow-900/10 border border-yellow-500/20 p-4 rounded-xl flex justify-between items-center group animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.06}s;">
-                <div class="truncate"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-yellow-300 mt-1">الردود: ${q.results ? q.results.length : 0} | عام (برابط)</p></div>
-                <div class="flex gap-4 items-center shrink-0">
-                    <button onclick="showDetailedResults('${q.id}', true)" class="bg-yellow-600/20 text-yellow-500 px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-bold hover:bg-yellow-600 hover:text-black transition-all active:scale-95">النتائج</button>
-                    <div onclick="deleteContent('${grade}', 'publicQuiz', '${q.id}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div>
+            htmlPubQZ += `<div id="pubQz-${q.id}" class="bg-yellow-900/10 border border-yellow-500/20 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.06}s;">
+                <div class="truncate w-full sm:w-auto"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-yellow-300 mt-1">الردود: ${q.results ? q.results.length : 0} | عام (برابط)</p></div>
+                <div class="flex gap-4 items-center shrink-0 w-full sm:w-auto justify-end mt-2 sm:mt-0">
+                    <button onclick="showDetailedResults('${q.id}', true)" class="bg-yellow-600/20 text-yellow-500 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-600 hover:text-black transition-all active:scale-95 w-full sm:w-auto">النتائج</button>
+                    <div onclick="deleteContent('${grade}', 'publicQuiz', '${q.id}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-2">${trashSVG}</div>
                 </div>
             </div>`;
         });
@@ -652,11 +648,11 @@ function renderManageContent(grade) {
     let htmlQZ = '';
     if (data.quizzes && data.quizzes.length > 0) {
         data.quizzes.forEach((q, index) => {
-            htmlQZ += `<div id="qz-${q.id}" class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center group animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.06}s;">
-                <div class="truncate"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-gray-500 mt-1">المجيبين: ${q.results ? q.results.length : 0}</p></div>
-                <div class="flex gap-4 items-center shrink-0">
-                    <button onclick="showDetailedResults('${q.id}', false)" class="bg-white/10 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-bold hover:bg-white hover:text-black transition-all active:scale-95">عرض النتائج</button>
-                    <div onclick="deleteContent('${grade}', 'quiz', '${q.id}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div>
+            htmlQZ += `<div id="qz-${q.id}" class="bg-black/30 border border-white/5 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 group animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.06}s;">
+                <div class="truncate w-full sm:w-auto"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-gray-500 mt-1">المجيبين: ${q.results ? q.results.length : 0}</p></div>
+                <div class="flex gap-4 items-center shrink-0 w-full sm:w-auto justify-end mt-2 sm:mt-0">
+                    <button onclick="showDetailedResults('${q.id}', false)" class="bg-white/10 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-white hover:text-black transition-all active:scale-95 w-full sm:w-auto">عرض النتائج</button>
+                    <div onclick="deleteContent('${grade}', 'quiz', '${q.id}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-2">${trashSVG}</div>
                 </div>
             </div>`;
         });
@@ -666,7 +662,7 @@ function renderManageContent(grade) {
     let htmlTS = '';
     if (data.tests && data.tests.length > 0) {
         data.tests.forEach((t, index) => {
-            htmlTS += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.04}s;"><p class="font-bold text-white truncate">${t.testName}</p><div onclick="deleteContent('${grade}', 'test', '${t.testName}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div></div>`;
+            htmlTS += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.04}s;"><p class="font-bold text-white truncate">${t.testName}</p><div onclick="deleteContent('${grade}', 'test', '${t.testName}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-2">${trashSVG}</div></div>`;
         });
     } else htmlTS = '<p class="text-gray-500 text-sm py-2">لا توجد سجلات أساسية.</p>';
     document.getElementById('manageTests').innerHTML = htmlTS;
@@ -674,7 +670,7 @@ function renderManageContent(grade) {
     let htmlQS = '';
     if (data.questions && data.questions.length > 0) {
         data.questions.forEach((q, index) => {
-            htmlQS += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4 animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.04}s;"><p class="text-white text-sm truncate">${q.question}</p><div onclick="deleteContent('${grade}', 'question', '${q.question}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div></div>`;
+            htmlQS += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4 animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.04}s;"><p class="text-white text-sm truncate">${q.question}</p><div onclick="deleteContent('${grade}', 'question', '${q.question}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-2">${trashSVG}</div></div>`;
         });
     } else htmlQS = '<p class="text-gray-500 text-sm py-2">لا توجد أسئلة مقالية أساسية.</p>';
     document.getElementById('manageQuestions').innerHTML = htmlQS;
@@ -682,7 +678,7 @@ function renderManageContent(grade) {
     let htmlPT = '';
     if (data.points && data.points.length > 0) {
         data.points.forEach((p, index) => {
-            htmlPT += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4 animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.04}s;"><p class="text-gray-300 text-sm truncate">${p}</p><div onclick="deleteContent('${grade}', 'point', '${p}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div></div>`;
+            htmlPT += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center gap-4 animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.04}s;"><p class="text-gray-300 text-sm truncate">${p}</p><div onclick="deleteContent('${grade}', 'point', '${p}', this)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-2">${trashSVG}</div></div>`;
         });
     } else htmlPT = '<p class="text-gray-500 text-sm py-2">لا توجد نقاط أساسية.</p>';
     document.getElementById('managePoints').innerHTML = htmlPT;
@@ -741,15 +737,15 @@ function showDetailedResults(quizId, isPublic) {
             
             html += `
             <div class="bg-black/40 rounded-xl border ${borderColor} mb-3 overflow-hidden animate-fade-in-up transition-all hover:bg-black/60" style="animation-fill-mode: both; animation-delay: ${index * 0.05}s;">
-                <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-white/5 transition-colors" onclick="toggleStudentDetails('detail-${index}')">
-                    <div class="flex items-center gap-4 truncate">
+                <div class="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer hover:bg-white/5 transition-colors gap-4" onclick="toggleStudentDetails('detail-${index}')">
+                    <div class="flex items-center gap-4 w-full sm:w-auto truncate">
                         <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center font-bold text-white shrink-0 shadow-inner">${index + 1}</div>
                         <div class="truncate">
                             <p class="font-bold text-white text-sm md:text-base truncate">${res.studentName || 'طالب غير معروف'}</p>
                             <p class="text-xs text-gray-500 mt-1 truncate">${res.email || ''} ${res.visitorId ? ' | <span class="text-yellow-500" title="بصمة الجهاز">تم التحقق</span>' : ''}</p>
                         </div>
                     </div>
-                    <div class="text-left flex items-center gap-4 shrink-0">
+                    <div class="text-left flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto shrink-0 border-t border-white/5 sm:border-none pt-2 sm:pt-0">
                         <div class="text-center">
                             <p class="font-black text-xl md:text-2xl ${color}">${res.percentage || 0}%</p>
                             <p class="text-[10px] text-gray-400">${res.score} / ${quiz.questions.length}</p>
@@ -758,7 +754,7 @@ function showDetailedResults(quizId, isPublic) {
                     </div>
                 </div>
                 
-                <div id="detail-${index}" class="student-details bg-black/60 px-5 pb-5 max-h-0 overflow-hidden transition-all duration-500 ease-in-out opacity-0">
+                <div id="detail-${index}" class="student-details bg-black/60 px-3 sm:px-5 pb-5 max-h-0 overflow-hidden transition-all duration-500 ease-in-out opacity-0">
                     <h4 class="text-white font-bold text-sm mb-4 border-b border-white/10 pb-2 mt-2">مراجعة الإجابات:</h4>
                     <div class="space-y-4">`;
 
@@ -769,8 +765,8 @@ function showDetailedResults(quizId, isPublic) {
                     const isCorrect = sAns === cAns;
                     
                     html += `
-                        <div class="bg-black/50 p-4 rounded-xl border ${isCorrect ? 'border-green-500/20' : 'border-red-500/20'} transition-all hover:scale-[1.01]">
-                            <p class="text-sm font-semibold text-gray-200 mb-3">${qIdx + 1}. ${q.questionText}</p>
+                        <div class="bg-black/50 p-3 sm:p-4 rounded-xl border ${isCorrect ? 'border-green-500/20' : 'border-red-500/20'} transition-all hover:scale-[1.01]">
+                            <p class="text-sm font-semibold text-gray-200 mb-3 leading-relaxed">${qIdx + 1}. ${q.questionText}</p>
                             <div class="space-y-2 text-xs md:text-sm">`;
                     
                     q.options.forEach((opt, optIdx) => {
@@ -778,17 +774,17 @@ function showDetailedResults(quizId, isPublic) {
                         let optIcon = "○";
                         
                         if (optIdx === sAns && !isCorrect) {
-                            optStyle = "text-red-400 font-bold bg-red-500/10 px-2 py-1 rounded border border-red-500/20";
+                            optStyle = "text-red-400 font-bold bg-red-500/10 px-2 py-1.5 rounded border border-red-500/20";
                             optIcon = "❌";
                         } else if (optIdx === cAns) {
-                            optStyle = "text-green-400 font-bold bg-green-500/10 px-2 py-1 rounded border border-green-500/20";
+                            optStyle = "text-green-400 font-bold bg-green-500/10 px-2 py-1.5 rounded border border-green-500/20";
                             optIcon = "✅";
                         } else if (optIdx === sAns && isCorrect) {
-                            optStyle = "text-green-400 font-bold bg-green-500/10 px-2 py-1 rounded border border-green-500/20";
+                            optStyle = "text-green-400 font-bold bg-green-500/10 px-2 py-1.5 rounded border border-green-500/20";
                             optIcon = "✅ (إجابة الطالب)";
                         }
 
-                        html += `<div class="${optStyle} flex items-center gap-2"><span class="w-4 flex-shrink-0 text-center text-base">${optIcon}</span> <span class="leading-relaxed">${opt}</span></div>`;
+                        html += `<div class="${optStyle} flex items-center gap-2"><span class="w-5 flex-shrink-0 text-center text-base">${optIcon}</span> <span class="leading-relaxed break-words">${opt}</span></div>`;
                     });
                     
                     html += `</div></div>`;
@@ -821,7 +817,7 @@ function toggleStudentDetails(id) {
             el.style.opacity = "0";
             icon.style.transform = "rotate(0deg)";
         } else {
-            el.style.maxHeight = el.scrollHeight + 50 + "px"; 
+            el.style.maxHeight = el.scrollHeight + 100 + "px"; 
             el.style.opacity = "1";
             icon.style.transform = "rotate(180deg)";
         }
@@ -849,8 +845,9 @@ function addMCQBlock() {
     questionCounter++;
     const container = document.getElementById('dynamicQuestionsContainer');
     const block = document.createElement('div');
-    block.className = 'mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)] cursor-move';
-    block.draggable = true; 
+    block.className = 'mcq-block glass-panel p-4 sm:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
+    // لا نحتاج لـ draggable="true" على الموبايل لأنه يتطلب Polyfills معقدة، لكن على الكمبيوتر سيعمل بالـ Mouse Events
+    block.draggable = window.innerWidth > 768; 
     
     block.style.opacity = "0";
     block.style.transform = "translateY(10px)";
@@ -858,22 +855,22 @@ function addMCQBlock() {
 
     block.innerHTML = `
         <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-            <h3 class="text-lg font-bold text-yellow-500 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+            <h3 class="text-base sm:text-lg font-bold text-yellow-500 flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
                 السؤال رقم <span class="q-number">${questionCounter}</span>
             </h3>
-            <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div>
+            <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-1 sm:p-0">${trashSVG}</div>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال الأساسي هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثالث" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الرابع" required></div>
+        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 sm:py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال الأساسي هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-3 mb-4">
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول" required></div>
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني" required></div>
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثالث" required></div>
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الرابع" required></div>
         </div>
-        <div class="bg-green-500/10 border border-green-500/20 p-3 md:p-4 rounded-xl flex items-center gap-3">
-            <label class="text-sm font-bold text-green-400 whitespace-nowrap">الإجابة الصحيحة:</label>
-            <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm">
+        <div class="bg-green-500/10 border border-green-500/20 p-3 sm:p-4 rounded-xl flex items-center gap-3">
+            <label class="text-sm font-bold text-green-400 whitespace-nowrap shrink-0">الإجابة الصحيحة:</label>
+            <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm py-1">
                 <option value="0" class="bg-gray-900">أ</option>
                 <option value="1" class="bg-gray-900">ب</option>
                 <option value="2" class="bg-gray-900">ج</option>
@@ -901,35 +898,37 @@ function addMCQBlock() {
         }
     });
 
-    block.addEventListener('dragstart', function(e) {
-        this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
-        e.dataTransfer.effectAllowed = 'move';
-        window.draggedBlock = this;
-    });
-    block.addEventListener('dragover', function(e) {
-        e.preventDefault(); 
-        e.dataTransfer.dropEffect = 'move';
-        if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
-    });
-    block.addEventListener('dragleave', function(e) {
-        this.classList.remove('border-yellow-500', 'bg-white/5');
-    });
-    block.addEventListener('drop', function(e) {
-        e.preventDefault();
-        this.classList.remove('border-yellow-500', 'bg-white/5');
-        if (window.draggedBlock && window.draggedBlock !== this) {
-            const allBlocks = [...container.querySelectorAll('.mcq-block')];
-            const draggedIndex = allBlocks.indexOf(window.draggedBlock);
-            const droppedIndex = allBlocks.indexOf(this);
-            if(draggedIndex < droppedIndex) this.parentNode.insertBefore(window.draggedBlock, this.nextSibling);
-            else this.parentNode.insertBefore(window.draggedBlock, this);
-            updateQuestionNumbers(container); 
-        }
-    });
-    block.addEventListener('dragend', function(e) {
-        this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
-        window.draggedBlock = null;
-    });
+    if (window.innerWidth > 768) {
+        block.addEventListener('dragstart', function(e) {
+            this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
+            e.dataTransfer.effectAllowed = 'move';
+            window.draggedBlock = this;
+        });
+        block.addEventListener('dragover', function(e) {
+            e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move';
+            if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
+        });
+        block.addEventListener('dragleave', function(e) {
+            this.classList.remove('border-yellow-500', 'bg-white/5');
+        });
+        block.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-yellow-500', 'bg-white/5');
+            if (window.draggedBlock && window.draggedBlock !== this) {
+                const allBlocks = [...container.querySelectorAll('.mcq-block')];
+                const draggedIndex = allBlocks.indexOf(window.draggedBlock);
+                const droppedIndex = allBlocks.indexOf(this);
+                if(draggedIndex < droppedIndex) this.parentNode.insertBefore(window.draggedBlock, this.nextSibling);
+                else this.parentNode.insertBefore(window.draggedBlock, this);
+                updateQuestionNumbers(container); 
+            }
+        });
+        block.addEventListener('dragend', function(e) {
+            this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
+            window.draggedBlock = null;
+        });
+    }
 
     container.appendChild(block);
     setTimeout(() => {
@@ -1003,8 +1002,8 @@ function addPublicMCQBlock() {
     publicQuestionCounter++;
     const container = document.getElementById('dynamicPublicQuestionsContainer');
     const block = document.createElement('div');
-    block.className = 'public-mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)] cursor-move';
-    block.draggable = true;
+    block.className = 'public-mcq-block glass-panel p-4 sm:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
+    block.draggable = window.innerWidth > 768;
     
     block.style.opacity = "0";
     block.style.transform = "translateY(10px)";
@@ -1012,22 +1011,22 @@ function addPublicMCQBlock() {
 
     block.innerHTML = `
         <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-            <h3 class="text-lg font-bold text-yellow-500 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+            <h3 class="text-base sm:text-lg font-bold text-yellow-500 flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
                 السؤال العام رقم <span class="q-number">${publicQuestionCounter}</span>
             </h3>
-            <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div>
+            <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-1 sm:p-0">${trashSVG}</div>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال العام هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول العام" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني العام" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثالث العام" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الرابع العام" required></div>
+        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 sm:py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال العام هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-3 mb-4">
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول العام" required></div>
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني العام" required></div>
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثالث العام" required></div>
+            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الرابع العام" required></div>
         </div>
-        <div class="bg-green-500/10 border border-green-500/20 p-3 md:p-4 rounded-xl flex items-center gap-3">
-            <label class="text-sm font-bold text-green-400 whitespace-nowrap">الإجابة الصحيحة العامة:</label>
-            <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm">
+        <div class="bg-green-500/10 border border-green-500/20 p-3 sm:p-4 rounded-xl flex items-center gap-3">
+            <label class="text-sm font-bold text-green-400 whitespace-nowrap shrink-0">الإجابة الصحيحة العامة:</label>
+            <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm py-1">
                 <option value="0" class="bg-gray-900">أ</option>
                 <option value="1" class="bg-gray-900">ب</option>
                 <option value="2" class="bg-gray-900">ج</option>
@@ -1055,35 +1054,37 @@ function addPublicMCQBlock() {
         }
     });
 
-    block.addEventListener('dragstart', function(e) {
-        this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
-        e.dataTransfer.effectAllowed = 'move';
-        window.draggedBlock = this;
-    });
-    block.addEventListener('dragover', function(e) {
-        e.preventDefault(); 
-        e.dataTransfer.dropEffect = 'move';
-        if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
-    });
-    block.addEventListener('dragleave', function(e) {
-        this.classList.remove('border-yellow-500', 'bg-white/5');
-    });
-    block.addEventListener('drop', function(e) {
-        e.preventDefault();
-        this.classList.remove('border-yellow-500', 'bg-white/5');
-        if (window.draggedBlock && window.draggedBlock !== this) {
-            const allBlocks = [...container.querySelectorAll('.public-mcq-block')];
-            const draggedIndex = allBlocks.indexOf(window.draggedBlock);
-            const droppedIndex = allBlocks.indexOf(this);
-            if(draggedIndex < droppedIndex) this.parentNode.insertBefore(window.draggedBlock, this.nextSibling);
-            else this.parentNode.insertBefore(window.draggedBlock, this);
-            updateQuestionNumbers(container); 
-        }
-    });
-    block.addEventListener('dragend', function(e) {
-        this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
-        window.draggedBlock = null;
-    });
+    if (window.innerWidth > 768) {
+        block.addEventListener('dragstart', function(e) {
+            this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
+            e.dataTransfer.effectAllowed = 'move';
+            window.draggedBlock = this;
+        });
+        block.addEventListener('dragover', function(e) {
+            e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move';
+            if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
+        });
+        block.addEventListener('dragleave', function(e) {
+            this.classList.remove('border-yellow-500', 'bg-white/5');
+        });
+        block.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-yellow-500', 'bg-white/5');
+            if (window.draggedBlock && window.draggedBlock !== this) {
+                const allBlocks = [...container.querySelectorAll('.public-mcq-block')];
+                const draggedIndex = allBlocks.indexOf(window.draggedBlock);
+                const droppedIndex = allBlocks.indexOf(this);
+                if(draggedIndex < droppedIndex) this.parentNode.insertBefore(window.draggedBlock, this.nextSibling);
+                else this.parentNode.insertBefore(window.draggedBlock, this);
+                updateQuestionNumbers(container); 
+            }
+        });
+        block.addEventListener('dragend', function(e) {
+            this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
+            window.draggedBlock = null;
+        });
+    }
 
     container.appendChild(block);
 
@@ -1199,6 +1200,7 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
             linkInput.value = fullLink;
             
             linkArea.classList.remove('hidden');
+            linkArea.classList.add('flex', 'flex-col', 'sm:flex-row'); // دعم تجاوب الجوال للصندوق
             linkArea.style.opacity = '0';
             linkArea.style.transform = 'translateY(10px)';
             setTimeout(() => {
@@ -1218,26 +1220,48 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
     }
 }
 
-function copyPublicLink() {
+// التحديث الجذري لدالة نسخ الرابط لتعمل بسلاسة على كل الأجهزة
+async function copyPublicLink() {
     const input = document.getElementById('publicQuizLinkInput');
-    const btn = input.nextElementSibling; 
+    if (!input || !input.value) return;
     
-    input.select();
-    input.setSelectionRange(0, 99999); 
-    navigator.clipboard.writeText(input.value);
+    // محاولة استخدام Clipboard API الحديث (مفضل للجوالات لتجنب الكيبورد)
+    try {
+        await navigator.clipboard.writeText(input.value);
+        triggerCopyAnimation(input);
+    } catch (err) {
+        // Fallback للطوارئ
+        input.select();
+        input.setSelectionRange(0, 99999);
+        try {
+            document.execCommand('copy');
+            triggerCopyAnimation(input);
+        } catch (err2) {
+            SysUI.toast('error', 'فشل النسخ التلقائي، يرجى النسخ يدوياً.');
+        }
+        // إزالة التحديد حتى لا يظل الكيبورد مفتوحاً
+        window.getSelection().removeAllRanges();
+    }
+}
+
+function triggerCopyAnimation(inputElement) {
+    // جلب الزر الذي بجانب حقل الإدخال
+    const btn = inputElement.nextElementSibling;
+    if(!btn) return;
+
+    const originalHTML = btn.innerHTML;
+    const originalClasses = btn.className;
     
-    const originalText = btn.innerText;
-    btn.innerText = "تم النسخ! ✔";
-    btn.classList.add('bg-green-600', 'text-white');
-    btn.classList.remove('text-yellow-500');
+    // أنيميشن زر النسخ الناجح
+    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم النسخ</span>`;
+    btn.className = 'w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-3 sm:py-0 rounded-xl font-bold transition-all shadow-[0_0_15px_rgba(22,163,74,0.4)] whitespace-nowrap';
     
     SysUI.toast('success', "تم نسخ الرابط بنجاح.");
     
     setTimeout(() => {
-        btn.innerText = originalText;
-        btn.classList.remove('bg-green-600', 'text-white');
-        btn.classList.add('text-yellow-500');
-    }, 2000);
+        btn.innerHTML = originalHTML;
+        btn.className = originalClasses;
+    }, 2500);
 }
 
 // ==================== 9. المساعد الصوتي للإدارة 🎙️ ====================
