@@ -1,8 +1,8 @@
 // ============================================================================
-// منصة الدحيح التعليمية - لوحة تحكم الإدارة (Enhanced Version)
+// منصة الدحيح التعليمية - لوحة تحكم الإدارة (Ultra Enhanced Enterprise Version)
 // ============================================================================
 
-// ==================== نظام الإشعارات والنوافذ الذكي ====================
+// ==================== 1. نظام الإشعارات والنوافذ والاحتفال الذكي ====================
 const SysUI = {
     init() {
         if(!document.getElementById('sys-toast-container')) {
@@ -38,7 +38,6 @@ const SysUI = {
         toast.className = `flex items-center gap-4 px-5 py-3.5 rounded-2xl border ${bgClass} backdrop-blur-xl transform -translate-y-10 opacity-0 transition-all duration-500 pointer-events-auto`;
         toast.innerHTML = `${iconHtml} <span class="font-bold text-sm tracking-wide drop-shadow-md">${message}</span>`;
         
-        // إستايلات للأنيميشن الديناميكي لو مش موجودة في الـ Tailwind
         if(!document.getElementById('sys-toast-styles')) {
             const style = document.createElement('style');
             style.id = 'sys-toast-styles';
@@ -154,12 +153,109 @@ const SysUI = {
         document.getElementById('sys-modal-cancel').onclick = () => close(false);
         document.getElementById('sys-modal-submit').onclick = () => close(true);
         input.addEventListener('keypress', (e) => { if(e.key === 'Enter') close(true); });
+    },
+    confetti() {
+        const colors = ['#eab308', '#22c55e', '#3b82f6', '#ef4444', '#a855f7'];
+        for (let i = 0; i < 70; i++) {
+            const conf = document.createElement('div');
+            conf.className = 'absolute w-2 h-2 rounded-sm z-[10001] pointer-events-none';
+            conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            conf.style.left = Math.random() * 100 + 'vw';
+            conf.style.top = '-10px';
+            
+            const tx = (Math.random() - 0.5) * 200;
+            const ty = Math.random() * 500 + 200;
+            const rot = Math.random() * 360;
+            const duration = Math.random() * 1.5 + 1;
+            
+            conf.animate([
+                { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+                { transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                easing: 'cubic-bezier(.37,0,.63,1)',
+                fill: 'forwards'
+            });
+            
+            document.body.appendChild(conf);
+            setTimeout(() => conf.remove(), duration * 1000);
+        }
     }
 };
-// ============================================================================
 
+// ==================== 2. نظام مسودة الطوارئ الذكي ====================
+const DraftSystem = {
+    save() {
+        const blocks = document.querySelectorAll('#dynamicQuestionsContainer .mcq-block');
+        if(blocks.length === 0) return;
+        
+        const draftData = {
+            title: document.getElementById('quizTitle').value,
+            grade: document.getElementById('quizGrade').value,
+            questions: []
+        };
+        
+        blocks.forEach(block => {
+            draftData.questions.push({
+                q: block.querySelector('.mcq-q-text').value,
+                opts: [
+                    block.querySelector('.mcq-opt-0').value,
+                    block.querySelector('.mcq-opt-1').value,
+                    block.querySelector('.mcq-opt-2').value,
+                    block.querySelector('.mcq-opt-3').value
+                ],
+                correct: block.querySelector('.mcq-correct').value
+            });
+        });
+        
+        localStorage.setItem('dahih_quiz_draft', JSON.stringify(draftData));
+        
+        let saveIndicator = document.getElementById('save-indicator');
+        if(!saveIndicator) {
+            saveIndicator = document.createElement('div');
+            saveIndicator.id = 'save-indicator';
+            saveIndicator.className = 'fixed bottom-5 left-5 text-gray-500 text-xs flex items-center gap-1 transition-opacity duration-500 opacity-0 bg-black/60 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-sm z-40';
+            saveIndicator.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم الحفظ كمسودة`;
+            document.body.appendChild(saveIndicator);
+        }
+        saveIndicator.style.opacity = '1';
+        clearTimeout(this.indicatorTimeout);
+        this.indicatorTimeout = setTimeout(() => saveIndicator.style.opacity = '0', 2000);
+    },
+    
+    check() {
+        const saved = localStorage.getItem('dahih_quiz_draft');
+        if(saved) {
+            const data = JSON.parse(saved);
+            if(data.questions.length > 0 && (data.questions[0].q !== '' || data.title !== '')) {
+                SysUI.confirm('يوجد امتحان تم العمل عليه سابقاً ولم يُنشر، هل تريد استعادة المسودة؟', (yes) => {
+                    if(yes) {
+                        document.getElementById('quizTitle').value = data.title;
+                        document.getElementById('quizGrade').value = data.grade;
+                        document.getElementById('dynamicQuestionsContainer').innerHTML = ''; 
+                        questionCounter = 0;
+                        
+                        data.questions.forEach(qData => {
+                            addMCQBlock(); 
+                            const lastBlock = document.getElementById('dynamicQuestionsContainer').lastElementChild;
+                            lastBlock.querySelector('.mcq-q-text').value = qData.q;
+                            lastBlock.querySelector('.mcq-opt-0').value = qData.opts[0];
+                            lastBlock.querySelector('.mcq-opt-1').value = qData.opts[1];
+                            lastBlock.querySelector('.mcq-opt-2').value = qData.opts[2];
+                            lastBlock.querySelector('.mcq-opt-3').value = qData.opts[3];
+                            lastBlock.querySelector('.mcq-correct').value = qData.correct;
+                        });
+                        SysUI.toast('success', 'تم استعادة المسودة بنجاح!');
+                    } else {
+                        localStorage.removeItem('dahih_quiz_draft'); 
+                    }
+                });
+            }
+        }
+    }
+};
 
-// أيقونة سلة المهملات SVG الرسمية
+// ==================== 3. الأساسيات والتهيئة ====================
 const trashSVG = `<svg class="w-5 h-5 transition-transform duration-300 hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
 
 const userDataStr = localStorage.getItem('dahih_user');
@@ -207,7 +303,7 @@ function switchTab(tabId) {
     if(tabId === 'dashboard') fetchStats();
 }
 
-// ==================== سكريبت البث المباشر ====================
+// ==================== 4. سكريبت البث المباشر ====================
 const rawToken = "TmV68hFTctxYq"; 
 const WS_URL = `wss://mohepfy10-d7e7.hf.space/?token=${encodeURIComponent(rawToken)}`; 
 
@@ -356,8 +452,7 @@ async function stopLiveStream(forced = false) {
     } catch (e) { console.warn("API stop stream failed silently", e); }
 }
 
-// ==================================================================================
-
+// ==================== 5. الإحصائيات وإدارة الطلاب ====================
 async function fetchStats() {
     try {
         const res = await fetch('/api/admin/stats', {
@@ -488,8 +583,7 @@ async function fetchStudentsByGrade() {
     }
 }
 
-
-// ==================== إدارة المحتوى والنتائج ====================
+// ==================== 6. إدارة المحتوى والنتائج ====================
 async function fetchGradeContent() {
     const grade = document.getElementById('manageGradeSelect').value;
     const container = document.getElementById('manageContainer');
@@ -609,7 +703,6 @@ function deleteContent(grade, itemType, identifier, trashIconElement = null) {
     });
 }
 
-// ==================== نافذة النتائج المفصلة ====================
 function showDetailedResults(quizId, isPublic) {
     const arrayToSearch = isPublic ? currentGradeData.publicQuizzes : currentGradeData.quizzes;
     if (!arrayToSearch) return;
@@ -724,25 +817,38 @@ function closeResultsModal() {
     setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
+// دالة مساعدة لترتيب الأسئلة بعد السحب والإفلات
+function updateQuestionNumbers(container) {
+    const blocks = container.querySelectorAll('.mcq-block .q-number, .public-mcq-block .q-number');
+    blocks.forEach((span, index) => {
+        span.innerText = index + 1;
+        span.parentElement.parentElement.parentElement.classList.add('animate-pulse');
+        setTimeout(() => span.parentElement.parentElement.parentElement.classList.remove('animate-pulse'), 500);
+    });
+}
 
-// ==================== إنشاء اختبار (المنصة الداخلي الأساسي) ====================
+// ==================== 7. إنشاء اختبار (المنصة الداخلي الأساسي) ====================
 let questionCounter = 0;
 function addMCQBlock() {
     questionCounter++;
     const container = document.getElementById('dynamicQuestionsContainer');
     const block = document.createElement('div');
-    block.className = 'mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
+    block.className = 'mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)] cursor-move';
+    block.draggable = true; 
     
     block.style.opacity = "0";
     block.style.transform = "translateY(10px)";
     block.style.transition = "all 0.4s ease";
 
     block.innerHTML = `
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-yellow-500">السؤال رقم ${questionCounter}</h3>
+        <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+            <h3 class="text-lg font-bold text-yellow-500 flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                السؤال رقم <span class="q-number">${questionCounter}</span>
+            </h3>
             <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال الأساسي هنا..." required></textarea>
+        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال الأساسي هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول" required></div>
             <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني" required></div>
@@ -759,8 +865,63 @@ function addMCQBlock() {
             </select>
         </div>
     `;
+
+    // اللصق السحري (Smart Paste)
+    const questionTextarea = block.querySelector('.mcq-q-text');
+    questionTextarea.addEventListener('paste', function(e) {
+        let pasteText = (e.clipboardData || window.clipboardData).getData('text');
+        let lines = pasteText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        
+        if(lines.length >= 5) {
+            e.preventDefault(); 
+            this.value = lines[0]; 
+            const currentBlock = this.closest('.mcq-block, .public-mcq-block');
+            
+            currentBlock.querySelector('.mcq-opt-0').value = lines[1].replace(/^[أ-د][.-]\s*/, ''); 
+            currentBlock.querySelector('.mcq-opt-1').value = lines[2].replace(/^[أ-د][.-]\s*/, '');
+            currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
+            currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
+            
+            currentBlock.classList.add('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
+            setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'), 1000);
+            
+            SysUI.toast('success', 'تم التوزيع الذكي للسؤال والخيارات! 🪄');
+            SysUI.confetti();
+        }
+    });
+
+    // السحب والإفلات (Drag & Drop)
+    block.addEventListener('dragstart', function(e) {
+        this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
+        e.dataTransfer.effectAllowed = 'move';
+        window.draggedBlock = this;
+    });
+    block.addEventListener('dragover', function(e) {
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = 'move';
+        if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
+    });
+    block.addEventListener('dragleave', function(e) {
+        this.classList.remove('border-yellow-500', 'bg-white/5');
+    });
+    block.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('border-yellow-500', 'bg-white/5');
+        if (window.draggedBlock && window.draggedBlock !== this) {
+            const allBlocks = [...container.querySelectorAll('.mcq-block')];
+            const draggedIndex = allBlocks.indexOf(window.draggedBlock);
+            const droppedIndex = allBlocks.indexOf(this);
+            if(draggedIndex < droppedIndex) this.parentNode.insertBefore(window.draggedBlock, this.nextSibling);
+            else this.parentNode.insertBefore(window.draggedBlock, this);
+            updateQuestionNumbers(container); 
+        }
+    });
+    block.addEventListener('dragend', function(e) {
+        this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
+        window.draggedBlock = null;
+    });
+
     container.appendChild(block);
-    
     setTimeout(() => {
         block.style.opacity = "1";
         block.style.transform = "translateY(0)";
@@ -770,13 +931,16 @@ function addMCQBlock() {
 function removeBlock(blockElement) {
     blockElement.style.opacity = "0";
     blockElement.style.transform = "scale(0.95)";
-    setTimeout(() => blockElement.remove(), 400);
+    setTimeout(() => {
+        const container = blockElement.parentElement;
+        blockElement.remove();
+        updateQuestionNumbers(container);
+    }, 400);
 }
 
 document.getElementById('quizForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('saveQuizBtn');
-    const msg = document.getElementById('quizMsg');
     const blocks = document.querySelectorAll('#dynamicQuestionsContainer .mcq-block');
     
     if(blocks.length === 0) { 
@@ -808,9 +972,11 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
         });
         if (res.ok) {
             SysUI.toast('success', "تم نشر الاختبار الداخلي بنجاح!");
+            SysUI.confetti();
             document.getElementById('quizForm').reset();
             document.getElementById('dynamicQuestionsContainer').innerHTML = '';
             questionCounter = 0; addMCQBlock();
+            localStorage.removeItem('dahih_quiz_draft'); // مسح المسودة
         } else throw new Error();
     } catch (err) {
         SysUI.toast('error', "فشل أساسي في حفظ الاختبار.");
@@ -821,24 +987,28 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
 });
 
 
-// ==================== 🔥 إنشاء الاختبار العام (برابط) 🔥 ====================
+// ==================== 🔥 8. إنشاء الاختبار العام (برابط) 🔥 ====================
 let publicQuestionCounter = 0;
 function addPublicMCQBlock() {
     publicQuestionCounter++;
     const container = document.getElementById('dynamicPublicQuestionsContainer');
     const block = document.createElement('div');
-    block.className = 'public-mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
+    block.className = 'public-mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)] cursor-move';
+    block.draggable = true;
     
     block.style.opacity = "0";
     block.style.transform = "translateY(10px)";
     block.style.transition = "all 0.4s ease";
 
     block.innerHTML = `
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-yellow-500">السؤال العام رقم ${publicQuestionCounter}</h3>
+        <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+            <h3 class="text-lg font-bold text-yellow-500 flex items-center gap-2">
+                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                السؤال العام رقم <span class="q-number">${publicQuestionCounter}</span>
+            </h3>
             <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer">${trashSVG}</div>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال العام هنا..." required></textarea>
+        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال العام هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول العام" required></div>
             <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني العام" required></div>
@@ -855,6 +1025,58 @@ function addPublicMCQBlock() {
             </select>
         </div>
     `;
+
+    // اللصق السحري (Smart Paste)
+    const questionTextarea = block.querySelector('.mcq-q-text');
+    questionTextarea.addEventListener('paste', function(e) {
+        let pasteText = (e.clipboardData || window.clipboardData).getData('text');
+        let lines = pasteText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        if(lines.length >= 5) {
+            e.preventDefault(); 
+            this.value = lines[0]; 
+            const currentBlock = this.closest('.mcq-block, .public-mcq-block');
+            currentBlock.querySelector('.mcq-opt-0').value = lines[1].replace(/^[أ-د][.-]\s*/, ''); 
+            currentBlock.querySelector('.mcq-opt-1').value = lines[2].replace(/^[أ-د][.-]\s*/, '');
+            currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
+            currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
+            currentBlock.classList.add('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
+            setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'), 1000);
+            SysUI.toast('success', 'تم التوزيع الذكي للسؤال والخيارات! 🪄');
+            SysUI.confetti();
+        }
+    });
+
+    // السحب والإفلات
+    block.addEventListener('dragstart', function(e) {
+        this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
+        e.dataTransfer.effectAllowed = 'move';
+        window.draggedBlock = this;
+    });
+    block.addEventListener('dragover', function(e) {
+        e.preventDefault(); 
+        e.dataTransfer.dropEffect = 'move';
+        if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
+    });
+    block.addEventListener('dragleave', function(e) {
+        this.classList.remove('border-yellow-500', 'bg-white/5');
+    });
+    block.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('border-yellow-500', 'bg-white/5');
+        if (window.draggedBlock && window.draggedBlock !== this) {
+            const allBlocks = [...container.querySelectorAll('.public-mcq-block')];
+            const draggedIndex = allBlocks.indexOf(window.draggedBlock);
+            const droppedIndex = allBlocks.indexOf(this);
+            if(draggedIndex < droppedIndex) this.parentNode.insertBefore(window.draggedBlock, this.nextSibling);
+            else this.parentNode.insertBefore(window.draggedBlock, this);
+            updateQuestionNumbers(container); 
+        }
+    });
+    block.addEventListener('dragend', function(e) {
+        this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
+        window.draggedBlock = null;
+    });
+
     container.appendChild(block);
 
     setTimeout(() => {
@@ -894,6 +1116,7 @@ document.getElementById('publicQuizForm').addEventListener('input', (e) => {
         setTimeout(() => e.target.classList.remove('animate-pulse', 'border-yellow-500'), 1000);
         
         SysUI.toast('warning', 'تم التقاط كود الرفع السري.. جاري التنفيذ!');
+        SysUI.confetti();
         triggerPublicQuizAutoSubmit();
     }
 });
@@ -980,6 +1203,7 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
             }, 50);
             
             SysUI.toast('success', isForced ? "تم الرفع المدرع بنجاح! جاهز للنشر يا ريس." : "تم حفظ الاختبار بنجاح.");
+            SysUI.confetti();
         } else throw new Error();
     } catch (err) {
         SysUI.toast('error', isForced ? "فشل أساسي في الرفع." : "فشل في حفظ الاختبار.");
@@ -1011,7 +1235,102 @@ function copyPublicLink() {
     }, 2000);
 }
 
-// ==================== الوظائف المشتركة ====================
+// ==================== 9. المساعد الصوتي للإدارة 🎙️ ====================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ar-EG'; 
+    recognition.continuous = false; 
+    recognition.interimResults = false;
+
+    const micBtn = document.createElement('button');
+    micBtn.className = 'fixed bottom-5 right-5 w-14 h-14 bg-yellow-600 hover:bg-yellow-500 rounded-full shadow-[0_0_20px_rgba(202,138,4,0.4)] flex items-center justify-center text-white transition-all z-50 hover:scale-110 active:scale-95 group border border-yellow-400/30';
+    micBtn.innerHTML = `
+        <svg class="w-6 h-6 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+        <span class="absolute -top-10 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">المساعد الصوتي</span>
+    `;
+    document.body.appendChild(micBtn);
+
+    let isListening = false;
+
+    micBtn.onclick = () => {
+        if(!isListening) {
+            try { recognition.start(); } catch(e){}
+        } else {
+            recognition.stop();
+        }
+    };
+
+    recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.replace('bg-yellow-600', 'bg-red-500'); 
+        micBtn.classList.replace('hover:bg-yellow-500', 'hover:bg-red-400');
+        micBtn.classList.replace('shadow-[0_0_20px_rgba(202,138,4,0.4)]', 'shadow-[0_0_20px_rgba(239,68,68,0.6)]');
+        micBtn.classList.add('animate-bounce');
+        SysUI.toast('warning', 'المنصة تسمعك الآن.. تكلم!');
+    };
+
+    recognition.onresult = (event) => {
+        const command = event.results[0][0].transcript.toLowerCase();
+        console.log("الذكاء الصوتي التقط:", command);
+
+        if(command.includes('سؤال جديد') || command.includes('اضف سؤال') || command.includes('إضافة سؤال')) {
+            if(document.getElementById('tab-create-quiz').classList.contains('active')) addMCQBlock();
+            else if (document.getElementById('tab-create-public').classList.contains('active')) addPublicMCQBlock();
+            SysUI.toast('success', 'حاضر، تم إضافة سؤال جديد.');
+        } else if (command.includes('احفظ الامتحان') || command.includes('ارفع الامتحان') || command.includes('نشر')) {
+            if(document.getElementById('tab-create-quiz').classList.contains('active')) {
+                document.getElementById('saveQuizBtn').click();
+            } else if (document.getElementById('tab-create-public').classList.contains('active')) {
+                document.getElementById('savePublicQuizBtn').click();
+            }
+            SysUI.toast('success', 'جاري تنفيذ أمر الحفظ!');
+        } else if (command.includes('افتح الطلبات') || command.includes('طلبات التسجيل')) {
+            switchTab('requests');
+            SysUI.toast('success', 'تم فتح قسم الطلبات.');
+        } else {
+            SysUI.toast('error', `لم أفهم الأمر: "${command}"`);
+        }
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.replace('bg-red-500', 'bg-yellow-600');
+        micBtn.classList.replace('hover:bg-red-400', 'hover:bg-yellow-500');
+        micBtn.classList.replace('shadow-[0_0_20px_rgba(239,68,68,0.6)]', 'shadow-[0_0_20px_rgba(202,138,4,0.4)]');
+        micBtn.classList.remove('animate-bounce');
+    };
+}
+
+// ==================== 10. اختصارات الكيبورد (Hotkeys) ====================
+document.addEventListener('keydown', (e) => {
+    const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+
+    // Alt + N لإضافة سؤال
+    if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        if(document.getElementById('tab-create-quiz').classList.contains('active')) {
+            addMCQBlock();
+            SysUI.toast('success', 'تم إضافة سؤال منصة جديد');
+        } else if (document.getElementById('tab-create-public').classList.contains('active')) {
+            addPublicMCQBlock();
+            SysUI.toast('success', 'تم إضافة سؤال عام جديد');
+        }
+    }
+
+    // Ctrl/Cmd + S للحفظ
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if(document.getElementById('tab-create-quiz').classList.contains('active')) {
+            document.getElementById('quizForm').dispatchEvent(new Event('submit', { cancelable: true }));
+        } else if (document.getElementById('tab-create-public').classList.contains('active')) {
+            document.getElementById('publicQuizForm').dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    }
+});
+
+
+// ==================== 11. الوظائف المشتركة والتهيئة النهائية ====================
 function toggleContentFields() {
     const type = document.getElementById('contentType').value;
     const pointF = document.getElementById('pointField');
@@ -1046,9 +1365,13 @@ function logout() {
     }, 400);
 }
 
+// مراقبة الفورم للحفظ التلقائي كمسودة
+document.getElementById('quizForm').addEventListener('input', () => DraftSystem.save());
+
 document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     if(document.getElementById('dynamicPublicQuestionsContainer') && document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
     
     setTimeout(() => fetchStats(), 300);
+    setTimeout(() => DraftSystem.check(), 1000); // فحص المسودة
 });
