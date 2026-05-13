@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>حالة الحساب | منصة الدحيح</title>
+    <title>قاعة الانتظار | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Readex Pro', sans-serif; overflow: hidden; }
         
-        /* خلفية متدرجة متحركة */
         .bg-animated-gradient {
             background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
             background-size: 400% 400%;
@@ -17,15 +16,13 @@
         }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
         
-        /* اللوحات الزجاجية الاحترافية */
         .glass-panel { 
-            background: rgba(15, 23, 42, 0.4); 
+            background: rgba(15, 23, 42, 0.5); 
             border: 1px solid rgba(255, 255, 255, 0.05); 
-            backdrop-filter: blur(20px); 
+            backdrop-filter: blur(25px); 
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
         
-        /* إضاءات الخلفية العائمة */
         .orb-1 { animation: float 8s ease-in-out infinite; }
         .orb-2 { animation: float 12s ease-in-out infinite reverse; }
         @keyframes float {
@@ -33,100 +30,95 @@
             50% { transform: translateY(-30px) scale(1.05); }
         }
 
-        /* حركات العناصر */
-        .fade-in-up {
-            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+        .fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         @keyframes fadeInUp {
             0% { opacity: 0; transform: translateY(20px); }
             100% { opacity: 1; transform: translateY(0); }
         }
 
-        .spinner-ring {
-            border: 3px solid rgba(234, 179, 8, 0.1);
-            border-top-color: #eab308;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col items-center justify-center p-6 selection:bg-yellow-500 selection:text-black relative">
 
-    <!-- إضاءات سينمائية في الخلفية -->
     <div class="fixed top-[-10%] left-[-10%] w-96 h-96 bg-yellow-600/20 rounded-full blur-[100px] pointer-events-none orb-1"></div>
     <div class="fixed bottom-[-10%] right-[-10%] w-96 h-96 bg-indigo-600/20 rounded-full blur-[100px] pointer-events-none orb-2"></div>
 
-    <div class="glass-panel w-full max-w-lg rounded-[2.5rem] p-10 relative overflow-hidden text-center z-10 transition-all duration-500 transform hover:scale-[1.01]" id="mainContainer">
+    <div class="glass-panel w-full max-w-lg rounded-[2.5rem] p-10 relative overflow-hidden text-center z-10 transition-all duration-500" id="mainContainer">
         
-        <!-- اللوجو -->
-        <div class="text-4xl font-black text-yellow-500 tracking-tight mb-8 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">الدحيح<span class="text-white">.</span></div>
+        <div class="text-4xl font-black text-yellow-500 tracking-tight mb-10 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">الدحيح<span class="text-white">.</span></div>
 
-        <!-- 1. شاشة التحميل المبدئية (Checking State) -->
-        <div id="loadingSection" class="flex flex-col items-center justify-center py-8 fade-in-up">
-            <div class="w-16 h-16 spinner-ring mb-6"></div>
-            <h2 class="text-xl font-bold mb-2">جاري فحص حالة الحساب...</h2>
-            <p class="text-gray-400 text-sm">لحظات ونقوم بتوجيهك</p>
-        </div>
-
-        <!-- 2. شاشة قيد المراجعة (Pending) -->
-        <div id="pendingSection" class="hidden opacity-0 transition-opacity duration-500">
-            <div class="relative w-28 h-28 mx-auto mb-8 group">
-                <div class="absolute inset-0 bg-yellow-500/20 rounded-full blur-xl group-hover:bg-yellow-500/30 transition-all duration-500 animate-pulse"></div>
-                <div class="relative w-full h-full bg-gradient-to-tr from-yellow-900/40 to-yellow-600/20 rounded-full flex items-center justify-center border border-yellow-500/30 shadow-[0_0_30px_rgba(234,179,8,0.15)]">
-                    <svg class="w-12 h-12 text-yellow-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <!-- شريط التقدم الفخم (يظهر في حالة الانتظار) -->
+        <div id="progressSteps" class="hidden opacity-0 transition-opacity duration-500 mb-10">
+            <div class="flex items-center justify-between relative px-2">
+                <div class="absolute left-0 right-0 top-1/2 h-0.5 bg-gray-800 -z-10 -translate-y-1/2"></div>
+                <div class="absolute right-0 top-1/2 h-0.5 bg-green-500 -z-10 -translate-y-1/2 w-1/2 transition-all duration-1000" id="progressLine"></div>
+                
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center text-black font-bold shadow-[0_0_15px_rgba(34,197,94,0.4)]">✓</div>
+                    <span class="text-[10px] text-green-400 font-bold">التسجيل</span>
+                </div>
+                
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-black font-bold shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse" id="step2Icon">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </div>
+                    <span class="text-[10px] text-yellow-400 font-bold" id="step2Text">المراجعة</span>
+                </div>
+                
+                <div class="flex flex-col items-center gap-2 opacity-50" id="step3Container">
+                    <div class="w-8 h-8 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-400 font-bold" id="step3Icon">3</div>
+                    <span class="text-[10px] text-gray-400 font-bold">المنصة</span>
                 </div>
             </div>
-            <h2 class="text-3xl font-bold mb-3 tracking-wide">طلبك قيد المراجعة</h2>
-            <p class="text-gray-400 text-sm leading-relaxed mb-8 px-4">
-                أهلاً بك يا <span id="pendingName" class="font-bold text-yellow-500"></span>. حسابك حالياً في مرحلة التوثيق من قِبل الإدارة. يرجى الانتظار، سيمكنك الدخول إلى المنصة قريباً جداً.
+        </div>
+
+        <div id="loadingSection" class="flex flex-col items-center justify-center py-4 fade-in-up">
+            <div class="w-12 h-12 border-4 border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin mb-6"></div>
+            <h2 class="text-xl font-bold mb-2">جاري مزامنة البيانات...</h2>
+        </div>
+
+        <div id="pendingSection" class="hidden opacity-0 transition-opacity duration-500">
+            <h2 class="text-3xl font-bold mb-3 tracking-wide">قاعة الانتظار</h2>
+            <p class="text-gray-400 text-sm leading-relaxed mb-6 px-2">
+                أهلاً بك يا <span id="pendingName" class="font-bold text-yellow-500"></span>.يرجي انتظار الادارة لحين مراجعة طلبك ، ملاحظة قد تستغرق المراجعة عدد ساعات
             </p>
         </div>
 
-        <!-- 3. شاشة الرفض (Rejected) -->
         <div id="rejectedSection" class="hidden opacity-0 transition-opacity duration-500">
-            <div class="relative w-28 h-28 mx-auto mb-8 group">
+            <div class="relative w-24 h-24 mx-auto mb-6 group">
                 <div class="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse"></div>
                 <div class="relative w-full h-full bg-gradient-to-tr from-red-900/40 to-red-600/20 rounded-full flex items-center justify-center border border-red-500/30 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
-                    <svg class="w-12 h-12 text-red-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    <svg class="w-10 h-10 text-red-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </div>
             </div>
-            <h2 class="text-3xl font-bold text-red-400 mb-3 tracking-wide">تم رفض الطلب</h2>
-            <p class="text-gray-400 text-sm leading-relaxed mb-6 px-4">
-                عذراً يا <span id="rejectedName" class="font-bold text-white"></span>، للأسف لم يتم قبول طلب انضمامك للمنصة في الوقت الحالي.
+            <h2 class="text-2xl font-bold text-red-400 mb-3 tracking-wide">تم إيقاف الطلب</h2>
+            <p class="text-gray-400 text-sm leading-relaxed mb-6 px-2">
+                عذراً يا <span id="rejectedName" class="font-bold text-white"></span>، تعذر الموافقة على انضمامك.
             </p>
             
-            <!-- صندوق سبب الرفض الاحترافي -->
-            <div class="bg-black/40 border border-red-500/20 rounded-2xl p-5 text-right mb-8 relative overflow-hidden group">
-                <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+            <div class="bg-black/40 border border-red-500/20 rounded-2xl p-5 text-right mb-6 relative overflow-hidden">
+                <div class="absolute right-0 top-0 bottom-0 w-1 bg-red-500"></div>
                 <div class="flex items-center gap-2 mb-2">
                     <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                    <span class="text-sm font-bold text-red-400">رسالة الإدارة (سبب الرفض):</span>
+                    <span class="text-sm font-bold text-red-400">ملاحظة الإدارة:</span>
                 </div>
-                <p id="rejectionReason" class="text-sm text-gray-300 leading-relaxed pl-2 font-medium">لم يتم تحديد سبب إضافي.</p>
+                <p id="rejectionReason" class="text-sm text-white leading-relaxed pl-2 font-medium">لم يتم تحديد سبب إضافي.</p>
             </div>
         </div>
 
-        <!-- أزرار التحكم -->
-        <div id="controlsSection" class="flex flex-col gap-3 hidden opacity-0 transition-opacity duration-500 mt-4">
-            <button id="refreshBtn" onclick="checkAgain()" class="group relative w-full bg-white/5 border border-white/10 text-white font-bold py-4 rounded-2xl hover:bg-white/10 transition-all overflow-hidden flex items-center justify-center gap-2">
+        <div id="controlsSection" class="flex flex-col gap-3 hidden opacity-0 transition-opacity duration-500 mt-2">
+            <button id="refreshBtn" onclick="checkAgain()" class="group relative w-full bg-white/5 border border-white/10 text-white font-bold py-3.5 rounded-2xl hover:bg-white/10 transition-all overflow-hidden flex items-center justify-center gap-2">
                 <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/0 via-yellow-500/10 to-yellow-500/0 translate-x-[-100%] group-hover:animate-[shimmer_1.5s_infinite]"></div>
                 <svg class="w-5 h-5 text-gray-400 group-hover:text-yellow-500 transition-colors" id="refreshIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                <span id="refreshText">تحديث ومراجعة الحالة</span>
+                <span id="refreshText">تحديث الحالة</span>
             </button>
-            <button onclick="logout()" class="w-full text-red-400/70 font-medium py-3 hover:text-red-400 transition-colors text-sm rounded-xl hover:bg-red-500/5">
+            <button onclick="logout()" class="w-full text-gray-500 font-medium py-2 hover:text-red-400 transition-colors text-sm rounded-xl hover:bg-red-500/5">
                 تسجيل الخروج
             </button>
         </div>
 
     </div>
-
-    <!-- أنيميشن خفيف للشيمر للزر -->
-    <style>
-        @keyframes shimmer {
-            100% { transform: translateX(100%); }
-        }
-    </style>
 
     <script>
         const userDataStr = localStorage.getItem('dahih_user');
@@ -136,27 +128,22 @@
         } else {
             const user = JSON.parse(userDataStr);
             const firstName = user.name ? user.name.split(' ')[0] : "بطل";
-            
-            // تأخير بسيط لإظهار شاشة التحميل الجمالية
             setTimeout(() => checkStatusFromServer(user.email, firstName), 1200);
         }
 
-        // دالة تبديل المشاهد بنعومة
         function showView(viewId) {
             const views = ['loadingSection', 'pendingSection', 'rejectedSection'];
             views.forEach(v => {
                 const el = document.getElementById(v);
                 if (v === viewId) {
                     el.classList.remove('hidden');
-                    // Timeout صغير عشان الـ display:block يسمع قبل الأنيميشن
                     setTimeout(() => el.classList.remove('opacity-0'), 50);
                 } else {
                     el.classList.add('opacity-0');
-                    setTimeout(() => el.classList.add('hidden'), 500);
+                    setTimeout(() => el.classList.add('hidden'), 300);
                 }
             });
 
-            // إظهار أزرار التحكم لو مكنتش ظاهرة
             if (viewId !== 'loadingSection') {
                 const controls = document.getElementById('controlsSection');
                 controls.classList.remove('hidden');
@@ -168,7 +155,7 @@
             const btnText = document.getElementById('refreshText');
             const btnIcon = document.getElementById('refreshIcon');
             
-            if(btnText) btnText.innerText = "جاري الاتصال بالسيرفر...";
+            if(btnText) btnText.innerText = "جاري الاتصال...";
             if(btnIcon) btnIcon.classList.add('animate-spin');
             
             try {
@@ -182,7 +169,9 @@
                     const data = await res.json();
                     
                     if (data.status === 'accepted') {
-                        // تأثير خروج سلس قبل التوجيه
+                        // تحريك الـ Progress للنهاية قبل الدخول
+                        const progLine = document.getElementById('progressLine');
+                        if(progLine) progLine.style.width = '100%';
                         document.getElementById('mainContainer').style.opacity = '0';
                         document.getElementById('mainContainer').style.transform = 'scale(0.95)';
                         
@@ -196,12 +185,19 @@
 
                     if (data.status === 'pending') {
                         document.getElementById('pendingName').innerText = name;
+                        
+                        // إظهار شريط التقدم
+                        const prog = document.getElementById('progressSteps');
+                        prog.classList.remove('hidden');
+                        setTimeout(() => prog.classList.remove('opacity-0'), 50);
+                        
                         showView('pendingSection');
                     } else if (data.status === 'rejected') {
                         document.getElementById('rejectedName').innerText = name;
+                        document.getElementById('progressSteps').classList.add('hidden'); // إخفاء التقدم في حالة الرفض
+                        
                         if(data.reason && data.reason.trim() !== "") {
                             document.getElementById('rejectionReason').innerText = data.reason;
-                            document.getElementById('rejectionReason').classList.add('text-white'); // تنوير السبب لو موجود
                         } else {
                             document.getElementById('rejectionReason').innerText = "لم تقم الإدارة بإرفاق سبب محدد.";
                         }
@@ -209,38 +205,31 @@
                     }
                 }
             } catch (err) {
-                console.error("خطأ في الاتصال");
-                // لو السيرفر وقع، نرجعه لحالة التحميل مع رسالة خطأ
                 const loadingHtml = document.getElementById('loadingSection');
                 loadingHtml.innerHTML = `
-                    <div class="w-16 h-16 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-6 text-red-500">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <div class="w-12 h-12 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-4 text-red-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
                     </div>
-                    <h2 class="text-xl font-bold mb-2 text-red-400">فشل الاتصال بالسيرفر</h2>
-                    <p class="text-gray-400 text-sm">يرجى التحقق من الإنترنت والمحاولة لاحقاً</p>
+                    <h2 class="text-lg font-bold mb-2 text-red-400">السيرفر لا يستجيب</h2>
                 `;
                 showView('loadingSection');
-                
-                const controls = document.getElementById('controlsSection');
-                controls.classList.remove('hidden');
-                setTimeout(() => controls.classList.remove('opacity-0'), 50);
+                document.getElementById('controlsSection').classList.remove('hidden');
+                setTimeout(() => document.getElementById('controlsSection').classList.remove('opacity-0'), 50);
             } finally {
-                if(btnText) btnText.innerText = "تحديث ومراجعة الحالة";
+                if(btnText) btnText.innerText = "تحديث الحالة";
                 if(btnIcon) btnIcon.classList.remove('animate-spin');
             }
         }
 
         function checkAgain() {
-            // نرجع لشاشة التحميل تاني
             showView('loadingSection');
             document.getElementById('controlsSection').classList.add('opacity-0');
-            setTimeout(() => document.getElementById('controlsSection').classList.add('hidden'), 500);
+            setTimeout(() => document.getElementById('controlsSection').classList.add('hidden'), 300);
 
             const user = JSON.parse(localStorage.getItem('dahih_user'));
             const firstName = user.name ? user.name.split(' ')[0] : "بطل";
             
-            // تأخير جمالي قبل طلب السيرفر عشان يشوف الأنيميشن
-            setTimeout(() => checkStatusFromServer(user.email, firstName), 1000);
+            setTimeout(() => checkStatusFromServer(user.email, firstName), 800);
         }
 
         function logout() {
@@ -254,3 +243,4 @@
     </script>
 </body>
 </html>
+
