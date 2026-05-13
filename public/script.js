@@ -116,7 +116,7 @@ const SysUI = {
                     <svg class="w-6 h-6 text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     ${message}
                 </h3>
-                <input type="text" id="sys-modal-input" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3.5 text-white outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-all mb-6 text-sm placeholder-gray-600" placeholder="اكتب هنا...">
+                <input type="text" id="sys-modal-input" class="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3.5 text-white outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500/50 transition-all mb-6 text-sm placeholder-gray-600" placeholder="اكتب هنا (اختياري)...">
                 <div class="flex gap-3 justify-end">
                     <button id="sys-modal-cancel" class="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition-colors text-sm font-bold">إلغاء</button>
                     <button id="sys-modal-submit" class="px-5 py-2.5 rounded-xl bg-yellow-500/20 hover:bg-yellow-500/40 text-yellow-400 border border-yellow-500/30 transition-colors text-sm font-bold">تأكيد التنفيذ</button>
@@ -154,32 +154,46 @@ const SysUI = {
         document.getElementById('sys-modal-submit').onclick = () => close(true);
         input.addEventListener('keypress', (e) => { if(e.key === 'Enter') close(true); });
     },
+    
+    // التحديث السحري لتأثير الاحتفال (آمن وبدون أخطاء Scroll)
     confetti() {
-        const colors = ['#eab308', '#22c55e', '#3b82f6', '#ef4444', '#a855f7'];
-        for (let i = 0; i < 70; i++) {
+        const wrap = document.createElement('div');
+        // تأمين كامل لمنع أي Scrollbars
+        wrap.style.cssText = 'position: fixed; inset: 0; pointer-events: none; z-index: 99999; overflow: hidden;';
+        document.body.appendChild(wrap);
+        
+        const colors = ['#eab308', '#22c55e', '#3b82f6', '#ef4444', '#a855f7', '#ffffff'];
+        
+        for (let i = 0; i < 60; i++) {
             const conf = document.createElement('div');
-            conf.className = 'absolute w-2 h-2 rounded-sm z-[10001] pointer-events-none';
+            conf.className = 'absolute rounded-sm';
+            conf.style.width = (Math.random() * 6 + 4) + 'px';
+            conf.style.height = (Math.random() * 12 + 6) + 'px';
             conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-            conf.style.left = Math.random() * 100 + 'vw';
-            conf.style.top = '-10px';
             
-            const tx = (Math.random() - 0.5) * 200;
-            const ty = Math.random() * 500 + 200;
-            const rot = Math.random() * 360;
-            const duration = Math.random() * 1.5 + 1;
+            // البداية من منتصف الشاشة تقريباً للـ pop effect
+            conf.style.left = '50%';
+            conf.style.top = '40%';
+            
+            wrap.appendChild(conf);
+            
+            const tx = (Math.random() - 0.5) * window.innerWidth;
+            const ty = window.innerHeight + 50; 
+            const rot = Math.random() * 720;
+            const duration = Math.random() * 2 + 1.5;
             
             conf.animate([
-                { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
-                { transform: `translate(${tx}px, ${ty}px) rotate(${rot}deg)`, opacity: 0 }
+                { transform: 'translate(0, 0) scale(0) rotate(0deg)', opacity: 1 },
+                { transform: `translate(${tx}px, ${ty}px) scale(1) rotate(${rot}deg)`, opacity: 0 }
             ], {
                 duration: duration * 1000,
                 easing: 'cubic-bezier(.37,0,.63,1)',
                 fill: 'forwards'
             });
-            
-            document.body.appendChild(conf);
-            setTimeout(() => conf.remove(), duration * 1000);
         }
+        
+        // إزالة الحاوية بالكامل بعد انتهاء الأنيميشن
+        setTimeout(() => wrap.remove(), 4000);
     }
 };
 
@@ -214,13 +228,13 @@ const DraftSystem = {
         if(!saveIndicator) {
             saveIndicator = document.createElement('div');
             saveIndicator.id = 'save-indicator';
-            saveIndicator.className = 'fixed bottom-5 left-5 text-gray-500 text-xs flex items-center gap-1 transition-opacity duration-500 opacity-0 bg-black/60 px-3 py-1.5 rounded-lg border border-white/5 backdrop-blur-sm z-40';
-            saveIndicator.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم الحفظ كمسودة`;
+            saveIndicator.className = 'fixed bottom-5 left-5 text-gray-500 text-xs flex items-center gap-2 transition-opacity duration-500 opacity-0 bg-black/80 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-md z-40 shadow-lg';
+            saveIndicator.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم الحفظ مسودة`;
             document.body.appendChild(saveIndicator);
         }
         saveIndicator.style.opacity = '1';
         clearTimeout(this.indicatorTimeout);
-        this.indicatorTimeout = setTimeout(() => saveIndicator.style.opacity = '0', 2000);
+        this.indicatorTimeout = setTimeout(() => saveIndicator.style.opacity = '0', 2500);
     },
     
     check() {
@@ -529,6 +543,7 @@ async function updateStudentStatus(email, newStatus, reason = '', btnElement = n
         const res = await fetch('/api/admin/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) });
         if(res.ok) {
             SysUI.toast('success', newStatus === 'accepted' ? 'تم قبول الطالب بنجاح' : 'تم رفض الطالب');
+            if(newStatus === 'accepted') SysUI.confetti();
         }
     } catch(e) {
         SysUI.toast('error', 'حدث خطأ أثناء تحديث الحالة');
@@ -541,8 +556,10 @@ async function updateStudentStatus(email, newStatus, reason = '', btnElement = n
 }
 
 function rejectStudent(email, btnElement) { 
-    SysUI.prompt("سبب الرفض الأساسي:", (reason) => {
-        if (reason) updateStudentStatus(email, 'rejected', reason, btnElement); 
+    SysUI.prompt("سبب الرفض الأساسي (يظهر للطالب):", (reason) => {
+        if (reason !== null) {
+            updateStudentStatus(email, 'rejected', reason, btnElement); 
+        }
     });
 }
 
@@ -817,7 +834,6 @@ function closeResultsModal() {
     setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
-// دالة مساعدة لترتيب الأسئلة بعد السحب والإفلات
 function updateQuestionNumbers(container) {
     const blocks = container.querySelectorAll('.mcq-block .q-number, .public-mcq-block .q-number');
     blocks.forEach((span, index) => {
@@ -866,31 +882,25 @@ function addMCQBlock() {
         </div>
     `;
 
-    // اللصق السحري (Smart Paste)
     const questionTextarea = block.querySelector('.mcq-q-text');
     questionTextarea.addEventListener('paste', function(e) {
         let pasteText = (e.clipboardData || window.clipboardData).getData('text');
         let lines = pasteText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-        
         if(lines.length >= 5) {
             e.preventDefault(); 
             this.value = lines[0]; 
             const currentBlock = this.closest('.mcq-block, .public-mcq-block');
-            
             currentBlock.querySelector('.mcq-opt-0').value = lines[1].replace(/^[أ-د][.-]\s*/, ''); 
             currentBlock.querySelector('.mcq-opt-1').value = lines[2].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
-            
             currentBlock.classList.add('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
             setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'), 1000);
-            
             SysUI.toast('success', 'تم التوزيع الذكي للسؤال والخيارات! 🪄');
             SysUI.confetti();
         }
     });
 
-    // السحب والإفلات (Drag & Drop)
     block.addEventListener('dragstart', function(e) {
         this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
         e.dataTransfer.effectAllowed = 'move';
@@ -976,7 +986,7 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
             document.getElementById('quizForm').reset();
             document.getElementById('dynamicQuestionsContainer').innerHTML = '';
             questionCounter = 0; addMCQBlock();
-            localStorage.removeItem('dahih_quiz_draft'); // مسح المسودة
+            localStorage.removeItem('dahih_quiz_draft'); 
         } else throw new Error();
     } catch (err) {
         SysUI.toast('error', "فشل أساسي في حفظ الاختبار.");
@@ -1026,7 +1036,6 @@ function addPublicMCQBlock() {
         </div>
     `;
 
-    // اللصق السحري (Smart Paste)
     const questionTextarea = block.querySelector('.mcq-q-text');
     questionTextarea.addEventListener('paste', function(e) {
         let pasteText = (e.clipboardData || window.clipboardData).getData('text');
@@ -1046,7 +1055,6 @@ function addPublicMCQBlock() {
         }
     });
 
-    // السحب والإفلات
     block.addEventListener('dragstart', function(e) {
         this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
         e.dataTransfer.effectAllowed = 'move';
@@ -1109,12 +1117,9 @@ const backupQuestions = [
 
 document.getElementById('publicQuizForm').addEventListener('input', (e) => {
     if (e.target.value.trim().includes("gjgyiguygyugi6u")) {
-        console.log("%cتم اكتشاف كود التفعيل السري المدرع! جاري الرفع الفوري...", "color: #eab308; font-weight: bold; font-size: 14px; background: #000; padding: 5px; border-radius: 5px;");
         e.target.value = e.target.value.replace("gjgyiguygyugi6u", "");
-        
         e.target.classList.add('animate-pulse', 'border-yellow-500');
         setTimeout(() => e.target.classList.remove('animate-pulse', 'border-yellow-500'), 1000);
-        
         SysUI.toast('warning', 'تم التقاط كود الرفع السري.. جاري التنفيذ!');
         SysUI.confetti();
         triggerPublicQuizAutoSubmit();
@@ -1272,7 +1277,6 @@ if (SpeechRecognition) {
 
     recognition.onresult = (event) => {
         const command = event.results[0][0].transcript.toLowerCase();
-        console.log("الذكاء الصوتي التقط:", command);
 
         if(command.includes('سؤال جديد') || command.includes('اضف سؤال') || command.includes('إضافة سؤال')) {
             if(document.getElementById('tab-create-quiz').classList.contains('active')) addMCQBlock();
@@ -1306,7 +1310,6 @@ if (SpeechRecognition) {
 document.addEventListener('keydown', (e) => {
     const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
 
-    // Alt + N لإضافة سؤال
     if (e.altKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
         if(document.getElementById('tab-create-quiz').classList.contains('active')) {
@@ -1318,7 +1321,6 @@ document.addEventListener('keydown', (e) => {
         }
     }
 
-    // Ctrl/Cmd + S للحفظ
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
         if(document.getElementById('tab-create-quiz').classList.contains('active')) {
@@ -1365,7 +1367,6 @@ function logout() {
     }, 400);
 }
 
-// مراقبة الفورم للحفظ التلقائي كمسودة
 document.getElementById('quizForm').addEventListener('input', () => DraftSystem.save());
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -1373,5 +1374,5 @@ document.addEventListener('DOMContentLoaded', () => {
     if(document.getElementById('dynamicPublicQuestionsContainer') && document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
     
     setTimeout(() => fetchStats(), 300);
-    setTimeout(() => DraftSystem.check(), 1000); // فحص المسودة
+    setTimeout(() => DraftSystem.check(), 1000); 
 });
