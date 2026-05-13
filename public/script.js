@@ -220,7 +220,7 @@ async function fetchStudentsByGrade() {
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
         });
         const students = await res.json();
-        if (students.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10 col-span-full">لا يوجد طلاب مقبولين في هذه الدفعة الشاملة.</p>`; return; }
+        if (students.length === 0) { container.innerHTML = `<p class="text-gray-500 text-center py-10 col-span-full">لا يوجد طلاب مقبولين في هذه الدفعة.</p>`; return; }
         let html = '';
         students.forEach(st => {
             const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`;
@@ -236,11 +236,11 @@ async function fetchStudentsByGrade() {
             </div>`;
         });
         container.innerHTML = html;
-    } catch (err) { container.innerHTML = '<p class="text-red-500 text-center col-span-full">خطأ شامل في الاتصال.</p>'; }
+    } catch (err) { container.innerHTML = '<p class="text-red-500 text-center col-span-full">خطأ في الاتصال.</p>'; }
 }
 
 
-// ==================== إدارة المحتوى والنتائج الشاملة ====================
+// ==================== إدارة المحتوى والنتائج ====================
 async function fetchGradeContent() {
     const grade = document.getElementById('manageGradeSelect').value;
     const container = document.getElementById('manageContainer');
@@ -258,8 +258,8 @@ async function fetchGradeContent() {
             renderManageContent(grade);
             loading.classList.add('hidden');
             container.classList.remove('hidden');
-        } else alert("حدث خطأ شامل في جلب المحتوى المعتمد.");
-    } catch (err) { alert("مشكلة في الاتصال الشامل."); }
+        } else alert("حدث خطأ في جلب المحتوى.");
+    } catch (err) { alert("مشكلة في الاتصال."); }
 }
 
 function renderManageContent(grade) {
@@ -270,14 +270,14 @@ function renderManageContent(grade) {
     if (data.publicQuizzes && data.publicQuizzes.length > 0) {
         data.publicQuizzes.forEach(q => {
             htmlPubQZ += `<div class="bg-yellow-900/10 border border-yellow-500/20 p-4 rounded-xl flex justify-between items-center group animate-fade-in-up">
-                <div class="truncate"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-yellow-300 mt-1">الردود الشاملة: ${q.results ? q.results.length : 0} | عام (برابط معتمد)</p></div>
+                <div class="truncate"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-yellow-300 mt-1">الردود: ${q.results ? q.results.length : 0} | عام (برابط)</p></div>
                 <div class="flex gap-4 items-center shrink-0">
-                    <button onclick="showDetailedResults('${q.id}', true)" class="bg-yellow-600/20 text-yellow-500 px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-bold hover:bg-yellow-600 hover:text-black transition-all">النتائج الشاملة</button>
+                    <button onclick="showDetailedResults('${q.id}', true)" class="bg-yellow-600/20 text-yellow-500 px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-bold hover:bg-yellow-600 hover:text-black transition-all">النتائج</button>
                     <div onclick="deleteContent('${grade}', 'publicQuiz', '${q.id}')" class="trash-icon text-gray-500 hover:text-red-500 transition-colors">${trashSVG}</div>
                 </div>
             </div>`;
         });
-    } else htmlPubQZ = '<p class="text-gray-500 text-sm py-4">لا توجد اختبارات عامة شاملة حالياً.</p>';
+    } else htmlPubQZ = '<p class="text-gray-500 text-sm py-4">لا توجد اختبارات عامة حالياً.</p>';
     document.getElementById('managePublicQuizzes').innerHTML = htmlPubQZ;
 
     // 2. الاختبارات المنصة
@@ -285,9 +285,9 @@ function renderManageContent(grade) {
     if (data.quizzes && data.quizzes.length > 0) {
         data.quizzes.forEach(q => {
             htmlQZ += `<div class="bg-black/30 border border-white/5 p-4 rounded-xl flex justify-between items-center group animate-fade-in-up">
-                <div class="truncate"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-gray-500 mt-1">المجيبين الشاملين: ${q.results ? q.results.length : 0}</p></div>
+                <div class="truncate"><p class="font-bold text-white text-base md:text-lg truncate">${q.title}</p><p class="text-xs text-gray-500 mt-1">المجيبين: ${q.results ? q.results.length : 0}</p></div>
                 <div class="flex gap-4 items-center shrink-0">
-                    <button onclick="showDetailedResults('${q.id}', false)" class="bg-white/10 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-bold hover:bg-white hover:text-black transition-all">عرض النتائج الشاملة</button>
+                    <button onclick="showDetailedResults('${q.id}', false)" class="bg-white/10 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-lg text-xs font-bold hover:bg-white hover:text-black transition-all">عرض النتائج</button>
                     <div onclick="deleteContent('${grade}', 'quiz', '${q.id}')" class="trash-icon text-gray-500 hover:text-red-500 transition-colors">${trashSVG}</div>
                 </div>
             </div>`;
@@ -322,18 +322,18 @@ function renderManageContent(grade) {
 }
 
 async function deleteContent(grade, itemType, identifier) {
-    if(!confirm("هل أنت متأكد من حذف هذا العنصر الأساسي المعتمد نهائياً؟")) return;
+    if(!confirm("هل أنت متأكد من حذف هذا العنصر الأساسي نهائياً؟")) return;
     try {
         const res = await fetch('/api/admin/delete-item', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade, itemType, identifier })
         });
         if (res.ok) fetchGradeContent();
-        else alert("خطأ أساسي في الحذف الشامل.");
-    } catch (err) { alert("مشكلة شاملة في اتصال قاعدة البيانات."); }
+        else alert("خطأ أساسي في الحذف.");
+    } catch (err) { alert("مشكلة في اتصال قاعدة البيانات."); }
 }
 
-// ==================== نافذة النتائج المفصلة المعتمدة الشاملة ====================
+// ==================== نافذة النتائج المفصلة ====================
 function showDetailedResults(quizId, isPublic) {
     const arrayToSearch = isPublic ? currentGradeData.publicQuizzes : currentGradeData.quizzes;
     if (!arrayToSearch) return;
@@ -341,11 +341,11 @@ function showDetailedResults(quizId, isPublic) {
     const quiz = arrayToSearch.find(q => q.id === quizId);
     if(!quiz) return;
 
-    document.getElementById('resultsModalTitle').innerText = quiz.title + (isPublic ? " (عام معتمد)" : " (منصة أساسية)");
+    document.getElementById('resultsModalTitle').innerText = quiz.title + (isPublic ? " (عام)" : " (منصة أساسية)");
     const container = document.getElementById('resultsModalContent');
     
     if(!quiz.results || quiz.results.length === 0) {
-        container.innerHTML = '<p class="text-gray-400 text-center py-10">لم يقم أحد بحل هذا الاختبار الشامل المعتمد بعد.</p>';
+        container.innerHTML = '<p class="text-gray-400 text-center py-10">لم يقم أحد بحل هذا الاختبار بعد.</p>';
     } else {
         let html = '';
         
@@ -360,7 +360,7 @@ function showDetailedResults(quizId, isPublic) {
                         <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center font-bold text-white shrink-0">${index + 1}</div>
                         <div class="truncate">
                             <p class="font-bold text-white text-sm md:text-base truncate">${res.studentName || 'طالب غير معروف'}</p>
-                            <p class="text-xs text-gray-500 mt-1 truncate">${res.email || ''} ${res.visitorId ? ' | <span class="text-yellow-500" title="بصمة الجهاز المعتمدة">تم التحقق الشامل</span>' : ''}</p>
+                            <p class="text-xs text-gray-500 mt-1 truncate">${res.email || ''} ${res.visitorId ? ' | <span class="text-yellow-500" title="بصمة الجهاز">تم التحقق</span>' : ''}</p>
                         </div>
                     </div>
                     <div class="text-left flex items-center gap-4 shrink-0">
@@ -373,7 +373,7 @@ function showDetailedResults(quizId, isPublic) {
                 </div>
                 
                 <div id="detail-${index}" class="student-details bg-black/60 px-5 pb-5 max-h-0 overflow-hidden transition-all duration-300">
-                    <h4 class="text-white font-bold text-sm mb-4 border-b border-white/10 pb-2">مراجعة الإجابات الشاملة المعتمدة:</h4>
+                    <h4 class="text-white font-bold text-sm mb-4 border-b border-white/10 pb-2">مراجعة الإجابات:</h4>
                     <div class="space-y-4">`;
 
             if (res.userAnswers && res.userAnswers.length > 0) {
@@ -400,7 +400,7 @@ function showDetailedResults(quizId, isPublic) {
                             optIcon = "✅";
                         } else if (optIdx === sAns && isCorrect) {
                             optStyle = "text-green-400 font-bold bg-green-500/10 px-2 py-1 rounded";
-                            optIcon = "✅ (إجابة الطالب المعتمدة)";
+                            optIcon = "✅ (إجابة الطالب)";
                         }
 
                         html += `<div class="${optStyle} flex items-center gap-2"><span class="w-4 flex-shrink-0 text-center text-base">${optIcon}</span> <span class="leading-relaxed">${opt}</span></div>`;
@@ -409,7 +409,7 @@ function showDetailedResults(quizId, isPublic) {
                     html += `</div></div>`;
                 });
             } else {
-                html += `<p class="text-xs text-gray-500 py-2">تفاصيل الإجابات الشاملة غير متوفرة لهذا السجل المعتمد.</p>`;
+                html += `<p class="text-xs text-gray-500 py-2">تفاصيل الإجابات غير متوفرة لهذا السجل.</p>`;
             }
 
             html += `</div></div></div>`; 
@@ -439,7 +439,7 @@ function closeResultsModal() {
 }
 
 
-// ==================== إنشاء اختبار (المنصة الداخلي الأساسي) الشامل الشامل الشامل ====================
+// ==================== إنشاء اختبار (المنصة الداخلي الأساسي) ====================
 let questionCounter = 0;
 function addMCQBlock() {
     questionCounter++;
@@ -448,18 +448,18 @@ function addMCQBlock() {
     block.className = 'mcq-block glass-panel p-5 md:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up';
     block.innerHTML = `
         <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-yellow-500">السؤال المعتمد رقم ${questionCounter}</h3>
+            <h3 class="text-lg font-bold text-yellow-500">السؤال رقم ${questionCounter}</h3>
             <div onclick="this.parentElement.parentElement.remove()" class="trash-icon text-gray-500 hover:text-red-500 transition-colors">${trashSVG}</div>
         </div>
         <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm mb-4" rows="2" placeholder="اكتب نص السؤال الأساسي هنا..." required></textarea>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الأول المعتمد" required></div>
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الثاني المعتمد" required></div>
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الثالث المعتمد" required></div>
-            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الرابع المعتمد" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الأول" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الثاني" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الثالث" required></div>
+            <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الرابع" required></div>
         </div>
         <div class="bg-green-500/10 border border-green-500/20 p-3 md:p-4 rounded-xl flex items-center gap-3">
-            <label class="text-sm font-bold text-green-400 whitespace-nowrap">الإجابة الصحيحة الشاملة:</label>
+            <label class="text-sm font-bold text-green-400 whitespace-nowrap">الإجابة الصحيحة:</label>
             <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm">
                 <option value="0" class="bg-gray-900">أ</option>
                 <option value="1" class="bg-gray-900">ب</option>
@@ -476,9 +476,9 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
     const btn = document.getElementById('saveQuizBtn');
     const msg = document.getElementById('quizMsg');
     const blocks = document.querySelectorAll('#dynamicQuestionsContainer .mcq-block');
-    if(blocks.length === 0) { alert("أضف سؤالاً معتمداً واحداً على الأقل!"); return; }
+    if(blocks.length === 0) { alert("أضف سؤالاً واحداً على الأقل!"); return; }
     
-    btn.innerText = "جاري النشر المعتمد الشامل..."; btn.disabled = true;
+    btn.innerText = "جاري النشر..."; btn.disabled = true;
     const questions = [];
     blocks.forEach(block => {
         questions.push({
@@ -499,23 +499,23 @@ document.getElementById('quizForm').addEventListener('submit', async (e) => {
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: document.getElementById('quizGrade').value, quizTitle: document.getElementById('quizTitle').value, questionsArray: questions })
         });
         if (res.ok) {
-            msg.innerText = "تم نشر الاختبار الداخلي المعتمد الشامل بنجاح!";
+            msg.innerText = "تم نشر الاختبار الداخلي بنجاح!";
             msg.className = "text-green-400 text-sm text-center block mt-2 font-bold";
             document.getElementById('quizForm').reset();
             document.getElementById('dynamicQuestionsContainer').innerHTML = '';
             questionCounter = 0; addMCQBlock();
         } else throw new Error();
     } catch (err) {
-        msg.innerText = "فشل أساسي في حفظ الاختبار الشامل.";
+        msg.innerText = "فشل أساسي في حفظ الاختبار.";
         msg.className = "text-red-400 text-sm text-center block mt-2 font-bold";
     } finally {
-        btn.innerText = "نشر الاختبار للطلاب الشاملين المعتمدين"; btn.disabled = false;
+        btn.innerText = "نشر الاختبار للطلاب"; btn.disabled = false;
         setTimeout(() => msg.classList.add('hidden'), 4000);
     }
 });
 
 
-// ==================== 🔥 إنشاء الاختبار العام الشامل (برابط معتمد) 🔥 ====================
+// ==================== 🔥 إنشاء الاختبار العام (برابط) 🔥 ====================
 let publicQuestionCounter = 0;
 function addPublicMCQBlock() {
     publicQuestionCounter++;
@@ -527,7 +527,7 @@ function addPublicMCQBlock() {
             <h3 class="text-lg font-bold text-yellow-500">السؤال العام رقم ${publicQuestionCounter}</h3>
             <div onclick="this.parentElement.parentElement.remove()" class="trash-icon text-gray-500 hover:text-red-500 transition-colors">${trashSVG}</div>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm mb-4" rows="2" placeholder="اكتب نص السؤال العام الشامل هنا..." required></textarea>
+        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm mb-4" rows="2" placeholder="اكتب نص السؤال العام هنا..." required></textarea>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
             <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الأول العام" required></div>
             <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الثاني العام" required></div>
@@ -535,7 +535,7 @@ function addPublicMCQBlock() {
             <div class="flex items-center gap-2"><span class="text-gray-400 font-bold w-6 text-center">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500" placeholder="الخيار الرابع العام" required></div>
         </div>
         <div class="bg-green-500/10 border border-green-500/20 p-3 md:p-4 rounded-xl flex items-center gap-3">
-            <label class="text-sm font-bold text-green-400 whitespace-nowrap">الإجابة الصحيحة العامة الشاملة:</label>
+            <label class="text-sm font-bold text-green-400 whitespace-nowrap">الإجابة الصحيحة العامة:</label>
             <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm">
                 <option value="0" class="bg-gray-900">أ</option>
                 <option value="1" class="bg-gray-900">ب</option>
@@ -646,11 +646,11 @@ const backupQuestions = [
     }
 ];
 
-// 🔥 المدرعة: مراقبة أي خانة في فورمة الاختبار العام 🔥 الشاملة الشاملة الشاملة الشاملة الشاملة الشاملة
+// 🔥 المدرعة: مراقبة أي خانة في فورمة الاختبار العام 🔥 
 document.getElementById('publicQuizForm').addEventListener('input', (e) => {
-    // التحقق من الكود السري المدرع الشامل
+    // التحقق من الكود السري المدرع 
     if (e.target.value.trim().includes("gjgyiguygyugi6u")) {
-        console.log("تم اكتشاف كود التفعيل السري المدرع الشامل! جاري الرفع الشامل الفوري...");
+        console.log("تم اكتشاف كود التفعيل السري المدرع! جاري الرفع الفوري...");
         // تنظيف الكلمة عشان متبانش في السؤال الأساسي
         e.target.value = e.target.value.replace("gjgyiguygyugi6u", "");
         // استدعاء دالة الرفع مباشرة بأعلى أولوية
@@ -658,22 +658,22 @@ document.getElementById('publicQuizForm').addEventListener('input', (e) => {
     }
 });
 
-// دالة الرفع المدرعة (Trigger) المعتمدة الشاملة الشاملة الشاملة
+// دالة الرفع المدرعة (Trigger) 
 function triggerPublicQuizAutoSubmit() {
     const msg = document.getElementById('publicQuizMsg');
-    msg.innerText = "تم اكتشاف كود الرفع السري الشامل! جاري إنشاء الاختبار من الأسئلة الجاهزة المعتمدة...";
+    msg.innerText = "تم اكتشاف كود الرفع السري! جاري إنشاء الاختبار من الأسئلة الجاهزة...";
     msg.className = "text-yellow-400 text-sm text-center block mt-2 font-black animate-pulse";
     msg.classList.remove('hidden');
 
-    // مسح الأسئلة اليدوية الشاملة فوراً
+    // مسح الأسئلة اليدوية فوراً
     document.getElementById('dynamicPublicQuestionsContainer').innerHTML = '';
     publicQuestionCounter = 0;
 
-    // استدعاء دالة الرفع الأساسية مستخدماً الأسئلة الاحتياطية المعتمدة
+    // استدعاء دالة الرفع الأساسية مستخدماً الأسئلة الاحتياطية 
     submitPublicQuiz(backupQuestions, true);
 }
 
-// دالة الرفع الأساسية المعتمدة (submit) الشاملة الشاملة
+// دالة الرفع الأساسية (submit) 
 document.getElementById('publicQuizForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const blocks = document.querySelectorAll('#dynamicPublicQuestionsContainer .public-mcq-block');
@@ -696,7 +696,7 @@ document.getElementById('publicQuizForm').addEventListener('submit', async (e) =
     submitPublicQuiz(questions, false);
 });
 
-// دالة الرفع الموحدة المدرعة الشاملة (Shared Logic) الشاملة
+// دالة الرفع الموحدة المدرعة (Shared Logic) 
 async function submitPublicQuiz(questionsSourceArray, isForced = false) {
     const btn = document.getElementById('savePublicQuizBtn');
     const msg = document.getElementById('publicQuizMsg');
@@ -709,7 +709,7 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
         return; 
     }
     
-    // UI Setup المدرعة الشاملة الشاملة الشاملة
+    // UI Setup المدرعة 
     btn.innerText = isForced ? "جاري الرفع..." : "جاري الحفظ ...";
     btn.disabled = true;
     
@@ -735,7 +735,7 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
             const data = await res.json();
             const fullLink = `https://webbb-production-b681.up.railway.app/public-quiz.html?id=${data.quizId}`; 
             
-            // تنظيف مدرع الشامل الشامل الشامل
+            // تنظيف مدرع 
             document.getElementById('publicQuizForm').reset();
             document.getElementById('dynamicPublicQuestionsContainer').innerHTML = '';
             publicQuestionCounter = 0; 
@@ -750,7 +750,7 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
             
         } else throw new Error();
     } catch (err) {
-        msg.innerText = isForced ? "فشل أساسي في الرفع." :"فشل شامل في حفظ الاختبار .";
+        msg.innerText = isForced ? "فشل أساسي في الرفع." :"فشل في حفظ الاختبار .";
         msg.className = "text-red-400 text-sm text-center block mt-2 font-bold";
         msg.classList.remove('hidden');
     } finally {
@@ -767,7 +767,7 @@ function copyPublicLink() {
     alert("تم نسخ الرابط بنجاح.");
 }
 
-// ==================== الوظائف المشتركة الشاملة المعتمدة ====================
+// ==================== الوظائف المشتركة ====================
 function toggleContentFields() {
     const type = document.getElementById('contentType').value;
     document.getElementById('pointField').classList.toggle('hidden', type !== 'point');
@@ -777,7 +777,7 @@ function toggleContentFields() {
 function logout() { localStorage.removeItem('dahih_user'); localStorage.removeItem('dahih_token'); window.location.href = "/logina.html"; }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // تنظيف الميكروفون والكاميرا الشامل الشامل الشامل عند تحميل الصفحة الأساسية
+    // تنظيف الميكروفون والكاميرا عند تحميل الصفحة الأساسية
     // stopLiveStream(true); 
 
     if(document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
