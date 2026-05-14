@@ -99,6 +99,25 @@ const requireAdmin = (req, res, next) => {
     next();
 };
 
+// ==========================================
+// 🔥 مسار التحقق التلقائي من الجلسة (Auto-Login)
+// ==========================================
+app.get('/api/verify-session', authenticateToken, (req, res) => {
+    const userRole = req.user.role;
+    
+    // توجيه المستخدم حسب صلاحياته
+    let redirectUrl = '/student-dashboard.html'; 
+    
+    if (userRole === 'dev' || userRole === 'owner') {
+        redirectUrl = '/admin-dashboard.html'; 
+    }
+
+    res.status(200).json({ 
+        message: "التوكن صالح", 
+        redirectTo: redirectUrl,
+        role: userRole 
+    });
+});
 
 // ==========================================
 // 1️⃣ مسارات الطلاب وتسجيل الدخول (محمية ومشفّرة)
@@ -184,7 +203,6 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
 // 2️⃣ مسارات لوحة الإدارة (محمية بالتوكن والصلاحيات)
 // ==========================================
 
-// تم إزالة (const { role } = req.body) لأنه ثغرة، الآن نعتمد على التوكن المشفر (req.user.role)
 app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });  
