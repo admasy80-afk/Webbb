@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>قاعة الانتظار | منصة الدحيح</title>
+    <title>صفحة الانتظار | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
@@ -177,9 +177,17 @@
                         
                         const user = JSON.parse(localStorage.getItem('dahih_user'));
                         user.status = 'accepted';
+                        user.phoneVerified = data.phoneVerified; // تحديث حالة التحقق محلياً
                         localStorage.setItem('dahih_user', JSON.stringify(user));
                         
-                        setTimeout(() => window.location.replace("/dashboard.html"), 600);
+                        // 🔥 التوجيه حسب التوثيق 🔥
+                        setTimeout(() => {
+                            if (data.phoneVerified) {
+                                window.location.replace("/dashboard.html");
+                            } else {
+                                window.location.replace("/verify.html");
+                            }
+                        }, 600);
                         return;
                     }
 
@@ -243,4 +251,3 @@
     </script>
 </body>
 </html>
-
