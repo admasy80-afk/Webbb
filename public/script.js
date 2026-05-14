@@ -1362,19 +1362,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const SmartImportSystem = {
     init() {
-        // 1. إضافة زر الاستيراد الذكي بجانب زر "إضافة سؤال عام"
-        const publicTabBtnContainer = document.querySelector('#tab-create-public form .flex.justify-between.items-center.mb-6');
-        if (publicTabBtnContainer && !document.getElementById('smart-import-btn')) {
+        // البحث عن الحاوية أو وضع الزر في الفورم
+        const btnContainer = document.getElementById('smart-import-btn-container');
+        const formContainer = document.getElementById('publicQuizForm');
+        
+        if (!document.getElementById('smart-import-btn') && formContainer) {
             const importBtn = document.createElement('button');
             importBtn.id = 'smart-import-btn';
             importBtn.type = 'button';
-            importBtn.className = 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center gap-2 hover:-translate-y-1';
+            importBtn.className = 'w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-3.5 sm:py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2 hover:-translate-y-1';
             importBtn.innerHTML = `
                 <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 كتابة سريع
             `;
             importBtn.onclick = () => this.showImportModal();
-            publicTabBtnContainer.appendChild(importBtn);
+            
+            if(btnContainer) {
+                btnContainer.appendChild(importBtn);
+            } else {
+                 // إذا لم يجد الحاوية، يضعه فوق الأسئلة مباشرة
+                const dynContainer = document.getElementById('dynamicPublicQuestionsContainer');
+                if(dynContainer) dynContainer.parentNode.insertBefore(importBtn, dynContainer);
+            }
         }
 
         // 2. تجهيز نافذة اللصق المنبثقة (Modal)
