@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تأكيد الرقم | منصة الدحيح</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    
+    <style>
+        body { font-family: 'Readex Pro', sans-serif; }
+        .bg-animated-gradient {
+            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
+            background-size: 400% 400%;
+            animation: gradientMove 15s ease infinite;
+        }
+        @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        .glass-card {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+        }
+        .otp-input:focus { border-color: #eab308; box-shadow: 0 0 10px rgba(234, 179, 8, 0.2); }
+        @keyframes bounce-slow { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .animate-bounce-slow { animation: bounce-slow 3s ease-in-out infinite; }
+    </style>
+</head>
+<body class="bg-animated-gradient text-white min-h-screen flex items-center justify-center p-6">
+
+    <div class="glass-card w-full max-w-md rounded-[2.5rem] p-8 text-center relative overflow-hidden">
+        
+        <!-- الأيقونة العلوية -->
+        <div class="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce-slow border border-yellow-500/30">
+            <svg class="w-10 h-10 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+        </div>
+
+        <h2 class="text-2xl font-bold mb-2">تأكيد رقم الهاتف</h2>
+        <p id="infoText" class="text-gray-400 text-sm mb-8 leading-relaxed">سنقوم بإرسال رمز تحقق برسالة نصية للتأكد من هويتك كطالب في منصة الدحيح.</p>
+
+        <!-- منطقة الـ ReCAPTCHA المخفية -->
+        <div id="recaptcha-container"></div>
+
+        <div id="phoneInputSection">
+            <input type="text" id="phoneDisplay" readonly
+                class="w-full bg-black/40 border border-white/10 text-center text-xl tracking-widest text-yellow-500 rounded-2xl py-4 mb-6 outline-none">
+            <button onclick="sendCode()" id="sendBtn" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl hover:bg-yellow-400 transition-all shadow-lg">
+                إرسال رمز التحقق
+            </button>
+        </div>
+
+        <div id="otpSection" class="hidden">
+            <input type="text" id="otpCode" placeholder="أدخل الـ 6 أرقام هنا"
+                class="otp-input w-full bg-black/40 border border-white/10 text-center text-2xl tracking-[1em] text-white rounded-2xl py-4 mb-6 outline-none transition-all">
+            <button onclick="verifyCode()" id="verifyBtn" class="w-full bg-green-500 text-white font-black py-4 rounded-2xl hover:bg-green-400 transition-all shadow-lg">
+                تأكيد الرمز والدخول
+            </button>
+        </div>
+
+        <p id="msg" class="mt-4 text-sm font-medium hidden"></p>
+    </div>
+
+    <script>
+        // دمج بيانات Firebase Config الخاصة بك
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSQvaTzE73ua2U8eKKMT_shuQ_l52tpxU",
+            authDomain: "eld7e7-63bfe.firebaseapp.com",
+            projectId: "eld7e7-63bfe",
+            storageBucket: "eld7e7-63bfe.firebasestorage.app",
+            messagingSenderId: "124898726301",
+            appId: "1:124898726301:web:80d1fac8332028977e5f74"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        const user = JSON.parse(localStorage.getItem('dahih_user'));
+        if(!user) window.location.replace("/logina.html");
+        
+        // عرض الرقم المخزن عند التسجيل
+        document.getElementById('phoneDisplay').value = user.phone || "رقمك غير مسجل";
+
+        window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
+
+        async function sendCode() {
+            const btn = document.getElementById('sendBtn');
+            btn.innerText = "جاري الإرسال...";
+            btn.disabled = true;
+
+            auth.signInWithPhoneNumber(user.phone, window.recaptchaVerifier)
+                .then((confirmationResult) => {
+                    window.confirmationResult = confirmationResult;
+                    document.getElementById('phoneInputSection').classList.add('hidden');
+                    document.getElementById('otpSection').classList.remove('hidden');
+                    document.getElementById('infoText').innerText = "أدخل الكود الذي وصلك الآن";
+                }).catch(err => {
+                    alert("خطأ: " + err.message);
+                    btn.disabled = false;
+                    btn.innerText = "إعادة المحاولة";
+                });
+        }
+
+        async function verifyCode() {
+            const code = document.getElementById('otpCode').value;
+            confirmationResult.confirm(code).then(async (result) => {
+                // نجاح التحقق في Firebase -> نبلغ السيرفر الخاص بنا
+                await fetch('/api/student/verify-phone', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ email: user.email })
+                });
+                
+                alert("تم التحقق بنجاح! أهلاً بك في منصة الدحيح");
+                window.location.replace("/dashboard.html");
+            }).catch(err => alert("الرمز غير صحيح!"));
+        }
+    </script>
+</body>
+</html>
+
