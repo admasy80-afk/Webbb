@@ -63,7 +63,7 @@
 
         .animate-slide-down { animation: slideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .animate-fade-up { opacity: 0; animation: customFadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        .animate-pop-in { opacity: 0; animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .animate-pop-in { animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         .animate-float-1 { animation: floatSlow 8s ease-in-out infinite; }
         .animate-float-2 { animation: floatSlow 12s ease-in-out infinite; animation-delay: 2s; }
 
@@ -139,7 +139,6 @@
             <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:-translate-y-1">المناهج</a>
         </div>
         
-        <!-- 🔥 تم إضافة كلاس fallback-button هنا لضمان ظهور اللون الأصفر حتى لو فشل Tailwind -->
         <a href="/logina.html" class="fallback-button bg-yellow-500 text-black px-5 py-2 md:px-6 md:py-2.5 rounded-full text-sm md:text-base font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-110 shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]">
             التسجيل
         </a>
@@ -161,13 +160,13 @@
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full max-w-xl justify-center items-center mb-16">
-                <!-- 🔥 إضافة style مباشر لزر "ابدأ التعلم الآن" -->
-                <a href="/register.html" class="animate-pop-in delay-400 w-full sm:w-1/2 text-center px-8 py-4 bg-white text-black font-bold rounded-2xl pulse-glow hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105" style="background-color: white; color: black; text-decoration: none;">
+                <!-- 🔥 تم إضافة خصائص الحجم (padding و display) لضمان ظهور الزر بقوة -->
+                <a href="/register.html" class="animate-pop-in delay-400 w-full sm:w-1/2 text-center px-8 py-4 bg-white text-black font-bold rounded-2xl pulse-glow hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105" style="background-color: white; color: black; text-decoration: none; display: inline-block; padding: 15px 30px; border-radius: 15px; margin-bottom: 10px;">
                     ابدأ التعلم الآن
                 </a>
                 
-                <!-- 🔥 إضافة style مباشر لزر "جرب بنك الأسئلة" -->
-                <a href="#" class="animate-pop-in delay-500 w-full sm:w-1/2 text-center px-8 py-4 border-2 border-gray-700 text-gray-300 font-bold rounded-2xl hover:text-white hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-500 transform hover:scale-105" style="border: 2px solid #374151; color: #d1d5db; text-decoration: none;">
+                <!-- 🔥 تم إضافة خصائص الحجم (padding و display) لضمان ظهور الزر بقوة -->
+                <a href="#" class="animate-pop-in delay-500 w-full sm:w-1/2 text-center px-8 py-4 border-2 border-gray-700 text-gray-300 font-bold rounded-2xl hover:text-white hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-500 transform hover:scale-105" style="border: 2px solid #374151; color: #d1d5db; text-decoration: none; display: inline-block; padding: 15px 30px; border-radius: 15px;">
                     جرب بنك الأسئلة
                 </a>
             </div>
@@ -176,7 +175,6 @@
                 <p class="text-sm md:text-base text-gray-400 font-light mb-4 md:mb-6 animate-fade-up delay-700">تواصل معنا على:</p>
                 <div class="flex flex-row gap-4 sm:gap-6 justify-center items-center">
                     
-                    <!-- 🔥 أضفنا width و height للأيقونات عشان منحجمهاش تاني زي ما حصل في الصورة -->
                     <a href="https://wa.me/201274993282" target="_blank" rel="noopener noreferrer" class="animate-pop-in delay-700 p-3 md:p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-green-400 hover:border-green-400 hover:bg-green-400/10 transition-all duration-300 transform hover:scale-110 hover:-translate-y-2 shadow-lg flex items-center justify-center">
                         <svg width="24" height="24" class="w-6 h-6 md:w-7 md:h-7 fill-current" viewBox="0 0 24 24"><path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.115.549 4.17 1.594 5.99L0 24l6.15-1.574A11.968 11.968 0 0 0 12.031 24c6.646 0 12.031-5.385 12.031-12.031S18.677 0 12.031 0zm3.896 17.291c-.171.482-.992.946-1.428 1.011-.437.065-1.026.152-3.328-.802-2.775-1.15-4.544-4.004-4.682-4.187-.137-.183-1.118-1.486-1.118-2.836 0-1.35.706-2.012.955-2.285.25-.272.545-.341.727-.341.182 0 .364 0 .524.008.172.008.384-.066.598.455.227.545.772 1.886.84 2.022.069.136.114.296.023.477-.091.182-.136.296-.273.455-.136.159-.283.33-.409.466-.136.148-.285.31-.125.584.159.273.708 1.168 1.522 1.897 1.05 .938 1.932 1.233 2.204 1.369.273.136.432.114.591-.068.159-.182.682-.795.864-1.068.182-.273.364-.227.614-.136.25.091 1.591.75 1.864.886.273.136.455.205.524.318.068.114.068.659-.103 1.14z"/></svg>
                     </a>
