@@ -45,7 +45,7 @@
         <div id="recaptcha-container"></div>
 
         <div id="phoneInputSection">
-            <input type="text" id="phoneDisplay" readonly
+            <input type="text" id="phoneDisplay" readonly dir="ltr"
                 class="w-full bg-black/40 border border-white/10 text-center text-xl tracking-widest text-yellow-500 rounded-2xl py-4 mb-6 outline-none">
             <button onclick="sendCode()" id="sendBtn" class="w-full bg-yellow-500 text-black font-black py-4 rounded-2xl hover:bg-yellow-400 transition-all shadow-lg">
                 إرسال رمز التحقق
@@ -53,7 +53,7 @@
         </div>
 
         <div id="otpSection" class="hidden">
-            <input type="text" id="otpCode" placeholder="أدخل الـ 6 أرقام هنا"
+            <input type="text" id="otpCode" placeholder="أدخل الـ 6 أرقام هنا" dir="ltr"
                 class="otp-input w-full bg-black/40 border border-white/10 text-center text-2xl tracking-[1em] text-white rounded-2xl py-4 mb-6 outline-none transition-all">
             <button onclick="verifyCode()" id="verifyBtn" class="w-full bg-green-500 text-white font-black py-4 rounded-2xl hover:bg-green-400 transition-all shadow-lg">
                 تأكيد الرمز والدخول
@@ -84,39 +84,84 @@
 
         window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
 
+        // دالة ذكية لتحويل الرقم للصيغة الدولية المدعومة في فايربيز (E.164)
+        function formatPhoneNumber(phone) {
+            if (!phone) return "";
+            let cleaned = phone.trim();
+            
+            // لو الرقم بيبدأ بـ 01 (مثل 01012345678)، شيل الصفر وحط +20
+            if (cleaned.startsWith('01')) {
+                cleaned = '+20' + cleaned.substring(1);
+            } 
+            // لو الرقم بيبدأ بـ 20 من غير علامة +
+            else if (cleaned.startsWith('20')) {
+                cleaned = '+' + cleaned;
+            }
+            // لو الرقم مش بيبدأ بـ + (يعني رقم عادي من غير 0 في الأول)
+            else if (!cleaned.startsWith('+')) {
+                cleaned = '+20' + cleaned;
+            }
+            
+            return cleaned;
+        }
+
         async function sendCode() {
             const btn = document.getElementById('sendBtn');
             btn.innerText = "جاري الإرسال...";
             btn.disabled = true;
 
-            auth.signInWithPhoneNumber(user.phone, window.recaptchaVerifier)
+            // تجهيز الرقم بالصيغة الصحيحة
+            const finalPhone = formatPhoneNumber(user.phone);
+            console.log("الرقم المرسل إلى Firebase:", finalPhone); // للـ Debugging في الكونسول
+
+            auth.signInWithPhoneNumber(finalPhone, window.recaptchaVerifier)
                 .then((confirmationResult) => {
                     window.confirmationResult = confirmationResult;
                     document.getElementById('phoneInputSection').classList.add('hidden');
                     document.getElementById('otpSection').classList.remove('hidden');
                     document.getElementById('infoText').innerText = "أدخل الكود الذي وصلك الآن";
                 }).catch(err => {
-                    alert("خطأ: " + err.message);
+                    console.error("Firebase Error:", err);
+                    alert("خطأ: يرجى التأكد من أن الرقم مسجل بشكل صحيح");
                     btn.disabled = false;
                     btn.innerText = "إعادة المحاولة";
                 });
         }
 
         async function verifyCode() {
-            const code = document.getElementById('otpCode').value;
+            const code = document.getElementById('otpCode').value.trim();
+            if (!code) return alert("الرجاء إدخال الكود");
+            
+            const btn = document.getElementById('verifyBtn');
+            btn.innerText = "جاري التأكيد...";
+            btn.disabled = true;
+
             confirmationResult.confirm(code).then(async (result) => {
                 // نجاح التحقق في Firebase -> نبلغ السيرفر الخاص بنا
-                await fetch('/api/student/verify-phone', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ email: user.email })
-                });
-                
-                alert("تم التحقق بنجاح! أهلاً بك في منصة الدحيح");
-                window.location.replace("/dashboard.html");
-            }).catch(err => alert("الرمز غير صحيح!"));
+                try {
+                    await fetch('/api/student/verify-phone', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ email: user.email })
+                    });
+                    
+                    // تحديث حالة المستخدم في الـ LocalStorage عشان يقدر يدخل بعدين
+                    user.phoneVerified = true;
+                    localStorage.setItem('dahih_user', JSON.stringify(user));
+
+                    alert("تم التحقق بنجاح! أهلاً بك في منصة الدحيح");
+                    window.location.replace("/dashboard.html");
+                } catch(e) {
+                    alert("حدث خطأ أثناء تحديث بياناتك في الخادم.");
+                    btn.disabled = false;
+                    btn.innerText = "تأكيد الرمز والدخول";
+                }
+            }).catch(err => {
+                alert("الرمز غير صحيح!");
+                btn.disabled = false;
+                btn.innerText = "تأكيد الرمز والدخول";
+            });
         }
     </script>
 </body>
 </html>
-
