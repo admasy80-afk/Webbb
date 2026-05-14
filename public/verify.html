@@ -84,10 +84,12 @@
 
         window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
 
-        // دالة ذكية لتحويل الرقم للصيغة الدولية المدعومة في فايربيز (E.164)
+        // دالة ذكية لتحويل الرقم للصيغة الدولية المدعومة في فايربيز (E.164) مع تنظيف المسافات
         function formatPhoneNumber(phone) {
             if (!phone) return "";
-            let cleaned = phone.trim();
+            
+            // تنظيف الرقم من أي مسافات أو حروف، وترك الأرقام وعلامة + فقط
+            let cleaned = phone.replace(/[^\d+]/g, '');
             
             // لو الرقم بيبدأ بـ 01 (مثل 01012345678)، شيل الصفر وحط +20
             if (cleaned.startsWith('01')) {
@@ -122,7 +124,8 @@
                     document.getElementById('infoText').innerText = "أدخل الكود الذي وصلك الآن";
                 }).catch(err => {
                     console.error("Firebase Error:", err);
-                    alert("خطأ: يرجى التأكد من أن الرقم مسجل بشكل صحيح");
+                    // هنا قمنا بتعديل الـ Alert ليطبع تفاصيل الخطأ مباشرة
+                    alert("رسالة الخطأ من السيرفر:\n" + err.message);
                     btn.disabled = false;
                     btn.innerText = "إعادة المحاولة";
                 });
