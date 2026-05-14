@@ -846,7 +846,6 @@ function addMCQBlock() {
     const container = document.getElementById('dynamicQuestionsContainer');
     const block = document.createElement('div');
     block.className = 'mcq-block glass-panel p-4 sm:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
-    // لا نحتاج لـ draggable="true" على الموبايل لأنه يتطلب Polyfills معقدة، لكن على الكمبيوتر سيعمل بالـ Mouse Events
     block.draggable = window.innerWidth > 768; 
     
     block.style.opacity = "0";
@@ -1094,50 +1093,6 @@ function addPublicMCQBlock() {
     }, 10);
 }
 
-const backupQuestions = [
-    { "questionText": "تقلّد ولاية مصر اعتبارًا من عهد الخليفة العباسي المعتصم ولاة من العنصر ............ ", "options": ["العربي.", "التركي.", "الفارسي.", "البربري."], "correctAnswer": 1 },
-    { "questionText": "قام خمارويه بتدعيم حكمه من خلال وسائل ............ ", "options": ["اقتصادية.", "اجتماعية.", "دينية.", "عسكرية."], "correctAnswer": 1 },
-    { "questionText": "نجح أحمد بن طولون في تثبيت حكمه في مصر معتمدًا على مبدأ ............ ", "options": ["الديمقراطية.", "المشاركة.", "الديكتاتورية.", "المساواة."], "correctAnswer": 1 },
-    { "questionText": "يرجع عدم استعادة الدولة العباسية حكم مصر بعد وفاة محمد بن طغج الإخشيد إلى ............ ", "options": ["التزامها بعهدها مع الإخشيد.", "قوة كافور الإخشيدي العسكرية.", "تصدى أنوجور لأعداء العباسيين.", "عدم اهتمام العباسيين بمصر."], "correctAnswer": 1 },
-    { "questionText": "تأكدت أهمية مصر الاقتصادية للدولة الإسلامية في عصر الخلفاء الراشدين من خلال ............ ", "options": ["توفير الأمن الغذائي.", "إنشاء خليج أمير المؤمنين.", "فتح أسواق للبضائع المصرية.", "استصلاح الأراضي الزراعية."], "correctAnswer": 0 },
-    { "questionText": "حدد أى من الحرف المصرية الآتية كان لها الفضل الأكبر فى التخفيف من الأزمة الاقتصادية فى عهد عمر بن الخطاب ............ ", "options": ["الرعى والصناعة.", "الرعى والزراعة.", "الزراعة والتجارة.", "التجارة والصناعة."], "correctAnswer": 1 },
-    { "questionText": "أدى إنشاء فروع لبيت المال في الولايات إلى تطبيق مبدأ ............ ", "options": ["الديمقراطية.", "المركزية.", "اللامركزية.", "المساواة."], "correctAnswer": 2 },
-    { "questionText": "أدى جعل عمر بن الخطاب أمين بيت المال مستقلًا في عمله عن الولاة إلى اكتساب الحضارة الإسلامية خاصية ............ ", "options": ["الابتكار.", "المساواة.", "العدالة.", "المشاركة."], "correctAnswer": 0 },
-    { "questionText": "ارتبط تقدم المسلمين في علمي الفلك والجبر بـ ............ ", "options": ["إقامة الدولة للمراصد.", "ازدهار حركة الترجمة.", "الشعائر الدينية.", "اتساع الدولة الإسلامية."], "correctAnswer": 2 },
-    { "questionText": "يُعد من أسباب ازدهار الحياة العلمية في الدولة الإسلامية الاستقرار الاقتصادي للعلماء من خلال ............ ", "options": ["ازدهار النشاط التجاري.", "نظام الوقف الإسلامي.", "تشجيع الأمويين للمترجمين.", "انتشار الإسلام بين غير العرب."], "correctAnswer": 1 },
-    { "questionText": "استفادت الزراعة من تقدم المسلمين في علمي ............ ", "options": ["الكيمياء والفيزياء.", "الجيولوجيا والفيزياء.", "الجغرافيا والجيولوجيا.", "الرياضيات والفلك."], "correctAnswer": 2 },
-    { "questionText": "تشابه موقف المسلمين في معركة حطين والحملة الصليبية الخامسة في ............ ", "options": ["القوة العسكرية للمسلمين.", "الاستفادة من ميدان المعركة.", "الحفاظ على بيت المقدس.", "القوة العسكرية للصليبيين."], "correctAnswer": 1 },
-    { "questionText": "حرص صلاح الدين الأيوبي على الاستيلاء على المدن الساحلية قبل استرداده بيت المقدس من أجل ............ ", "options": ["إبعاد الصليبيين عن بيت المقدس.", "الأهمية الاقتصادية لمدن الساحل.", "منع وصول إمدادات بحرية للصليبيين.", "تأمين طريق التجار المسلمين."], "correctAnswer": 2 },
-    { "questionText": "«نجح عماد الدين زنكى حاكم الموصل فى ضم مدن حلب وحمص وحماة ثم توج جهاده باسترداد إمارة الرها». فى ضوء العبارة السابقة : استفاد نور الدين محمود مما قام به عماد الدين زنكى فى ............ ", "options": ["السعى لضم مصر.", "تأمين عاصمة الخلافة.", "تنشيط التجارة الإسلامية.", "استقرار المجتمع الإسلامي."], "correctAnswer": 0 },
-    { "questionText": "حرص المسلمون على دراسة التربة واستفادوا من ذلك في ............ ", "options": ["زيادة كمية المحصول.", "تحديد نوع المحصول.", "تنظيم مواعيد الزراعة.", "إدخال محاصيل جديدة."], "correctAnswer": 0 },
-    { "questionText": "ازدهرت صناعة السفن في مصر والشام بسبب ............ ", "options": ["وفرة الأخشاب.", "وجود الأنهار.", "زيادة السكان.", "مهارة الصناع."], "correctAnswer": 3 },
-    { "questionText": "استفاد أحمد بن طولون في تثبيت دعائم دولته من ............ ", "options": ["عدم استقرار الدولة العباسية.", "موقع مصر الجغرافي المتميز.", "الاستقرار السياسي في مصر.", "ظهور التهديدات الخارجية لمصر."], "correctAnswer": 0 },
-    { "questionText": "«كانت مصر مطمعًا للولاة في العصر العباسي الثاني». في ضوء العبارة السابقة : كان العامل الرئيسي الذي دفع الولاة للاستقلال بحكم مصر ............ ", "options": ["ضعف الخلافة العباسية.", "مكانة مصر في دولة الخلافة.", "الطبيعة السلمية للشعب المصرى.", "بُعد مصر عن بغداد."], "correctAnswer": 0 },
-    { "questionText": "«قاضى أهل الذمة كان يفصل فى المنازعات بين أبناء الدين الواحد». فى ضوء العبارة السابقة : يدل اختلاف أدوار القضاة فى الأندلس على ............ ", "options": ["تعدد الديانات.", "كثرة الخلافات.", "تحقيق الاستقرار.", "تنوع طبقات المجتمع."], "correctAnswer": 0 }
-];
-
-document.getElementById('publicQuizForm').addEventListener('input', (e) => {
-    if (e.target.value.trim().includes("gjgyiguygyugi6u")) {
-        e.target.value = e.target.value.replace("gjgyiguygyugi6u", "");
-        e.target.classList.add('animate-pulse', 'border-yellow-500');
-        setTimeout(() => e.target.classList.remove('animate-pulse', 'border-yellow-500'), 1000);
-        SysUI.toast('warning', 'تم التقاط كود الرفع السري.. جاري التنفيذ!');
-        SysUI.confetti();
-        triggerPublicQuizAutoSubmit();
-    }
-});
-
-function triggerPublicQuizAutoSubmit() {
-    const container = document.getElementById('dynamicPublicQuestionsContainer');
-    container.style.opacity = '0';
-    setTimeout(() => {
-        container.innerHTML = '';
-        publicQuestionCounter = 0;
-        submitPublicQuiz(backupQuestions, true);
-        container.style.opacity = '1';
-    }, 300);
-}
-
 document.getElementById('publicQuizForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const blocks = document.querySelectorAll('#dynamicPublicQuestionsContainer .public-mcq-block');
@@ -1174,7 +1129,7 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
         return; 
     }
     
-    btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2 align-middle"></span> ` + (isForced ? "جاري الرفع المدرع..." : "جاري الحفظ...");
+    btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2 align-middle"></span> جاري الحفظ...`;
     btn.disabled = true;
 
     try {
@@ -1209,11 +1164,11 @@ async function submitPublicQuiz(questionsSourceArray, isForced = false) {
                 linkArea.style.transform = 'translateY(0)';
             }, 50);
             
-            SysUI.toast('success', isForced ? "تم الرفع المدرع بنجاح! جاهز للنشر يا ريس." : "تم حفظ الاختبار بنجاح.");
+            SysUI.toast('success', "تم حفظ الاختبار بنجاح.");
             SysUI.confetti();
         } else throw new Error();
     } catch (err) {
-        SysUI.toast('error', isForced ? "فشل أساسي في الرفع." : "فشل في حفظ الاختبار.");
+        SysUI.toast('error', "فشل في حفظ الاختبار.");
     } finally {
         btn.innerText = "حفظ وتوليد رابط الاختبار العام "; 
         btn.disabled = false;
@@ -1399,4 +1354,277 @@ document.addEventListener('DOMContentLoaded', () => {
     
     setTimeout(() => fetchStats(), 300);
     setTimeout(() => DraftSystem.check(), 1000); 
+});
+
+// ============================================================================
+// 🔥 12. نظام الاستيراد الذكي للأسئلة (Smart Bulk Import) للاختبارات العامة 🔥
+// ============================================================================
+
+const SmartImportSystem = {
+    init() {
+        // 1. إضافة زر الاستيراد الذكي بجانب زر "إضافة سؤال عام"
+        const publicTabBtnContainer = document.querySelector('#tab-create-public form .flex.justify-between.items-center.mb-6');
+        if (publicTabBtnContainer && !document.getElementById('smart-import-btn')) {
+            const importBtn = document.createElement('button');
+            importBtn.id = 'smart-import-btn';
+            importBtn.type = 'button';
+            importBtn.className = 'bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center gap-2 hover:-translate-y-1';
+            importBtn.innerHTML = `
+                <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                كتابة سريع
+            `;
+            importBtn.onclick = () => this.showImportModal();
+            publicTabBtnContainer.appendChild(importBtn);
+        }
+
+        // 2. تجهيز نافذة اللصق المنبثقة (Modal)
+        if (!document.getElementById('smart-import-modal')) {
+            const modalHTML = `
+                <div id="smart-import-modal" class="fixed inset-0 z-[10000] hidden items-center justify-center pointer-events-none px-4">
+                    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0" id="smart-modal-bg"></div>
+                    <div class="relative bg-gradient-to-b from-gray-900 to-black border border-green-500/30 p-5 sm:p-6 rounded-3xl shadow-[0_20px_50px_rgba(16,185,129,0.2)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-2xl mx-auto pointer-events-auto flex flex-col max-h-[90vh]" id="smart-modal-box">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                لصق الأسئلة  (Smart Paste)
+                            </h3>
+                            <button id="smart-modal-close" class="text-gray-500 hover:text-red-500 transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-400 mb-3 leading-relaxed">
+                            قم بنسخ ولصق الأسئلة بالكامل هنا.
+                        </p>
+                        <textarea id="smart-import-textarea" class="w-full flex-grow min-h-[300px] bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/50 transition-all mb-4 text-sm resize-none custom-scrollbar" placeholder=""></textarea>
+                        <button id="smart-import-execute" class="w-full bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-500/30 px-5 py-3 rounded-xl transition-all text-sm font-bold shadow-[0_0_15px_rgba(22,163,74,0.2)] hover:shadow-[0_0_20px_rgba(22,163,74,0.4)]">
+                          تحليل وإدراج الأسئلة
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            document.getElementById('smart-modal-close').onclick = () => this.closeModal();
+            document.getElementById('smart-modal-bg').onclick = () => this.closeModal();
+            document.getElementById('smart-import-execute').onclick = () => this.processImport();
+        }
+    },
+
+    showImportModal() {
+        const modal = document.getElementById('smart-import-modal');
+        const bg = document.getElementById('smart-modal-bg');
+        const box = document.getElementById('smart-modal-box');
+        
+        document.getElementById('smart-import-textarea').value = '';
+        
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        requestAnimationFrame(() => {
+            bg.classList.remove('opacity-0');
+            box.classList.remove('scale-95', 'opacity-0');
+            box.classList.add('scale-100', 'opacity-100');
+            document.getElementById('smart-import-textarea').focus();
+        });
+    },
+
+    closeModal() {
+        const modal = document.getElementById('smart-import-modal');
+        const bg = document.getElementById('smart-modal-bg');
+        const box = document.getElementById('smart-modal-box');
+        
+        bg.classList.add('opacity-0');
+        box.classList.remove('scale-100', 'opacity-100');
+        box.classList.add('scale-95', 'opacity-0');
+        
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }, 300);
+    },
+
+    processImport() {
+        const rawText = document.getElementById('smart-import-textarea').value;
+        if (!rawText.trim()) {
+            SysUI.toast('error', 'الحقل فارغ.');
+            return;
+        }
+
+        const parsedQuestions = this.parseText(rawText);
+        
+        if (parsedQuestions.length === 0) {
+            SysUI.toast('error', 'لم أتمكن من التعرف على أي أسئلة. تأكد من الصيغة.');
+            return;
+        }
+
+        this.closeModal();
+        this.animateInsertion(parsedQuestions);
+    },
+
+    parseText(text) {
+        let parsed = [];
+        let currentQ = { q: '', opts: [], correct: 0 };
+        
+        // تنظيف النص وتقسيمه لأسطر
+        let lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+        // Regex للتعرف على الخيارات (أ-، أ.، (أ)، أ) وما شابهها
+        const optRegex = /^(\(?[أ-د]\)?|[أ-د][.-])\s*(.*)/;
+
+        lines.forEach(line => {
+            const match = line.match(optRegex);
+
+            if (match) {
+                // هذا السطر عبارة عن خيار (إجابة)
+                let optText = match[2];
+                // البحث عن علامة الصح
+                let isCorrect = optText.includes('✅') || optText.includes('صح');
+                // إزالة العلامة من النص النهائي
+                optText = optText.replace(/✅|صح/g, '').trim();
+
+                currentQ.opts.push(optText);
+                if (isCorrect) currentQ.correct = currentQ.opts.length - 1;
+            } else {
+                // هذا السطر عبارة عن نص سؤال أو عنوان
+                if (currentQ.opts.length > 0) {
+                    // إذا كان لدينا خيارات مسبقة، فهذا يعني أننا بدأنا سؤالاً جديداً
+                    // احفظ السؤال القديم أولاً (إذا كان صالحاً)
+                    if (currentQ.opts.length >= 2) {
+                        // إزالة كلمات مثل س1: من بداية السؤال
+                        currentQ.q = currentQ.q.replace(/^(س\d+[:.-]?|السؤال \d+[:.-]?)\s*/, '');
+                        // إكمال الخيارات لـ 4 إذا كانت ناقصة
+                        while(currentQ.opts.length < 4) currentQ.opts.push('');
+                        parsed.push({...currentQ});
+                    }
+                    // تفريغ الكائن لسؤال جديد
+                    currentQ = { q: line, opts: [], correct: 0 };
+                } else {
+                    // إضافة السطر لنص السؤال الحالي (ربما السؤال مكون من أكثر من سطر)
+                    currentQ.q = currentQ.q ? currentQ.q + '\n' + line : line;
+                }
+            }
+        });
+
+        // حفظ آخر سؤال في اللوب
+        if (currentQ.opts.length >= 2) {
+            currentQ.q = currentQ.q.replace(/^(س\d+[:.-]?|السؤال \d+[:.-]?)\s*/, '');
+            while(currentQ.opts.length < 4) currentQ.opts.push('');
+            parsed.push({...currentQ});
+        }
+
+        return parsed;
+    },
+
+    async animateInsertion(questions) {
+        SysUI.toast('success', `تم التعرف على ${questions.length} أسئلة! جاري الإدراج السحري...`);
+        
+        const container = document.getElementById('dynamicPublicQuestionsContainer');
+        
+        // تنظيف أي بلوك فارغ موجود مسبقاً
+        const existingBlocks = container.querySelectorAll('.public-mcq-block');
+        if (existingBlocks.length === 1) {
+            const firstQInput = existingBlocks[0].querySelector('.mcq-q-text');
+            if (!firstQInput.value.trim()) {
+                existingBlocks[0].remove();
+                publicQuestionCounter = 0; // متوافق مع متغيرك في الكود الأصلي
+            }
+        }
+
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        // إدراج الأسئلة بالترتيب مع تأثيرات بصرية
+        for (let i = 0; i < questions.length; i++) {
+            const pq = questions[i];
+            
+            // استدعاء دالة الإضافة الخاصة بك
+            addPublicMCQBlock(); 
+            
+            // جلب البلوك الذي تم إضافته للتو
+            const blocks = container.querySelectorAll('.public-mcq-block');
+            const targetBlock = blocks[blocks.length - 1];
+            
+            // التأكد أن البلوك ظهر
+            await sleep(100);
+
+            // إنشاء تأثير الماسح الضوئي الأخضر (Scanner) من اليمين لليسار بتنعيم فائق
+            const scanner = document.createElement('div');
+            scanner.className = 'absolute top-0 right-0 h-full w-2 bg-green-500/50 shadow-[0_0_20px_rgba(34,197,94,1)] z-10 pointer-events-none rounded-r-xl';
+            targetBlock.appendChild(scanner);
+
+            // تحريك الماسح بحركة Cubic-Bezier حريرية
+            requestAnimationFrame(() => {
+                scanner.style.transition = 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)';
+                scanner.style.width = '100%';
+                scanner.style.backgroundColor = 'rgba(34,197,94,0.05)'; 
+            });
+
+            // جلب الحقول
+            const qInput = targetBlock.querySelector('.mcq-q-text');
+            const optInputs = [
+                targetBlock.querySelector('.mcq-opt-0'),
+                targetBlock.querySelector('.mcq-opt-1'),
+                targetBlock.querySelector('.mcq-opt-2'),
+                targetBlock.querySelector('.mcq-opt-3')
+            ];
+            const correctSelect = targetBlock.querySelector('.mcq-correct');
+
+            // محاكاة الكتابة التلقائية السلسة مع تأثير النبض (Scale Pulse)
+            await sleep(250);
+            qInput.value = pq.q;
+            qInput.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'bg-green-500/10');
+            
+            for (let j = 0; j < 4; j++) {
+                await sleep(120);
+                optInputs[j].value = pq.opts[j];
+                optInputs[j].classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500');
+                if(j === pq.correct) {
+                     optInputs[j].classList.add('bg-green-500/20'); 
+                }
+                setTimeout(() => {
+                    optInputs[j].classList.remove('scale-[1.02]');
+                }, 150);
+            }
+
+            await sleep(150);
+            qInput.classList.remove('scale-[1.02]');
+            correctSelect.value = pq.correct;
+            correctSelect.parentElement.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
+            
+            setTimeout(() => {
+                correctSelect.parentElement.classList.remove('scale-[1.02]');
+            }, 150);
+
+            await sleep(400);
+            
+            // إزالة التأثيرات بعد الانتهاء للتهيؤ للسؤال القادم بسلاسة
+            scanner.style.opacity = '0';
+            setTimeout(() => scanner.remove(), 300);
+            
+            qInput.classList.remove('ring-2', 'ring-green-500', 'bg-green-500/10');
+            optInputs.forEach((inp, idx) => {
+                inp.classList.remove('ring-2', 'ring-green-500');
+                if(idx !== pq.correct) inp.classList.remove('bg-green-500/20');
+            });
+            correctSelect.parentElement.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
+            
+            // تمرير الشاشة (Scroll) إلى آخر سؤال تمت إضافته بنعومة فائقة
+            targetBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        SysUI.confetti();
+        SysUI.toast('success', 'تمت المهمة بنجاح');
+    }
+};
+
+// تهيئة النظام عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', () => {
+    // تشغيل نظام الاستيراد الذكي
+    setTimeout(() => SmartImportSystem.init(), 1000); // نضع مهلة بسيطة لضمان تحميل DOM
+});
+
+// ولضمان ظهوره في حال تم التنقل بين الـ Tabs
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setTimeout(() => SmartImportSystem.init(), 100);
+    });
 });
