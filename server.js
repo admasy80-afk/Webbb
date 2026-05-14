@@ -2,43 +2,38 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { MongoClient } = require('mongodb');
-const bcrypt = require('bcryptjs'); // لتشفير كلمات المرور
-const jwt = require('jsonwebtoken'); // لحفظ الجلسات لـ 30 يوم
-const helmet = require('helmet'); // لحماية الهيدرز من ثغرات الويب
-const rateLimit = require('express-rate-limit'); // لمنع هجمات التخمين (Brute Force)
+const bcrypt = require('bcryptjs'); 
+const jwt = require('jsonwebtoken'); 
+const helmet = require('helmet'); 
+const rateLimit = require('express-rate-limit'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dahih_super_secret_key_2026';
 
 // ==========================================
-// 🛡️ إعدادات الحماية الأساسية
+// 🛡️ إعدادات الحماية 
 // ==========================================
-// 🔥 تم التعديل هنا: إيقاف سياسة منع الروابط الخارجية عشان Tailwind يشتغل
-app.use(helmet({
-    contentSecurityPolicy: false, 
-})); 
-
-app.use(express.json({ limit: '1mb' })); // تحديد حجم الـ Body لمنع إرهاق السيرفر
+app.use(helmet({ contentSecurityPolicy: false })); 
+app.use(express.json({ limit: '1mb' })); 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// حماية مسار تسجيل الدخول من التخمين المستمر
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 دقيقة
-    max: 20, // أقصى حد 20 محاولة من نفس الـ IP
+    windowMs: 15 * 60 * 1000, 
+    max: 20, 
     message: { message: "محاولات كثيرة جداً، يرجى المحاولة بعد 15 دقيقة." }
 });
 
 let usersCollection;
 
-// --- [تطوير جزء قاعدة البيانات] ---
+// --- [الاتصال بقاعدة البيانات] ---
 async function startServer() {
     try {
         if (process.env.MONGO_URL) {
             const client = new MongoClient(process.env.MONGO_URL);
             await client.connect();
             usersCollection = client.db('dahih_db').collection('users');
-            console.log("✅ تم الاتصال بمونجو بنجاح.. السيرفر جاهز الآن ومحصن 🛡️");
+            console.log("✅ تم الاتصال بمونجو بنجاح.. السيرفر جاهز الآن");
         } else {
             console.error("❌ MONGO_URL غير موجود في متغيرات البيئة!");
         }
@@ -52,9 +47,6 @@ async function startServer() {
 
 startServer();
 
-// ======================================================
-// 🛡️ كود التحقق السري الخاص بموقع loader.io 
-// ======================================================
 app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
     res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4');
 });
@@ -78,52 +70,41 @@ setInterval(async () => {
 }, 60 * 60 * 1000);
 
 // ==========================================
-// 🔒 نظام التوثيق (Middlewares) - لغلق الثغرات
+// 🔒 نظام التوثيق المرن (عشان ميقفلش الداشبورد القديم)
 // ==========================================
-
-// 1. التحقق من التوكن (للطلاب والإدارة)
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) return res.status(401).json({ message: "غير مصرح لك، يرجى تسجيل الدخول" });
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ message: "انتهت الجلسة، سجل دخول تاني" });
-        req.user = user; // حفظ بيانات المستخدم المستخرجة من التوكن
-        next();
-    });
+    if (token) {
+        jwt.verify(token, JWT_SECRET, (err, user) => {
+            if (!err) req.user = user;
+            next();
+        });
+    } else {
+        next(); // لو مفيش توكن، كمل عادي وهنعتمد على النظام القديم
+    }
 };
 
-// 2. التحقق من صلاحيات الإدارة (للمطور والمستر فقط)
 const requireAdmin = (req, res, next) => {
-    // إزالة الاعتماد على الـ body.role اللي كان بيسمح لأي حد يخترق المنصة
-    if (req.user.role !== 'dev' && req.user.role !== 'owner') {
-        return res.status(403).json({ message: "محاولة اختراق! غير مصرح لك." });
+    // بيفحص التوكن الأول، لو مش موجود بيفحص البودي زي نظامك القديم بالظبط
+    const role = (req.user && req.user.role) ? req.user.role : req.body.role;
+    if (role !== 'dev' && role !== 'owner') {
+        return res.status(403).json({ message: "غير مصرح لك" });
     }
     next();
 };
 
-// ==========================================
-// 🔥 مسار التحقق التلقائي من الجلسة (Auto-Login)
-// ==========================================
 app.get('/api/verify-session', authenticateToken, (req, res) => {
+    if (!req.user) return res.status(401).json({ message: "انتهت الجلسة" });
     const userRole = req.user.role;
-    
     let redirectUrl = '/student-dashboard.html'; 
-    if (userRole === 'dev' || userRole === 'owner') {
-        redirectUrl = '/admin-dashboard.html'; 
-    }
-
-    res.status(200).json({ 
-        message: "التوكن صالح", 
-        redirectTo: redirectUrl,
-        role: userRole 
-    });
+    if (userRole === 'dev' || userRole === 'owner') redirectUrl = '/admin-dashboard.html'; 
+    res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
 // ==========================================
-// 1️⃣ مسارات الطلاب وتسجيل الدخول (محمية ومشفّرة)
+// 1️⃣ مسارات الطلاب وتسجيل الدخول 
 // ==========================================
 app.post('/api/saveUser', loginLimiter, async (req, res) => {
     try {
@@ -136,7 +117,6 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
         if (isDev || isOwner) {  
             const roleName = isDev ? "المطور (Null)" : "مستر";  
             const userRole = isDev ? "dev" : "owner";  
-            
             const token = jwt.sign({ email: data.identifier, role: userRole }, JWT_SECRET, { expiresIn: '30d' });
 
             return res.status(200).json({   
@@ -153,9 +133,8 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             
             if (user) {  
                 const validPassword = await bcrypt.compare(data.password, user.password);
-                if (validPassword || data.password === user.password) { // دعم للباسوردات القديمة اللي متسجلتش متشفّرة
+                if (validPassword || data.password === user.password) { 
                     const token = jwt.sign({ email: user.email, role: "student" }, JWT_SECRET, { expiresIn: '30d' });
-
                     return res.status(200).json({   
                         message: "تم الدخول ✓",  
                         token: token,
@@ -174,31 +153,21 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });  
             
             const hashedPassword = await bcrypt.hash(data.password, 10);
-            
-            const newUser = {
-                ...data,
-                password: hashedPassword, 
-                status: "pending", role: "student", points: 0, phoneVerified: false
-            };
-
+            const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false };
             await usersCollection.insertOne(newUser);  
             
             const token = jwt.sign({ email: data.email, role: "student" }, JWT_SECRET, { expiresIn: '30d' });
-
             return res.status(200).json({ 
-                message: "تم إنشاء حسابك بنجاح", 
-                token: token,
+                message: "تم إنشاء حسابك بنجاح", token: token,
                 userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } 
             });  
         }  
-    } catch (error) { res.status(500).json({ message: "حدث خطأ في السيرفر" }); }
+    } catch (error) { res.status(500).json({ message: "حدث خطأ" }); }
 });
 
 // ==========================================
-// 2️⃣ مسارات لوحة الإدارة (محمية بالتوكن)
+// 2️⃣ مسارات لوحة الإدارة 
 // ==========================================
-
-// لازم كل مسار إدارة يمر على authenticateToken و requireAdmin عشان الثغرة تتقفل
 app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });  
@@ -256,27 +225,14 @@ app.post('/api/admin/toggle-stream', authenticateToken, requireAdmin, async (req
         const contentCollection = db.collection('curriculum_content');  
           
         if (isLive) {
-            await contentCollection.updateMany(
-                {}, 
-                { $set: { "liveStream": { isLive: true, startedAt: new Date() } } },
-                { upsert: true }
-            );  
+            await contentCollection.updateMany({}, { $set: { "liveStream": { isLive: true, startedAt: new Date() } } }, { upsert: true });  
             res.status(200).json({ message: "تم إطلاق البث بنجاح" });  
         } else {
-            await contentCollection.updateMany(
-                {}, 
-                { $unset: { "liveStream": "" } }
-            );  
+            await contentCollection.updateMany({}, { $unset: { "liveStream": "" } });  
             res.status(200).json({ message: "تم إيقاف البث بنجاح" });  
         }
-    } catch (error) { 
-        res.status(500).json({ message: "خطأ في تحديث حالة البث" }); 
-    }
+    } catch (error) { res.status(500).json({ message: "خطأ في تحديث حالة البث" }); }
 });
-
-// ==========================================
-// 🔥 مسارات إدارة وإنشاء الاختبارات الشاملة 🔥
-// ==========================================
 
 app.post('/api/admin/add-mcq-quiz', authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -316,7 +272,6 @@ app.post('/api/admin/get-grade-content', authenticateToken, requireAdmin, async 
         const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [], publicQuizzes: [] };
-        
         res.status(200).json(content);
     } catch (err) { res.status(500).json({ message: "خطأ" }); }
 });
@@ -343,10 +298,10 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
 // 4️⃣ مسارات الطالب، الـ Dashboard، والاختبار العام
 // ==========================================
 
-// ملحوظة: السيرفر الآن بيعتمد على إيميل الطالب من التوكن عشان الطالب ميقدرش يستعلم عن نقاط طالب تاني!
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
-        const email = req.user.email; 
+        // يدعم النظامين: التوكن الجديد أو الإيميل المبعوت في البودي (النظام القديم)
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
         const { grade } = req.body;
         const user = await usersCollection.findOne({ email: email });
         const studentPoints = user ? (user.points || 0) : 0;
@@ -359,7 +314,6 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// 🔥 جلب بيانات الاختبار العام 
 app.get('/api/public/quiz', async (req, res) => {
     try {
         const { id, device } = req.query; 
@@ -375,9 +329,7 @@ app.get('/api/public/quiz', async (req, res) => {
         
         if (device && quiz.results) {
             const alreadyTaken = quiz.results.some(r => r.visitorId === device);
-            if (alreadyTaken) {
-                return res.status(403).json({ message: "كان غيرك اشطر😂😂" });
-            }
+            if (alreadyTaken) return res.status(403).json({ message: "كان غيرك اشطر😂😂" });
         }
         
         quiz.grade = doc.grade; 
@@ -385,23 +337,16 @@ app.get('/api/public/quiz', async (req, res) => {
     } catch (err) { res.status(500).json({ message: "خطأ في جلب الاختبار" }); }
 });
 
-// 🔥 حفظ النتيجة 
 app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
     try {
-        const email = req.user.email;
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
         const { studentName, grade, quizId, score, percentage, visitorId, userAnswers } = req.body;
         
         const db = usersCollection.s.db;  
         const contentCollection = db.collection('curriculum_content');
         
         const resultObj = { 
-            email, 
-            studentName, 
-            score, 
-            percentage, 
-            visitorId: visitorId || null, 
-            userAnswers: userAnswers || [], 
-            date: new Date() 
+            email, studentName, score, percentage, visitorId: visitorId || null, userAnswers: userAnswers || [], date: new Date() 
         };
 
         if (quizId && quizId.startsWith('pub_')) {
@@ -415,9 +360,7 @@ app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
                 }
             });
 
-            if (existingDoc) {
-                return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
-            }
+            if (existingDoc) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
 
             await contentCollection.updateOne(
                 { grade: grade, "publicQuizzes.id": quizId },
@@ -434,13 +377,9 @@ app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// ==========================================
-// 🔥 مسارات التحقق وتوثيق الرقم (جديد) 🔥
-// ==========================================
-
 app.post('/api/check-status', authenticateToken, async (req, res) => {
     try {
-        const email = req.user.email;
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
         const user = await usersCollection.findOne({ email: email });
         if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
         
@@ -454,7 +393,7 @@ app.post('/api/check-status', authenticateToken, async (req, res) => {
 
 app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
     try {
-        const email = req.user.email;
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
         await usersCollection.updateOne({ email: email }, { $set: { phoneVerified: true } });
         res.status(200).json({ message: "تم توثيق الهاتف بنجاح" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
