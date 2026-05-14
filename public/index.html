@@ -14,22 +14,37 @@
     <style>
         body {
             font-family: 'Readex Pro', sans-serif;
+            -webkit-tap-highlight-color: transparent; /* إخفاء وميض الضغط في الجوال */
         }
 
+        /* خلفية متدرجة متحركة */
         .bg-animated-gradient {
             background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
             background-size: 400% 400%;
             animation: gradientMove 15s ease infinite;
         }
+
+        /* ---------------- [ الحركات الجديدة (Animations) ] ---------------- */
         @keyframes gradientMove {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
         }
 
+        @keyframes slideDown {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
         @keyframes customFadeUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            80% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         @keyframes floatSlow {
@@ -37,78 +52,152 @@
             50% { transform: translateY(-20px) scale(1.05); }
         }
 
+        @keyframes textShine {
+            0% { background-position: -200% center; }
+            100% { background-position: 200% center; }
+        }
+
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 10px rgba(234,179,8,0.3); }
+            50% { box-shadow: 0 0 25px rgba(234,179,8,0.7); }
+            100% { box-shadow: 0 0 10px rgba(234,179,8,0.3); }
+        }
+
+        /* كلاسات التطبيق للحركات */
+        .animate-slide-down { animation: slideDown 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        
         .animate-fade-up {
             opacity: 0;
             animation: customFadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
         
+        .animate-pop-in {
+            opacity: 0;
+            animation: popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
         .animate-float-1 { animation: floatSlow 8s ease-in-out infinite; }
         .animate-float-2 { animation: floatSlow 12s ease-in-out infinite; animation-delay: 2s; }
 
+        .text-shine {
+            background: linear-gradient(to right, #eab308 20%, #fff 40%, #eab308 60%);
+            background-size: 200% auto;
+            color: transparent;
+            -webkit-background-clip: text;
+            background-clip: text;
+            animation: textShine 4s linear infinite;
+        }
+
+        .pulse-glow { animation: pulseGlow 2s infinite; }
+
+        /* تأخير الحركات */
         .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
         .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
         .delay-500 { animation-delay: 0.5s; }
         .delay-700 { animation-delay: 0.7s; }
+
+        /* شاشة التحميل للتحقق من الدخول (Auto-Login Overlay) */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: #0f172a;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        #loading-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(234,179,8,0.2);
+            border-top-color: #eab308;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between selection:bg-yellow-500 selection:text-black overflow-x-hidden p-6">
+<body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between selection:bg-yellow-500 selection:text-black overflow-x-hidden p-4 md:p-6">
 
-    <nav class="w-full flex justify-between items-center py-6 max-w-7xl mx-auto animate-fade-up">
-        <div class="text-3xl font-extrabold text-yellow-500 tracking-tight">
+    <!-- شاشة التحميل الوهمية أثناء التحقق من التوكن -->
+    <div id="loading-overlay">
+        <div class="spinner mb-4"></div>
+        <p class="text-yellow-500 font-semibold animate-pulse">جاري تسجيل الدخول...</p>
+    </div>
+
+    <!-- الناف بار (دخول من الأعلى) -->
+    <nav class="w-full flex justify-between items-center py-4 md:py-6 max-w-7xl mx-auto animate-slide-down">
+        <div class="text-2xl md:text-3xl font-extrabold text-yellow-500 tracking-tight cursor-pointer hover:scale-105 transition-transform">
             الدحيح<span class="text-white">.</span>
         </div>
         <div class="hidden md:flex gap-8 text-sm font-medium text-gray-300">
-            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">الرئيسية</a>
-            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">بنك الأسئلة</a>
-            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:scale-105">المناهج</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:-translate-y-1">الرئيسية</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:-translate-y-1">بنك الأسئلة</a>
+            <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:-translate-y-1">المناهج</a>
         </div>
-        <a href="/logina.html" class="bg-yellow-500 text-black px-6 py-2.5 rounded-full font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-105 hover:shadow-[0_0_20px_rgba(234,179,8,0.4)] inline-block">
+        <a href="/logina.html" class="bg-yellow-500 text-black px-5 py-2 md:px-6 md:py-2.5 rounded-full text-sm md:text-base font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-110 shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)] inline-block">
             التسجيل
         </a>
     </nav>
 
-    <main class="relative flex-grow flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+    <!-- المحتوى الرئيسي -->
+    <main class="relative flex-grow flex flex-col items-center justify-center text-center px-4 overflow-hidden w-full">
         
-        <div class="absolute top-0 left-[-15%] w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] animate-float-1 pointer-events-none"></div>
-        <div class="absolute bottom-0 right-[-15%] w-96 h-96 bg-indigo-600/10 rounded-full blur-[120px] animate-float-2 pointer-events-none"></div>
+        <!-- فقاعات الخلفية العائمة -->
+        <div class="absolute top-0 left-[-20%] md:left-[-15%] w-72 h-72 md:w-96 md:h-96 bg-blue-600/15 rounded-full blur-[100px] md:blur-[120px] animate-float-1 pointer-events-none"></div>
+        <div class="absolute bottom-0 right-[-20%] md:right-[-15%] w-72 h-72 md:w-96 md:h-96 bg-indigo-600/15 rounded-full blur-[100px] md:blur-[120px] animate-float-2 pointer-events-none"></div>
 
-        <div class="relative z-10 max-w-5xl my-auto w-full flex flex-col items-center pt-10">
+        <div class="relative z-10 max-w-5xl my-auto w-full flex flex-col items-center pt-8 md:pt-10">
             
-            <h1 class="text-6xl md:text-8xl font-black mb-10 leading-normal tracking-tight animate-fade-up delay-100">
-                <span class="text-yellow-500">الدحيح</span> في التاريخ
+            <!-- العنوان بلمعان وحركة صعود -->
+            <h1 class="text-5xl sm:text-6xl md:text-8xl font-black mb-6 md:mb-10 leading-tight tracking-tight animate-fade-up delay-100">
+                <span class="text-shine">الدحيح</span> في التاريخ
             </h1>
             
-            <p class="text-2xl md:text-3xl text-gray-400 font-extralight max-w-3xl mx-auto mt-4 mb-16 leading-relaxed animate-fade-up delay-300">
+            <!-- الوصف بحركة صعود -->
+            <p class="text-xl sm:text-2xl md:text-3xl text-gray-400 font-extralight max-w-3xl mx-auto mt-2 mb-12 md:mb-16 leading-relaxed animate-fade-up delay-300">
                 رحلة من <span class="text-white font-medium">ميح</span> لـ <span class="text-white font-medium">دحيح</span>
             </p>
 
-            <div class="flex flex-col sm:flex-row gap-5 w-full max-w-xl justify-center items-center animate-fade-up delay-500 mb-16">
-                <a href="/register.html" class="w-full sm:w-1/2 text-center px-8 py-4 bg-white text-black font-bold rounded-2xl hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105 hover:shadow-[0_10px_30px_rgba(255,255,255,0.1)]">
+            <!-- الأزرار بدخول ارتدادي وتأثير نبض -->
+            <div class="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full max-w-xl justify-center items-center mb-16">
+                <a href="/register.html" class="animate-pop-in delay-400 w-full sm:w-1/2 text-center px-8 py-4 bg-white text-black font-bold rounded-2xl pulse-glow hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105">
                     ابدأ التعلم الآن
                 </a>
-                <a href="#" class="w-full sm:w-1/2 text-center px-8 py-4 border-2 border-gray-800 font-bold rounded-2xl hover:border-white hover:bg-white/5 transition-all duration-500 transform hover:scale-105">
+                <a href="#" class="animate-pop-in delay-500 w-full sm:w-1/2 text-center px-8 py-4 border-2 border-gray-700 text-gray-300 font-bold rounded-2xl hover:text-white hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-500 transform hover:scale-105">
                     جرب بنك الأسئلة
                 </a>
             </div>
 
-            <div class="w-full flex flex-col items-center animate-fade-up delay-700 mt-8">
-                <p class="text-base text-gray-400 font-light mb-6">تواصل معنا على:</p>
+            <!-- أيقونات التواصل الاجتماعي بحركة تتابعية -->
+            <div class="w-full flex flex-col items-center mt-4 md:mt-8">
+                <p class="text-sm md:text-base text-gray-400 font-light mb-4 md:mb-6 animate-fade-up delay-700">تواصل معنا على:</p>
                 <div class="flex flex-row gap-4 sm:gap-6 justify-center items-center">
                     
-                    <a href="https://wa.me/201274993282" target="_blank" rel="noopener noreferrer" class="p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-yellow-500 hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 transform hover:scale-110 shadow-lg flex items-center justify-center">
-                        <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24"><path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.115.549 4.17 1.594 5.99L0 24l6.15-1.574A11.968 11.968 0 0 0 12.031 24c6.646 0 12.031-5.385 12.031-12.031S18.677 0 12.031 0zm3.896 17.291c-.171.482-.992.946-1.428 1.011-.437.065-1.026.152-3.328-.802-2.775-1.15-4.544-4.004-4.682-4.187-.137-.183-1.118-1.486-1.118-2.836 0-1.35.706-2.012.955-2.285.25-.272.545-.341.727-.341.182 0 .364 0 .524.008.172.008.384-.066.598.455.227.545.772 1.886.84 2.022.069.136.114.296.023.477-.091.182-.136.296-.273.455-.136.159-.283.33-.409.466-.136.148-.285.31-.125.584.159.273.708 1.168 1.522 1.897 1.05 .938 1.932 1.233 2.204 1.369.273.136.432.114.591-.068.159-.182.682-.795.864-1.068.182-.273.364-.227.614-.136.25.091 1.591.75 1.864.886.273.136.455.205.524.318.068.114.068.659-.103 1.14z"/></svg>
+                    <a href="https://wa.me/201274993282" target="_blank" rel="noopener noreferrer" class="animate-pop-in delay-700 p-3 md:p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-green-400 hover:border-green-400 hover:bg-green-400/10 transition-all duration-300 transform hover:scale-110 hover:-translate-y-2 shadow-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 md:w-7 md:h-7 fill-current" viewBox="0 0 24 24"><path d="M12.031 0C5.385 0 0 5.385 0 12.031c0 2.115.549 4.17 1.594 5.99L0 24l6.15-1.574A11.968 11.968 0 0 0 12.031 24c6.646 0 12.031-5.385 12.031-12.031S18.677 0 12.031 0zm3.896 17.291c-.171.482-.992.946-1.428 1.011-.437.065-1.026.152-3.328-.802-2.775-1.15-4.544-4.004-4.682-4.187-.137-.183-1.118-1.486-1.118-2.836 0-1.35.706-2.012.955-2.285.25-.272.545-.341.727-.341.182 0 .364 0 .524.008.172.008.384-.066.598.455.227.545.772 1.886.84 2.022.069.136.114.296.023.477-.091.182-.136.296-.273.455-.136.159-.283.33-.409.466-.136.148-.285.31-.125.584.159.273.708 1.168 1.522 1.897 1.05 .938 1.932 1.233 2.204 1.369.273.136.432.114.591-.068.159-.182.682-.795.864-1.068.182-.273.364-.227.614-.136.25.091 1.591.75 1.864.886.273.136.455.205.524.318.068.114.068.659-.103 1.14z"/></svg>
                     </a>
 
-                    <a href="https://www.tiktok.com/@mrseifashraf123?_r=1&_t=ZS-96BVxbDdV1Y" target="_blank" rel="noopener noreferrer" class="p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-yellow-500 hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 transform hover:scale-110 shadow-lg flex items-center justify-center">
-                        <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
+                    <a href="https://www.tiktok.com/@mrseifashraf123?_r=1&_t=ZS-96BVxbDdV1Y" target="_blank" rel="noopener noreferrer" class="animate-pop-in delay-[800ms] p-3 md:p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-white hover:border-white hover:bg-white/10 transition-all duration-300 transform hover:scale-110 hover:-translate-y-2 shadow-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 md:w-7 md:h-7 fill-current" viewBox="0 0 24 24"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>
                     </a>
 
-                    <a href="https://www.instagram.com/saif_ashraf20?igsh=MTMwbjM3YXViNTM3cQ==" target="_blank" rel="noopener noreferrer" class="p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-yellow-500 hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 transform hover:scale-110 shadow-lg flex items-center justify-center">
-                        <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                    <a href="https://www.instagram.com/saif_ashraf20?igsh=MTMwbjM3YXViNTM3cQ==" target="_blank" rel="noopener noreferrer" class="animate-pop-in delay-[900ms] p-3 md:p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-pink-500 hover:border-pink-500 hover:bg-pink-500/10 transition-all duration-300 transform hover:scale-110 hover:-translate-y-2 shadow-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 md:w-7 md:h-7 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                     </a>
 
-                    <a href="https://www.facebook.com/share/1CNQPtWfKF/" target="_blank" rel="noopener noreferrer" class="p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-yellow-500 hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-300 transform hover:scale-110 shadow-lg flex items-center justify-center">
-                        <svg class="w-7 h-7 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    <a href="https://www.facebook.com/share/1CNQPtWfKF/" target="_blank" rel="noopener noreferrer" class="animate-pop-in delay-[1000ms] p-3 md:p-4 rounded-full border-2 border-white/10 bg-white/5 text-white hover:text-blue-500 hover:border-blue-500 hover:bg-blue-500/10 transition-all duration-300 transform hover:scale-110 hover:-translate-y-2 shadow-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 md:w-7 md:h-7 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                     </a>
                     
                 </div>
@@ -117,17 +206,20 @@
         </div>
     </main>
 
-    <footer class="w-full text-center py-6 border-t border-white/5 text-gray-600 text-sm mt-auto z-10 relative">
-        <p class="text-sm text-gray-500">جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026</p>
+    <footer class="w-full text-center py-6 border-t border-white/5 text-gray-600 text-xs md:text-sm mt-auto z-10 relative">
+        <p>جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026</p>
     </footer>
 
+    <!-- 🛡️ كود الحماية والتحقق التلقائي (Auto-Login) -->
     <script>
         window.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('dahih_token');
+            // بنستخدم 'userToken' زي ما اتفقنا في السيرفر الجديد
+            const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
             
             if (token) {
-                // منع التكرار وإظهار حالة التحميل (اختياري)
-                document.body.style.opacity = "0.5"; 
+                // إظهار شاشة التحميل الشيك عشان نغطي الصفحة لحد ما السيرفر يرد
+                const loader = document.getElementById('loading-overlay');
+                loader.classList.add('active');
                 
                 fetch('/api/verify-session', {
                     method: 'GET',
@@ -137,16 +229,18 @@
                 })
                 .then(res => {
                     if (res.ok) return res.json();
-                    throw new Error("التوكن غير صالح أو منتهي");
+                    throw new Error("انتهت الجلسة");
                 })
                 .then(data => {
-                    // الدخول مباشرة بدون كتابة باسورد
+                    // السيرفر وافق! هندخله على الداشبورد فوراً
                     window.location.href = data.redirectTo; 
                 })
                 .catch(err => {
                     console.warn(err.message);
-                    localStorage.removeItem('dahih_token'); // حذف التوكن التالف
-                    document.body.style.opacity = "1"; // إرجاع الصفحة لطبيعتها
+                    // التوكن بايظ أو قديم، هنمسحه ونخفي شاشة التحميل ونخليه يسجل من جديد
+                    localStorage.removeItem('userToken'); 
+                    localStorage.removeItem('dahih_token'); 
+                    loader.classList.remove('active'); 
                 });
             }
         });
