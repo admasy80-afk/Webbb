@@ -83,9 +83,18 @@ app.post('/api/saveUser', async (req, res) => {
                 password: data.password  
             });  
             if (user) {  
+                // 🔥 تم التعديل هنا: إرجاع رقم الهاتف وحالة توثيق الهاتف
                 return res.status(200).json({   
                     message: "تم الدخول ✓",  
-                    userData: { name: user.first_name, grade: user.grade, status: user.status || "pending", email: user.email, role: "student" }  
+                    userData: { 
+                        name: user.first_name, 
+                        grade: user.grade, 
+                        status: user.status || "pending", 
+                        email: user.email, 
+                        phone: user.phone, // مهم جداً لصفحة التحقق
+                        role: "student",
+                        phoneVerified: user.phoneVerified || false // حالة التحقق من الهاتف
+                    }  
                 });  
             } else {  
                 return res.status(401).json({ message: "خطأ في بيانات الدخول" });  
@@ -95,9 +104,12 @@ app.post('/api/saveUser', async (req, res) => {
         if (data.first_name) {  
             const existing = await usersCollection.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });  
             if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });  
-            data.status = "pending"; data.role = "student"; data.points = 0;  
+            data.status = "pending"; data.role = "student"; data.points = 0; data.phoneVerified = false; 
             await usersCollection.insertOne(data);  
-            return res.status(200).json({ message: "تم إنشاء حسابك بنجاح", userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, role: "student" } });  
+            return res.status(200).json({ 
+                message: "تم إنشاء حسابك بنجاح", 
+                userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } 
+            });  
         }  
     } catch (error) { res.status(500).json({ message: "حدث خطأ" }); }
 });
@@ -357,5 +369,30 @@ app.post('/api/student/submit-quiz', async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// ==========================================
+// 🔥 مسارات التحقق وتوثيق الرقم (جديد) 🔥
+// ==========================================
 
+app.post('/api/check-status', async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await usersCollection.findOne({ email: email });
+        if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+        
+        res.status(200).json({ 
+            status: user.status, 
+            reason: user.rejection_reason,
+            phoneVerified: user.phoneVerified || false 
+        });
+    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر" }); }
+});
+
+app.post('/api/student/verify-phone', async (req, res) => {
+    try {
+        const { email } = req.body;
+        await usersCollection.updateOne({ email: email }, { $set: { phoneVerified: true } });
+        res.status(200).json({ message: "تم توثيق الهاتف بنجاح" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
