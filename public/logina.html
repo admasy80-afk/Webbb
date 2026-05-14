@@ -164,19 +164,23 @@ form.addEventListener('submit', async (event) => {
             localStorage.setItem('dahih_user', JSON.stringify(result.userData));
         }
 
-        // 🔥 التوجيه الذكي للمدير والطالب 🔥
+        // 🔥 التوجيه الذكي للمدير والطالب مع إضافة فحص تأكيد الهاتف 🔥
         setTimeout(() => {
             const user = result.userData;
             
-            // عشان نتأكد، دي بتطبع الدور بتاعك في الكونسول (هتلاقيه dev أو owner)
             console.log("الدور الحالي:", user.role); 
 
             if (user.role === 'dev' || user.role === 'owner') {
-                window.location.replace("/admin.html"); // استخدام replace عشان ما يرجعش لورا
+                window.location.replace("/admin.html");
             } else if (user.status === 'pending' || user.status === 'rejected') {
                 window.location.replace("/status.html");
             } else {
-                window.location.replace("/dashboard.html");
+                // الطالب مقبول، هل وثق رقمه؟
+                if (user.phoneVerified) {
+                    window.location.replace("/dashboard.html");
+                } else {
+                    window.location.replace("/verify.html");
+                }
             }
         }, 1000);
 
