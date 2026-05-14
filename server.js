@@ -11,6 +11,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dahih_super_secret_key_2026';
 
+// 🔥 السطر السحري لحل مشكلة Railway والـ Rate Limit
+app.set('trust proxy', 1);
+
 // ==========================================
 // 🛡️ إعدادات الحماية 
 // ==========================================
@@ -300,7 +303,6 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
 
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
-        // يدعم النظامين: التوكن الجديد أو الإيميل المبعوت في البودي (النظام القديم)
         const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
         const { grade } = req.body;
         const user = await usersCollection.findOne({ email: email });
