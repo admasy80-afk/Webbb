@@ -160,11 +160,17 @@ form.addEventListener('submit', async (event) => {
         btn.innerText = "تم بنجاح";
         btn.style.backgroundColor = "#22c55e";
 
+        // 🔥 التعديل السحري هنا: حفظ التوكن وبيانات المستخدم بشكل سليم 🔥
+        if (result.token) {
+            localStorage.setItem('userToken', result.token);
+            localStorage.setItem('dahih_token', result.token); // نسخة احتياطية
+        }
         if (result.userData) {
-            localStorage.setItem('dahih_user', JSON.stringify(result.userData));
+            localStorage.setItem('userData', JSON.stringify(result.userData));
+            localStorage.setItem('dahih_user', JSON.stringify(result.userData)); // عشان السكريبتات القديمة بتاعتك تفضل شغالة
         }
 
-        // 🔥 التوجيه الذكي للمدير والطالب مع إضافة فحص تأكيد الهاتف 🔥
+        // التوجيه الذكي للمدير والطالب مع إضافة فحص تأكيد الهاتف
         setTimeout(() => {
             const user = result.userData;
             
