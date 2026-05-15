@@ -32,6 +32,16 @@
         .student-details { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
         .student-details.open { max-height: 2000px; padding-top: 1rem; opacity: 1; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
     </style>
+
+    <!-- رادار الأخطاء لاكتشاف المشكلة على الجوال -->
+    <script>
+        window.addEventListener('error', function(e) {
+            alert("🚨 خطأ في السطر " + e.lineno + "\nالملف: " + e.filename + "\nالخطأ: " + e.message);
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+            alert("🚨 خطأ استيراد الملفات:\n" + (e.reason.message || e.reason));
+        });
+    </script>
 </head>
 <body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
 
