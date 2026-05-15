@@ -8,6 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
+        
+        /* ======== إصلاحات الجوال والوميض الأبيض ======== */
+        html { background-color: #070b19; overscroll-behavior: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        *:focus, button:focus, input:focus, select:focus, textarea:focus { outline: none !important; box-shadow: none !important; }
+        /* =============================================== */
+
         .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
         .tab-btn { transition: all 0.3s ease; position: relative; }
         .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); color: white; }
