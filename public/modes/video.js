@@ -1,274 +1,195 @@
+// ==================== الملف الرئيسي المجمع للمنصة ====================
 import { SysUI } from './ui.js';
-import { sessionToken } from './state.js'; // 🔥 ربط التوكن الحقيقي بتاع المنصة
+import './state.js'; 
+import { fetchStats, fetchPendingRequests, fetchGradeContent, fetchStudentsByGrade, logout } from './admin.js';
+import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink } from './quiz.js';
+import './stream.js'; 
+import { VideoSystem } from './video.js'; 
 
-function escapeHTML(str = '') {
-    return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
+// 🚀 السحر كله هنا: فك حظر الدوال وإجبار المتصفح إنه يشوفها
+window.addMCQBlock = addMCQBlock;
+window.addPublicMCQBlock = addPublicMCQBlock;
+window.fetchGradeContent = fetchGradeContent;
+window.fetchStudentsByGrade = fetchStudentsByGrade;
+window.copyPublicLink = copyPublicLink;
+window.logout = logout;
 
-export const VideoSystem = {
-
-    currentXHR: null,
-
-    init() {
-        const uploadForm = document.getElementById('uploadVideoForm');
-        if (uploadForm) {
-            uploadForm.addEventListener('submit', (e) => this.handleUpload(e));
-        }
-
-        const coursesList = document.getElementById('coursesList');
-
-        // Event Delegation بدل onclick
-        if (coursesList) {
-            coursesList.addEventListener('click', (e) => {
-                const deleteBtn = e.target.closest('.delete-course-btn');
-                if (!deleteBtn) return;
-                const courseId = deleteBtn.dataset.id;
-                this.deleteCourse(courseId);
-            });
-
-            this.loadCourses();
-        }
-
-        // 🔥 ربط الدالة بالـ window علناً عشان الـ HTML يشوفها والبيانات تظهر فوراً
-        window.loadCourses = (page) => this.loadCourses(page);
-    },
-
-    async handleUpload(e) {
-        e.preventDefault();
-
-        // منع رفعين بنفس الوقت
-        if (this.currentXHR) {
-            return SysUI.toast('error', 'يوجد رفع جارٍ بالفعل');
-        }
-
-        // 🔥 استخدام التوكن الصحيح الخاص بـ state.js
-        const token = sessionToken || localStorage.getItem('dahih_token');
-        if (!token) {
-            return SysUI.toast('error', 'انتهت الجلسة، يرجى تسجيل الدخول بحساب الإدارة');
-        }
-
-        const uploadForm = document.getElementById('uploadVideoForm');
-        const fileInput = document.getElementById('videoFile');
-        const courseNameInput = document.getElementById('courseName');
-        const gradeInput = document.getElementById('videoGrade');
-        const descriptionInput = document.getElementById('videoDescription');
-
-        const file = fileInput?.files?.[0];
-        if (!file) {
-            return SysUI.toast('error', 'يرجى اختيار ملف الفيديو');
-        }
-
-        // التحقق من الحجم
-        const MAX_SIZE = 2 * 1024 * 1024 * 1024;
-        if (file.size > MAX_SIZE) {
-            return SysUI.toast('error', 'حجم الفيديو أكبر من 2GB');
-        }
-
-        // التحقق من نوع الملف
-        if (!file.type.startsWith('video/')) {
-            return SysUI.toast('error', 'الملف المختار ليس فيديو');
-        }
-
-        const courseName = courseNameInput.value.trim();
-        const grade = gradeInput.value.trim();
-        const description = descriptionInput.value.trim();
-
-        if (!courseName || !grade) {
-            return SysUI.toast('error', 'يرجى تعبئة جميع الحقول المطلوبة');
-        }
-
-        const formData = new FormData();
-        formData.append('videoFile', file);
-        formData.append('courseName', courseName);
-        formData.append('grade', grade);
-        formData.append('description', description);
-
-        // عناصر الواجهة
-        const progressContainer = document.getElementById('videoProgressContainer');
-        const progressBar = document.getElementById('videoProgressBar');
-        const progressText = document.getElementById('videoProgressText');
-        const submitBtn = document.getElementById('videoSubmitBtn');
-
-        // إظهار شريط التقدم
-        progressContainer?.classList.remove('hidden');
-
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ جاري رفع المحاضرة السحابية...';
-        }
-
-        const xhr = new XMLHttpRequest();
-        this.currentXHR = xhr;
-
-        xhr.open('POST', '/api/admin/upload-course', true);
-        xhr.timeout = 1000 * 60 * 60;
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`); // إرسال التوكن الصحيح للسيرفر
-
-        // Progress
-        xhr.upload.onprogress = (event) => {
-            if (!event.lengthComputable) return;
-
-            const percent = Math.round((event.loaded / event.total) * 100);
-
-            if (progressBar) {
-                progressBar.style.width = `${percent}%`;
-            }
-
-            if (progressText) {
-                const uploadedMB = (event.loaded / 1024 / 1024).toFixed(1);
-                const totalMB = (event.total / 1024 / 1024).toFixed(1);
-                progressText.innerText = `${percent}% • ${uploadedMB}MB / ${totalMB}MB`;
-            }
-        };
-
-        xhr.onload = async () => {
-            this.currentXHR = null;
-            this.resetUploadUI();
-
-            try {
-                const response = JSON.parse(xhr.responseText);
-
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    SysUI.toast('success', '✅ تم رفع ونشر المحاضرة بنجاح');
-                    uploadForm?.reset();
-                    await this.loadCourses();
-                } else {
-                    SysUI.toast('error', response.message || 'فشل رفع الفيديو');
-                }
-            } catch (err) {
-                SysUI.toast('error', 'حدث خطأ أثناء معالجة استجابة السيرفر');
-            }
-        };
-
-        xhr.onerror = () => {
-            this.currentXHR = null;
-            this.resetUploadUI();
-            SysUI.toast('error', 'فشل الاتصال بالسيرفر');
-        };
-
-        xhr.ontimeout = () => {
-            this.currentXHR = null;
-            this.resetUploadUI();
-            SysUI.toast('error', 'انتهى وقت الرفع، تحقق من الشبكة');
-        };
-
-        xhr.send(formData);
-    },
-
-    resetUploadUI() {
-        const progressContainer = document.getElementById('videoProgressContainer');
-        const submitBtn = document.getElementById('videoSubmitBtn');
-
-        if (progressContainer) {
-            progressContainer.classList.add('hidden');
-        }
-
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '🚀 ابدأ الرفع والمعالجة السحابية';
-        }
-    },
-
-    async loadCourses(page = 1) {
-        // 🔥 استخدام التوكن الصحيح الخاص بـ state.js
-        const token = sessionToken || localStorage.getItem('dahih_token');
-        const container = document.getElementById('coursesList');
-        if (!container) return;
-
-        if (!token) {
-            container.innerHTML = `<div class="text-center py-10 text-red-400">يرجى تسجيل الدخول أولاً لرؤية الأرشيف.</div>`;
-            return;
-        }
-
-        try {
-            container.innerHTML = `
-                <div class="text-center py-10 text-gray-400 animate-pulse">
-                    جاري تحميل المحاضرات المأرشفة...
-                </div>
-            `;
-
-            const res = await fetch(`/api/admin/get-all-courses?page=${page}&limit=20`, {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}` // إرسال التوكن الصحيح
-                }
-            });
-
-            if (!res.ok) {
-                throw new Error('Failed to load courses');
-            }
-
-            const data = await res.json();
-            const courses = data.courses || [];
-
-            if (!courses.length) {
-                container.innerHTML = `
-                    <div class="text-center py-10 text-gray-500">
-                        لا توجد محاضرات مرفوعة حالياً
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = courses.map(c => {
-                const courseName = escapeHTML(c.courseName);
-                const grade = escapeHTML(c.grade);
-                const description = escapeHTML(c.description || 'لا يوجد وصف لهذه المحاضرة');
-
-                return `
-                    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex items-start justify-between gap-4 hover:border-indigo-500/40 transition-all duration-300">
-                        <div class="flex-1 min-w-0">
-                            <h3 class="text-white font-bold text-lg truncate">${courseName}</h3>
-                            <p class="text-indigo-400 text-xs mt-1">📌 ${grade}</p>
-                            <p class="text-gray-400 text-sm mt-3 leading-6 break-words">${description}</p>
-                        </div>
-                        <button class="delete-course-btn bg-red-600/10 hover:bg-red-600 text-red-400 hover:text-white px-4 py-2 rounded-xl transition-all duration-300 text-sm shrink-0" data-id="${c.id}">
-                            حذف
-                        </button>
-                    </div>
-                `;
-            }).join('');
-
-        } catch (err) {
-            console.error(err);
-            container.innerHTML = `
-                <div class="text-center py-10 text-red-400">
-                    فشل تحميل المحاضرات
-                </div>
-            `;
-        }
-    },
-
-    async deleteCourse(courseId) {
-        const confirmed = confirm('هل أنت متأكد من حذف المحاضرة نهائياً من السيرفر؟');
-        if (!confirmed) return;
-
-        // 🔥 استخدام التوكن الصحيح
-        const token = sessionToken || localStorage.getItem('dahih_token');
-
-        try {
-            const res = await fetch(`/api/admin/delete-course/${courseId}`, {
-                method: 'DELETE',
-                headers: {
-                    Authorization: `Bearer ${token}` // إرسال التوكن الصحيح
-                }
-            });
-
-            const data = await res.json();
-            if (!res.ok) {
-                throw new Error(data.message);
-            }
-
-            SysUI.toast('success', 'تم حذف المحاضرة بنجاح');
-            await this.loadCourses();
-
-        } catch (err) {
-            SysUI.toast('error', err.message || 'فشل حذف المحاضرة');
-        }
+// ✅ دالة قفل النافذة المنبثقة للنتائج (مكتوبة مباشرة هنا عشان متضربش أي إيرور)
+window.closeResultsModal = function() {
+    const modal = document.getElementById('resultsModal');
+    if (modal) {
+        modal.classList.add('hidden');
     }
 };
+// =================================================================
+
+export function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active');
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    });
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    const activeTab = document.getElementById(`tab-${tabId}`);
+    if(activeTab) {
+        activeTab.classList.add('active');
+        document.getElementById(`btn-${tabId}`).classList.add('active');
+        
+        setTimeout(() => {
+            activeTab.style.opacity = '1';
+            activeTab.style.transform = 'translateY(0)';
+        }, 50);
+
+        if(tabId === 'requests') fetchPendingRequests();
+        if(tabId === 'dashboard') fetchStats();
+        if(tabId === 'videos' && VideoSystem) VideoSystem.loadCourses(); // 🔥 تحديث أرشيف الفيديوهات تلقائياً عند فتح القسم
+    }
+}
+window.switchTab = switchTab;
+
+export function toggleContentFields() {
+    const type = document.getElementById('contentType').value;
+    const pointF = document.getElementById('pointField');
+    const qFields = document.getElementById('questionFields');
+    
+    if(type !== 'point') {
+        pointF.style.opacity = '0';
+        setTimeout(() => {
+            pointF.classList.add('hidden');
+            qFields.classList.remove('hidden');
+            qFields.style.opacity = '0';
+            setTimeout(() => { qFields.style.transition = 'opacity 0.3s'; qFields.style.opacity = '1'; }, 50);
+        }, 150);
+    } else {
+        qFields.style.opacity = '0';
+        setTimeout(() => {
+            qFields.classList.add('hidden');
+            pointF.classList.remove('hidden');
+            pointF.style.opacity = '0';
+            setTimeout(() => { pointF.style.transition = 'opacity 0.3s'; pointF.style.opacity = '1'; }, 50);
+        }, 150);
+    }
+}
+window.toggleContentFields = toggleContentFields;
+
+// ==================== المساعد الصوتي ====================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition) {
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'ar-EG'; 
+    recognition.continuous = false; 
+    recognition.interimResults = false;
+
+    const micBtn = document.createElement('button');
+    micBtn.className = 'fixed bottom-5 right-5 w-14 h-14 bg-yellow-600 hover:bg-yellow-500 rounded-full shadow-[0_0_20px_rgba(202,138,4,0.4)] flex items-center justify-center text-white transition-all z-50 hover:scale-110 active:scale-95 group border border-yellow-400/30';
+    micBtn.innerHTML = `
+        <svg class="w-6 h-6 group-hover:animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+        <span class="absolute -top-10 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">المساعد الصوتي</span>
+    `;
+    document.body.appendChild(micBtn);
+
+    let isListening = false;
+
+    micBtn.onclick = () => {
+        if(!isListening) {
+            try { recognition.start(); } catch(e){}
+        } else {
+            recognition.stop();
+        }
+    };
+
+    recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.replace('bg-yellow-600', 'bg-red-500'); 
+        micBtn.classList.replace('hover:bg-yellow-500', 'hover:bg-red-400');
+        micBtn.classList.replace('shadow-[0_0_20px_rgba(202,138,4,0.4)]', 'shadow-[0_0_20px_rgba(239,68,68,0.6)]');
+        micBtn.classList.add('animate-bounce');
+        SysUI.toast('warning', 'المنصة تسمعك الآن.. تكلم!');
+    };
+
+    recognition.onresult = (event) => {
+        const command = event.results[0][0].transcript.toLowerCase();
+
+        if(command.includes('سؤال جديد') || command.includes('اضف سؤال') || command.includes('إضافة سؤال')) {
+            if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) addMCQBlock();
+            else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) addPublicMCQBlock();
+            SysUI.toast('success', 'حاضر، تم إضافة سؤال جديد.');
+        } else if (command.includes('احفظ الامتحان') || command.includes('ارفع الامتحان') || command.includes('نشر')) {
+            if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) {
+                document.getElementById('saveQuizBtn').click();
+            } else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) {
+                document.getElementById('savePublicQuizBtn').click();
+            }
+            SysUI.toast('success', 'جاري تنفيذ أمر الحفظ!');
+        } else if (command.includes('افتح الطلبات') || command.includes('طلبات التسجيل')) {
+            switchTab('requests');
+            SysUI.toast('success', 'تم فتح قسم الطلبات.');
+        } else if (command.includes('افتح المحاضرات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) {
+            switchTab('videos');
+            SysUI.toast('success', 'تم فتح قسم الكورسات.');
+        } else {
+            SysUI.toast('error', `لم أفهم الأمر: "${command}"`);
+        }
+    };
+
+    recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.replace('bg-red-500', 'bg-yellow-600');
+        micBtn.classList.replace('hover:bg-red-400', 'hover:bg-yellow-500');
+        micBtn.classList.replace('shadow-[0_0_20px_rgba(239,68,68,0.6)]', 'shadow-[0_0_20px_rgba(202,138,4,0.4)]');
+        micBtn.classList.remove('animate-bounce');
+    };
+}
+
+// ==================== اختصارات الكيبورد ====================
+document.addEventListener('keydown', (e) => {
+    const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+
+    if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) {
+            addMCQBlock();
+            SysUI.toast('success', 'تم إضافة سؤال منصة جديد');
+        } else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) {
+            addPublicMCQBlock();
+            SysUI.toast('success', 'تم إضافة سؤال عام جديد');
+        }
+    }
+
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) {
+            document.getElementById('quizForm').dispatchEvent(new Event('submit', { cancelable: true }));
+        } else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) {
+            document.getElementById('publicQuizForm').dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    }
+});
+
+// ==================== الأحداث الأساسية والتحميل ====================
+const quizForm = document.getElementById('quizForm');
+if(quizForm) {
+    quizForm.addEventListener('input', () => DraftSystem.save());
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // 🔥 تهيئة نظام تشغيل الفيديوهات وربط أحداث الفورم بمجرد تحميل الصفحة
+    if (VideoSystem && typeof VideoSystem.init === 'function') {
+        VideoSystem.init();
+    }
+
+    if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
+    if(document.getElementById('dynamicPublicQuestionsContainer') && document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
+    
+    setTimeout(() => fetchStats(), 300);
+    setTimeout(() => DraftSystem.check(), 1000); 
+    setTimeout(() => SmartImportSystem.init(), 1000); 
+});
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        setTimeout(() => SmartImportSystem.init(), 100);
+    });
+});
