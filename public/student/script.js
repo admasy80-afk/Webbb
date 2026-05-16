@@ -6,12 +6,12 @@ const sounds = {
 Object.values(sounds).forEach(audio => audio.volume = 0.3);
 
 const userDataStr = localStorage.getItem('dahih_user');
-const token = localStorage.getItem('dahih_token'); // سحب التوكن السليم
+const token = localStorage.getItem('dahih_token'); 
 window.availableQuizzes = []; 
 let currentUser = null;
 let currentPointsTracker = -1; 
+let currentPlayingMsgId = null;
 
-// التحقق من تسجيل الدخول
 if (!userDataStr) {
     window.location.replace("/logina.html");
 } else {
@@ -22,12 +22,12 @@ if (!userDataStr) {
     document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
     
     fetchDashboardData();
-    // تقليل معدل التحديث لعدم إرهاق السيرفر
-    setInterval(fetchDashboardData, 10000); 
+    setInterval(fetchDashboardData, 8000); 
 }
 
-// ==================== إعدادات المشغل الذكي (Native Player) ====================
+// ==================== عقل المشغل الذكي (Native HTML5 Player Engine) ====================
 const video = document.getElementById('dahihPlayer');
+const placeholder = document.getElementById('videoPlaceholder');
 const tapLeft = document.getElementById('tapLeft');
 const tapRight = document.getElementById('tapRight');
 const skipIndicator = document.getElementById('skipIndicator');
@@ -39,18 +39,16 @@ const speedBtn = document.getElementById('speedBtn');
 const muteBtn = document.getElementById('muteBtn');
 const currentTimeDisplay = document.getElementById('currentTimeDisplay');
 const durationDisplay = document.getElementById('durationDisplay');
+const controlsBar = document.querySelector('.custom-controls');
+const playingTitle = document.getElementById('playingVideoTitle');
 
 let currentSpeedIndex = 0;
 const speeds = [1, 1.25, 1.5, 2];
 
 if(video) {
-    // 1. التشغيل والإيقاف + الـ Blur
     const togglePlay = () => {
-        if (video.paused) {
-            video.play();
-        } else {
-            video.pause();
-        }
+        if(video.src === "") return;
+        if (video.paused) video.play(); else video.pause();
     };
 
     video.addEventListener('click', togglePlay);
@@ -63,38 +61,26 @@ if(video) {
 
     video.addEventListener('pause', () => {
         centerPlayBtn.style.opacity = '1';
-        video.classList.add('video-blur'); // التغبيش الاحترافي
+        video.classList.add('video-blur'); 
     });
 
-    // 2. التقديم والتأخير الذكي (Double Tap)
     const handleDoubleTap = (seconds, directionText) => {
+        if(video.src === "") return;
         video.currentTime += seconds;
         skipText.innerText = directionText;
         skipIndicator.classList.remove('hidden');
-        
-        // إعادة تشغيل الأنيميشن
         skipIndicator.style.animation = 'none';
         void skipIndicator.offsetWidth; 
         skipIndicator.style.animation = 'popFade 0.8s ease-out forwards';
         
-        if ("vibrate" in navigator) navigator.vibrate(50);
-        
-        setTimeout(() => {
-            skipIndicator.classList.add('hidden');
-        }, 800);
+        if ("vibrate" in navigator) navigator.vibrate(40);
+        setTimeout(() => skipIndicator.classList.add('hidden'), 800);
     };
 
-    tapLeft.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        handleDoubleTap(10, "⏩ +10 ثواني");
-    });
+    // الـ RTL يخلي اليسار تقديم واليمين تأخير للمشاهدة المريحة
+    tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(10, "⏩ +10 ثواني"); });
+    tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(-10, "⏪ -10 ثواني"); });
 
-    tapRight.addEventListener('dblclick', (e) => {
-        e.preventDefault();
-        handleDoubleTap(-10, "⏪ -10 ثواني");
-    });
-
-    // 3. السرعة
     speedBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
@@ -102,7 +88,6 @@ if(video) {
         speedBtn.innerText = speeds[currentSpeedIndex] + 'x';
     });
 
-    // 4. الصوت
     muteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         video.muted = !video.muted;
@@ -111,8 +96,8 @@ if(video) {
             : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"></path></svg>`;
     });
 
-    // 5. شريط التقدم والوقت
     const formatTime = (time) => {
+        if(isNaN(time)) return "00:00";
         const min = Math.floor(time / 60);
         const sec = Math.floor(time % 60);
         return `${min}:${sec < 10 ? '0' : ''}${sec}`;
@@ -130,14 +115,49 @@ if(video) {
 
     progressContainer.addEventListener('click', (e) => {
         e.stopPropagation();
+        if(video.src === "") return;
         const rect = progressContainer.getBoundingClientRect();
         const pos = (e.clientX - rect.left) / rect.width;
-        // عشان اتجاه الـ RTL نعكس الحسبة
-        video.currentTime = (1 - pos) * video.duration; 
+        video.currentTime = pos * video.duration; 
     });
 }
 
-// ==================== وضع السينما ====================
+// دالة سحب وتشغيل المحاضرة سحابياً عند النقر عليها بالأنيميشن السلس
+window.loadVideoToPlayer = function(msgId, title) {
+    if(!video || currentPlayingMsgId === msgId) return;
+    sounds.click.play().catch(()=>{});
+    
+    currentPlayingMsgId = msgId;
+    playingTitle.innerText = title;
+    
+    // 🎬 تأثير الـ Fade Out السلس والراقي للبوستر الملكي
+    placeholder.style.opacity = '0';
+    placeholder.style.transform = 'scale(1.05)';
+    
+    setTimeout(() => {
+        placeholder.classList.add('hidden');
+        
+        // إظهار الفيديو وعناصر التحكم
+        video.classList.remove('hidden');
+        tapLeft.classList.remove('hidden');
+        tapRight.classList.remove('hidden');
+        controlsBar.classList.remove('hidden');
+        
+        // شحن بث المحاضرة مباشرة من التليجرام
+        video.pause();
+        video.src = `/api/video/stream/${msgId}`;
+        video.load();
+        
+        video.style.opacity = '1';
+        video.play().catch(()=>{});
+    }, 400); 
+
+    // تمييز الكارد الفعال في الأرشيف
+    document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
+    document.getElementById(`course_${msgId}`)?.classList.add('card-active');
+};
+
+// ==================== وضع السينما وتكبير الشاشة ====================
 function toggleTheaterMode() {
     sounds.click.play().catch(()=>{});
     const body = document.body;
@@ -150,49 +170,32 @@ function toggleTheaterMode() {
     document.querySelectorAll('body > *:not(#liveStreamSection)').forEach(el => {
         el.style.opacity = isTheater ? '0' : '1';
         el.style.pointerEvents = isTheater ? 'none' : 'auto';
-        el.style.transition = 'opacity 0.5s ease';
+        el.style.transition = 'opacity 0.4s ease';
     });
-
-    streamSection.style.transform = isTheater ? 'scale(1.02)' : 'scale(1)';
-    streamSection.style.zIndex = isTheater ? '100' : 'auto';
-    streamSection.style.position = isTheater ? 'relative' : 'static';
-    streamSection.style.transition = 'all 0.4s ease';
-}
-
-function handleFullscreenText(isFullscreen) {
-    const fsWrapper = document.getElementById('fs-wrapper');
-    if (fsWrapper) {
-        const warningText = fsWrapper.querySelector('p');
-        if (warningText) warningText.style.display = isFullscreen ? 'none' : 'block';
-    }
 }
 
 function toggleStudentFullScreen() {
     const fsWrapper = document.getElementById('fs-wrapper');
     if (!fsWrapper) return;
-    
     if (!document.fullscreenElement) {
-        if(fsWrapper.requestFullscreen) fsWrapper.requestFullscreen().then(() => { try { screen.orientation.lock('landscape'); } catch (e) {} });
-    } else { 
-        if (document.exitFullscreen) document.exitFullscreen().then(() => { try { screen.orientation.unlock(); } catch (e) {} });
+        fsWrapper.requestFullscreen().catch(()=>{});
+    } else {
+        document.exitFullscreen().catch(()=>{});
     }
 }
-
-document.addEventListener('fullscreenchange', () => handleFullscreenText(!!document.fullscreenElement));
 
 function toggleSection(sectionId, iconId) {
     sounds.click.play().catch(()=>{});
     const section = document.getElementById(sectionId);
     const icon = document.getElementById(iconId);
     if (!section || !icon) return;
-    
     section.classList.toggle('collapsed');
     icon.classList.toggle('collapsed');
     if(section.classList.contains('collapsed')) { 
         section.style.maxHeight = '0px'; 
         section.style.opacity = '0.5';
     } else { 
-        section.style.maxHeight = section.scrollHeight + 500 + 'px'; 
+        section.style.maxHeight = '1000px'; 
         section.style.opacity = '1';
     }
 }
@@ -209,60 +212,57 @@ function animateValue(obj, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
-// عرض الفيديو من السيرفر (تم ربطها بـ API تليجرام)
-function forceShowStream(msgId) {
-    const section = document.getElementById('liveStreamSection');
-    
-    if(section) {
-        section.classList.remove('hidden');
-        section.style.display = 'block';
-        
-        // ربط السورس بملف الـ API اللي عملناه
-        if(video && msgId && video.src === "") {
-            // إضافة التوكن للرابط عشان السيرفر يقبله (لأن المسار محمي)
-            fetch(`/api/video/stream/${msgId}`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            }).then(res => res.blob()).then(blob => {
-                video.src = URL.createObjectURL(blob);
-                video.classList.add('video-blur'); // يبدأ مغبش لحد ما الطالب يدوس تشغيل
-            });
-        }
-    }
-}
-
-function forceHideStream() {
-    const section = document.getElementById('liveStreamSection');
-    if(section) section.style.display = 'none';
-    if(video) { video.pause(); video.src = ""; }
-}
-
+// ==================== سحب وضخ البيانات من الباك إند المحمي ====================
 async function fetchDashboardData() {
     try {
         const res = await fetch('/api/student/dashboard-data', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ email: currentUser.email, grade: currentUser.grade })
         });
 
         if (res.ok) {
             const data = await res.json();
             
-            // 🔥 هنا لازم الداتا بيز ترجع الـ msgId بتاع الفيديو الأخير للمرحلة دي
-            // للتجربة هنفترض إن الـ msgId متاح في data.latestVideoMsgId
-            if (data.latestVideoMsgId) { 
-                forceShowStream(data.latestVideoMsgId); 
-            } else { 
-                forceHideStream(); 
+            // 🎥 ضخ وعرض مصفوفة الحصص والأرشيف بالتفصيل والترتيب
+            const coursesContainer = document.getElementById('studentCoursesContainer');
+            if (coursesContainer) {
+                const coursesList = data.courses || data.content?.courses || [];
+                
+                if (coursesList.length > 0) {
+                    let coursesHTML = '';
+                    coursesList.slice().reverse().forEach((course, index) => {
+                        const isActive = currentPlayingMsgId === course.telegramMsgId ? 'card-active' : '';
+                        coursesHTML += `
+                        <div id="course_${course.telegramMsgId}" class="course-card ${isActive} bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:border-yellow-500/30">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded font-bold">الحصة ${coursesList.length - index}</span>
+                                    <h3 class="font-bold text-base md:text-lg text-white">${course.courseName}</h3>
+                                </div>
+                                <p class="text-xs md:text-sm text-gray-400 mt-2 leading-relaxed">${course.description || 'لا يوجد وصف مضاف لهذه المحاضرة.'}</p>
+                            </div>
+                            <button onclick="window.loadVideoToPlayer(${course.telegramMsgId}, '${course.courseName}')" class="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-yellow-500 hover:text-black text-yellow-500 font-bold px-5 py-2.5 rounded-xl border border-yellow-500/20 hover:border-transparent transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> تشغيل الدرس
+                            </button>
+                        </div>`;
+                    });
+                    coursesContainer.innerHTML = coursesHTML;
+                } else {
+                    coursesContainer.innerHTML = '<p class="text-center text-gray-500 py-6">لا توجد محاضرات سحابية مرفوعة حالياً لهذه المرحلة.</p>';
+                }
             }
 
+            // تحديث التقييم العام
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             const newPoints = parseInt(data.studentPoints || 0);
-            
             if (pointsDisplay && currentPointsTracker !== newPoints) {
                 const startPoint = currentPointsTracker === -1 ? 0 : currentPointsTracker;
                 animateValue(pointsDisplay, startPoint, newPoints, 1500);
                 currentPointsTracker = newPoints;
             }
 
+            // تحديث كروت الكويزات والاختبارات المتاحة
             window.availableQuizzes = data.content?.quizzes || [];
             const qzContainer = document.getElementById('onlineQuizzesContainer');
             if (qzContainer) {
@@ -283,6 +283,7 @@ async function fetchDashboardData() {
                 } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
             }
 
+            // تحديث الملاحظات وأهم نقاط المنهج
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
@@ -293,6 +294,7 @@ async function fetchDashboardData() {
                 } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
             }
 
+            // تحديث الأسئلة المقالية والHints
             const qContainer = document.getElementById('questionsContainer');
             if (qContainer) {
                 if (data.content?.questions && data.content.questions.length > 0) {
@@ -303,29 +305,11 @@ async function fetchDashboardData() {
                     qContainer.innerHTML = qHTML;
                 } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
             }
-
-            const tContainer = document.getElementById('testsContainer');
-            if (tContainer) {
-                if (data.content?.tests && data.content.tests.length > 0) {
-                    let tHTML = '';
-                    data.content.tests.slice().reverse().forEach(test => {
-                        tHTML += `<div class="bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 card-hover"><h3 class="font-bold text-yellow-500 mb-4 border-b border-white/10 pb-2">${test.testName}</h3><div class="space-y-2">`;
-                        let sortedScores = test.scores.sort((a, b) => b.score - a.score);
-                        sortedScores.forEach((s, index) => {
-                            let highlight = index < 3 ? 'text-white font-bold bg-white/5 border border-white/5' : 'text-gray-400';
-                            let rank = index < 3 ? ['الأول', 'الثاني', 'الثالث'][index] : index + 1;
-                            tHTML += `<div class="flex justify-between items-center p-2 rounded ${highlight}"><span class="text-sm"><span class="text-gray-500 ml-3 w-8 inline-block text-right">${rank}</span>${s.name}</span><span dir="ltr" class="font-bold">${s.score}</span></div>`;
-                        });
-                        tHTML += `</div></div>`;
-                    });
-                    tContainer.innerHTML = tHTML;
-                } else { tContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لم تُنشر نتائج للاختبارات الورقية.</p>'; }
-            }
         }
     } catch (err) { console.log("Error fetching data:", err); }
 }
 
-// دوال الكويزات كما هي لم يتم المساس بها
+// دوال إدارة النوافذ المنبثقة للاختبارات (Quizzes)
 function openQuizModal(quizId) {
     sounds.click.play().catch(()=>{});
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
@@ -349,19 +333,13 @@ function openQuizModal(quizId) {
     html += `<div class="flex flex-col md:flex-row gap-3 pt-4 border-t border-white/10"><button type="submit" id="btnSubmitQuiz" class="flex-1 bg-yellow-500 text-black font-bold py-3 md:py-4 rounded-xl hover:bg-yellow-400 transition-colors text-sm md:text-base shadow-md">إنهاء وتسليم الإجابات</button><button type="button" onclick="closeQuizModal()" class="md:w-32 bg-transparent border border-white/10 text-gray-300 font-bold py-3 md:py-4 rounded-xl hover:bg-white/5 transition-colors text-sm md:text-base">إلغاء</button></div></form>`;
 
     modalContent.innerHTML = html;
-    
     modal.classList.remove('hidden');
-    modalContent.classList.add('opacity-0', 'scale-95', 'transition-all', 'duration-300');
-    setTimeout(() => {
-        modalContent.classList.remove('opacity-0', 'scale-95');
-        modalContent.classList.add('opacity-100', 'scale-100');
-    }, 10);
 }
 
 async function submitQuiz(event, quizId) {
     event.preventDefault();
     const btn = document.getElementById('btnSubmitQuiz');
-    if (btn) { btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 inline text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري التصحيح...`; btn.disabled = true; }
+    if (btn) { btn.innerHTML = `جاري التصحيح واعتماد النتيجة...`; btn.disabled = true; }
 
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
     const form = event.target;
@@ -373,68 +351,30 @@ async function submitQuiz(event, quizId) {
 
     const percentage = Math.round((score / quiz.questions.length) * 100);
 
-    if ("vibrate" in navigator) {
-        if (percentage >= 50) navigator.vibrate([100, 50, 100]);
-        else navigator.vibrate(400); 
-    }
-
     try {
         await fetch('/api/student/submit-quiz', {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ 
-                email: currentUser.email, 
-                studentName: currentUser.name, 
-                grade: currentUser.grade, 
-                quizId: quizId, 
-                score: score, 
-                percentage: percentage 
-            })
+            body: JSON.stringify({ email: currentUser.email, studentName: currentUser.name, grade: currentUser.grade, quizId: quizId, score: score, percentage: percentage })
         });
 
         if (percentage >= 85) {
             sounds.success.play().catch(()=>{});
-            const duration = 3 * 1000;
-            const animationEnd = Date.now() + duration;
-            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
-            const randomInRange = (min, max) => Math.random() * (max - min) + min;
-
-            const interval = setInterval(function() {
-                const timeLeft = animationEnd - Date.now();
-                if (timeLeft <= 0) return clearInterval(interval);
-                const particleCount = 50 * (timeLeft / duration);
-                if(typeof confetti === 'function') {
-                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
-                    confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
-                }
-            }, 250);
-        } else {
-            sounds.click.play().catch(()=>{});
+            if(typeof confetti === 'function') {
+                confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
+            }
         }
 
         let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
-        let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.2)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.2)' : 'rgba(248, 113, 113, 0.2)');
-        const successIcon = `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
-        
         const modalContent = document.getElementById('quizModalContent');
         if (modalContent) {
-            modalContent.innerHTML = `<div class="text-center py-10 px-6 overflow-hidden flex flex-col items-center"><div class="w-24 h-24 mb-6 rounded-full border border-white/10 flex items-center justify-center bg-black/40 animate-pop-in animate-float relative" style="box-shadow: 0 0 40px ${shadowColor};">${successIcon}</div><h2 class="text-3xl font-bold text-white mb-2 animate-slide-up delay-100">تم تسجيل إجاباتك</h2><p class="text-gray-400 mb-8 animate-slide-up delay-150">هذه هي نتيجتك النهائية المعتمدة</p><div class="inline-block animate-slide-up delay-200 mb-10"><div class="text-8xl font-black ${colorClass}" style="text-shadow: 0 0 30px ${shadowColor};" dir="ltr">${percentage}%</div></div><div class="bg-black/30 border border-white/5 rounded-2xl p-5 text-gray-300 w-full max-w-xs mx-auto mb-10 flex justify-between items-center px-8 animate-slide-up delay-250"><span class="font-medium text-gray-400">الإجابات الصحيحة</span><span class="font-bold text-white text-lg" dir="ltr">${score} / ${quiz.questions.length}</span></div><button onclick="closeQuizModal(); fetchDashboardData();" class="w-full max-w-xs mx-auto bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-colors block animate-slide-up delay-300">العودة للوحة التحكم</button></div>`;
+            modalContent.innerHTML = `<div class="text-center py-10 px-6 flex flex-col items-center"><h2 class="text-2xl font-bold text-white mb-2">تم تسجيل النتيجة بنجاح!</h2><div class="text-7xl font-black ${colorClass} my-6" dir="ltr">${percentage}%</div><p class="text-gray-400 mb-6">الإجابات الصحيحة: ${score} من أصل ${quiz.questions.length}</p><button onclick="closeQuizModal(); fetchDashboardData();" class="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl transition-all">العودة للوحة التحكم</button></div>`;
         }
-    } catch (err) { 
-        alert("حدث خطأ، حاول مجدداً."); 
-        if (btn) { btn.innerText = "تسليم الإجابات"; btn.disabled = false; }
-    }
+    } catch (err) { alert("حدث خطأ أثناء حفظ النتيجة."); }
 }
 
 function closeQuizModal() { 
     sounds.click.play().catch(()=>{});
-    const modal = document.getElementById('quizModal');
-    const modalContent = document.getElementById('quizModalContent');
-    
-    if (modal && modalContent) {
-        modalContent.classList.remove('opacity-100', 'scale-100');
-        modalContent.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => { modal.classList.add('hidden'); }, 300);
-    }
+    document.getElementById('quizModal')?.classList.add('hidden'); 
 }
 
 function logout() { 
