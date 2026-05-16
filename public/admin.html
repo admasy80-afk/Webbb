@@ -9,11 +9,9 @@
     <style>
         body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
         
-        /* ======== إصلاحات الجوال والوميض الأبيض ======== */
         html { background-color: #070b19; overscroll-behavior: none; }
         * { -webkit-tap-highlight-color: transparent; }
         *:focus, button:focus, input:focus, select:focus, textarea:focus { outline: none !important; box-shadow: none !important; }
-        /* =============================================== */
 
         .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
         .tab-btn { transition: all 0.3s ease; position: relative; }
@@ -35,7 +33,6 @@
         #videoContainer:fullscreen { background-color: #000; display: flex; align-items: center; justify-content: center; }
         #videoContainer:fullscreen video { height: 100vh; width: 100vw; object-fit: contain; border: none; border-radius: 0; }
         
-        /* تأثيرات لنتائج الطلاب المفصلة */
         .student-details { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
         .student-details.open { max-height: 2000px; padding-top: 1rem; opacity: 1; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
     </style>
@@ -90,7 +87,6 @@
             }
         };
 
-        // دالة إضافة الدرجات الورقية أصبحت هنا لتعمل بسرعة وبدون أخطاء
         window.addScoreRow = function() {
             const container = document.getElementById('scoresContainer');
             const row = document.createElement('div');
@@ -123,12 +119,10 @@
             <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
             <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
             <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
-            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">محاضرات الفيديو 🎬</button>
+            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">كورسات</button>
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
             <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار المنصة</button>
-            
             <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار عام (رابط)</button>
-            
             <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى والنتائج</button>
             <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">البث المباشر</button>
         </nav>
@@ -276,7 +270,7 @@
         </div>
 
         <div id="tab-videos" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة محاضرات الفيديو السحابية</h1>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة الكورسات السحابية</h1>
             <p class="text-gray-400 mb-6">ارفع ملفات الفيديو الكبيرة مباشرة إلى السيرفر المشفر الآمن حتى حده الأقصى 2GB.</p>
             
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
@@ -337,13 +331,14 @@
                 </div>
 
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 lg:col-span-2 h-fit">
-                    <h2 class="text-lg font-bold text-white mb-5">📚 أرشيف المحاضرات المنشورة بالفيديو</h2>
+                    <h2 class="text-lg font-bold text-white mb-5">📚 أرشيف الكورسات المنشورة</h2>
                     <div id="coursesList" class="space-y-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-hide">
                         <div class="text-center py-10 text-gray-500">جاري قراءة الملفات السحابية...</div>
                     </div>
                 </div>
             </div>
         </div>
+
         <div id="tab-content" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى والأسئلة المقالية</h1>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl border-t-4 border-yellow-500">
@@ -527,4 +522,3 @@
     <script type="module" src="./modes/main.js"></script>
 </body>
 </html>
-
