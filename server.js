@@ -7,19 +7,28 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet'); 
 const rateLimit = require('express-rate-limit'); 
 
+// 🪐 مكتبات نظام تيليجرام السحابي ورفع الملفات
+const fs = require('fs');
+const multer = require('multer');
+const { TelegramClient } = require('telegram');
+const { StringSession } = require('telegram/sessions');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dahih_super_secret_key_2026';
 
-// 🔥 السطر السحري لحل مشكلة Railway والـ Rate Limit
+// 🔥 حل مشكلة Railway والـ Rate Limit للـ Proxies
 app.set('trust proxy', 1);
 
 // ==========================================
-// 🛡️ إعدادات الحماية 
+// 🛡️ إعدادات الحماية والملفات المؤقتة
 // ==========================================
 app.use(helmet({ contentSecurityPolicy: false })); 
 app.use(express.json({ limit: '1mb' })); 
 app.use(express.static(path.join(__dirname, 'public')));
+
+// إعداد فولدر رفع مؤقت للفيديوهات على السيرفر قبل نقلها لتيليجرام
+const upload = multer({ dest: 'uploads/' }); 
 
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
@@ -29,7 +38,19 @@ const loginLimiter = rateLimit({
 
 let usersCollection;
 
-// --- [الاتصال بقاعدة البيانات] ---
+// ==========================================
+// 🤖 تهيئة نظام تيليجرام MTProto (كسر حاجز الـ 50 ميجا)
+// ==========================================
+const apiId = parseInt(process.env.TELEGRAM_API_ID);
+const apiHash = process.env.TELEGRAM_API_HASH;
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const stringSession = new StringSession(""); // جلسة سريعة في الذاكرة للبوت
+
+const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
+    connectionRetries: 5,
+});
+
+// --- [الاتصال بقاعدة البيانات وتشغيل السيرفرات] ---
 async function startServer() {
     try {
         if (process.env.MONGO_URL) {
@@ -41,9 +62,13 @@ async function startServer() {
             console.error("❌ MONGO_URL غير موجود في متغيرات البيئة!");
         }
 
+        // تشغيل اتصال تيليجرام المطور بالخلفية
+        await tgClient.start({ botToken: botToken });
+        console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز للبث الآمن حتى 2 جيجا!");
+
         app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));  
     } catch (err) {  
-        console.error("❌ فشل الاتصال بقاعدة البيانات:", err);  
+        console.error("❌ فشل تشغيل السيرفر أو اتصال الـ MTProto:", err);  
         process.exit(1);  
     }
 }
@@ -55,7 +80,7 @@ app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
 });
 
 // ==========================================
-// 🧹 نظام التنظيف التلقائي 
+// 🧹 نظام التنظيف التلقائي للموارد
 // ==========================================
 setInterval(async () => {
     if (!usersCollection) return;
@@ -73,7 +98,7 @@ setInterval(async () => {
 }, 60 * 60 * 1000);
 
 // ==========================================
-// 🔒 نظام التوثيق المرن (عشان ميقفلش الداشبورد القديم)
+// 🔒 نظام التوثيق المرن 
 // ==========================================
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -85,12 +110,11 @@ const authenticateToken = (req, res, next) => {
             next();
         });
     } else {
-        next(); // لو مفيش توكن، كمل عادي وهنعتمد على النظام القديم
+        next(); 
     }
 };
 
 const requireAdmin = (req, res, next) => {
-    // بيفحص التوكن الأول، لو مش موجود بيفحص البودي زي نظامك القديم بالظبط
     const role = (req.user && req.user.role) ? req.user.role : req.body.role;
     if (role !== 'dev' && role !== 'owner') {
         return res.status(403).json({ message: "غير مصرح لك" });
@@ -107,7 +131,112 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
 });
 
 // ==========================================
-// 1️⃣ مسارات الطلاب وتسجيل الدخول 
+// 🎥 مسارات بث ورفع الفيديوهات السحابية (الجديدة)
+// ==========================================
+
+// 1. مسار رفع المحاضرة من المستر وتخزينها مشفرة في تيليجرام ومونجو
+app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
+    try {
+        const { courseName, grade, description } = req.body;
+        const file = req.file;
+
+        if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
+
+        console.log(`⏳ جاري معالجة ورفع الحصة سحابياً وبشكل صامت: ${courseName}`);
+
+        // رفع الملف كـ Stream أوتوماتيكي عبر بروتوكول MTProto لكسر ليميت الـ 50 ميجا
+        const uploadedFile = await tgClient.uploadFile({
+            file: file.path,
+            workers: 4 // تقسيم الملف لـ 4 مسارات لسرعة صاروخية في الرفع
+        });
+
+        // إرسال الملف لشات البوت الخاص (me) لأرشفته وتوليد الـ ID
+        const message = await tgClient.sendFile('me', {
+            file: uploadedFile,
+            caption: `حصة: ${courseName} | الصف: ${grade}`
+        });
+
+        // تنظيف وحذف الفيديو فوراً من سيرفر Railway عشان المساحة متتمليش
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+
+        // أرشفة تفاصيل الحصة ومعرف تيليجرام السري في الـ MongoDB
+        const db = usersCollection.s.db;
+        const coursesCollection = db.collection('courses');
+        await coursesCollection.insertOne({
+            courseName,
+            grade,
+            description,
+            telegramMsgId: message.id, // المفتاح السري الذي سيتم استخدامه للبث الخفي
+            createdAt: new Date()
+        });
+
+        res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها للمنصة بنجاح لا نهائي!" });
+    } catch (error) {
+        console.error("❌ خطأ الرفع السحابي:", error);
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        res.status(500).json({ message: "فشل الرفع السحابي، تأكد من كود الـ API والتوكن في الـ .env" });
+    }
+});
+
+// 2. مسار البث الخفي والذكي للطالب (يمنع سحب الروابط ويدعم تحميل المتصفح حتة بحتة Chunks)
+app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
+    try {
+        const msgId = parseInt(req.params.msgId);
+        
+        // جلب الرسالة المخزنة في شات البوت من الـ ID بتاعها
+        const messages = await tgClient.getMessages('me', { ids: [msgId] });
+        if (!messages || messages.length === 0 || !messages[0].media) {
+            return res.status(404).send("الفيديو غير متاح أو تم حذفه من الأرشيف");
+        }
+
+        const message = messages[0];
+        const document = message.media.document;
+        if (!document) return res.status(404).send("الملف المرفق ليس فيديو صالح");
+
+        const fileSize = document.size;
+        const range = req.headers.range;
+
+        // دعم الـ Range Requests عشان الطالب يقدر يقدم ويأخر الفيديو براحته والسيرفر ميهنجش
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': 'video/mp4'
+            });
+
+            // سحب القطعة المطلوبة فقط من تيليجرام وضخها مباشرة للمتصفح (بدون استهلاك رامات السيرفر)
+            const chunk = await tgClient.downloadFile(message.media, {
+                start: start,
+                end: end + 1,
+                dcId: document.dcId,
+                fileSize: fileSize
+            });
+            res.end(chunk);
+        } else {
+            res.writeHead(200, {
+                'Content-Length': fileSize,
+                'Content-Type': 'video/mp4'
+            });
+            const chunk = await tgClient.downloadFile(message.media, {
+                dcId: document.dcId,
+                fileSize: fileSize
+            });
+            res.end(chunk);
+        }
+    } catch (error) {
+        console.error("❌ خطأ أثناء بث الفيديو:", error);
+        if (!res.headersSent) res.status(500).send("حدث خطأ أثناء تحميل مشغل الفيديو المحمي");
+    }
+});
+
+// ==========================================
+// 1️⃣ مسارات الطلاب وتسجيل الدخول القديمة
 // ==========================================
 app.post('/api/saveUser', loginLimiter, async (req, res) => {
     try {
@@ -169,7 +298,7 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
 });
 
 // ==========================================
-// 2️⃣ مسارات لوحة الإدارة 
+// 2️⃣ باقي مسارات لوحة الإدارة 
 // ==========================================
 app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
@@ -298,9 +427,8 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
 });
 
 // ==========================================
-// 4️⃣ مسارات الطالب، الـ Dashboard، والاختبار العام
+// 4️⃣ مسارات الطالب والـ Dashboard
 // ==========================================
-
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
