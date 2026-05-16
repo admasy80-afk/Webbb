@@ -1,4 +1,4 @@
-require('dotenv').config(); 
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { MongoClient, ObjectId } = require('mongodb'); 
@@ -6,8 +6,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken'); 
 const helmet = require('helmet'); 
 const rateLimit = require('express-rate-limit'); 
-
-// 🪐 مكتبات نظام تيليجرام السحابي ورفع الملفات
 const fs = require('fs');
 const multer = require('multer');
 const { TelegramClient } = require('telegram');
@@ -17,7 +15,6 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dahih_super_secret_key_2026';
 
-// 🔥 حل مشكلة Railway والـ Rate Limit للـ Proxies
 app.set('trust proxy', 1);
 
 app.use(helmet({ contentSecurityPolicy: false })); 
@@ -35,14 +32,10 @@ const loginLimiter = rateLimit({
 let db;
 let usersCollection;
 
-// ==========================================
-// 🤖 نظام تيليجرام (مع حفظ الجلسة لمنع الـ Flood)
-// ==========================================
 const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm7VktRzjrpMg18KAtsig").trim().replace(/['"]/g, '');
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 
-// قراءة الجلسة المحفوظة (إن وجدت) عشان تيليجرام ميعتبرناش سبام
 let savedSession = "";
 if (fs.existsSync('tg_session.txt')) {
     savedSession = fs.readFileSync('tg_session.txt', 'utf8');
@@ -53,35 +46,27 @@ const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
     connectionRetries: 5,
 });
 
-// --- [الاتصال بقاعدة البيانات وتشغيل السيرفرات] ---
 async function startServer() {
     try {
         if (process.env.MONGO_URL) {
             const client = new MongoClient(process.env.MONGO_URL);
             await client.connect();
-            
-            // 🚨 الفخ هنا: اتأكد إن اسم قاعدة البيانات دي هو نفس الاسم في أطلس!
             db = client.db('dahih_db'); 
             usersCollection = db.collection('users');
             console.log("✅ تم الاتصال بمونجو بنجاح.. قاعدة البيانات جاهزة!");
         }
 
-        // تشغيل المنصة فوراً (عشان لو تيليجرام واقع، الموقع يفضل شغال للطلاب)
         app.listen(PORT, () => console.log(`🚀 السيرفر شغال على بورت ${PORT}`));  
 
-        // 🪐 محاولة الاتصال بتيليجرام (بدون قتل السيرفر لو فشل)
         try {
             if (!tgClient.connected) {
                 console.log("⏳ جاري الاتصال بتيليجرام بهدوء...");
                 await tgClient.start({ botAuthToken: botToken });
                 console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز!");
-                
-                // حفظ الجلسة عشان نكسر الـ Loop الجهنمية
                 fs.writeFileSync('tg_session.txt', tgClient.session.save());
             }
         } catch (tgErr) {
             console.error("⚠️ تيليجرام معصب (FLOOD):", tgErr.message);
-            console.log("💡 المنصة ومونجو شغالين مية مية. سيب السيرفر وهو هيتصل بتيليجرام لوحده لما العقوبة تخلص.");
         }
 
     } catch (err) {  
@@ -91,9 +76,6 @@ async function startServer() {
 
 startServer();
 
-// ==========================================
-// باقي الأكواد والمسارات بدون أي تغيير
-// ==========================================
 app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
     res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4');
 });
@@ -154,7 +136,8 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
             workers: 4 
         });
 
-        const message = await tgClient.sendFile('me', {
+        // 🔥 الرفع لقناتك الخاصة
+        const message = await tgClient.sendFile('@mohamed293g', {
             file: uploadedFile,
             caption: `حصة: ${courseName} | الصف: ${grade}`
         });
@@ -216,7 +199,9 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
-        const messages = await tgClient.getMessages('me', { ids: [msgId] });
+        
+        // 🔥 جلب الفيديوهات من قناتك وعرضها للطلاب
+        const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
         if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
 
         const message = messages[0];
