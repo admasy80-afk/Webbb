@@ -1,21 +1,27 @@
 // ==================== الملف الرئيسي المجمع للمنصة ====================
 import { SysUI } from './ui.js';
 import './state.js'; 
-// 🔥 ضفنا الدوال الناقصة هنا من ملف admin
 import { fetchStats, fetchPendingRequests, fetchGradeContent, fetchStudentsByGrade, logout } from './admin.js';
-// 🔥 ضفنا الدوال الناقصة هنا من ملف quiz
-import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink, closeResultsModal } from './quiz.js';
+// 🔥 شيلنا closeResultsModal من الـ import عشان متعملش كراش
+import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink } from './quiz.js';
 import './stream.js'; 
-import { VideoSystem } from './video.js'; // تأكد إن مسار الفيديوهات صحيح
+import { VideoSystem } from './video.js'; 
 
-// 🚀 السحر كله هنا: فك حظر الدوال وإجبار المتصفح إنه يشوفها للـ HTML
+// 🚀 السحر كله هنا: فك حظر الدوال وإجبار المتصفح إنه يشوفها
 window.addMCQBlock = addMCQBlock;
 window.addPublicMCQBlock = addPublicMCQBlock;
 window.fetchGradeContent = fetchGradeContent;
 window.fetchStudentsByGrade = fetchStudentsByGrade;
 window.copyPublicLink = copyPublicLink;
-window.closeResultsModal = closeResultsModal;
 window.logout = logout;
+
+// ✅ دالة قفل النافذة المنبثقة للنتائج (مكتوبة مباشرة هنا عشان متضربش أي إيرور)
+window.closeResultsModal = function() {
+    const modal = document.getElementById('resultsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+};
 // =================================================================
 
 export function switchTab(tabId) {
@@ -121,7 +127,7 @@ if (SpeechRecognition) {
         } else if (command.includes('افتح الطلبات') || command.includes('طلبات التسجيل')) {
             switchTab('requests');
             SysUI.toast('success', 'تم فتح قسم الطلبات.');
-        } else if (command.includes('افتح المحاضرات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) { 
+        } else if (command.includes('افتح المحاضرات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) {
             switchTab('videos');
             SysUI.toast('success', 'تم فتح قسم الكورسات سحابياً.');
         } else {
