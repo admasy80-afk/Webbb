@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const { MongoClient, ObjectId } = require('mongodb'); 
+const { MongoClient, ObjectId } = require('mongodb'); // تم إضافة ObjectId لمعالجة مسار الحذف الجديد
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken'); 
 const helmet = require('helmet'); 
@@ -36,8 +36,6 @@ const loginLimiter = rateLimit({
     message: { message: "محاولات كثيرة جداً، يرجى المحاولة بعد 15 دقيقة." }
 });
 
-// تعيين المتغيرات العالمية بشكل صحيح متوافق مع v6
-let db;
 let usersCollection;
 
 // ==========================================
@@ -58,18 +56,15 @@ async function startServer() {
         if (process.env.MONGO_URL) {
             const client = new MongoClient(process.env.MONGO_URL);
             await client.connect();
-            
-            // الحل الجذري: تعيين كائن الـ db برابط رسمي مباشر مستقر
-            db = client.db('dahih_db');
-            usersCollection = db.collection('users');
-            
+            usersCollection = client.db('dahih_db').collection('users');
             console.log("✅ تم الاتصال بمونجو بنجاح.. السيرفر جاهز الآن");
         } else {
             console.error("❌ MONGO_URL غير موجود في متغيرات البيئة!");
         }
 
-        // تشغيل اتصال تيليجرام المطور بالخلفية وحل مشكلة البوت كراش عبر المخرجات الصحيحة للمكتبة
-        await tgClient.start({ botAuthToken: botToken });
+        // تشغيل اتصال تيليجرام المطور بالخلفية وحل مشكلة البوت كراش
+        // ✅ السطر الجديد الصحيح بعد كشف الخدعة
+await tgClient.start({ botAuthToken: botToken });
 
         console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز للبث الآمن حتى 2 جيجا!");
 
@@ -90,8 +85,9 @@ app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
 // 🧹 نظام التنظيف التلقائي للموارد
 // ==========================================
 setInterval(async () => {
-    if (!db) return;
+    if (!usersCollection) return;
     try {
+        const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
         await contentCollection.updateMany(
@@ -153,7 +149,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         // رفع الملف كـ Stream أوتوماتيكي عبر بروتوكول MTProto لكسر ليميت الـ 50 ميجا
         const uploadedFile = await tgClient.uploadFile({
             file: file.path,
-            workers: 4 
+            workers: 4 // تقسيم الملف لـ 4 مسارات لسرعة صاروخية في الرفع
         });
 
         // إرسال الملف لشات البوت الخاص (me) لأرشفته وتوليد الـ ID
@@ -165,6 +161,8 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         // تنظيف وحذف الفيديو فوراً من سيرفر Railway عشان المساحة متتمليش
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
 
+        // أرشفة تفاصيل الحصة ومعرف تيليجرام السري في الـ MongoDB داخل جدول كورس مخصص
+        const db = usersCollection.s.db;
         const coursesCollection = db.collection('courses');
         await coursesCollection.insertOne({
             courseName,
@@ -189,6 +187,7 @@ app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (re
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
 
+        const db = usersCollection.s.db;
         const coursesCollection = db.collection('courses');
         
         const courses = await coursesCollection.find({})
@@ -197,6 +196,7 @@ app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (re
             .limit(limit)
             .toArray();
 
+        // إعادة تشكيل المخرجات لتطابق بنية الفرونت إند بدقة (c.id)
         const formattedCourses = courses.map(c => ({
             id: c._id.toString(),
             courseName: c.courseName,
@@ -215,6 +215,7 @@ app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (re
 app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const courseId = req.params.id;
+        const db = usersCollection.s.db;
         const coursesCollection = db.collection('courses');
 
         const result = await coursesCollection.deleteOne({ _id: new ObjectId(courseId) });
@@ -382,6 +383,7 @@ app.post('/api/admin/students-by-grade', authenticateToken, requireAdmin, async 
 app.post('/api/admin/add-content', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { grade, type, pointText, questionText, questionHint } = req.body;
+        const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         if (type === 'point') await contentCollection.updateOne({ grade: grade }, { $push: { points: pointText } }, { upsert: true });
         else await contentCollection.updateOne({ grade: grade }, { $push: { questions: { question: questionText, hint: questionHint } } }, { upsert: true });
@@ -400,6 +402,7 @@ app.post('/api/admin/update-points', authenticateToken, requireAdmin, async (req
 app.post('/api/admin/toggle-stream', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { isLive } = req.body; 
+        const db = usersCollection.s.db;   
         const contentCollection = db.collection('curriculum_content');  
           
         if (isLive) {
@@ -416,6 +419,7 @@ app.post('/api/admin/add-mcq-quiz', authenticateToken, requireAdmin, async (req,
     try {
         const { grade, quizTitle, questionsArray } = req.body;
         const quizId = 'quiz_' + Date.now();
+        const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         
         await contentCollection.updateOne(
@@ -431,6 +435,7 @@ app.post('/api/admin/add-public-quiz', authenticateToken, requireAdmin, async (r
     try {
         const { grade, quizTitle, questionsArray } = req.body;
         const quizId = 'pub_' + Date.now(); 
+        const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         
         await contentCollection.updateOne(
@@ -445,6 +450,7 @@ app.post('/api/admin/add-public-quiz', authenticateToken, requireAdmin, async (r
 app.post('/api/admin/get-grade-content', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { grade } = req.body;
+        const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [], publicQuizzes: [] };
         res.status(200).json(content);
@@ -454,6 +460,7 @@ app.post('/api/admin/get-grade-content', authenticateToken, requireAdmin, async 
 app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { grade, itemType, identifier } = req.body;
+        const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         
         let updateQuery = {};
@@ -478,6 +485,7 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
         const user = await usersCollection.findOne({ email: email });
         const studentPoints = user ? (user.points || 0) : 0;
         
+        const db = usersCollection.s.db;  
         const contentCollection = db.collection('curriculum_content');  
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
         
@@ -490,6 +498,7 @@ app.get('/api/public/quiz', async (req, res) => {
         const { id, device } = req.query; 
         if (!id) return res.status(400).json({ message: "مفقود معرف الاختبار" });
 
+        const db = usersCollection.s.db;
         const contentCollection = db.collection('curriculum_content');
         
         const doc = await contentCollection.findOne({ "publicQuizzes.id": id });
@@ -512,6 +521,7 @@ app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email;
         const { studentName, grade, quizId, score, percentage, visitorId, userAnswers } = req.body;
         
+        const db = usersCollection.s.db;  
         const contentCollection = db.collection('curriculum_content');
         
         const resultObj = { 
