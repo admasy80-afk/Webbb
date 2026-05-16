@@ -1,10 +1,22 @@
 // ==================== الملف الرئيسي المجمع للمنصة ====================
 import { SysUI } from './ui.js';
 import './state.js'; 
-import { fetchStats, fetchPendingRequests } from './admin.js';
-import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem } from './quiz.js';
+// 🔥 ضفنا الدوال الناقصة هنا من ملف admin
+import { fetchStats, fetchPendingRequests, fetchGradeContent, fetchStudentsByGrade, logout } from './admin.js';
+// 🔥 ضفنا الدوال الناقصة هنا من ملف quiz
+import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink, closeResultsModal } from './quiz.js';
 import './stream.js'; 
-import { VideoSystem } from './modes/video.js'; // 🔥 استدعاء نظام رفع وبث الفيديوهات السحابي الجديد
+import { VideoSystem } from './video.js'; // تأكد إن مسار الفيديوهات صحيح
+
+// 🚀 السحر كله هنا: فك حظر الدوال وإجبار المتصفح إنه يشوفها للـ HTML
+window.addMCQBlock = addMCQBlock;
+window.addPublicMCQBlock = addPublicMCQBlock;
+window.fetchGradeContent = fetchGradeContent;
+window.fetchStudentsByGrade = fetchStudentsByGrade;
+window.copyPublicLink = copyPublicLink;
+window.closeResultsModal = closeResultsModal;
+window.logout = logout;
+// =================================================================
 
 export function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => {
@@ -27,7 +39,7 @@ export function switchTab(tabId) {
 
         if(tabId === 'requests') fetchPendingRequests();
         if(tabId === 'dashboard') fetchStats();
-        if(tabId === 'videos') VideoSystem.loadCourses(); // 🔥 تحديث أرشيف الفيديوهات تلقائياً عند فتح القسم
+        if(tabId === 'videos' && VideoSystem) VideoSystem.loadCourses(); // 🔥 تحديث أرشيف الفيديوهات تلقائياً عند فتح القسم
     }
 }
 window.switchTab = switchTab;
@@ -109,9 +121,9 @@ if (SpeechRecognition) {
         } else if (command.includes('افتح الطلبات') || command.includes('طلبات التسجيل')) {
             switchTab('requests');
             SysUI.toast('success', 'تم فتح قسم الطلبات.');
-        } else if (command.includes('افتح المحاضرات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) { // 🔥 المساعد الصوتي يفتح قسم الفيديوهات
+        } else if (command.includes('افتح المحاضرات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) { 
             switchTab('videos');
-            SysUI.toast('success', 'تم فتح قسم إدارة الفيديوهات سحابياً.');
+            SysUI.toast('success', 'تم فتح قسم الكورسات سحابياً.');
         } else {
             SysUI.toast('error', `لم أفهم الأمر: "${command}"`);
         }
@@ -159,7 +171,9 @@ if(quizForm) {
 
 document.addEventListener('DOMContentLoaded', () => {
     // 🔥 تهيئة نظام تشغيل الفيديوهات وربط أحداث الفورم بمجرد تحميل الصفحة
-    VideoSystem.init();
+    if (VideoSystem && typeof VideoSystem.init === 'function') {
+        VideoSystem.init();
+    }
 
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     if(document.getElementById('dynamicPublicQuestionsContainer') && document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
