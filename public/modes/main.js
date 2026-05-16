@@ -4,6 +4,7 @@ import './state.js';
 import { fetchStats, fetchPendingRequests } from './admin.js';
 import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem } from './quiz.js';
 import './stream.js'; 
+import { VideoSystem } from './modes/video.js'; // 🔥 استدعاء نظام رفع وبث الفيديوهات السحابي الجديد
 
 export function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => {
@@ -26,6 +27,7 @@ export function switchTab(tabId) {
 
         if(tabId === 'requests') fetchPendingRequests();
         if(tabId === 'dashboard') fetchStats();
+        if(tabId === 'videos') VideoSystem.loadCourses(); // 🔥 تحديث أرشيف الفيديوهات تلقائياً عند فتح القسم
     }
 }
 window.switchTab = switchTab;
@@ -107,6 +109,9 @@ if (SpeechRecognition) {
         } else if (command.includes('افتح الطلبات') || command.includes('طلبات التسجيل')) {
             switchTab('requests');
             SysUI.toast('success', 'تم فتح قسم الطلبات.');
+        } else if (command.includes('افتح المحاضرات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) { // 🔥 المساعد الصوتي يفتح قسم الفيديوهات
+            switchTab('videos');
+            SysUI.toast('success', 'تم فتح قسم إدارة الفيديوهات سحابياً.');
         } else {
             SysUI.toast('error', `لم أفهم الأمر: "${command}"`);
         }
@@ -153,6 +158,9 @@ if(quizForm) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // 🔥 تهيئة نظام تشغيل الفيديوهات وربط أحداث الفورم بمجرد تحميل الصفحة
+    VideoSystem.init();
+
     if(document.getElementById('dynamicQuestionsContainer') && document.getElementById('dynamicQuestionsContainer').children.length === 0) addMCQBlock();
     if(document.getElementById('dynamicPublicQuestionsContainer') && document.getElementById('dynamicPublicQuestionsContainer').children.length === 0) addPublicMCQBlock();
     
