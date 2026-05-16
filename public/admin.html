@@ -40,7 +40,6 @@
         .student-details.open { max-height: 2000px; padding-top: 1rem; opacity: 1; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
     </style>
 
-    <!-- رادار الأخطاء لاكتشاف المشكلة على الجوال -->
     <script>
         window.addEventListener('error', function(e) {
             alert("🚨 خطأ في السطر " + e.lineno + "\nالملف: " + e.filename + "\nالخطأ: " + e.message);
@@ -50,7 +49,6 @@
         });
     </script>
 
-    <!-- تعريف الدوال الأساسية لتعمل الأزرار فوراً بسلاسة -->
     <script>
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
@@ -73,6 +71,7 @@
 
                 if(tabId === 'requests' && typeof window.fetchPendingRequests === 'function') window.fetchPendingRequests();
                 if(tabId === 'dashboard' && typeof window.fetchStats === 'function') window.fetchStats();
+                if(tabId === 'videos' && typeof window.loadCourses === 'function') window.loadCourses();
             }
         };
 
@@ -124,6 +123,7 @@
             <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
             <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
             <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
+            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">محاضرات الفيديو 🎬</button>
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
             <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار المنصة</button>
             
@@ -275,6 +275,75 @@
             </div>
         </div>
 
+        <div id="tab-videos" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة محاضرات الفيديو السحابية</h1>
+            <p class="text-gray-400 mb-6">ارفع ملفات الفيديو الكبيرة مباشرة إلى السيرفر المشفر الآمن حتى حده الأقصى 2GB.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 h-fit animate-fade-in-up">
+                    <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2">
+                        <span>🎬</span> رفع حصة جديدة
+                    </h2>
+                    
+                    <form id="uploadVideoForm" class="space-y-5">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">اسم الحصة / المحاضرة</label>
+                            <input type="text" id="courseName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm transition-colors" placeholder="مثال: الباب الأول - المحاضرة الثالثة">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">السنة الدراسية المستهدفة</label>
+                            <select id="videoGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer transition-colors">
+                                <option value="" disabled selected>اختر الدفعة...</option>
+                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">وصف أو محتوى الحصة (اختياري)</label>
+                            <textarea id="videoDescription" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm transition-colors" placeholder="اكتب مخرجات التعلم أو ملفات الشرح المرفقة هنا..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-2">اختر ملف الفيديو (MP4, MKV, MOV)</label>
+                            <input type="file" id="videoFile" accept="video/*" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 text-sm transition-colors">
+                        </div>
+
+                        <div id="videoProgressContainer" class="hidden bg-black/40 p-4 rounded-xl border border-white/5 space-y-2">
+                            <div class="flex justify-between text-xs font-semibold">
+                                <span class="text-yellow-500">جاري البث والتشفير السحابي السري...</span>
+                                <span id="videoProgressText" class="text-yellow-500">0% • 0MB / 0MB</span>
+                            </div>
+                            <div class="w-full bg-white/5 rounded-full h-2">
+                                <div id="videoProgressBar" class="bg-yellow-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="videoSubmitBtn" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/10 text-sm">
+                            🚀 ابدأ الرفع والمعالجة السحابية
+                        </button>
+                    </form>
+                </div>
+
+                <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 lg:col-span-2 h-fit">
+                    <h2 class="text-lg font-bold text-white mb-5">📚 أرشيف المحاضرات المنشورة بالفيديو</h2>
+                    <div id="coursesList" class="space-y-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-hide">
+                        <div class="text-center py-10 text-gray-500">جاري قراءة الملفات السحابية...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div id="tab-content" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى والأسئلة المقالية</h1>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl border-t-4 border-yellow-500">
@@ -455,7 +524,6 @@
         </div>
     </div>
 
-    <!-- استدعاء ملفات الجافاسكريبت بنظام الوحدات -->
     <script type="module" src="./modes/main.js"></script>
 </body>
 </html>
