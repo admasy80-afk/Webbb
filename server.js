@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb'); // تم إضافة ObjectId لمعالجة مسار الحذف الجديد
 const bcrypt = require('bcryptjs'); 
 const jwt = require('jsonwebtoken'); 
 const helmet = require('helmet'); 
@@ -39,11 +39,11 @@ const loginLimiter = rateLimit({
 let usersCollection;
 
 // ==========================================
-// 🤖 تهيئة نظام تيليجرام MTProto (كسر حاجز الـ 50 ميجا)
+// 🤖 تهيئة نظام تيليجرام MTProto (تنظيف أوتوماتيكي وحماية متقدمة)
 // ==========================================
-const apiId = parseInt(process.env.TELEGRAM_API_ID);
-const apiHash = process.env.TELEGRAM_API_HASH;
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm7VktRzjrpMg18KAtsig").trim().replace(/['"]/g, '');
+const apiId = parseInt((process.env.TELEGRAM_API_ID || "").toString().trim().replace(/['"]/g, ''));
+const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 const stringSession = new StringSession(""); // جلسة سريعة في الذاكرة للبوت
 
 const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
@@ -62,7 +62,7 @@ async function startServer() {
             console.error("❌ MONGO_URL غير موجود في متغيرات البيئة!");
         }
 
-        // تشغيل اتصال تيليجرام المطور بالخلفية
+        // تشغيل اتصال تيليجرام المطور بالخلفية وحل مشكلة البوت كراش
         await tgClient.start({ botToken: botToken });
         console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز للبث الآمن حتى 2 جيجا!");
 
@@ -131,7 +131,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
 });
 
 // ==========================================
-// 🎥 مسارات بث ورفع الفيديوهات السحابية (الجديدة)
+// 🎥 مسارات بث ورفع الفيديوهات السحابية 
 // ==========================================
 
 // 1. مسار رفع المحاضرة من المستر وتخزينها مشفرة في تيليجرام ومونجو
@@ -159,14 +159,14 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         // تنظيف وحذف الفيديو فوراً من سيرفر Railway عشان المساحة متتمليش
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
 
-        // أرشفة تفاصيل الحصة ومعرف تيليجرام السري في الـ MongoDB
+        // أرشفة تفاصيل الحصة ومعرف تيليجرام السري في الـ MongoDB داخل جدول كورس مخصص
         const db = usersCollection.s.db;
         const coursesCollection = db.collection('courses');
         await coursesCollection.insertOne({
             courseName,
             grade,
             description,
-            telegramMsgId: message.id, // المفتاح السري الذي سيتم استخدامه للبث الخفي
+            telegramMsgId: message.id, 
             createdAt: new Date()
         });
 
@@ -178,12 +178,61 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     }
 });
 
-// 2. مسار البث الخفي والذكي للطالب (يمنع سحب الروابط ويدعم تحميل المتصفح حتة بحتة Chunks)
+// 2. جلب جميع الكورسات مع دعم الـ GET والـ Pagination المطور المتوافق مع الفرونت إند
+app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+
+        const db = usersCollection.s.db;
+        const coursesCollection = db.collection('courses');
+        
+        const courses = await coursesCollection.find({})
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .toArray();
+
+        // إعادة تشكيل المخرجات لتطابق بنية الفرونت إند بدقة (c.id)
+        const formattedCourses = courses.map(c => ({
+            id: c._id.toString(),
+            courseName: c.courseName,
+            grade: c.grade,
+            description: c.description,
+            telegramMsgId: c.telegramMsgId
+        }));
+
+        res.status(200).json({ courses: formattedCourses });
+    } catch (error) {
+        res.status(500).json({ message: "خطأ في السيرفر أثناء جلب البيانات" });
+    }
+});
+
+// 3. مسار حذف الكورس المتكامل المتوافق مع الـ RESTful API الجديد الخاص بك
+app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const courseId = req.params.id;
+        const db = usersCollection.s.db;
+        const coursesCollection = db.collection('courses');
+
+        const result = await coursesCollection.deleteOne({ _id: new ObjectId(courseId) });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ message: "المحاضرة غير موجودة بالفعل" });
+        }
+
+        res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
+    } catch (error) {
+        res.status(500).json({ message: "فشل الحذف، معرف غير صالح" });
+    }
+});
+
+// 4. مسار البث الخفي والذكي للطالب (يمنع سحب الروابط ويدعم تحميل المتصفح حتة بحتة Chunks)
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
         
-        // جلب الرسالة المخزنة في شات البوت من الـ ID بتاعها
         const messages = await tgClient.getMessages('me', { ids: [msgId] });
         if (!messages || messages.length === 0 || !messages[0].media) {
             return res.status(404).send("الفيديو غير متاح أو تم حذفه من الأرشيف");
@@ -196,7 +245,6 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const fileSize = document.size;
         const range = req.headers.range;
 
-        // دعم الـ Range Requests عشان الطالب يقدر يقدم ويأخر الفيديو براحته والسيرفر ميهنجش
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
@@ -210,7 +258,6 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
                 'Content-Type': 'video/mp4'
             });
 
-            // سحب القطعة المطلوبة فقط من تيليجرام وضخها مباشرة للمتصفح (بدون استهلاك رامات السيرفر)
             const chunk = await tgClient.downloadFile(message.media, {
                 start: start,
                 end: end + 1,
