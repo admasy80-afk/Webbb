@@ -41,7 +41,7 @@ const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 
-// 🔥 مسح الجلسة القديمة الفاسدة
+// 🔥 مسح الجلسة القديمة الفاسدة لضمان دخول نظيف
 if (fs.existsSync('tg_session.txt')) {
     try {
         fs.unlinkSync('tg_session.txt');
@@ -133,7 +133,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
-// 🔥🔥🔥 دالة الرفع المباشرة (بدون Workers فرعية لحل خطأ الـ AUTH_KEY) 🔥🔥🔥
+// 🔥🔥🔥 التعديل النهائي المدمج للرفع المباشر وتفادي أخطاء الجلسة 🔥🔥🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     try {
         const { courseName, grade, description } = req.body;
@@ -144,6 +144,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         console.log("🚀 جاري معالجة الملف لرفعه لتيليجرام...");
         const absoluteFilePath = path.resolve(file.path);
 
+        // تأمين إضافي: نتأكد إن البوت لسه متصل قبل الرفع
         if (!tgClient.connected) {
             console.log("🔄 جاري إعادة تنشيط الاتصال بتيليجرام...");
             await tgClient.connect();
@@ -151,6 +152,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         console.log("✅ جاري الإرسال للقناة مباشرة (بدون فزلكة الـ Workers)...");
 
+        // الإرسال المباشر للقناة بخطوة واحدة
         const message = await tgClient.sendFile('@mohamed293g', {
             file: absoluteFilePath,
             caption: `حصة: ${courseName} | الصف: ${grade}`,
@@ -159,6 +161,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         console.log("✅ تم الإرسال للقناة بنجاح! Message ID:", message.id);
 
+        // مسح الملف من السيرفر بعد الرفع
         if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
 
         const coursesCollection = db.collection('courses');
@@ -174,6 +177,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     } catch (error) {
         console.error("❌ خطأ تفصيلي من تيليجرام:", error);
         
+        // تنظيف الملف لو حصل خطأ
         if (req.file && req.file.path) {
             const absoluteFilePath = path.resolve(req.file.path);
             if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
