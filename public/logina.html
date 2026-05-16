@@ -183,7 +183,7 @@ form.addEventListener('submit', async (event) => {
             } else {
                 // الطالب مقبول، هل وثق رقمه؟
                 if (user.phoneVerified) {
-                    window.location.replace("/dashboard.html");
+                    window.location.replace("/student/");
                 } else {
                     window.location.replace("/verify.html");
                 }
