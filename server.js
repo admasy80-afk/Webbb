@@ -41,7 +41,7 @@ const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 
-// 🔥 السر هنا: تدمير الجلسة القديمة الفاسدة للبدء على النضافة
+// 🔥 مسح الجلسة القديمة الفاسدة
 if (fs.existsSync('tg_session.txt')) {
     try {
         fs.unlinkSync('tg_session.txt');
@@ -49,7 +49,7 @@ if (fs.existsSync('tg_session.txt')) {
     } catch (e) {}
 }
 
-const stringSession = new StringSession(""); // الدخول بجلسة فارغة جديدة
+const stringSession = new StringSession(""); 
 
 const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
     connectionRetries: 5,
@@ -133,6 +133,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
+// 🔥🔥🔥 دالة الرفع المباشرة (بدون Workers فرعية لحل خطأ الـ AUTH_KEY) 🔥🔥🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     try {
         const { courseName, grade, description } = req.body;
@@ -141,21 +142,19 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
 
         console.log("🚀 جاري معالجة الملف لرفعه لتيليجرام...");
-
         const absoluteFilePath = path.resolve(file.path);
-        
-        const uploadedFile = await tgClient.uploadFile({
-            file: new CustomFile(file.originalname || 'video.mp4', file.size, absoluteFilePath),
+
+        if (!tgClient.connected) {
+            console.log("🔄 جاري إعادة تنشيط الاتصال بتيليجرام...");
+            await tgClient.connect();
+        }
+
+        console.log("✅ جاري الإرسال للقناة مباشرة (بدون فزلكة الـ Workers)...");
+
+        const message = await tgClient.sendFile('@mohamed293g', {
+            file: absoluteFilePath,
+            caption: `حصة: ${courseName} | الصف: ${grade}`,
             workers: 1 
-        });
-
-        console.log("✅ تم الرفع لتليجرام، جاري إرساله للقناة...");
-
-        const channel = await tgClient.getEntity('mohamed293g');
-
-        const message = await tgClient.sendFile(channel, {
-            file: uploadedFile,
-            caption: `حصة: ${courseName} | الصف: ${grade}`
         });
 
         console.log("✅ تم الإرسال للقناة بنجاح! Message ID:", message.id);
@@ -174,6 +173,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها للمنصة بنجاح لا نهائي!" });
     } catch (error) {
         console.error("❌ خطأ تفصيلي من تيليجرام:", error);
+        
         if (req.file && req.file.path) {
             const absoluteFilePath = path.resolve(req.file.path);
             if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
