@@ -170,7 +170,7 @@ form.addEventListener('submit', async (event) => {
             localStorage.setItem('dahih_user', JSON.stringify(result.userData)); // عشان السكريبتات القديمة بتاعتك تفضل شغالة
         }
 
-        // التوجيه الذكي للمدير والطالب مع إضافة فحص تأكيد الهاتف
+        // التوجيه الذكي للمدير والطالب
         setTimeout(() => {
             const user = result.userData;
             
@@ -181,12 +181,8 @@ form.addEventListener('submit', async (event) => {
             } else if (user.status === 'pending' || user.status === 'rejected') {
                 window.location.replace("/status.html");
             } else {
-                // الطالب مقبول، هل وثق رقمه؟
-                if (user.phoneVerified) {
-                    window.location.replace("/student/");
-                } else {
-                    window.location.replace("/verify.html");
-                }
+                // الطالب مقبول، توجيه مباشر لصفحة الطالب
+                window.location.replace("/student/");
             }
         }, 1000);
 
