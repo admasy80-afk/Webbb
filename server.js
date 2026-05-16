@@ -10,7 +10,6 @@ const fs = require('fs');
 const multer = require('multer');
 const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
-// 🔥 السر هنا: أداة تيليجرام السحرية لرفع الملفات الكبيرة بدون استهلاك الرامات
 const { CustomFile } = require('telegram/client/uploads'); 
 
 const app = express();
@@ -23,7 +22,6 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '1mb' })); 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// إنشاء مجلد الرفع لو مش موجود عشان نتفادى أي أخطاء
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
@@ -43,11 +41,15 @@ const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 
-let savedSession = "";
+// 🔥 السر هنا: تدمير الجلسة القديمة الفاسدة للبدء على النضافة
 if (fs.existsSync('tg_session.txt')) {
-    savedSession = fs.readFileSync('tg_session.txt', 'utf8');
+    try {
+        fs.unlinkSync('tg_session.txt');
+        console.log("🧹 تم مسح الجلسة القديمة الفاسدة!");
+    } catch (e) {}
 }
-const stringSession = new StringSession(savedSession); 
+
+const stringSession = new StringSession(""); // الدخول بجلسة فارغة جديدة
 
 const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
     connectionRetries: 5,
@@ -69,11 +71,11 @@ async function startServer() {
             if (!tgClient.connected) {
                 console.log("⏳ جاري الاتصال بتيليجرام بهدوء...");
                 await tgClient.start({ botAuthToken: botToken });
-                console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز!");
+                console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز بمفتاح جديد!");
                 fs.writeFileSync('tg_session.txt', tgClient.session.save());
             }
         } catch (tgErr) {
-            console.error("⚠️ تيليجرام معصب (FLOOD):", tgErr.message);
+            console.error("⚠️ خطأ في الاتصال:", tgErr.message);
         }
 
     } catch (err) {  
@@ -140,7 +142,6 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         console.log("🚀 جاري معالجة الملف لرفعه لتيليجرام...");
 
-        // 🔥 التعديل السحري: إعطاء المسار المطلق للملف واستخدام CustomFile
         const absoluteFilePath = path.resolve(file.path);
         
         const uploadedFile = await tgClient.uploadFile({
@@ -173,7 +174,6 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها للمنصة بنجاح لا نهائي!" });
     } catch (error) {
         console.error("❌ خطأ تفصيلي من تيليجرام:", error);
-        // تنظيف الملف لو حصل خطأ عشان السيرفر ميتمليش
         if (req.file && req.file.path) {
             const absoluteFilePath = path.resolve(req.file.path);
             if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
