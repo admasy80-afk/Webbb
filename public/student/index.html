@@ -17,7 +17,7 @@
         /* ستايل المشغل الاحترافي */
         .video-container:hover .custom-controls { opacity: 1; }
         .custom-controls { transition: opacity 0.3s ease; }
-        .video-blur { filter: blur(8px) brightness(0.6); transition: filter 0.4s ease; }
+        .video-blur { filter: blur(10px) brightness(0.5); transition: filter 0.4s ease; }
         .skip-indicator { animation: popFade 0.8s ease-out forwards; }
         @keyframes popFade {
             0% { opacity: 0; transform: scale(0.5); }
@@ -26,6 +26,10 @@
         }
         /* إخفاء أزرار الفيديو الافتراضية */
         video::-webkit-media-controls { display: none !important; }
+        .card-active { border-color: #eab308 !important; background: rgba(234, 179, 8, 0.05) !important; }
+        
+        /* أنيميشن الانتقال السلس بين البوستر والفيديو */
+        .fade-smooth { transition: opacity 0.4s ease, transform 0.4s ease; }
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col selection:bg-yellow-500 selection:text-black relative">
@@ -49,7 +53,7 @@
                 <h1 class="text-3xl md:text-5xl font-black tracking-tight leading-tight mb-2 text-white">
                     مرحباً بك، <span id="studentName" class="text-yellow-500">...</span>
                 </h1>
-                <p class="text-gray-400 font-light text-sm md:text-base">نرجو لك التوفيق في مسيرتك التعليمية.</p>
+                <p class="text-gray-400 font-light text-sm md:text-base">جاهزين لبكالوريا التميز والتاريخ المضمون! 🔥</p>
             </div>
         </div>
 
@@ -57,14 +61,11 @@
 
             <div class="lg:col-span-2 space-y-6 md:space-y-8">
                 
-                <section id="liveStreamSection" class="glass-panel rounded-2xl md:rounded-[2rem] border-t-red-500 shadow-[0_0_50px_rgba(239,68,68,0.15)] hidden stream-active">
-                    <div class="p-5 md:p-6 flex items-center justify-between border-b border-white/5 bg-gradient-to-r from-red-500/10 to-transparent">
+                <section id="liveStreamSection" class="glass-panel rounded-2xl md:rounded-[2rem] border-t-yellow-500 shadow-[0_0_50px_rgba(234,179,8,0.05)]">
+                    <div class="p-5 md:p-6 flex items-center justify-between border-b border-white/5 bg-white/5">
                         <div class="flex items-center gap-3">
-                            <span class="relative flex h-3 w-3 md:h-4 md:w-4">
-                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                              <span class="relative inline-flex rounded-full h-3 w-3 md:h-4 md:w-4 bg-red-500"></span>
-                            </span>
-                            <h2 class="text-lg md:text-xl font-bold text-white tracking-tight">شاشة العرض</h2>
+                            <span class="w-2.5 h-2.5 rounded-full bg-yellow-500 animate-pulse"></span>
+                            <h2 id="playingVideoTitle" class="text-lg md:text-xl font-bold text-white tracking-tight">اختر محاضرة لبدء الشرح التعليمي</h2>
                         </div>
                         <div class="flex gap-2">
                             <button onclick="toggleTheaterMode()" class="bg-white/5 hover:bg-white/10 p-2.5 rounded-xl border border-white/10 text-yellow-500 hover:text-yellow-400 transition-colors shadow-lg" title="وضع السينما">
@@ -77,26 +78,40 @@
                     </div>
                     
                     <div class="p-3 md:p-6 bg-black/60 fullscreen-wrapper" id="fs-wrapper">
-                        <div class="video-container relative w-full aspect-video bg-black rounded-xl overflow-hidden shadow-2xl group cursor-pointer">
+                        <div class="video-container relative w-full aspect-video bg-[#070b19] rounded-xl overflow-hidden shadow-2xl group cursor-pointer">
                             
-                            <video id="dahihPlayer" class="w-full h-full object-contain transition-all duration-300" src="" playsinline preload="metadata"></video>
+                            <div id="videoPlaceholder" class="fade-smooth absolute inset-0 z-40 flex flex-col items-center justify-center text-center p-6 select-none bg-cover bg-center" style="background-image: url('/poster.jpg');">
+                                <div class="absolute inset-0 bg-gradient-to-b from-black/50 via-black/70 to-[#070b19]/95 backdrop-blur-[2px]"></div>
+                                
+                                <div class="relative z-10">
+                                    <div class="w-20 h-20 bg-yellow-500/20 border border-yellow-500/40 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_40px_rgba(234,179,8,0.2)] animate-bounce">
+                                        <svg class="w-8 h-8 text-yellow-500 pl-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                    </div>
+                                    <h3 class="text-2xl md:text-4xl font-black text-white mb-3 tracking-tight drop-shadow-lg">بكالوريا <span class="text-yellow-500">2027</span> جاهزين! 👑</h3>
+                                    <p class="text-gray-300 text-xs md:text-sm max-w-sm leading-relaxed mx-auto bg-black/40 backdrop-blur-md p-3 rounded-xl border border-white/5">
+                                        الدحيح معاك في كل الأحوال علمي وأدبي.. اختر درسك من الأرشيف بالأسفل وانطلق فوراً! 🚀
+                                    </p>
+                                </div>
+                            </div>
+
+                            <video id="dahihPlayer" class="fade-smooth w-full h-full object-contain hidden opacity-0" src="" playsinline preload="metadata"></video>
                             
-                            <div id="tapLeft" class="absolute top-0 left-0 w-1/2 h-full z-10"></div>
-                            <div id="tapRight" class="absolute top-0 right-0 w-1/2 h-full z-10"></div>
+                            <div id="tapLeft" class="absolute top-0 left-0 w-1/2 h-full z-10 hidden"></div>
+                            <div id="tapRight" class="absolute top-0 right-0 w-1/2 h-full z-10 hidden"></div>
 
                             <div id="skipIndicator" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none hidden">
-                                <div class="bg-black/60 backdrop-blur-sm text-white px-6 py-4 rounded-full font-bold text-2xl flex items-center gap-2">
+                                <div class="bg-black/70 backdrop-blur-sm text-white px-6 py-4 rounded-full font-bold text-xl flex items-center gap-2">
                                     <span id="skipText">+10 ثواني</span>
                                 </div>
                             </div>
                             
-                            <div id="centerPlayBtn" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none transition-opacity duration-300">
-                                <div class="w-20 h-20 bg-yellow-500/90 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.5)]">
-                                    <svg class="w-10 h-10 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <div id="centerPlayBtn" class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none opacity-0 transition-opacity duration-300">
+                                <div class="w-16 h-16 bg-yellow-500/90 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.4)]">
+                                    <svg class="w-8 h-8 text-black ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                 </div>
                             </div>
 
-                            <div class="custom-controls opacity-0 absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 to-transparent pt-12 pb-4 px-4 z-30 flex flex-col gap-2">
+                            <div class="custom-controls opacity-0 absolute bottom-0 left-0 w-full bg-gradient-to-t from-black/90 to-transparent pt-12 pb-4 px-4 z-30 flex flex-col gap-2 hidden">
                                 <div class="w-full bg-white/20 h-1.5 rounded-full cursor-pointer relative" id="progressContainer">
                                     <div id="progressBar" class="bg-yellow-500 h-full rounded-full relative w-0">
                                         <div class="absolute -left-2 -top-1.5 w-4 h-4 bg-white rounded-full shadow"></div>
@@ -116,6 +131,18 @@
                             </div>
                         </div>
                         <p class="text-gray-500 text-xs md:text-sm mt-4 text-center">مشغل الدحيح الذكي - انقر مرتين للتقديم والتأخير</p>
+                    </div>
+                </section>
+
+                <section class="glass-panel rounded-2xl overflow-hidden border-t-[3px] border-t-yellow-500">
+                    <div class="p-5 md:p-6 flex items-center justify-between cursor-pointer border-b border-white/5 bg-white/5 hover:bg-white/10 transition-colors" onclick="toggleSection('coursesSection', 'coursesIcon')">
+                        <h2 class="text-xl font-bold text-white">المحاضرات والحصص المتوفرة</h2>
+                        <svg id="coursesIcon" class="w-5 h-5 text-gray-400 icon-rotate" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                    <div id="coursesSection" class="section-content max-h-[1000px] p-5 md:p-6 bg-black/20">
+                        <div id="studentCoursesContainer" class="space-y-4">
+                            <p class="text-gray-500 text-sm text-center animate-pulse">جاري جلب المحاضرات السحابية من سيرفر تيليجرام...</p>
+                        </div>
                     </div>
                 </section>
 
