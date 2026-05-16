@@ -10,6 +10,8 @@ const fs = require('fs');
 const multer = require('multer');
 const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
+// 🔥 السر هنا: أداة تيليجرام السحرية لرفع الملفات الكبيرة بدون استهلاك الرامات
+const { CustomFile } = require('telegram/client/uploads'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,7 +23,12 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '1mb' })); 
 app.use(express.static(path.join(__dirname, 'public')));
 
-const upload = multer({ dest: 'uploads/' }); 
+// إنشاء مجلد الرفع لو مش موجود عشان نتفادى أي أخطاء
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir);
+}
+const upload = multer({ dest: uploadDir }); 
 
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, 
@@ -124,7 +131,6 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
-// 🔥🔥🔥 التعديل السحري لكشف الأخطاء وتخفيف الضغط هنا 🔥🔥🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     try {
         const { courseName, grade, description } = req.body;
@@ -132,17 +138,18 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
 
-        console.log("🚀 جاري رفع الملف إلى سيرفرات تيليجرام...");
+        console.log("🚀 جاري معالجة الملف لرفعه لتيليجرام...");
 
-        // قللنا الـ workers لـ 1 عشان ريلواي ميفصلش الاتصال
+        // 🔥 التعديل السحري: إعطاء المسار المطلق للملف واستخدام CustomFile
+        const absoluteFilePath = path.resolve(file.path);
+        
         const uploadedFile = await tgClient.uploadFile({
-            file: file.path,
+            file: new CustomFile(file.originalname || 'video.mp4', file.size, absoluteFilePath),
             workers: 1 
         });
 
         console.log("✅ تم الرفع لتليجرام، جاري إرساله للقناة...");
 
-        // جلب بيانات القناة لضمان عدم حدوث خطأ Peer
         const channel = await tgClient.getEntity('mohamed293g');
 
         const message = await tgClient.sendFile(channel, {
@@ -152,7 +159,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         console.log("✅ تم الإرسال للقناة بنجاح! Message ID:", message.id);
 
-        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+        if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
 
         const coursesCollection = db.collection('courses');
         await coursesCollection.insertOne({
@@ -166,9 +173,11 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها للمنصة بنجاح لا نهائي!" });
     } catch (error) {
         console.error("❌ خطأ تفصيلي من تيليجرام:", error);
-        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        
-        // لو حصل خطأ، هيظهرلك على الشاشة الحمراء بدل الرسالة المبهمة
+        // تنظيف الملف لو حصل خطأ عشان السيرفر ميتمليش
+        if (req.file && req.file.path) {
+            const absoluteFilePath = path.resolve(req.file.path);
+            if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
+        }
         res.status(500).json({ message: "خطأ تليجرام: " + (error.message || "فشل غير معروف") });
     }
 });
@@ -284,7 +293,7 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             await usersCollection.insertOne(newUser);  
             
             const token = jwt.sign({ email: data.email, role: "student" }, JWT_SECRET, { expiresIn: '30d' });
-            return res.status(200).json({ message: "تم إنشاء حسابك بنجاح", token: token, userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } });  
+            return res.status(200).json({ message: "تم إنشاء حساب بنجاح", token: token, userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } });  
         }  
     } catch (error) { res.status(500).json({ message: "حدث خطأ" }); }
 });
