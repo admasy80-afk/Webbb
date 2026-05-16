@@ -45,12 +45,12 @@ const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 
-// 🔥 السر الأول: الدخول بجلسة فارغة دائماً لعدم حدوث خطأ AUTH_KEY
+// الدخول بجلسة فارغة دائماً لعدم حدوث خطأ AUTH_KEY
 const stringSession = new StringSession(""); 
 
 const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
     connectionRetries: 10,
-    useWSS: true // 🔥 السر التاني: استقرار الاتصال السحابي
+    useWSS: true // استقرار الاتصال السحابي
 });
 
 async function ensureTelegramConnection() {
@@ -131,7 +131,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
-// 🔥🔥🔥 دالة الرفع المباشرة المصفحة 🔥🔥🔥
+// دالة الرفع المباشرة المصفحة
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     let absoluteFilePath = null;
     try {
@@ -180,48 +180,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     }
 });
 
-// بث الفيديو
-app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
-    try {
-        const msgId = parseInt(req.params.msgId);
-        await ensureTelegramConnection();
-
-        const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
-        if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
-
-        const message = messages[0];
-        const document = message.media.document;
-        if (!document) return res.status(404).send("الملف المرفق ليس فيديو صالح");
-
-        const fileSize = document.size;
-        const range = req.headers.range;
-
-        if (range) {
-            const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-            const chunksize = (end - start) + 1;
-
-            res.writeHead(206, {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': 'video/mp4'
-            });
-
-            const chunk = await tgClient.downloadFile(message.media, { start: start, end: end + 1, dcId: document.dcId, fileSize: fileSize });
-            res.end(chunk);
-        } else {
-            res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4' });
-            const chunk = await tgClient.downloadFile(message.media, { dcId: document.dcId, fileSize: fileSize });
-            res.end(chunk);
-        }
-    } catch (error) {
-        if (!res.headersSent) res.status(500).send("حدث خطأ أثناء تحميل مشغل الفيديو المحمي");
-    }
-});
-
-// باقي المسارات الأساسية
+// بث ومحاكاة دفق الفيديو الآمن لحماية الروابط
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
@@ -432,7 +391,7 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
     } catch (err) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// 🔥🔥🔥 دالة جلب بيانات لوحة الطالب المعدلة لضخ مصفوفة الحصص بالكامل 🔥🔥🔥
+// دالة جلب بيانات لوحة الطالب لضخ مصفوفة الحصص بالكامل
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
@@ -444,14 +403,14 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
         const contentCollection = db.collection('curriculum_content');  
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
 
-        // 🎥 الحل المضمون: سحب كل الحصص المرفوعة للمرحلة الدراسية دي وترتيبها من الأقدم للأحدث ليتم عرضها كقائمة
+        // سحب كل الحصص المرفوعة للمرحلة الدراسية دي وترتيبها من الأقدم للأحدث ليتم عرضها كقائمة
         const coursesCollection = db.collection('courses');
         const courses = await coursesCollection.find({ grade: grade }).sort({ createdAt: 1 }).toArray();
 
         res.status(200).json({ 
             studentPoints, 
             content,
-            courses: courses // ضخ المصفوفة بالكامل للفرونت إند ليتم رصها بالترتيب
+            courses: courses // ضخ المصفوفة بالكامل للفرونت إند
         });  
     } catch (error) { 
         console.error("❌ خطأ في جلب بيانات لوحة الطالب:", error);
@@ -521,4 +480,5 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-app.get('*', (req, res) => res.sendFile(path.join(/__dirname, 'public', 'index.html')));
+// 🔥 تعديل المسار هنا: شيلنا السلاش الزيادة وبقى المسار مظبوط وجاهز للـ SPA وبدون أي أخطاء سينتاكس
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
