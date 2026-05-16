@@ -14,7 +14,13 @@ function getValidToken() {
     return localStorage.getItem('token') || localStorage.getItem('dahih_token') || sessionToken;
 }
 
-// 🔥 هنا السر: لازم كلمة export تكون موجودة عشان main.js يقدر يشوفها
+// حماية السيرفر لو المستخدم قفل الصفحة فجأة والرفع شغال
+window.addEventListener('beforeunload', () => {
+    if (VideoSystem.currentXHR) {
+        VideoSystem.currentXHR.abort();
+    }
+});
+
 export const VideoSystem = {
 
     currentXHR: null,
@@ -42,7 +48,9 @@ export const VideoSystem = {
     async handleUpload(e) {
         e.preventDefault();
 
-        if (this.currentXHR) {
+        const submitBtn = document.getElementById('videoSubmitBtn');
+        // حماية ضد الضغطات السريعة (Double Click)
+        if (submitBtn?.disabled || this.currentXHR) {
             return SysUI.toast('error', 'يوجد رفع جارٍ بالفعل');
         }
 
@@ -67,8 +75,12 @@ export const VideoSystem = {
             return SysUI.toast('error', 'حجم الفيديو أكبر من 2GB');
         }
 
-        if (!file.type.startsWith('video/')) {
-            return SysUI.toast('error', 'الملف المختار ليس فيديو');
+        // فحص الامتدادات الذكي (لأن المتصفحات بتخرف في الـ MIME Types)
+        const allowedExtensions = ['mp4', 'mkv', 'mov', 'avi', 'webm'];
+        const extension = file.name.split('.').pop().toLowerCase();
+
+        if (!file.type.startsWith('video/') && !allowedExtensions.includes(extension)) {
+            return SysUI.toast('error', 'الملف المختار ليس فيديو صالح');
         }
 
         const courseName = courseNameInput.value.trim();
@@ -88,7 +100,6 @@ export const VideoSystem = {
         const progressContainer = document.getElementById('videoProgressContainer');
         const progressBar = document.getElementById('videoProgressBar');
         const progressText = document.getElementById('videoProgressText');
-        const submitBtn = document.getElementById('videoSubmitBtn');
 
         progressContainer?.classList.remove('hidden');
 
@@ -101,7 +112,7 @@ export const VideoSystem = {
         this.currentXHR = xhr;
 
         xhr.open('POST', '/api/admin/upload-course', true);
-        xhr.timeout = 1000 * 60 * 60;
+        xhr.timeout = 1000 * 60 * 60; // ساعة كحد أقصى للرفع
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
 
         xhr.upload.onprogress = (event) => {
@@ -113,6 +124,12 @@ export const VideoSystem = {
                 const totalMB = (event.total / 1024 / 1024).toFixed(1);
                 progressText.innerText = `${percent}% • ${uploadedMB}MB / ${totalMB}MB`;
             }
+        };
+
+        xhr.onabort = () => {
+            this.currentXHR = null;
+            this.resetUploadUI();
+            SysUI.toast('error', 'تم إلغاء عملية الرفع');
         };
 
         xhr.onload = async () => {
