@@ -1,4 +1,5 @@
 import { SysUI } from './ui.js';
+import { sessionToken } from './state.js'; // 🔥 ربط التوكن الحقيقي بتاع المنصة
 
 function escapeHTML(str = '') {
     return str
@@ -45,9 +46,10 @@ export const VideoSystem = {
             return SysUI.toast('error', 'يوجد رفع جارٍ بالفعل');
         }
 
-        const token = localStorage.getItem('token');
+        // 🔥 استخدام التوكن الصحيح الخاص بـ state.js
+        const token = sessionToken || localStorage.getItem('dahih_token');
         if (!token) {
-            return SysUI.toast('error', 'انتهت الجلسة، يرجى تسجيل الدخول');
+            return SysUI.toast('error', 'انتهت الجلسة، يرجى تسجيل الدخول بحساب الإدارة');
         }
 
         const uploadForm = document.getElementById('uploadVideoForm');
@@ -97,7 +99,7 @@ export const VideoSystem = {
 
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ جاري رفع المحاضرة...';
+            submitBtn.innerHTML = '⏳ جاري رفع المحاضرة السحابية...';
         }
 
         const xhr = new XMLHttpRequest();
@@ -105,7 +107,7 @@ export const VideoSystem = {
 
         xhr.open('POST', '/api/admin/upload-course', true);
         xhr.timeout = 1000 * 60 * 60;
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`); // إرسال التوكن الصحيح للسيرفر
 
         // Progress
         xhr.upload.onprogress = (event) => {
@@ -173,21 +175,27 @@ export const VideoSystem = {
     },
 
     async loadCourses(page = 1) {
-        const token = localStorage.getItem('token');
+        // 🔥 استخدام التوكن الصحيح الخاص بـ state.js
+        const token = sessionToken || localStorage.getItem('dahih_token');
         const container = document.getElementById('coursesList');
         if (!container) return;
 
+        if (!token) {
+            container.innerHTML = `<div class="text-center py-10 text-red-400">يرجى تسجيل الدخول أولاً لرؤية الأرشيف.</div>`;
+            return;
+        }
+
         try {
             container.innerHTML = `
-                <div class="text-center py-10 text-gray-400">
-                    جاري تحميل المحاضرات...
+                <div class="text-center py-10 text-gray-400 animate-pulse">
+                    جاري تحميل المحاضرات المأرشفة...
                 </div>
             `;
 
             const res = await fetch(`/api/admin/get-all-courses?page=${page}&limit=20`, {
                 method: 'GET',
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}` // إرسال التوكن الصحيح
                 }
             });
 
@@ -237,16 +245,17 @@ export const VideoSystem = {
     },
 
     async deleteCourse(courseId) {
-        const confirmed = confirm('هل أنت متأكد من حذف المحاضرة؟');
+        const confirmed = confirm('هل أنت متأكد من حذف المحاضرة نهائياً من السيرفر؟');
         if (!confirmed) return;
 
-        const token = localStorage.getItem('token');
+        // 🔥 استخدام التوكن الصحيح
+        const token = sessionToken || localStorage.getItem('dahih_token');
 
         try {
             const res = await fetch(`/api/admin/delete-course/${courseId}`, {
                 method: 'DELETE',
                 headers: {
-                    Authorization: `Bearer ${token}`
+                    Authorization: `Bearer ${token}` // إرسال التوكن الصحيح
                 }
             });
 
