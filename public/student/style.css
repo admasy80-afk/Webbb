@@ -1,15 +1,93 @@
-body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; }
-.bg-animated-gradient { background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%); background-size: 200% 200%; animation: gradientMove 20s ease-in-out infinite; }
-@keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-.glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
-.card-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease; }
-.card-hover:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 12px 24px rgba(234, 179, 8, 0.1); }
-.section-content { transition: max-height 0.5s ease-in-out, opacity 0.4s; overflow: hidden; }
-.section-content.collapsed { max-height: 0 !important; opacity: 0; }
-.icon-rotate { transition: transform 0.4s; }
-.icon-rotate.collapsed { transform: rotate(180deg); }
-#liveStreamSection { transition: all 0.5s; max-height: 0; opacity: 0; overflow: hidden; }
-#liveStreamSection.stream-active { max-height: 1200px; opacity: 1; }
-.player-crop-wrapper { position: relative; width: 100%; padding-top: 56.25%; overflow: hidden; border-radius: 1.5rem; background: #000; }
-.twitch-iframe-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; overflow-x: hidden; transition: background-color 0.5s ease; }
 
+.bg-animated-gradient {
+    background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
+    background-size: 200% 200%;
+    animation: gradientMove 20s ease-in-out infinite;
+}
+@keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+.glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(10px); }
+.card-hover { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease, border-color 0.3s ease; }
+.card-hover:hover { transform: translateY(-4px) scale(1.01); box-shadow: 0 12px 24px rgba(234, 179, 8, 0.1); border-color: rgba(234, 179, 8, 0.3); }
+
+.quiz-option input[type="radio"]:checked + div { border-color: #eab308; background-color: rgba(234, 179, 8, 0.1); }
+
+.section-content { transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease; overflow: hidden; opacity: 1; }
+.section-content.collapsed { max-height: 0 !important; opacity: 0; padding-top: 0; padding-bottom: 0; border: none; }
+.icon-rotate { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.icon-rotate.collapsed { transform: rotate(180deg); }
+
+/* حركات الأنيميشن */
+@keyframes ultraSmoothPop { 0% { transform: scale(0.9) translateY(20px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+@keyframes ultraSmoothSlideUp { 0% { transform: translateY(20px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+@keyframes softFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+.animate-pop-in { animation: ultraSmoothPop 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform, opacity; }
+.animate-slide-up { opacity: 0; animation: ultraSmoothSlideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; will-change: transform, opacity; }
+.animate-float { animation: softFloat 4s ease-in-out infinite; will-change: transform; }
+
+/* تأخيرات لظهور العناصر بشكل متسلسل */
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-250 { animation-delay: 250ms; }
+.delay-300 { animation-delay: 300ms; }
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* إعدادات البث */
+#liveStreamSection {
+    transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    border-top-width: 0px;
+    pointer-events: none;
+    transform: scale(0.98);
+}
+#liveStreamSection.stream-active {
+    max-height: 1200px; 
+    opacity: 1;
+    margin-bottom: 2rem;
+    border-top-width: 3px;
+    pointer-events: auto;
+    transform: scale(1);
+}
+
+.player-crop-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%;
+    overflow: hidden;
+    border-radius: 1.5rem;
+    background-color: #000;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.twitch-iframe-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+}
+
+#fs-wrapper:fullscreen {
+    background-color: #000;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#fs-wrapper:fullscreen .player-crop-wrapper {
+    padding-top: 0;
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+}
