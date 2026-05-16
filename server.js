@@ -1,4 +1,4 @@
-require('dotenv').config(); // تم تصحيح الـ r لتكون سمول لضمان قراءة متغيرات البيئة
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const { MongoClient, ObjectId } = require('mongodb'); 
@@ -6,8 +6,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken'); 
 const helmet = require('helmet'); 
 const rateLimit = require('express-rate-limit'); 
-
-// 🪐 مكتبات نظام تيليجرام السحابي ورفع الملفات
 const fs = require('fs');
 const multer = require('multer');
 const { TelegramClient } = require('telegram');
@@ -17,17 +15,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dahih_super_secret_key_2026';
 
-// 🔥 حل مشكلة Railway والـ Rate Limit للـ Proxies
 app.set('trust proxy', 1);
 
-// ==========================================
-// 🛡️ إعدادات الحماية والملفات المؤقتة
-// ==========================================
 app.use(helmet({ contentSecurityPolicy: false })); 
 app.use(express.json({ limit: '1mb' })); 
 app.use(express.static(path.join(__dirname, 'public')));
 
-// إعداد فولدر رفع مؤقت للفيديوهات على السيرفر قبل نقلها لتيليجرام
 const upload = multer({ dest: 'uploads/' }); 
 
 const loginLimiter = rateLimit({
@@ -36,13 +29,9 @@ const loginLimiter = rateLimit({
     message: { message: "محاولات كثيرة جداً، يرجى المحاولة بعد 15 دقيقة." }
 });
 
-// تعيين المتغيرات العالمية بشكل صحيح متوافق مع v6 ومستقر
 let db;
 let usersCollection;
 
-// ==========================================
-// 🤖 تهيئة نظام تيليجرام MTProto (تنظيف أوتوماتيكي وحقن الاحتياطي الصارم)
-// ==========================================
 const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm7VktRzjrpMg18KAtsig").trim().replace(/['"]/g, '');
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
@@ -52,22 +41,18 @@ const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
     connectionRetries: 5,
 });
 
-// --- [الاتصال بقاعدة البيانات وتشغيل السيرفرات] ---
 async function startServer() {
     try {
         if (process.env.MONGO_URL) {
             const client = new MongoClient(process.env.MONGO_URL);
             await client.connect();
-            
             db = client.db('dahih_db');
             usersCollection = db.collection('users');
-            
             console.log("✅ تم الاتصال بمونجو بنجاح.. السيرفر جاهز الآن");
         } else {
             console.error("❌ MONGO_URL غير موجود في متغيرات البيئة!");
         }
 
-        // تشغيل اتصال تيليجرام المطور بالخلفية وحل مشكلة البوت كراش نهائياً بالخيار المعتمد
         await tgClient.start({ botAuthToken: botToken });
         console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز للبث الآمن حتى 2 جيجا!");
 
@@ -84,9 +69,6 @@ app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
     res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4');
 });
 
-// ==========================================
-// 🧹 نظام التنظيف التلقائي للموارد
-// ==========================================
 setInterval(async () => {
     if (!db) return;
     try {
@@ -101,9 +83,6 @@ setInterval(async () => {
     }
 }, 60 * 60 * 1000);
 
-// ==========================================
-// 🔒 نظام التوثيق المرن 
-// ==========================================
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
@@ -134,11 +113,6 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
-// ==========================================
-// 🎥 مسارات بث ورفع الفيديوهات السحابية 
-// ==========================================
-
-// 1. مسار رفع المحاضرة من المستر وتخزينها مشفرة في تيليجرام ومونجو
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     try {
         const { courseName, grade, description } = req.body;
@@ -148,19 +122,16 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         console.log(`⏳ جاري معالجة ورفع الحصة سحابياً وبشكل صامت: ${courseName}`);
 
-        // رفع الملف كـ Stream أوتوماتيكي عبر بروتوكول MTProto لكسر ليميت الـ 50 ميجا
         const uploadedFile = await tgClient.uploadFile({
             file: file.path,
             workers: 4 
         });
 
-        // إرسال الملف لشات البوت الخاص (me) لأرشفته وتوليد الـ ID
         const message = await tgClient.sendFile('me', {
             file: uploadedFile,
             caption: `حصة: ${courseName} | الصف: ${grade}`
         });
 
-        // تنظيف وحذف الفيديو فوراً من سيرفر Railway عشان المساحة متتمليش
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
 
         const coursesCollection = db.collection('courses');
@@ -180,7 +151,6 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     }
 });
 
-// 2. جلب جميع الكورسات مع دعم الـ GET والـ Pagination المطور المتوافق مع الفرونت إند
 app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -209,7 +179,6 @@ app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (re
     }
 });
 
-// 3. مسار حذف الكورس المتكامل المتوافق مع الـ RESTful API الجديد الخاص بك
 app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const courseId = req.params.id;
@@ -227,7 +196,6 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
     }
 });
 
-// 4. مسار البث الخفي والذكي للطالب (يمنع سحب الروابط ويدعم تحميل المتصفح حتة بحتة Chunks)
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
@@ -281,9 +249,6 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     }
 });
 
-// ==========================================
-// 1️⃣ مسارات الطلاب وتسجيل الدخول القديمة
-// ==========================================
 app.post('/api/saveUser', loginLimiter, async (req, res) => {
     try {
         const data = req.body;
@@ -343,9 +308,6 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "حدث خطأ" }); }
 });
 
-// ==========================================
-// 2️⃣ باقي مسارات لوحة الإدارة 
-// ==========================================
 app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });  
@@ -466,9 +428,6 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
     } catch (err) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// ==========================================
-// 4️⃣ مسارات الطالب والـ Dashboard
-// ==========================================
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
