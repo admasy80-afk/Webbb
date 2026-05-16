@@ -370,6 +370,11 @@ export function closeResultsModal() {
     setTimeout(() => modal.classList.add('hidden'), 300);
 }
 
+export function logout() {
+    localStorage.removeItem('token');
+    window.location.href = '/login.html';
+}
+
 // ربط الدوال بالـ window لتعمل في الـ HTML
 window.fetchStats = fetchStats;
 window.fetchPendingRequests = fetchPendingRequests;
@@ -381,3 +386,4 @@ window.deleteContent = deleteContent;
 window.showDetailedResults = showDetailedResults;
 window.toggleStudentDetails = toggleStudentDetails;
 window.closeResultsModal = closeResultsModal;
+window.logout = logout;
