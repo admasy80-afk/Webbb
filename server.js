@@ -222,6 +222,46 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
 });
 
 // باقي المسارات الأساسية
+app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
+    try {
+        const msgId = parseInt(req.params.msgId);
+        await ensureTelegramConnection();
+
+        const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
+        if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
+
+        const message = messages[0];
+        const document = message.media.document;
+        if (!document) return res.status(404).send("الملف المرفق ليس فيديو صالح");
+
+        const fileSize = document.size;
+        const range = req.headers.range;
+
+        if (range) {
+            const parts = range.replace(/bytes=/, "").split("-");
+            const start = parseInt(parts[0], 10);
+            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            const chunksize = (end - start) + 1;
+
+            res.writeHead(206, {
+                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': chunksize,
+                'Content-Type': 'video/mp4'
+            });
+
+            const chunk = await tgClient.downloadFile(message.media, { start: start, end: end + 1, dcId: document.dcId, fileSize: fileSize });
+            res.end(chunk);
+        } else {
+            res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4' });
+            const chunk = await tgClient.downloadFile(message.media, { dcId: document.dcId, fileSize: fileSize });
+            res.end(chunk);
+        }
+    } catch (error) {
+        if (!res.headersSent) res.status(500).send("حدث خطأ أثناء تحميل مشغل الفيديو المحمي");
+    }
+});
+
 app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -392,16 +432,31 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
     } catch (err) { res.status(500).json({ message: "خطأ" }); }
 });
 
+// 🔥🔥🔥 دالة جلب بيانات لوحة الطالب المعدلة لضخ مصفوفة الحصص بالكامل 🔥🔥🔥
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
         const { grade } = req.body;
+        
         const user = await usersCollection.findOne({ email: email });
         const studentPoints = user ? (user.points || 0) : 0;
+        
         const contentCollection = db.collection('curriculum_content');  
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
-        res.status(200).json({ studentPoints, content });  
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+
+        // 🎥 الحل المضمون: سحب كل الحصص المرفوعة للمرحلة الدراسية دي وترتيبها من الأقدم للأحدث ليتم عرضها كقائمة
+        const coursesCollection = db.collection('courses');
+        const courses = await coursesCollection.find({ grade: grade }).sort({ createdAt: 1 }).toArray();
+
+        res.status(200).json({ 
+            studentPoints, 
+            content,
+            courses: courses // ضخ المصفوفة بالكامل للفرونت إند ليتم رصها بالترتيب
+        });  
+    } catch (error) { 
+        console.error("❌ خطأ في جلب بيانات لوحة الطالب:", error);
+        res.status(500).json({ message: "خطأ في السيرفر" }); 
+    }
 });
 
 app.get('/api/public/quiz', async (req, res) => {
@@ -456,7 +511,7 @@ app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// معالجة أخطاء الرفع الكبيرة
+// معالجة أخطاء الرفع الكبيرة لـ Multer من غير كراش
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         return res.status(400).json({
@@ -466,4 +521,4 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('*', (req, res) => res.sendFile(path.join(/__dirname, 'public', 'index.html')));
