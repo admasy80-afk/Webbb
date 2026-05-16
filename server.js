@@ -124,6 +124,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
+// 🔥🔥🔥 التعديل السحري لكشف الأخطاء وتخفيف الضغط هنا 🔥🔥🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     try {
         const { courseName, grade, description } = req.body;
@@ -131,16 +132,25 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
 
+        console.log("🚀 جاري رفع الملف إلى سيرفرات تيليجرام...");
+
+        // قللنا الـ workers لـ 1 عشان ريلواي ميفصلش الاتصال
         const uploadedFile = await tgClient.uploadFile({
             file: file.path,
-            workers: 4 
+            workers: 1 
         });
 
-        // 🔥 الرفع لقناتك الخاصة
-        const message = await tgClient.sendFile('@mohamed293g', {
+        console.log("✅ تم الرفع لتليجرام، جاري إرساله للقناة...");
+
+        // جلب بيانات القناة لضمان عدم حدوث خطأ Peer
+        const channel = await tgClient.getEntity('mohamed293g');
+
+        const message = await tgClient.sendFile(channel, {
             file: uploadedFile,
             caption: `حصة: ${courseName} | الصف: ${grade}`
         });
+
+        console.log("✅ تم الإرسال للقناة بنجاح! Message ID:", message.id);
 
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
 
@@ -155,8 +165,11 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها للمنصة بنجاح لا نهائي!" });
     } catch (error) {
+        console.error("❌ خطأ تفصيلي من تيليجرام:", error);
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        res.status(500).json({ message: "فشل الرفع السحابي، تأكد من اتصال تيليجرام" });
+        
+        // لو حصل خطأ، هيظهرلك على الشاشة الحمراء بدل الرسالة المبهمة
+        res.status(500).json({ message: "خطأ تليجرام: " + (error.message || "فشل غير معروف") });
     }
 });
 
@@ -200,8 +213,7 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
         
-        // 🔥 جلب الفيديوهات من قناتك وعرضها للطلاب
-        const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
+        const messages = await tgClient.getMessages('mohamed293g', { ids: [msgId] });
         if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
 
         const message = messages[0];
