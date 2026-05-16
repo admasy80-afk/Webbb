@@ -63,7 +63,9 @@ async function startServer() {
         }
 
         // تشغيل اتصال تيليجرام المطور بالخلفية وحل مشكلة البوت كراش
-        await tgClient.start({ botToken: botToken });
+        // ✅ السطر الجديد الصحيح بعد كشف الخدعة
+await tgClient.start({ botAuthToken: botToken });
+
         console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز للبث الآمن حتى 2 جيجا!");
 
         app.listen(PORT, () => console.log(`🚀 Running on port ${PORT}`));  
