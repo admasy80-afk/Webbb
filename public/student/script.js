@@ -1,7 +1,4 @@
 // ==================== الإعدادات الأساسية والمؤثرات الصوتية ====================
-const trashSVG = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>`;
-
-// المؤثرات الصوتية (هادئة وغير مزعجة)
 const sounds = {
     click: new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_78d5236b22.mp3'),
     success: new Audio('https://cdn.pixabay.com/download/audio/2021/08/04/audio_0625c1539c.mp3')
@@ -9,9 +6,10 @@ const sounds = {
 Object.values(sounds).forEach(audio => audio.volume = 0.3);
 
 const userDataStr = localStorage.getItem('dahih_user');
+const token = localStorage.getItem('dahih_token'); // سحب التوكن السليم
 window.availableQuizzes = []; 
 let currentUser = null;
-let currentPointsTracker = -1; // لتتبع النقاط ومنع تكرار الأنيميشن
+let currentPointsTracker = -1; 
 
 // التحقق من تسجيل الدخول
 if (!userDataStr) {
@@ -20,60 +18,126 @@ if (!userDataStr) {
     currentUser = JSON.parse(userDataStr);
     const firstName = currentUser.name ? currentUser.name.split(' ')[0] : "طالب";
     
-    const nameEl = document.getElementById('studentName');
-    const gradeEl = document.getElementById('studentGrade');
-    if (nameEl) nameEl.innerText = firstName;
-    if (gradeEl) gradeEl.innerText = currentUser.grade || "الصف غير محدد";
-    
-    const loadOverlay = document.getElementById('loadingOverlay');
-    const unmuteOverlay = document.getElementById('unmuteOverlay');
-    if (loadOverlay) loadOverlay.style.display = 'none';
-    if (unmuteOverlay) unmuteOverlay.style.display = 'none';
+    document.getElementById('studentName').innerText = firstName;
+    document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
     
     fetchDashboardData();
-    setInterval(fetchDashboardData, 2000); 
+    // تقليل معدل التحديث لعدم إرهاق السيرفر
+    setInterval(fetchDashboardData, 10000); 
 }
 
-// ==================== إعدادات المشغل (Hype Meter + Theater Mode) ====================
+// ==================== إعدادات المشغل الذكي (Native Player) ====================
+const video = document.getElementById('dahihPlayer');
+const tapLeft = document.getElementById('tapLeft');
+const tapRight = document.getElementById('tapRight');
+const skipIndicator = document.getElementById('skipIndicator');
+const skipText = document.getElementById('skipText');
+const centerPlayBtn = document.getElementById('centerPlayBtn');
+const progressContainer = document.getElementById('progressContainer');
+const progressBar = document.getElementById('progressBar');
+const speedBtn = document.getElementById('speedBtn');
+const muteBtn = document.getElementById('muteBtn');
+const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+const durationDisplay = document.getElementById('durationDisplay');
 
-let hypeClicks = 0;
-const maxHype = 3; // عدد الضغطات المطلوبة لفتح البث
+let currentSpeedIndex = 0;
+const speeds = [1, 1.25, 1.5, 2];
 
-window.revealStream = function() {
-    const btn = document.getElementById('enterStreamBtn');
-    if(!btn) return;
-    
-    hypeClicks++;
-    sounds.click.play().catch(()=>{});
-    
-    // اهتزاز خفيف مع كل ضغطة
-    if ("vibrate" in navigator) navigator.vibrate(30);
+if(video) {
+    // 1. التشغيل والإيقاف + الـ Blur
+    const togglePlay = () => {
+        if (video.paused) {
+            video.play();
+        } else {
+            video.pause();
+        }
+    };
 
-    const percentage = (hypeClicks / maxHype) * 100;
-    
-    if (hypeClicks < maxHype) {
-        // تحديث شكل الزر كعداد حماس
-        btn.style.background = `linear-gradient(90deg, #eab308 ${percentage}%, #1f2937 ${percentage}%)`;
-        btn.innerHTML = `🔥 حمسنا عشان نبدأ! (${hypeClicks}/${maxHype})`;
-    } else {
-        // فتح البث
-        btn.style.background = '#eab308';
-        btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري الدخول...`;
-        btn.disabled = true;
+    video.addEventListener('click', togglePlay);
+    centerPlayBtn.addEventListener('click', togglePlay);
+
+    video.addEventListener('play', () => {
+        centerPlayBtn.style.opacity = '0';
+        video.classList.remove('video-blur');
+    });
+
+    video.addEventListener('pause', () => {
+        centerPlayBtn.style.opacity = '1';
+        video.classList.add('video-blur'); // التغبيش الاحترافي
+    });
+
+    // 2. التقديم والتأخير الذكي (Double Tap)
+    const handleDoubleTap = (seconds, directionText) => {
+        video.currentTime += seconds;
+        skipText.innerText = directionText;
+        skipIndicator.classList.remove('hidden');
         
-        if ("vibrate" in navigator) navigator.vibrate([50, 50, 100]); // اهتزاز الدخول
-
+        // إعادة تشغيل الأنيميشن
+        skipIndicator.style.animation = 'none';
+        void skipIndicator.offsetWidth; 
+        skipIndicator.style.animation = 'popFade 0.8s ease-out forwards';
+        
+        if ("vibrate" in navigator) navigator.vibrate(50);
+        
         setTimeout(() => {
-            const overlay = document.getElementById('dahih-custom-overlay');
-            if(overlay) {
-                overlay.classList.add('opacity-0', 'scale-110');
-                setTimeout(() => overlay.style.display = 'none', 500);
-            }
-        }, 1500); // قللنا الوقت لسرعة الاستجابة
-    }
-};
+            skipIndicator.classList.add('hidden');
+        }, 800);
+    };
 
-// وضع السينما (إطفاء الأنوار)
+    tapLeft.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        handleDoubleTap(10, "⏩ +10 ثواني");
+    });
+
+    tapRight.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        handleDoubleTap(-10, "⏪ -10 ثواني");
+    });
+
+    // 3. السرعة
+    speedBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
+        video.playbackRate = speeds[currentSpeedIndex];
+        speedBtn.innerText = speeds[currentSpeedIndex] + 'x';
+    });
+
+    // 4. الصوت
+    muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        video.muted = !video.muted;
+        muteBtn.innerHTML = video.muted 
+            ? `<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>`
+            : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"></path></svg>`;
+    });
+
+    // 5. شريط التقدم والوقت
+    const formatTime = (time) => {
+        const min = Math.floor(time / 60);
+        const sec = Math.floor(time % 60);
+        return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+    };
+
+    video.addEventListener('timeupdate', () => {
+        const percent = (video.currentTime / video.duration) * 100;
+        progressBar.style.width = `${percent}%`;
+        currentTimeDisplay.innerText = formatTime(video.currentTime);
+    });
+
+    video.addEventListener('loadedmetadata', () => {
+        durationDisplay.innerText = formatTime(video.duration);
+    });
+
+    progressContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const rect = progressContainer.getBoundingClientRect();
+        const pos = (e.clientX - rect.left) / rect.width;
+        // عشان اتجاه الـ RTL نعكس الحسبة
+        video.currentTime = (1 - pos) * video.duration; 
+    });
+}
+
+// ==================== وضع السينما ====================
 function toggleTheaterMode() {
     sounds.click.play().catch(()=>{});
     const body = document.body;
@@ -95,58 +159,6 @@ function toggleTheaterMode() {
     streamSection.style.transition = 'all 0.4s ease';
 }
 
-function forceShowStream() {
-    const section = document.getElementById('liveStreamSection');
-    const container = document.getElementById("twitch-embed"); 
-    
-    if(section && !section.classList.contains('stream-active')) {
-        section.classList.add('stream-active');
-    }
-    
-    if (container && container.innerHTML.trim() === "") {
-        const myDomain = "webbb-production-b681.up.railway.app";
-        const parentParams = `&parent=${myDomain}&parent=localhost`;
-        
-        const customOverlayHTML = `
-        <div id="dahih-custom-overlay" class="absolute inset-0 z-[60] flex flex-col items-center justify-center bg-[#070b19] transition-all duration-500 rounded-xl md:rounded-[1.5rem]">
-            <div class="glass-panel border border-white/5 p-6 md:p-8 rounded-2xl text-center w-[85%] max-w-sm border-t-[3px] border-t-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.1)] transition-all">
-                <div class="w-14 h-14 mx-auto bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-4 animate-pulse">
-                    <svg class="w-6 h-6 text-yellow-500 pl-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </div>
-                <h3 class="text-lg md:text-xl font-bold text-white mb-2">منصة الدحيح</h3>
-                <p class="text-gray-400 text-xs md:text-sm mb-6">يوجد بث مباشر يعمل الان</p>
-                <div class="flex gap-2">
-                    <button id="enterStreamBtn" onclick="revealStream()" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-4 rounded-xl transition-all text-sm md:text-base flex items-center justify-center shadow-md">
-                        دخول الحصة
-                    </button>
-                    <button onclick="toggleTheaterMode()" title="وضع السينما" class="bg-white/5 border border-white/10 text-yellow-500 p-3 rounded-xl hover:bg-white/10 transition-colors">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                    </button>
-                </div>
-            </div>
-        </div>`;
-
-        container.innerHTML = customOverlayHTML + `<iframe 
-            src="https://player.twitch.tv/?channel=moooae2tf${parentParams}&autoplay=true&muted=true&controls=false" 
-            height="100%" width="100%" allowfullscreen="true" scrolling="no" frameborder="0" style="border: none;">
-        </iframe>`;
-    }
-}
-
-function forceHideStream() {
-    const section = document.getElementById('liveStreamSection');
-    const container = document.getElementById("twitch-embed"); 
-    
-    if(section && section.classList.contains('stream-active')) {
-        section.classList.remove('stream-active');
-        if (container) container.innerHTML = ""; 
-        if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-        document.body.classList.remove('bg-black'); // إلغاء وضع السينما لو البث قفل
-    }
-}
-
-// ==================== التفاعل والشاشات (العداد الرقمي) ====================
-
 function handleFullscreenText(isFullscreen) {
     const fsWrapper = document.getElementById('fs-wrapper');
     if (fsWrapper) {
@@ -160,20 +172,13 @@ function toggleStudentFullScreen() {
     if (!fsWrapper) return;
     
     if (!document.fullscreenElement) {
-        if(fsWrapper.requestFullscreen) {
-            fsWrapper.requestFullscreen().then(() => { try { screen.orientation.lock('landscape'); } catch (e) {} });
-        } else if(fsWrapper.webkitRequestFullscreen) {
-            fsWrapper.webkitRequestFullscreen();
-        }
+        if(fsWrapper.requestFullscreen) fsWrapper.requestFullscreen().then(() => { try { screen.orientation.lock('landscape'); } catch (e) {} });
     } else { 
-        if (document.exitFullscreen) {
-            document.exitFullscreen().then(() => { try { screen.orientation.unlock(); } catch (e) {} });
-        }
+        if (document.exitFullscreen) document.exitFullscreen().then(() => { try { screen.orientation.unlock(); } catch (e) {} });
     }
 }
 
 document.addEventListener('fullscreenchange', () => handleFullscreenText(!!document.fullscreenElement));
-document.addEventListener('webkitfullscreenchange', () => handleFullscreenText(!!document.webkitFullscreenElement));
 
 function toggleSection(sectionId, iconId) {
     sounds.click.play().catch(()=>{});
@@ -192,36 +197,63 @@ function toggleSection(sectionId, iconId) {
     }
 }
 
-// أنيميشن العداد الرقمي المطور
 function animateValue(obj, start, end, duration) {
     let startTimestamp = null;
     const step = (timestamp) => {
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        // استخدام easing لتبطيء العداد في النهاية
         const easeOut = progress * (2 - progress);
         obj.innerText = Math.floor(easeOut * (end - start) + start) + '%';
-        if (progress < 1) {
-            window.requestAnimationFrame(step);
-        }
+        if (progress < 1) window.requestAnimationFrame(step);
     };
     window.requestAnimationFrame(step);
+}
+
+// عرض الفيديو من السيرفر (تم ربطها بـ API تليجرام)
+function forceShowStream(msgId) {
+    const section = document.getElementById('liveStreamSection');
+    
+    if(section) {
+        section.classList.remove('hidden');
+        section.style.display = 'block';
+        
+        // ربط السورس بملف الـ API اللي عملناه
+        if(video && msgId && video.src === "") {
+            // إضافة التوكن للرابط عشان السيرفر يقبله (لأن المسار محمي)
+            fetch(`/api/video/stream/${msgId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            }).then(res => res.blob()).then(blob => {
+                video.src = URL.createObjectURL(blob);
+                video.classList.add('video-blur'); // يبدأ مغبش لحد ما الطالب يدوس تشغيل
+            });
+        }
+    }
+}
+
+function forceHideStream() {
+    const section = document.getElementById('liveStreamSection');
+    if(section) section.style.display = 'none';
+    if(video) { video.pause(); video.src = ""; }
 }
 
 async function fetchDashboardData() {
     try {
         const res = await fetch('/api/student/dashboard-data', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ email: currentUser.email, grade: currentUser.grade })
         });
 
         if (res.ok) {
             const data = await res.json();
             
-            const isLiveOnServer = data.content?.liveStream?.isLive === true;
-            if (isLiveOnServer) { forceShowStream(); } else { forceHideStream(); }
+            // 🔥 هنا لازم الداتا بيز ترجع الـ msgId بتاع الفيديو الأخير للمرحلة دي
+            // للتجربة هنفترض إن الـ msgId متاح في data.latestVideoMsgId
+            if (data.latestVideoMsgId) { 
+                forceShowStream(data.latestVideoMsgId); 
+            } else { 
+                forceHideStream(); 
+            }
 
-            // تحديث التقييم باستخدام العداد الرقمي
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             const newPoints = parseInt(data.studentPoints || 0);
             
@@ -231,7 +263,6 @@ async function fetchDashboardData() {
                 currentPointsTracker = newPoints;
             }
 
-            // تحديث الاختبارات
             window.availableQuizzes = data.content?.quizzes || [];
             const qzContainer = document.getElementById('onlineQuizzesContainer');
             if (qzContainer) {
@@ -249,12 +280,9 @@ async function fetchDashboardData() {
                         </div>`;
                     });
                     qzContainer.innerHTML = qzHTML;
-                } else { 
-                    qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; 
-                }
+                } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
             }
 
-            // تحديث النقاط (الملاحظات)
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
@@ -265,7 +293,6 @@ async function fetchDashboardData() {
                 } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
             }
 
-            // تحديث المقالي
             const qContainer = document.getElementById('questionsContainer');
             if (qContainer) {
                 if (data.content?.questions && data.content.questions.length > 0) {
@@ -277,7 +304,6 @@ async function fetchDashboardData() {
                 } else { qContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد أسئلة مقالية.</p>'; }
             }
 
-            // نتائج الورقي
             const tContainer = document.getElementById('testsContainer');
             if (tContainer) {
                 if (data.content?.tests && data.content.tests.length > 0) {
@@ -299,8 +325,7 @@ async function fetchDashboardData() {
     } catch (err) { console.log("Error fetching data:", err); }
 }
 
-// ==================== نظام الاختبارات الشامل ====================
-
+// دوال الكويزات كما هي لم يتم المساس بها
 function openQuizModal(quizId) {
     sounds.click.play().catch(()=>{});
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
@@ -325,7 +350,6 @@ function openQuizModal(quizId) {
 
     modalContent.innerHTML = html;
     
-    // أنيميشن الفتح الناعم
     modal.classList.remove('hidden');
     modalContent.classList.add('opacity-0', 'scale-95', 'transition-all', 'duration-300');
     setTimeout(() => {
@@ -349,15 +373,14 @@ async function submitQuiz(event, quizId) {
 
     const percentage = Math.round((score / quiz.questions.length) * 100);
 
-    // الاهتزاز والصوت بناءً على النتيجة
     if ("vibrate" in navigator) {
         if (percentage >= 50) navigator.vibrate([100, 50, 100]);
-        else navigator.vibrate(400); // رسوب
+        else navigator.vibrate(400); 
     }
 
     try {
         await fetch('/api/student/submit-quiz', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
                 email: currentUser.email, 
                 studentName: currentUser.name, 
@@ -368,7 +391,6 @@ async function submitQuiz(event, quizId) {
             })
         });
 
-        // تأثير الورق المتناثر (Confetti) للمتفوقين
         if (percentage >= 85) {
             sounds.success.play().catch(()=>{});
             const duration = 3 * 1000;
@@ -411,9 +433,7 @@ function closeQuizModal() {
     if (modal && modalContent) {
         modalContent.classList.remove('opacity-100', 'scale-100');
         modalContent.classList.add('opacity-0', 'scale-95');
-        setTimeout(() => {
-            modal.classList.add('hidden'); 
-        }, 300);
+        setTimeout(() => { modal.classList.add('hidden'); }, 300);
     }
 }
 
