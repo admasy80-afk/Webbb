@@ -1,85 +1,86 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const { MongoClient, ObjectId } = require('mongodb'); 
-const bcrypt = require('bcryptjs'); 
-const jwt = require('jsonwebtoken'); 
-const helmet = require('helmet'); 
-const rateLimit = require('express-rate-limit'); 
 const fs = require('fs');
+const { MongoClient, ObjectId } = require('mongodb');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
-const { CustomFile } = require('telegram/client/uploads'); 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dahih_super_secret_key_2026';
 
+// إعدادات الحماية والبروكسي
 app.set('trust proxy', 1);
-
-app.use(helmet({ contentSecurityPolicy: false })); 
-app.use(express.json({ limit: '1mb' })); 
+app.use(helmet({ contentSecurityPolicy: false }));
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// إعداد مجلد الرفع وحماية الحجم (أقصى حاجة 2 جيجا)
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
 }
-const upload = multer({ dest: uploadDir }); 
+const upload = multer({ 
+    dest: uploadDir,
+    limits: { fileSize: 2 * 1024 * 1024 * 1024 } 
+});
 
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 20, 
+    windowMs: 15 * 60 * 1000,
+    max: 20,
     message: { message: "محاولات كثيرة جداً، يرجى المحاولة بعد 15 دقيقة." }
 });
 
 let db;
 let usersCollection;
 
+// بيانات تيليجرام
 const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm7VktRzjrpMg18KAtsig").trim().replace(/['"]/g, '');
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 
-// 🔥 مسح الجلسة القديمة الفاسدة لضمان دخول نظيف
-if (fs.existsSync('tg_session.txt')) {
-    try {
-        fs.unlinkSync('tg_session.txt');
-        console.log("🧹 تم مسح الجلسة القديمة الفاسدة!");
-    } catch (e) {}
-}
-
+// 🔥 السر الأول: الدخول بجلسة فارغة دائماً لعدم حدوث خطأ AUTH_KEY
 const stringSession = new StringSession(""); 
 
 const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
-    connectionRetries: 5,
+    connectionRetries: 10,
+    useWSS: true // 🔥 السر التاني: استقرار الاتصال السحابي
 });
+
+async function ensureTelegramConnection() {
+    if (tgClient.connected) return true;
+    try {
+        console.log("⏳ جاري الاتصال بتيليجرام...");
+        await tgClient.start({ botAuthToken: botToken });
+        console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز طازة!");
+        return true;
+    } catch (err) {
+        console.error("❌ فشل اتصال تيليجرام:", err.message);
+        return false;
+    }
+}
 
 async function startServer() {
     try {
         if (process.env.MONGO_URL) {
             const client = new MongoClient(process.env.MONGO_URL);
             await client.connect();
-            db = client.db('dahih_db'); 
+            db = client.db('dahih_db');
             usersCollection = db.collection('users');
             console.log("✅ تم الاتصال بمونجو بنجاح.. قاعدة البيانات جاهزة!");
         }
 
-        app.listen(PORT, () => console.log(`🚀 السيرفر شغال على بورت ${PORT}`));  
+        await ensureTelegramConnection();
 
-        try {
-            if (!tgClient.connected) {
-                console.log("⏳ جاري الاتصال بتيليجرام بهدوء...");
-                await tgClient.start({ botAuthToken: botToken });
-                console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز بمفتاح جديد!");
-                fs.writeFileSync('tg_session.txt', tgClient.session.save());
-            }
-        } catch (tgErr) {
-            console.error("⚠️ خطأ في الاتصال:", tgErr.message);
-        }
-
-    } catch (err) {  
-        console.error("❌ فشل تشغيل السيرفر الأساسي:", err);  
+        app.listen(PORT, () => console.log(`🚀 السيرفر شغال على بورت ${PORT}`));
+    } catch (err) {
+        console.error("❌ فشل تشغيل السيرفر الأساسي:", err);
     }
 }
 
@@ -89,6 +90,7 @@ app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
     res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4');
 });
 
+// تنظيف البث المباشر
 setInterval(async () => {
     if (!db) return;
     try {
@@ -106,15 +108,11 @@ setInterval(async () => {
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-
-    if (token) {
-        jwt.verify(token, JWT_SECRET, (err, user) => {
-            if (!err) req.user = user;
-            next();
-        });
-    } else {
-        next(); 
-    }
+    if (!token) return next();
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (!err) req.user = user;
+        next();
+    });
 };
 
 const requireAdmin = (req, res, next) => {
@@ -128,31 +126,31 @@ const requireAdmin = (req, res, next) => {
 app.get('/api/verify-session', authenticateToken, (req, res) => {
     if (!req.user) return res.status(401).json({ message: "انتهت الجلسة" });
     const userRole = req.user.role;
-    let redirectUrl = '/student-dashboard.html'; 
-    if (userRole === 'dev' || userRole === 'owner') redirectUrl = '/admin-dashboard.html'; 
+    let redirectUrl = '/student-dashboard.html';
+    if (userRole === 'dev' || userRole === 'owner') redirectUrl = '/admin-dashboard.html';
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
-// 🔥🔥🔥 التعديل النهائي المدمج للرفع المباشر وتفادي أخطاء الجلسة 🔥🔥🔥
+// 🔥🔥🔥 دالة الرفع المباشرة المصفحة 🔥🔥🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
+    let absoluteFilePath = null;
     try {
         const { courseName, grade, description } = req.body;
         const file = req.file;
 
         if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
 
-        console.log("🚀 جاري معالجة الملف لرفعه لتيليجرام...");
-        const absoluteFilePath = path.resolve(file.path);
+        absoluteFilePath = path.resolve(file.path);
+        console.log("🚀 بدء معالجة الملف لرفعه لتيليجرام...");
 
-        // تأمين إضافي: نتأكد إن البوت لسه متصل قبل الرفع
-        if (!tgClient.connected) {
-            console.log("🔄 جاري إعادة تنشيط الاتصال بتيليجرام...");
-            await tgClient.connect();
+        const connected = await ensureTelegramConnection();
+        if (!connected) {
+            throw new Error("فشل الاتصال بسيرفرات تيليجرام.");
         }
 
-        console.log("✅ جاري الإرسال للقناة مباشرة (بدون فزلكة الـ Workers)...");
+        console.log("✅ جاري الإرسال للقناة...");
 
-        // الإرسال المباشر للقناة بخطوة واحدة
+        // الإرسال المباشر وتحديد Workers 1
         const message = await tgClient.sendFile('@mohamed293g', {
             file: absoluteFilePath,
             caption: `حصة: ${courseName} | الصف: ${grade}`,
@@ -161,7 +159,6 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         console.log("✅ تم الإرسال للقناة بنجاح! Message ID:", message.id);
 
-        // مسح الملف من السيرفر بعد الرفع
         if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
 
         const coursesCollection = db.collection('courses');
@@ -169,64 +166,27 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
             courseName,
             grade,
             description,
-            telegramMsgId: message.id, 
+            telegramMsgId: message.id,
             createdAt: new Date()
         });
 
         res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها للمنصة بنجاح لا نهائي!" });
     } catch (error) {
         console.error("❌ خطأ تفصيلي من تيليجرام:", error);
-        
-        // تنظيف الملف لو حصل خطأ
-        if (req.file && req.file.path) {
-            const absoluteFilePath = path.resolve(req.file.path);
-            if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
+        if (absoluteFilePath && fs.existsSync(absoluteFilePath)) {
+            fs.unlinkSync(absoluteFilePath);
         }
         res.status(500).json({ message: "خطأ تليجرام: " + (error.message || "فشل غير معروف") });
     }
 });
 
-app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 20;
-        const skip = (page - 1) * limit;
-
-        const coursesCollection = db.collection('courses');
-        const courses = await coursesCollection.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
-
-        const formattedCourses = courses.map(c => ({
-            id: c._id.toString(),
-            courseName: c.courseName,
-            grade: c.grade,
-            description: c.description,
-            telegramMsgId: c.telegramMsgId
-        }));
-
-        res.status(200).json({ courses: formattedCourses });
-    } catch (error) {
-        res.status(500).json({ message: "خطأ في السيرفر أثناء جلب البيانات" });
-    }
-});
-
-app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const courseId = req.params.id;
-        const coursesCollection = db.collection('courses');
-        const result = await coursesCollection.deleteOne({ _id: new ObjectId(courseId) });
-
-        if (result.deletedCount === 0) return res.status(404).json({ message: "المحاضرة غير موجودة بالفعل" });
-        res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
-    } catch (error) {
-        res.status(500).json({ message: "فشل الحذف، معرف غير صالح" });
-    }
-});
-
+// بث الفيديو
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
-        
-        const messages = await tgClient.getMessages('mohamed293g', { ids: [msgId] });
+        await ensureTelegramConnection();
+
+        const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
         if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
 
         const message = messages[0];
@@ -261,21 +221,47 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     }
 });
 
+// باقي المسارات الأساسية
+app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        const coursesCollection = db.collection('courses');
+        const courses = await coursesCollection.find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
+        const formattedCourses = courses.map(c => ({
+            id: c._id.toString(),
+            courseName: c.courseName,
+            grade: c.grade,
+            description: c.description,
+            telegramMsgId: c.telegramMsgId
+        }));
+        res.status(200).json({ courses: formattedCourses });
+    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر أثناء جلب البيانات" }); }
+});
+
+app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const courseId = req.params.id;
+        const coursesCollection = db.collection('courses');
+        const result = await coursesCollection.deleteOne({ _id: new ObjectId(courseId) });
+        if (result.deletedCount === 0) return res.status(404).json({ message: "المحاضرة غير موجودة بالفعل" });
+        res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
+    } catch (error) { res.status(500).json({ message: "فشل الحذف، معرف غير صالح" }); }
+});
+
 app.post('/api/saveUser', loginLimiter, async (req, res) => {
     try {
         const data = req.body;
         if (!usersCollection) return res.status(500).json({ message: "السيرفر لسه بيسخن.." });  
-
         const isDev = data.identifier === "nullbrodidyouknow@gmail.com" && data.password === "T9@qL7!zR4#pX2vK8";  
         const isOwner = data.identifier === "owner@owner.com" && data.password === "123456asdW#";  
-
         if (isDev || isOwner) {  
             const roleName = isDev ? "المطور (Null)" : "مستر";  
             const userRole = isDev ? "dev" : "owner";  
             const token = jwt.sign({ email: data.identifier, role: userRole }, JWT_SECRET, { expiresIn: '30d' });
             return res.status(200).json({ message: `أهلاً بك يا ${roleName} 👑`, token: token, userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" } });  
         }  
-
         if (data.identifier) {  
             const user = await usersCollection.findOne({ $or: [{ email: data.identifier }, { phone: data.identifier }] });  
             if (user) {  
@@ -287,15 +273,12 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             } 
             return res.status(401).json({ message: "خطأ في بيانات الدخول" });  
         }  
-
         if (data.first_name) {  
             const existing = await usersCollection.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });  
             if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });  
-            
             const hashedPassword = await bcrypt.hash(data.password, 10);
             const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false };
             await usersCollection.insertOne(newUser);  
-            
             const token = jwt.sign({ email: data.email, role: "student" }, JWT_SECRET, { expiresIn: '30d' });
             return res.status(200).json({ message: "تم إنشاء حساب بنجاح", token: token, userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } });  
         }  
@@ -471,6 +454,16 @@ app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
         await usersCollection.updateOne({ email: email }, { $set: { phoneVerified: true } });
         res.status(200).json({ message: "تم توثيق الهاتف بنجاح" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+// معالجة أخطاء الرفع الكبيرة
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        return res.status(400).json({
+            message: err.code === 'LIMIT_FILE_SIZE' ? 'حجم الملف أكبر من 2 جيجا!' : 'حدث خطأ أثناء الرفع.'
+        });
+    }
+    next(err);
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
