@@ -131,7 +131,7 @@ if(video) {
     }
 }
 
-// 🔥 دالة سحب وتشغيل المحاضرة سحابياً (مع فتح القسم المخفي وكاشف الأخطاء المتقدم) 🔥
+// 🔥 دالة سحب وتشغيل المحاضرة سحابياً 🔥
 window.loadVideoToPlayer = function(msgId, title) {
     console.log("🟢 1. تم النقر على زر التشغيل. كود الدرس:", msgId);
 
@@ -142,13 +142,11 @@ window.loadVideoToPlayer = function(msgId, title) {
             return;
         }
 
-        // إظهار القسم المخفي
         const liveSection = document.getElementById('liveStreamSection');
         if (liveSection) {
             liveSection.classList.add('stream-active');
         }
 
-        // التحقق لو ضغطت على نفس الفيديو
         if (String(currentPlayingMsgId) === String(msgId)) {
             if (video.paused) {
                 video.play().catch(e => console.warn("المتصفح منع التشغيل: ", e));
@@ -164,7 +162,6 @@ window.loadVideoToPlayer = function(msgId, title) {
         const playingTitle = document.getElementById('playingVideoTitle');
         if (playingTitle) playingTitle.innerText = title;
         
-        // إخفاء الصورة الترحيبية
         const placeholder = document.getElementById('videoPlaceholder');
         if (placeholder) {
             placeholder.style.opacity = '0';
@@ -172,7 +169,6 @@ window.loadVideoToPlayer = function(msgId, title) {
             setTimeout(() => placeholder.classList.add('hidden'), 400); 
         }
 
-        // إظهار المشغل
         video.classList.remove('hidden');
         const tapLeft = document.getElementById('tapLeft');
         const tapRight = document.getElementById('tapRight');
@@ -182,7 +178,6 @@ window.loadVideoToPlayer = function(msgId, title) {
         if(tapRight) tapRight.classList.remove('hidden');
         if(controlsBar) controlsBar.classList.remove('hidden');
         
-        // 🚨 إعدادات كاشف أخطاء الشبكة والفيديو 🚨
         video.onerror = function() {
             let errorMsg = "خطأ غير معروف في مشغل الفيديو.";
             if (video.error) {
@@ -197,20 +192,17 @@ window.loadVideoToPlayer = function(msgId, title) {
             console.error("Video Error:", video.error);
         };
         
-        // تنبيه إذا تأخر الفيديو أكثر من 15 ثانية (يكتشف بطء السيرفر)
         let loadTimeout = setTimeout(() => {
             if (video.readyState === 0) {
                 alert("⚠️ تنبيه: السيرفر (Railway) بطيء جداً أو لا يستجيب ببيانات الفيديو. يرجى مراجعة الباك إند.");
             }
         }, 15000);
 
-        // إيقاف التنبيه إذا بدأ الفيديو بالتحميل بنجاح
         video.onloadeddata = () => {
             clearTimeout(loadTimeout);
             console.log("✅ تم استقبال بيانات الفيديو بنجاح من السيرفر.");
         };
 
-        // تمرير الرابط للمشغل مع التوكن
         console.log("🟢 4. جاري طلب الفيديو من السيرفر...");
         video.pause();
         const activeToken = localStorage.getItem('dahih_token'); 
@@ -224,7 +216,6 @@ window.loadVideoToPlayer = function(msgId, title) {
             if(centerPlayBtn) centerPlayBtn.style.opacity = '1';
         });
 
-        // تلوين الكارت الخاص بالدرس
         document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
         const activeCard = document.getElementById(`course_${msgId}`);
         if(activeCard) activeCard.classList.add('card-active');
@@ -254,11 +245,17 @@ function toggleTheaterMode() {
     });
 }
 
+// 🚨 الحل السحري لتكبير الفيديو فقط بشكل مثالي 🚨
 function toggleStudentFullScreen() {
-    const fsWrapper = document.getElementById('fs-wrapper');
-    if (!fsWrapper) return;
+    // نحدد صندوق الفيديو فقط بدلاً من تحديد الصندوق الخارجي بالكامل
+    const videoContainer = document.querySelector('.video-container');
+    if (!videoContainer) return;
+    
     if (!document.fullscreenElement) {
-        fsWrapper.requestFullscreen().catch(()=>{});
+        // نطلب وضع ملء الشاشة لحاوية الفيديو نفسها
+        videoContainer.requestFullscreen().catch(err => {
+            console.error("Error attempting to enable fullscreen:", err);
+        });
     } else {
         document.exitFullscreen().catch(()=>{});
     }
