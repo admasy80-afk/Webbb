@@ -11,22 +11,25 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const cors = require('cors');
 
-// Note: You must run `npm install file-type@16.5.4` (using CommonJS compatible version)
-let fileTypeFromFile;
-import('file-type').then(module => {
-    fileTypeFromFile = module.fileTypeFromFile;
-}).catch(err => console.error("Failed to load file-type module:", err));
-
-// S3 Cloud Storage Libraries
-const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const { Upload } = require('@aws-sdk/lib-storage');
-
 // CRITICAL SECURITY: Enforce JWT Secret
 if (!process.env.JWT_SECRET) {
     console.error("FATAL ERROR: JWT_SECRET environment variable is missing.");
     process.exit(1);
 }
 const JWT_SECRET = process.env.JWT_SECRET;
+
+// File Type Validation (Strict Magic Numbers Check via require)
+let fileTypeFromFile;
+try {
+    const fileTypeModule = require('file-type');
+    fileTypeFromFile = fileTypeModule.fileTypeFromFile;
+} catch (err) {
+    console.error("Failed to initialize file-type module:", err.message);
+}
+
+// S3 Cloud Storage Libraries
+const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { Upload } = require('@aws-sdk/lib-storage');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,7 +70,7 @@ if (!fs.existsSync(uploadDir)) {
 // Multer Configuration
 const upload = multer({ 
     dest: uploadDir,
-    limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2GB Max (Consider lowering in production)
+    limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2GB Max
 });
 
 // Rate Limiters
@@ -79,14 +82,14 @@ const loginLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000, // 1 minute
-    max: 100, // Limit each IP to 100 requests per windowMs
+    max: 100,
     message: { message: "تجاوزت الحد المسموح من الطلبات." }
 });
 
 // Apply general limiter to all /api routes except login
 app.use('/api/', (req, res, next) => {
     if (req.path === '/saveUser') {
-        return next(); // Skip general limiter for login (handled by loginLimiter)
+        return next();
     }
     apiLimiter(req, res, next);
 });
@@ -176,7 +179,7 @@ function shuffleArray(array) {
 
 // ==================== Routes ====================
 
-// Smart Multi-Cloud Failover Upload 
+// Smart Multi-Cloud Failover Upload (with Retry, Timeout & Async Cleanup)
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     let absoluteFilePath = null;
     try {
@@ -241,7 +244,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
                     console.log(`[${req.requestId}] Upload completed successfully using provider: ${finalProvider}`);
                 } catch (err) {
                     clearTimeout(timeoutId);
-                    if (fileStream) fileStream.destroy(); 
+                    if (fileStream) fileStream.destroy(); // Prevent memory leaks
                     console.warn(`[${req.requestId}] Attempt ${attempt} failed for provider ${providerConfig.name}.`);
                     attempt++;
                 }
@@ -269,7 +272,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         res.status(200).json({ message: "تم الرفع بنجاح." });
     } catch (error) {
         console.error(`[${req.requestId}] Multi-cloud upload failed:`, error.message);
-        res.status(500).json({ message: error.message || "حدث خطأ غير متوقع أثناء الرفع." });
+        res.status(500).json({ message: "حدث خطأ غير متوقع أثناء الرفع." });
     } finally {
         if (absoluteFilePath && fs.existsSync(absoluteFilePath)) {
             try {
@@ -281,7 +284,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     }
 });
 
-// Dynamic Video Streamer with Error Handling
+// Dynamic Video Streamer with Range Validation and Error Handling
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = req.params.msgId;
@@ -529,112 +532,4 @@ app.post('/api/admin/get-grade-content', authenticateToken, requireAdmin, async 
     try {
         const { grade } = req.body;
         const contentCollection = db.collection('curriculum_content');
-        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [], publicQuizzes: [] };
-        res.status(200).json(content);
-    } catch (err) { res.status(500).json({ message: "حدث خطأ داخلي في الخادم." }); }
-});
-
-app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, res) => {
-    try {
-        const { grade, itemType, identifier } = req.body;
-        const contentCollection = db.collection('curriculum_content');
-        let updateQuery = {};
-        if (itemType === 'point') updateQuery = { $pull: { points: identifier } };
-        else if (itemType === 'question') updateQuery = { $pull: { questions: { question: identifier } } };
-        else if (itemType === 'test') updateQuery = { $pull: { tests: { testName: identifier } } };
-        else if (itemType === 'quiz') updateQuery = { $pull: { quizzes: { id: identifier } } };
-        else if (itemType === 'publicQuiz') updateQuery = { $pull: { publicQuizzes: { id: identifier } } };
-        await contentCollection.updateOne({ grade: grade }, updateQuery);
-        res.status(200).json({ message: "تم حذف العنصر بنجاح." });
-    } catch (err) { res.status(500).json({ message: "حدث خطأ داخلي في الخادم." }); }
-});
-
-app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
-    try {
-        const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
-        const { grade } = req.body;
-        
-        const user = await usersCollection.findOne({ email: email });
-        const studentPoints = user ? (user.points || 0) : 0;
-        
-        const contentCollection = db.collection('curriculum_content');  
-        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
-
-        const coursesCollection = db.collection('courses');
-        const courses = await coursesCollection.find({ grade: grade }).sort({ createdAt: 1 }).toArray();
-
-        res.status(200).json({ 
-            studentPoints, 
-            content,
-            courses: courses 
-        });  
-    } catch (error) { 
-        console.error(`[${req.requestId}] Student dashboard data fetch error:`, error.message);
-        res.status(500).json({ message: "فشل جلب البيانات." }); 
-    }
-});
-
-// Note: Ensure this route is actually intended to be public or update auth.
-app.get('/api/public/quiz', async (req, res) => {
-    try {
-        const { id } = req.query; 
-        if (!id) return res.status(400).json({ message: "تعذر العثور على الاختبار." });
-        const contentCollection = db.collection('curriculum_content');
-        const doc = await contentCollection.findOne({ "publicQuizzes.id": id });
-        if (!doc) return res.status(404).json({ message: "تعذر العثور على الاختبار." });
-        const quiz = doc.publicQuizzes.find(q => q.id === id);
-        
-        quiz.grade = doc.grade; 
-        res.status(200).json(quiz);
-    } catch (err) { res.status(500).json({ message: "حدث خطأ داخلي في الخادم." }); }
-});
-
-app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
-    try {
-        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
-        const { studentName, grade, quizId, score, percentage, visitorId, userAnswers } = req.body;
-        const contentCollection = db.collection('curriculum_content');
-        const resultObj = { email, studentName, score, percentage, visitorId: visitorId || null, userAnswers: userAnswers || [], date: new Date() };
-
-        if (quizId && quizId.startsWith('pub_')) {
-            const existingDoc = await contentCollection.findOne({ grade: grade, publicQuizzes: { $elemMatch: { id: quizId, results: { $elemMatch: { email: email } } } } });
-            if (existingDoc) return res.status(403).json({ message: "تم إرسال الاختبار مسبقاً." });
-            await contentCollection.updateOne({ grade: grade, "publicQuizzes.id": quizId }, { $push: { "publicQuizzes.$.results": resultObj } });
-        } else {
-            await contentCollection.updateOne({ grade: grade, "quizzes.id": quizId }, { $push: { "quizzes.$.results": resultObj } });
-        }
-        res.status(200).json({ message: "تم إرسال النتيجة بنجاح." });
-    } catch (error) { res.status(500).json({ message: "حدث خطأ داخلي في الخادم." }); }
-});
-
-app.post('/api/check-status', authenticateToken, async (req, res) => {
-    try {
-        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
-        const user = await usersCollection.findOne({ email: email });
-        if (!user) return res.status(404).json({ message: "المستخدم غير موجود." });
-        res.status(200).json({ status: user.status, reason: user.rejection_reason, phoneVerified: user.phoneVerified || false });
-    } catch (error) { res.status(500).json({ message: "حدث خطأ داخلي في الخادم." }); }
-});
-
-app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
-    try {
-        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
-        await usersCollection.updateOne({ email: email }, { $set: { phoneVerified: true } });
-        res.status(200).json({ message: "تم توثيق رقم الهاتف بنجاح." });
-    } catch (error) { res.status(500).json({ message: "حدث خطأ داخلي في الخادم." }); }
-});
-
-// Generic Error Handler for Multer and others
-app.use((err, req, res, next) => {
-    if (err instanceof multer.MulterError) {
-        return res.status(400).json({
-            message: err.code === 'LIMIT_FILE_SIZE' ? 'حجم الملف يتجاوز الحد المسموح.' : 'حدث خطأ أثناء رفع الملف.'
-        });
-    }
-    if (err) {
-        return res.status(400).json({ message: err.message });
-    }
-    next(err);
-});
-
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+        const content = await contentCollection.findOne({ grade: grade }) || { points: [],
