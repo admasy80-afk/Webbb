@@ -131,7 +131,7 @@ if(video) {
     }
 }
 
-// 🔥 دالة سحب وتشغيل المحاضرة سحابياً (محدثة مع فتح القسم المخفي وكاشف الأخطاء) 🔥
+// 🔥 دالة سحب وتشغيل المحاضرة سحابياً (مع فتح القسم المخفي وكاشف الأخطاء المتقدم) 🔥
 window.loadVideoToPlayer = function(msgId, title) {
     console.log("🟢 1. تم النقر على زر التشغيل. كود الدرس:", msgId);
 
@@ -142,35 +142,29 @@ window.loadVideoToPlayer = function(msgId, title) {
             return;
         }
 
-        // 🚨 الحل السحري: إظهار القسم المخفي اللي كان بيمنعك تشوف الفيديو 🚨
+        // إظهار القسم المخفي
         const liveSection = document.getElementById('liveStreamSection');
         if (liveSection) {
             liveSection.classList.add('stream-active');
-            console.log("🟢 2. تم فتح قسم المشغل بنجاح (الكلاس stream-active تمت إضافته).");
-        } else {
-            alert("❌ خطأ: لم يتم العثور على قسم المشغل <section id='liveStreamSection'>!");
         }
 
-        // 3. التحقق لو ضغطت على نفس الفيديو مرة ثانية عشان يوقف أو يكمل
+        // التحقق لو ضغطت على نفس الفيديو
         if (String(currentPlayingMsgId) === String(msgId)) {
-            console.log("🟢 3. الدرس محمل مسبقاً، سيتم الإيقاف/التشغيل.");
             if (video.paused) {
-                video.play().catch(e => alert("❌ المتصفح منع التشغيل: " + e.message));
+                video.play().catch(e => console.warn("المتصفح منع التشغيل: ", e));
             } else {
                 video.pause();
             }
             return;
         }
 
-        // تشغيل صوت النقرة
         try { sounds.click.play().catch(()=>{}); } catch(e) {}
-        
         currentPlayingMsgId = String(msgId);
         
         const playingTitle = document.getElementById('playingVideoTitle');
         if (playingTitle) playingTitle.innerText = title;
         
-        // 4. إخفاء الصورة الترحيبية (البوستر)
+        // إخفاء الصورة الترحيبية
         const placeholder = document.getElementById('videoPlaceholder');
         if (placeholder) {
             placeholder.style.opacity = '0';
@@ -178,7 +172,7 @@ window.loadVideoToPlayer = function(msgId, title) {
             setTimeout(() => placeholder.classList.add('hidden'), 400); 
         }
 
-        // 5. إظهار المشغل وعناصر التحكم
+        // إظهار المشغل
         video.classList.remove('hidden');
         const tapLeft = document.getElementById('tapLeft');
         const tapRight = document.getElementById('tapRight');
@@ -188,7 +182,35 @@ window.loadVideoToPlayer = function(msgId, title) {
         if(tapRight) tapRight.classList.remove('hidden');
         if(controlsBar) controlsBar.classList.remove('hidden');
         
-        // 6. تمرير الرابط للمشغل مع التوكن
+        // 🚨 إعدادات كاشف أخطاء الشبكة والفيديو 🚨
+        video.onerror = function() {
+            let errorMsg = "خطأ غير معروف في مشغل الفيديو.";
+            if (video.error) {
+                switch (video.error.code) {
+                    case 1: errorMsg = "تم إيقاف تحميل الفيديو بواسطة المستخدم."; break;
+                    case 2: errorMsg = "خطأ في الشبكة: السيرفر لا يستجيب أو الاتصال انقطع."; break;
+                    case 3: errorMsg = "صيغة الفيديو غير مدعومة (تأكد أن الفيديو المرفوع MP4)."; break;
+                    case 4: errorMsg = "الفيديو غير موجود، أو الرابط خاطئ (404/Unauthorized)."; break;
+                }
+            }
+            alert("❌ فشل تشغيل الفيديو:\n\n" + errorMsg + "\n\n(ID: " + msgId + ")");
+            console.error("Video Error:", video.error);
+        };
+        
+        // تنبيه إذا تأخر الفيديو أكثر من 15 ثانية (يكتشف بطء السيرفر)
+        let loadTimeout = setTimeout(() => {
+            if (video.readyState === 0) {
+                alert("⚠️ تنبيه: السيرفر (Railway) بطيء جداً أو لا يستجيب ببيانات الفيديو. يرجى مراجعة الباك إند.");
+            }
+        }, 15000);
+
+        // إيقاف التنبيه إذا بدأ الفيديو بالتحميل بنجاح
+        video.onloadeddata = () => {
+            clearTimeout(loadTimeout);
+            console.log("✅ تم استقبال بيانات الفيديو بنجاح من السيرفر.");
+        };
+
+        // تمرير الرابط للمشغل مع التوكن
         console.log("🟢 4. جاري طلب الفيديو من السيرفر...");
         video.pause();
         const activeToken = localStorage.getItem('dahih_token'); 
@@ -196,25 +218,21 @@ window.loadVideoToPlayer = function(msgId, title) {
         video.load();
         video.style.opacity = '1';
         
-        // 7. تشغيل الفيديو وطباعة أي خطأ لو المتصفح منعه
-        video.play().then(() => {
-            console.log("✅ 5. الفيديو يعمل الآن بنجاح!");
-        }).catch(err => {
+        video.play().catch(err => {
             console.error("⚠️ المتصفح منع التشغيل التلقائي:", err);
             const centerPlayBtn = document.getElementById('centerPlayBtn');
             if(centerPlayBtn) centerPlayBtn.style.opacity = '1';
         });
 
-        // 8. تلوين الكارت الخاص بالدرس عشان يبان إنه شغال
+        // تلوين الكارت الخاص بالدرس
         document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
         const activeCard = document.getElementById(`course_${msgId}`);
         if(activeCard) activeCard.classList.add('card-active');
         
-        // 9. النزول التلقائي للشاشة عند المشغل
         if (liveSection) liveSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     } catch (criticalError) {
-        console.error("❌ خطأ كارثي أوقف الدالة:", criticalError);
+        console.error("❌ خطأ برمجي:", criticalError);
         alert("🚨 خطأ برمجي: " + criticalError.message);
     }
 };
@@ -286,7 +304,7 @@ async function fetchDashboardData(updateCourses = true) {
         if (res.ok) {
             const data = await res.json();
             
-            // 🎥 ضخ وعرض مصفوفة الحصص (فقط لو updateCourses = true عشان نحمي الزرار وقت الضغط)
+            // 🎥 ضخ وعرض مصفوفة الحصص
             const coursesContainer = document.getElementById('studentCoursesContainer');
             if (coursesContainer && updateCourses) {
                 const coursesList = data.courses || data.content?.courses || [];
@@ -295,7 +313,6 @@ async function fetchDashboardData(updateCourses = true) {
                     let coursesHTML = '';
                     coursesList.slice().reverse().forEach((course, index) => {
                         const isActive = String(currentPlayingMsgId) === String(course.telegramMsgId) ? 'card-active' : '';
-                        // التأكد من استبدال المسافات والرموز المزعجة في العنوان
                         const safeTitle = course.courseName ? course.courseName.replace(/'/g, "\\'") : 'درس بدون عنوان';
                         
                         coursesHTML += `
@@ -327,7 +344,7 @@ async function fetchDashboardData(updateCourses = true) {
                 currentPointsTracker = newPoints;
             }
 
-            // تحديث كروت الكويزات والاختبارات المتاحة
+            // تحديث كروت الكويزات
             window.availableQuizzes = data.content?.quizzes || [];
             const qzContainer = document.getElementById('onlineQuizzesContainer');
             if (qzContainer) {
@@ -348,7 +365,7 @@ async function fetchDashboardData(updateCourses = true) {
                 } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
             }
 
-            // تحديث الملاحظات وأهم نقاط المنهج
+            // تحديث الملاحظات
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
@@ -359,7 +376,7 @@ async function fetchDashboardData(updateCourses = true) {
                 } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
             }
 
-            // تحديث الأسئلة المقالية والHints
+            // تحديث الأسئلة المقالية
             const qContainer = document.getElementById('questionsContainer');
             if (qContainer) {
                 if (data.content?.questions && data.content.questions.length > 0) {
@@ -374,7 +391,7 @@ async function fetchDashboardData(updateCourses = true) {
     } catch (err) { console.log("Error fetching data:", err); }
 }
 
-// دوال إدارة النوافذ المنبثقة للاختبارات (Quizzes)
+// دوال إدارة النوافذ المنبثقة للاختبارات
 function openQuizModal(quizId) {
     try { sounds.click.play().catch(()=>{}); } catch(e) {}
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
