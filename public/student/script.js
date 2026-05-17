@@ -21,13 +21,10 @@ if (!userDataStr) {
     document.getElementById('studentName').innerText = firstName;
     document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
     
-    // التحديث الأول يجلب الكورسات
+    // التحديث الأول يبني الكورسات (true)
     fetchDashboardData(true);
-    
-    // التحديثات الدورية لا تعيد بناء الكورسات لحماية الـ DOM (فقط النقاط والاختبارات)
-    setInterval(() => {
-        fetchDashboardData(false);
-    }, 8000); 
+    // التحديث الدوري يتجاهل الكورسات عشان ميقتلش الزر أثناء الضغط (false)
+    setInterval(() => fetchDashboardData(false), 8000); 
 }
 
 // ==================== عقل المشغل الذكي (Native HTML5 Player Engine) ====================
@@ -57,15 +54,15 @@ if(video) {
     };
 
     video.addEventListener('click', togglePlay);
-    centerPlayBtn.addEventListener('click', togglePlay);
+    if(centerPlayBtn) centerPlayBtn.addEventListener('click', togglePlay);
 
     video.addEventListener('play', () => {
-        centerPlayBtn.style.opacity = '0';
+        if(centerPlayBtn) centerPlayBtn.style.opacity = '0';
         video.classList.remove('video-blur');
     });
 
     video.addEventListener('pause', () => {
-        centerPlayBtn.style.opacity = '1';
+        if(centerPlayBtn) centerPlayBtn.style.opacity = '1';
         video.classList.add('video-blur'); 
     });
 
@@ -82,23 +79,28 @@ if(video) {
         setTimeout(() => skipIndicator.classList.add('hidden'), 800);
     };
 
-    tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(10, "⏩ +10 ثواني"); });
-    tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(-10, "⏪ -10 ثواني"); });
+    // الـ RTL يخلي اليسار تقديم واليمين تأخير للمشاهدة المريحة
+    if(tapLeft) tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(10, "⏩ +10 ثواني"); });
+    if(tapRight) tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(-10, "⏪ -10 ثواني"); });
 
-    speedBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
-        video.playbackRate = speeds[currentSpeedIndex];
-        speedBtn.innerText = speeds[currentSpeedIndex] + 'x';
-    });
+    if(speedBtn) {
+        speedBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentSpeedIndex = (currentSpeedIndex + 1) % speeds.length;
+            video.playbackRate = speeds[currentSpeedIndex];
+            speedBtn.innerText = speeds[currentSpeedIndex] + 'x';
+        });
+    }
 
-    muteBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        video.muted = !video.muted;
-        muteBtn.innerHTML = video.muted 
-            ? `<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>`
-            : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"></path></svg>`;
-    });
+    if(muteBtn) {
+        muteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            video.muted = !video.muted;
+            muteBtn.innerHTML = video.muted 
+                ? `<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>`
+                : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"></path></svg>`;
+        });
+    }
 
     const formatTime = (time) => {
         if(isNaN(time)) return "00:00";
@@ -108,96 +110,136 @@ if(video) {
     };
 
     video.addEventListener('timeupdate', () => {
+        if(!progressBar || !currentTimeDisplay) return;
         const percent = (video.currentTime / video.duration) * 100;
         progressBar.style.width = `${percent}%`;
         currentTimeDisplay.innerText = formatTime(video.currentTime);
     });
 
     video.addEventListener('loadedmetadata', () => {
-        durationDisplay.innerText = formatTime(video.duration);
+        if(durationDisplay) durationDisplay.innerText = formatTime(video.duration);
     });
 
-    progressContainer.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if(video.src === "") return;
-        const rect = progressContainer.getBoundingClientRect();
-        const pos = (e.clientX - rect.left) / rect.width;
-        video.currentTime = pos * video.duration; 
-    });
+    if(progressContainer) {
+        progressContainer.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if(video.src === "") return;
+            const rect = progressContainer.getBoundingClientRect();
+            const pos = (e.clientX - rect.left) / rect.width;
+            video.currentTime = pos * video.duration; 
+        });
+    }
 }
 
-// 🔥 دالة سحب وتشغيل المحاضرة سحابياً (مدمج فيها كاشف أخطاء لطباعة المشكلة بالملي) 🔥
+// دالة سحب وتشغيل المحاضرة سحابياً عند النقر عليها بالأنيميشن السلس (مضمونة 100%)
 window.loadVideoToPlayer = function(msgId, title) {
-    console.log("CLICKED VIDEO:", msgId);
-    console.log("🎯 تم الضغط على زرار تشغيل الدرس الحصة ID:", msgId, "بإسم:", title);
-
-    const vid = document.getElementById('dahihPlayer');
-    
-    // التحقق من نوع البيانات لتفادي التعليق (String vs Number) وإضافة التشغيل والإيقاف
-    if (String(currentPlayingMsgId) === String(msgId)) {
-        if (vid) {
-            if (vid.paused) {
-                vid.play().catch(()=>{});
-            } else {
-                vid.pause();
-            }
-        }
-        return; // الخروج من الدالة لأن المحاضرة محملة مسبقاً
+    if (!video) {
+        console.error("عنصر الفيديو غير موجود!");
+        return;
     }
-
-    const bgPlaceholder = document.getElementById('videoPlaceholder');
-    const tLeft = document.getElementById('tapLeft');
-    const tRight = document.getElementById('tapRight');
-    const cBar = document.querySelector('.custom-controls');
-    const pTitle = document.getElementById('playingVideoTitle');
-
-    if (!vid) {
-        console.error("❌ خطأ كارثي: عنصر الفديو <video id='dahihPlayer'> غير موجود بالصفحة!");
-        alert("تنبيه الإدارة: عنصر المشغل غير موجود في كود HTML");
+    
+    // لو الطالب ضغط على نفس المحاضرة مرتين، وقف أو شغل (بدل ما يعمل return صامت)
+    if (String(currentPlayingMsgId) === String(msgId)) {
+        if (video.paused) {
+            video.play().catch(()=>{});
+        } else {
+            video.pause();
+        }
         return;
     }
 
     try { sounds.click.play().catch(()=>{}); } catch(e) {}
     
-    // تحديث الآيدي الحالي وتوحيده كنص
     currentPlayingMsgId = String(msgId);
-    if(pTitle) pTitle.innerText = title;
+    if(playingTitle) playingTitle.innerText = title;
     
-    if(bgPlaceholder) {
-        bgPlaceholder.style.opacity = '0';
-        bgPlaceholder.style.transform = 'scale(1.05)';
-        
-        setTimeout(() => {
-            bgPlaceholder.classList.add('hidden');
-            
-            vid.classList.remove('hidden');
-            vid.style.opacity = '1';
-            
-            if(tLeft) tLeft.classList.remove('hidden');
-            if(tRight) tRight.classList.remove('hidden');
-            if(cBar) cBar.classList.remove('hidden');
-            
-            // شحن وتمرير الفديو من السيرفر
-            console.log("🎬 جاري تمرير المسار السحابي الآمن للمشغل...");
-            vid.pause();
-            vid.src = `/api/video/stream/${msgId}?token=${token}`; 
-            vid.load();
-            vid.play()
-                .then(() => console.log("🚀 كفو! المحاضرة بدأت تعمل بنجاح!"))
-                .catch(e => console.log("⚠️ تم الإيقاف المؤقت في انتظار نقرة الطالب للتشغيل:", e.message));
-        }, 400); 
+    // 🎬 تأثير الـ Fade Out السلس للبوستر
+    if(placeholder) {
+        placeholder.style.opacity = '0';
+        placeholder.style.transform = 'scale(1.05)';
+        setTimeout(() => placeholder.classList.add('hidden'), 400); 
     }
 
-    // تحديث ألوان الأزرار (إزالة الفعال من الجميع وإضافته للمحدد)
+    // إظهار الفيديو وعناصر التحكم
+    video.classList.remove('hidden');
+    if(tapLeft) tapLeft.classList.remove('hidden');
+    if(tapRight) tapRight.classList.remove('hidden');
+    if(controlsBar) controlsBar.classList.remove('hidden');
+    
+    // شحن بث المحاضرة مباشرة من السيرفر مع التوكن
+    video.pause();
+    video.src = `/api/video/stream/${msgId}?token=${token}`; // التوكن مهم جداً للباك إند
+    video.load();
+    
+    video.style.opacity = '1';
+    video.play().catch(err => console.error("تنبيه: المشغل ينتظر تفاعل المستخدم", err));
+
+    // تمييز الكارد الفعال في الأرشيف
     document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
     const activeCard = document.getElementById(`course_${msgId}`);
     if(activeCard) activeCard.classList.add('card-active');
     
-    document.getElementById('liveStreamSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // تمرير الشاشة للمشغل ببطء
+    const liveSection = document.getElementById('liveStreamSection');
+    if(liveSection) liveSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
+// ==================== وضع السينما وتكبير الشاشة ====================
+function toggleTheaterMode() {
+    try { sounds.click.play().catch(()=>{}); } catch(e) {}
+    const body = document.body;
+    const streamSection = document.getElementById('liveStreamSection');
+    if(!streamSection) return;
+
+    body.classList.toggle('bg-black');
+    const isTheater = body.classList.contains('bg-black');
+
+    document.querySelectorAll('body > *:not(#liveStreamSection)').forEach(el => {
+        el.style.opacity = isTheater ? '0' : '1';
+        el.style.pointerEvents = isTheater ? 'none' : 'auto';
+        el.style.transition = 'opacity 0.4s ease';
+    });
+}
+
+function toggleStudentFullScreen() {
+    const fsWrapper = document.getElementById('fs-wrapper');
+    if (!fsWrapper) return;
+    if (!document.fullscreenElement) {
+        fsWrapper.requestFullscreen().catch(()=>{});
+    } else {
+        document.exitFullscreen().catch(()=>{});
+    }
+}
+
+function toggleSection(sectionId, iconId) {
+    try { sounds.click.play().catch(()=>{}); } catch(e) {}
+    const section = document.getElementById(sectionId);
+    const icon = document.getElementById(iconId);
+    if (!section || !icon) return;
+    section.classList.toggle('collapsed');
+    icon.classList.toggle('collapsed');
+    if(section.classList.contains('collapsed')) { 
+        section.style.maxHeight = '0px'; 
+        section.style.opacity = '0.5';
+    } else { 
+        section.style.maxHeight = '1000px'; 
+        section.style.opacity = '1';
+    }
+}
+
+function animateValue(obj, start, end, duration) {
+    let startTimestamp = null;
+    const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const easeOut = progress * (2 - progress);
+        obj.innerText = Math.floor(easeOut * (end - start) + start) + '%';
+        if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+}
+
 // ==================== سحب وضخ البيانات من الباك إند المحمي ====================
-// أضفنا بارامتر updateCourses لمنع إعادة بناء الكورسات أثناء التحديث الدوري
 async function fetchDashboardData(updateCourses = true) {
     try {
         const res = await fetch('/api/student/dashboard-data', {
@@ -209,8 +251,8 @@ async function fetchDashboardData(updateCourses = true) {
         if (res.ok) {
             const data = await res.json();
             
+            // 🎥 ضخ وعرض مصفوفة الحصص (فقط لو updateCourses = true عشان نحمي الزرار وقت الضغط)
             const coursesContainer = document.getElementById('studentCoursesContainer');
-            // لا نحدث الكورسات إلا إذا كان updateCourses = true (أول مرة فقط أو عند تحديث يدوي)
             if (coursesContainer && updateCourses) {
                 const coursesList = data.courses || data.content?.courses || [];
                 
@@ -218,18 +260,19 @@ async function fetchDashboardData(updateCourses = true) {
                     let coursesHTML = '';
                     coursesList.slice().reverse().forEach((course, index) => {
                         const isActive = String(currentPlayingMsgId) === String(course.telegramMsgId) ? 'card-active' : '';
-                        const safeTitle = course.courseName ? course.courseName.replace(/"/g, '&quot;') : 'درس بدون عنوان';
+                        // التأكد من استبدال المسافات والرموز المزعجة في العنوان
+                        const safeTitle = course.courseName ? course.courseName.replace(/'/g, "\\'") : 'درس بدون عنوان';
                         
                         coursesHTML += `
                         <div id="course_${course.telegramMsgId}" class="course-card ${isActive} bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:border-yellow-500/30">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded font-bold">الحصة ${coursesList.length - index}</span>
-                                    <h3 class="font-bold text-base md:text-lg text-white">${safeTitle}</h3>
+                                    <h3 class="font-bold text-base md:text-lg text-white">${course.courseName}</h3>
                                 </div>
                                 <p class="text-xs md:text-sm text-gray-400 mt-2 leading-relaxed">${course.description || 'لا يوجد وصف مضاف لهذه المحاضرة.'}</p>
                             </div>
-                            <button onclick="window.loadVideoToPlayer('${course.telegramMsgId}', this.getAttribute('data-title'))" data-title="${safeTitle}" class="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-yellow-500 hover:text-black text-yellow-500 font-bold px-5 py-2.5 rounded-xl border border-yellow-500/20 hover:border-transparent transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                            <button onclick="window.loadVideoToPlayer('${course.telegramMsgId}', '${safeTitle}')" class="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-yellow-500 hover:text-black text-yellow-500 font-bold px-5 py-2.5 rounded-xl border border-yellow-500/20 hover:border-transparent transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> تشغيل الدرس
                             </button>
                         </div>`;
@@ -240,19 +283,16 @@ async function fetchDashboardData(updateCourses = true) {
                 }
             }
 
+            // تحديث التقييم العام
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             const newPoints = parseInt(data.studentPoints || 0);
             if (pointsDisplay && currentPointsTracker !== newPoints) {
                 const startPoint = currentPointsTracker === -1 ? 0 : currentPointsTracker;
-                // إذا كانت دالة animateValue غير موجودة تأكد من إضافتها أو استبدال السطر بتعيين النص مباشرة
-                if (typeof animateValue === 'function') {
-                    animateValue(pointsDisplay, startPoint, newPoints, 1500);
-                } else {
-                    pointsDisplay.innerText = newPoints;
-                }
+                animateValue(pointsDisplay, startPoint, newPoints, 1500);
                 currentPointsTracker = newPoints;
             }
 
+            // تحديث كروت الكويزات والاختبارات المتاحة
             window.availableQuizzes = data.content?.quizzes || [];
             const qzContainer = document.getElementById('onlineQuizzesContainer');
             if (qzContainer) {
@@ -273,6 +313,7 @@ async function fetchDashboardData(updateCourses = true) {
                 } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
             }
 
+            // تحديث الملاحظات وأهم نقاط المنهج
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
@@ -283,6 +324,7 @@ async function fetchDashboardData(updateCourses = true) {
                 } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
             }
 
+            // تحديث الأسئلة المقالية والHints
             const qContainer = document.getElementById('questionsContainer');
             if (qContainer) {
                 if (data.content?.questions && data.content.questions.length > 0) {
@@ -299,7 +341,7 @@ async function fetchDashboardData(updateCourses = true) {
 
 // دوال إدارة النوافذ المنبثقة للاختبارات (Quizzes)
 function openQuizModal(quizId) {
-    sounds.click.play().catch(()=>{});
+    try { sounds.click.play().catch(()=>{}); } catch(e) {}
     const quiz = window.availableQuizzes.find(q => q.id === quizId);
     if (!quiz) return;
 
@@ -313,7 +355,7 @@ function openQuizModal(quizId) {
         html += `<div class="bg-black/40 p-4 md:p-5 rounded-xl border border-white/5"><h4 class="font-semibold text-base md:text-lg mb-4 text-white leading-relaxed"><span class="text-yellow-500 mr-2">${qIndex + 1}.</span>${q.questionText}</h4><div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
         q.options.forEach((opt, optIndex) => {
             const letters = ['أ', 'ب', 'ج', 'د'];
-            html += `<label class="quiz-option cursor-pointer group" onchange="if('vibrate' in navigator) navigator.vibrate(20); sounds.click.play().catch(()=>{})"><input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden"><div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-yellow-500/50 transition-all h-full"><div class="w-6 h-6 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:text-white shrink-0 transition-colors group-hover:bg-black/80">${letters[optIndex]}</div><span class="text-gray-300 text-sm md:text-base leading-relaxed">${opt}</span></div></label>`;
+            html += `<label class="quiz-option cursor-pointer group" onchange="if('vibrate' in navigator) navigator.vibrate(20); try { sounds.click.play().catch(()=>{}); } catch(e) {}"><input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden"><div class="flex items-center gap-3 p-3 md:p-4 rounded-xl bg-white/5 border border-white/10 group-hover:border-yellow-500/50 transition-all h-full"><div class="w-6 h-6 rounded-md bg-black/50 border border-white/20 flex items-center justify-center text-xs font-bold text-gray-400 group-hover:text-white shrink-0 transition-colors group-hover:bg-black/80">${letters[optIndex]}</div><span class="text-gray-300 text-sm md:text-base leading-relaxed">${opt}</span></div></label>`;
         });
         html += `</div></div>`;
     });
@@ -346,7 +388,7 @@ async function submitQuiz(event, quizId) {
         });
 
         if (percentage >= 85) {
-            sounds.success.play().catch(()=>{});
+            try { sounds.success.play().catch(()=>{}); } catch(e) {}
             if(typeof confetti === 'function') {
                 confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
             }
@@ -361,7 +403,7 @@ async function submitQuiz(event, quizId) {
 }
 
 function closeQuizModal() { 
-    sounds.click.play().catch(()=>{});
+    try { sounds.click.play().catch(()=>{}); } catch(e) {}
     document.getElementById('quizModal')?.classList.add('hidden'); 
 }
 
