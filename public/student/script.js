@@ -21,8 +21,13 @@ if (!userDataStr) {
     document.getElementById('studentName').innerText = firstName;
     document.getElementById('studentGrade').innerText = currentUser.grade || "الصف غير محدد";
     
-    fetchDashboardData();
-    setInterval(fetchDashboardData, 8000); 
+    // التحديث الأول يجلب الكورسات
+    fetchDashboardData(true);
+    
+    // التحديثات الدورية لا تعيد بناء الكورسات لحماية الـ DOM (فقط النقاط والاختبارات)
+    setInterval(() => {
+        fetchDashboardData(false);
+    }, 8000); 
 }
 
 // ==================== عقل المشغل الذكي (Native HTML5 Player Engine) ====================
@@ -123,9 +128,23 @@ if(video) {
 
 // 🔥 دالة سحب وتشغيل المحاضرة سحابياً (مدمج فيها كاشف أخطاء لطباعة المشكلة بالملي) 🔥
 window.loadVideoToPlayer = function(msgId, title) {
+    console.log("CLICKED VIDEO:", msgId);
     console.log("🎯 تم الضغط على زرار تشغيل الدرس الحصة ID:", msgId, "بإسم:", title);
 
     const vid = document.getElementById('dahihPlayer');
+    
+    // التحقق من نوع البيانات لتفادي التعليق (String vs Number) وإضافة التشغيل والإيقاف
+    if (String(currentPlayingMsgId) === String(msgId)) {
+        if (vid) {
+            if (vid.paused) {
+                vid.play().catch(()=>{});
+            } else {
+                vid.pause();
+            }
+        }
+        return; // الخروج من الدالة لأن المحاضرة محملة مسبقاً
+    }
+
     const bgPlaceholder = document.getElementById('videoPlaceholder');
     const tLeft = document.getElementById('tapLeft');
     const tRight = document.getElementById('tapRight');
@@ -140,7 +159,8 @@ window.loadVideoToPlayer = function(msgId, title) {
 
     try { sounds.click.play().catch(()=>{}); } catch(e) {}
     
-    currentPlayingMsgId = msgId;
+    // تحديث الآيدي الحالي وتوحيده كنص
+    currentPlayingMsgId = String(msgId);
     if(pTitle) pTitle.innerText = title;
     
     if(bgPlaceholder) {
@@ -168,6 +188,7 @@ window.loadVideoToPlayer = function(msgId, title) {
         }, 400); 
     }
 
+    // تحديث ألوان الأزرار (إزالة الفعال من الجميع وإضافته للمحدد)
     document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
     const activeCard = document.getElementById(`course_${msgId}`);
     if(activeCard) activeCard.classList.add('card-active');
@@ -176,7 +197,8 @@ window.loadVideoToPlayer = function(msgId, title) {
 };
 
 // ==================== سحب وضخ البيانات من الباك إند المحمي ====================
-async function fetchDashboardData() {
+// أضفنا بارامتر updateCourses لمنع إعادة بناء الكورسات أثناء التحديث الدوري
+async function fetchDashboardData(updateCourses = true) {
     try {
         const res = await fetch('/api/student/dashboard-data', {
             method: 'POST', 
@@ -188,13 +210,14 @@ async function fetchDashboardData() {
             const data = await res.json();
             
             const coursesContainer = document.getElementById('studentCoursesContainer');
-            if (coursesContainer) {
+            // لا نحدث الكورسات إلا إذا كان updateCourses = true (أول مرة فقط أو عند تحديث يدوي)
+            if (coursesContainer && updateCourses) {
                 const coursesList = data.courses || data.content?.courses || [];
                 
                 if (coursesList.length > 0) {
                     let coursesHTML = '';
                     coursesList.slice().reverse().forEach((course, index) => {
-                        const isActive = currentPlayingMsgId === course.telegramMsgId ? 'card-active' : '';
+                        const isActive = String(currentPlayingMsgId) === String(course.telegramMsgId) ? 'card-active' : '';
                         const safeTitle = course.courseName ? course.courseName.replace(/"/g, '&quot;') : 'درس بدون عنوان';
                         
                         coursesHTML += `
@@ -206,7 +229,7 @@ async function fetchDashboardData() {
                                 </div>
                                 <p class="text-xs md:text-sm text-gray-400 mt-2 leading-relaxed">${course.description || 'لا يوجد وصف مضاف لهذه المحاضرة.'}</p>
                             </div>
-                            <button onclick="window.loadVideoToPlayer(${course.telegramMsgId}, this.getAttribute('data-title'))" data-title="${safeTitle}" class="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-yellow-500 hover:text-black text-yellow-500 font-bold px-5 py-2.5 rounded-xl border border-yellow-500/20 hover:border-transparent transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                            <button onclick="window.loadVideoToPlayer('${course.telegramMsgId}', this.getAttribute('data-title'))" data-title="${safeTitle}" class="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-yellow-500 hover:text-black text-yellow-500 font-bold px-5 py-2.5 rounded-xl border border-yellow-500/20 hover:border-transparent transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> تشغيل الدرس
                             </button>
                         </div>`;
@@ -221,7 +244,12 @@ async function fetchDashboardData() {
             const newPoints = parseInt(data.studentPoints || 0);
             if (pointsDisplay && currentPointsTracker !== newPoints) {
                 const startPoint = currentPointsTracker === -1 ? 0 : currentPointsTracker;
-                animateValue(pointsDisplay, startPoint, newPoints, 1500);
+                // إذا كانت دالة animateValue غير موجودة تأكد من إضافتها أو استبدال السطر بتعيين النص مباشرة
+                if (typeof animateValue === 'function') {
+                    animateValue(pointsDisplay, startPoint, newPoints, 1500);
+                } else {
+                    pointsDisplay.innerText = newPoints;
+                }
                 currentPointsTracker = newPoints;
             }
 
@@ -327,7 +355,7 @@ async function submitQuiz(event, quizId) {
         let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
         const modalContent = document.getElementById('quizModalContent');
         if (modalContent) {
-            modalContent.innerHTML = `<div class="text-center py-10 px-6 flex flex-col items-center"><h2 class="text-2xl font-bold text-white mb-2">تم تسجيل النتيجة بنجاح!</h2><div class="text-7xl font-black ${colorClass} my-6" dir="ltr">${percentage}%</div><p class="text-gray-400 mb-6">الإجابات الصحيحة: ${score} من أصل ${quiz.questions.length}</p><button onclick="closeQuizModal(); fetchDashboardData();" class="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl transition-all">العودة للوحة التحكم</button></div>`;
+            modalContent.innerHTML = `<div class="text-center py-10 px-6 flex flex-col items-center"><h2 class="text-2xl font-bold text-white mb-2">تم تسجيل النتيجة بنجاح!</h2><div class="text-7xl font-black ${colorClass} my-6" dir="ltr">${percentage}%</div><p class="text-gray-400 mb-6">الإجابات الصحيحة: ${score} من أصل ${quiz.questions.length}</p><button onclick="closeQuizModal(); fetchDashboardData(false);" class="bg-yellow-500 text-black font-bold px-8 py-3 rounded-xl transition-all">العودة للوحة التحكم</button></div>`;
         }
     } catch (err) { alert("حدث خطأ أثناء حفظ النتيجة."); }
 }
