@@ -11,31 +11,34 @@ const rateLimit = require('express-rate-limit');
 const multer = require('multer');
 const cors = require('cors');
 
-// Note: You must run `npm install file-type@16.5.4` (using CommonJS compatible version)
-let fileTypeFromFile;
-import('file-type').then(module => {
-    fileTypeFromFile = module.fileTypeFromFile;
-}).catch(err => console.error("Failed to load file-type module:", err));
-
-// S3 Cloud Storage Libraries
-const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
-const { Upload } = require('@aws-sdk/lib-storage');
-
-// CRITICAL SECURITY: Enforce JWT Secret
+// الحماية القصوى: فرض وجود الـ JWT_SECRET في الـ Production
 if (!process.env.JWT_SECRET) {
     console.error("FATAL ERROR: JWT_SECRET environment variable is missing.");
     process.exit(1);
 }
 const JWT_SECRET = process.env.JWT_SECRET;
 
+// التحقق من نوع الملف بشكل حقيقي عبر تتبع الـ Magic Numbers
+let fileTypeFromFile;
+try {
+    const fileTypeModule = require('file-type');
+    fileTypeFromFile = fileTypeModule.fileTypeFromFile;
+} catch (err) {
+    console.error("Failed to initialize file-type module:", err.message);
+}
+
+// مكاتب التخزين السحابي (S3)
+const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { Upload } = require('@aws-sdk/lib-storage');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Security and Proxy Setup
+// إعدادات الحماية والبروكسي
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// CORS Setup
+// إعدادات الـ CORS
 const allowedOrigins = process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 app.use(cors({
     origin: function(origin, callback){
@@ -52,25 +55,25 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Request ID Tracking Middleware
+// تتبع مسار العمليات عبر معرف فريد (Request ID Tracking)
 app.use((req, res, next) => {
     req.requestId = crypto.randomUUID();
     next();
 });
 
-// Upload Directory Setup
+// إعداد مجلد المجلدات المؤقتة
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Multer Configuration
+// إعداد الـ Multer
 const upload = multer({ 
     dest: uploadDir,
-    limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2GB Max (Consider lowering in production)
+    limits: { fileSize: 2 * 1024 * 1024 * 1024 } // الحد الأقصى 2 جيجا
 });
 
-// Rate Limiters
+// جدران الحماية وتقييد الطلبات (Rate Limiters)
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
@@ -78,15 +81,15 @@ const loginLimiter = rateLimit({
 });
 
 const apiLimiter = rateLimit({
-    windowMs: 60 * 1000, // 1 minute
-    max: 100, // Limit each IP to 100 requests per windowMs
+    windowMs: 60 * 1000, // دقيقة واحدة
+    max: 100,
     message: { message: "تجاوزت الحد المسموح من الطلبات." }
 });
 
-// Apply general limiter to all /api routes except login
+// تطبيق حامي الطلبات العام لجميع مسارات الـ API عدا تسجيل الدخول
 app.use('/api/', (req, res, next) => {
     if (req.path === '/saveUser') {
-        return next(); // Skip general limiter for login (handled by loginLimiter)
+        return next();
     }
     apiLimiter(req, res, next);
 });
@@ -176,7 +179,7 @@ function shuffleArray(array) {
 
 // ==================== Routes ====================
 
-// Smart Multi-Cloud Failover Upload 
+// الرفع الذكي الموزع مع نظام الإنقاذ التلقائي ومكافحة تسريب الذاكرة
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     let absoluteFilePath = null;
     try {
@@ -188,7 +191,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
 
         absoluteFilePath = path.resolve(file.path);
 
-        // Strict File Signature Validation
+        // التحقق الحقيقي من صحة توقيع الفيديو
         if (fileTypeFromFile) {
              const type = await fileTypeFromFile(absoluteFilePath);
              if (!type || !type.mime.startsWith('video/')) {
@@ -241,7 +244,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
                     console.log(`[${req.requestId}] Upload completed successfully using provider: ${finalProvider}`);
                 } catch (err) {
                     clearTimeout(timeoutId);
-                    if (fileStream) fileStream.destroy(); 
+                    if (fileStream) fileStream.destroy(); // تدمير الـ Stream لمنع تسرب الذاكرة
                     console.warn(`[${req.requestId}] Attempt ${attempt} failed for provider ${providerConfig.name}.`);
                     attempt++;
                 }
@@ -281,7 +284,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     }
 });
 
-// Dynamic Video Streamer with Error Handling
+// بث الفيديو الموزع والمحمي بالكامل
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = req.params.msgId;
@@ -292,7 +295,6 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         }
 
         const coursesCollection = db.collection('courses');
-        // Support both old integer IDs and new UUIDs
         const queryId = isNaN(parseInt(msgId, 10)) ? msgId : parseInt(msgId, 10);
         const course = await coursesCollection.findOne({ telegramMsgId: queryId });
 
@@ -574,7 +576,6 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     }
 });
 
-// Note: Ensure this route is actually intended to be public or update auth.
 app.get('/api/public/quiz', async (req, res) => {
     try {
         const { id } = req.query; 
@@ -638,4 +639,3 @@ app.use((err, req, res, next) => {
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
