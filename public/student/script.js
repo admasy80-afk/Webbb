@@ -131,57 +131,92 @@ if(video) {
     }
 }
 
-// دالة سحب وتشغيل المحاضرة سحابياً عند النقر عليها بالأنيميشن السلس (مضمونة 100%)
+// 🔥 دالة سحب وتشغيل المحاضرة سحابياً (محدثة مع فتح القسم المخفي وكاشف الأخطاء) 🔥
 window.loadVideoToPlayer = function(msgId, title) {
-    if (!video) {
-        console.error("عنصر الفيديو غير موجود!");
-        return;
-    }
-    
-    // لو الطالب ضغط على نفس المحاضرة مرتين، وقف أو شغل (بدل ما يعمل return صامت)
-    if (String(currentPlayingMsgId) === String(msgId)) {
-        if (video.paused) {
-            video.play().catch(()=>{});
-        } else {
-            video.pause();
+    console.log("🟢 1. تم النقر على زر التشغيل. كود الدرس:", msgId);
+
+    try {
+        const video = document.getElementById('dahihPlayer');
+        if (!video) {
+            alert("❌ خطأ: لم يتم العثور على عنصر المشغل <video id='dahihPlayer'>!");
+            return;
         }
-        return;
+
+        // 🚨 الحل السحري: إظهار القسم المخفي اللي كان بيمنعك تشوف الفيديو 🚨
+        const liveSection = document.getElementById('liveStreamSection');
+        if (liveSection) {
+            liveSection.classList.add('stream-active');
+            console.log("🟢 2. تم فتح قسم المشغل بنجاح (الكلاس stream-active تمت إضافته).");
+        } else {
+            alert("❌ خطأ: لم يتم العثور على قسم المشغل <section id='liveStreamSection'>!");
+        }
+
+        // 3. التحقق لو ضغطت على نفس الفيديو مرة ثانية عشان يوقف أو يكمل
+        if (String(currentPlayingMsgId) === String(msgId)) {
+            console.log("🟢 3. الدرس محمل مسبقاً، سيتم الإيقاف/التشغيل.");
+            if (video.paused) {
+                video.play().catch(e => alert("❌ المتصفح منع التشغيل: " + e.message));
+            } else {
+                video.pause();
+            }
+            return;
+        }
+
+        // تشغيل صوت النقرة
+        try { sounds.click.play().catch(()=>{}); } catch(e) {}
+        
+        currentPlayingMsgId = String(msgId);
+        
+        const playingTitle = document.getElementById('playingVideoTitle');
+        if (playingTitle) playingTitle.innerText = title;
+        
+        // 4. إخفاء الصورة الترحيبية (البوستر)
+        const placeholder = document.getElementById('videoPlaceholder');
+        if (placeholder) {
+            placeholder.style.opacity = '0';
+            placeholder.style.transform = 'scale(1.05)';
+            setTimeout(() => placeholder.classList.add('hidden'), 400); 
+        }
+
+        // 5. إظهار المشغل وعناصر التحكم
+        video.classList.remove('hidden');
+        const tapLeft = document.getElementById('tapLeft');
+        const tapRight = document.getElementById('tapRight');
+        const controlsBar = document.querySelector('.custom-controls');
+        
+        if(tapLeft) tapLeft.classList.remove('hidden');
+        if(tapRight) tapRight.classList.remove('hidden');
+        if(controlsBar) controlsBar.classList.remove('hidden');
+        
+        // 6. تمرير الرابط للمشغل مع التوكن
+        console.log("🟢 4. جاري طلب الفيديو من السيرفر...");
+        video.pause();
+        const activeToken = localStorage.getItem('dahih_token'); 
+        video.src = `/api/video/stream/${msgId}?token=${activeToken}`;
+        video.load();
+        video.style.opacity = '1';
+        
+        // 7. تشغيل الفيديو وطباعة أي خطأ لو المتصفح منعه
+        video.play().then(() => {
+            console.log("✅ 5. الفيديو يعمل الآن بنجاح!");
+        }).catch(err => {
+            console.error("⚠️ المتصفح منع التشغيل التلقائي:", err);
+            const centerPlayBtn = document.getElementById('centerPlayBtn');
+            if(centerPlayBtn) centerPlayBtn.style.opacity = '1';
+        });
+
+        // 8. تلوين الكارت الخاص بالدرس عشان يبان إنه شغال
+        document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
+        const activeCard = document.getElementById(`course_${msgId}`);
+        if(activeCard) activeCard.classList.add('card-active');
+        
+        // 9. النزول التلقائي للشاشة عند المشغل
+        if (liveSection) liveSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    } catch (criticalError) {
+        console.error("❌ خطأ كارثي أوقف الدالة:", criticalError);
+        alert("🚨 خطأ برمجي: " + criticalError.message);
     }
-
-    try { sounds.click.play().catch(()=>{}); } catch(e) {}
-    
-    currentPlayingMsgId = String(msgId);
-    if(playingTitle) playingTitle.innerText = title;
-    
-    // 🎬 تأثير الـ Fade Out السلس للبوستر
-    if(placeholder) {
-        placeholder.style.opacity = '0';
-        placeholder.style.transform = 'scale(1.05)';
-        setTimeout(() => placeholder.classList.add('hidden'), 400); 
-    }
-
-    // إظهار الفيديو وعناصر التحكم
-    video.classList.remove('hidden');
-    if(tapLeft) tapLeft.classList.remove('hidden');
-    if(tapRight) tapRight.classList.remove('hidden');
-    if(controlsBar) controlsBar.classList.remove('hidden');
-    
-    // شحن بث المحاضرة مباشرة من السيرفر مع التوكن
-    video.pause();
-    video.src = `/api/video/stream/${msgId}?token=${token}`; // التوكن مهم جداً للباك إند
-    video.load();
-    
-    video.style.opacity = '1';
-    video.play().catch(err => console.error("تنبيه: المشغل ينتظر تفاعل المستخدم", err));
-
-    // تمييز الكارد الفعال في الأرشيف
-    document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
-    const activeCard = document.getElementById(`course_${msgId}`);
-    if(activeCard) activeCard.classList.add('card-active');
-    
-    // تمرير الشاشة للمشغل ببطء
-    const liveSection = document.getElementById('liveStreamSection');
-    if(liveSection) liveSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 // ==================== وضع السينما وتكبير الشاشة ====================
