@@ -180,7 +180,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     }
 });
 
-// بث ومحاكاة دفق الفيديو الآمن لحماية الروابط
+// 🔥 بث ومحاكاة دفق الفيديو الآمن لحماية الروابط (نظام التقطيع المتقدم لحل مشكلة الشاشة السوداء) 🔥
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
@@ -193,13 +193,18 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const document = message.media.document;
         if (!document) return res.status(404).send("الملف المرفق ليس فيديو صالح");
 
-        const fileSize = document.size;
+        // تأمين حجم الملف
+        const fileSize = Number(document.size);
         const range = req.headers.range;
 
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
             const start = parseInt(parts[0], 10);
-            const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+            
+            // 🚨 الحل السحري: نرسل 2 ميجابايت فقط في كل طلب لحماية Railway من الانهيار
+            const CHUNK_SIZE = 2 * 1024 * 1024; // 2 ميجا
+            const end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + CHUNK_SIZE - 1, fileSize - 1);
+            
             const chunksize = (end - start) + 1;
 
             res.writeHead(206, {
@@ -209,14 +214,33 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
                 'Content-Type': 'video/mp4'
             });
 
-            const chunk = await tgClient.downloadFile(message.media, { start: start, end: end + 1, dcId: document.dcId, fileSize: fileSize });
+            const chunk = await tgClient.downloadFile(message.media, { 
+                workers: 1, 
+                start: start, 
+                end: end + 1 // GramJS يتطلب إضافة بايت واحد للنهاية
+            });
             res.end(chunk);
         } else {
-            res.writeHead(200, { 'Content-Length': fileSize, 'Content-Type': 'video/mp4' });
-            const chunk = await tgClient.downloadFile(message.media, { dcId: document.dcId, fileSize: fileSize });
+            // إذا لم يرسل المتصفح Range، نرسل أول 2 ميجا فقط ليبدأ التشغيل فوراً
+            const CHUNK_SIZE = 2 * 1024 * 1024; 
+            const end = Math.min(CHUNK_SIZE - 1, fileSize - 1);
+            
+            res.writeHead(206, {
+                'Content-Range': `bytes 0-${end}/${fileSize}`,
+                'Accept-Ranges': 'bytes',
+                'Content-Length': end + 1,
+                'Content-Type': 'video/mp4'
+            });
+
+            const chunk = await tgClient.downloadFile(message.media, { 
+                workers: 1,
+                start: 0, 
+                end: end + 1 
+            });
             res.end(chunk);
         }
     } catch (error) {
+        console.error("❌ خطأ في بث الفيديو:", error.message);
         if (!res.headersSent) res.status(500).send("حدث خطأ أثناء تحميل مشغل الفيديو المحمي");
     }
 });
