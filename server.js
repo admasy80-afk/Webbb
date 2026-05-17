@@ -45,12 +45,11 @@ const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm
 const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
 const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
 
-// الدخول بجلسة فارغة دائماً لعدم حدوث خطأ AUTH_KEY
 const stringSession = new StringSession(""); 
 
 const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
     connectionRetries: 10,
-    useWSS: true // استقرار الاتصال السحابي
+    useWSS: true
 });
 
 async function ensureTelegramConnection() {
@@ -131,7 +130,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
 });
 
-// دالة الرفع المباشرة المصفحة
+// رفع الفيديو لتيليجرام
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     let absoluteFilePath = null;
     try {
@@ -141,23 +140,14 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
 
         absoluteFilePath = path.resolve(file.path);
-        console.log("🚀 بدء معالجة الملف لرفعه لتيليجرام...");
-
         const connected = await ensureTelegramConnection();
-        if (!connected) {
-            throw new Error("فشل الاتصال بسيرفرات تيليجرام.");
-        }
+        if (!connected) throw new Error("فشل الاتصال بسيرفرات تيليجرام.");
 
-        console.log("✅ جاري الإرسال للقناة...");
-
-        // الإرسال المباشر وتحديد Workers 1
         const message = await tgClient.sendFile('@mohamed293g', {
             file: absoluteFilePath,
             caption: `حصة: ${courseName} | الصف: ${grade}`,
             workers: 1 
         });
-
-        console.log("✅ تم الإرسال للقناة بنجاح! Message ID:", message.id);
 
         if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
 
@@ -170,17 +160,14 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
             createdAt: new Date()
         });
 
-        res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها للمنصة بنجاح لا نهائي!" });
+        res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها بنجاح!" });
     } catch (error) {
-        console.error("❌ خطأ تفصيلي من تيليجرام:", error);
-        if (absoluteFilePath && fs.existsSync(absoluteFilePath)) {
-            fs.unlinkSync(absoluteFilePath);
-        }
+        if (absoluteFilePath && fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
         res.status(500).json({ message: "خطأ تليجرام: " + (error.message || "فشل غير معروف") });
     }
 });
 
-// 🔥 بث ومحاكاة دفق الفيديو الآمن لحماية الروابط (نظام التقطيع المتقدم لحل مشكلة الشاشة السوداء) 🔥
+// 🔥 بث الفيديو بنظام الأنبوب المباشر (Direct Streaming Generator) لحل الشاشة السوداء 🔥
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
@@ -193,52 +180,53 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const document = message.media.document;
         if (!document) return res.status(404).send("الملف المرفق ليس فيديو صالح");
 
-        // تأمين حجم الملف
         const fileSize = Number(document.size);
         const range = req.headers.range;
 
+        let start = 0;
+        let end = fileSize - 1;
+
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
-            const start = parseInt(parts[0], 10);
-            
-            // 🚨 الحل السحري: نرسل 2 ميجابايت فقط في كل طلب لحماية Railway من الانهيار
-            const CHUNK_SIZE = 2 * 1024 * 1024; // 2 ميجا
-            const end = parts[1] ? parseInt(parts[1], 10) : Math.min(start + CHUNK_SIZE - 1, fileSize - 1);
-            
-            const chunksize = (end - start) + 1;
-
-            res.writeHead(206, {
-                'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': chunksize,
-                'Content-Type': 'video/mp4'
-            });
-
-            const chunk = await tgClient.downloadFile(message.media, { 
-                workers: 1, 
-                start: start, 
-                end: end + 1 // GramJS يتطلب إضافة بايت واحد للنهاية
-            });
-            res.end(chunk);
-        } else {
-            // إذا لم يرسل المتصفح Range، نرسل أول 2 ميجا فقط ليبدأ التشغيل فوراً
-            const CHUNK_SIZE = 2 * 1024 * 1024; 
-            const end = Math.min(CHUNK_SIZE - 1, fileSize - 1);
-            
-            res.writeHead(206, {
-                'Content-Range': `bytes 0-${end}/${fileSize}`,
-                'Accept-Ranges': 'bytes',
-                'Content-Length': end + 1,
-                'Content-Type': 'video/mp4'
-            });
-
-            const chunk = await tgClient.downloadFile(message.media, { 
-                workers: 1,
-                start: 0, 
-                end: end + 1 
-            });
-            res.end(chunk);
+            start = parseInt(parts[0], 10);
+            end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
         }
+
+        const chunksize = (end - start) + 1;
+
+        res.writeHead(range ? 206 : 200, {
+            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': chunksize,
+            'Content-Type': 'video/mp4'
+        });
+
+        // سحب وتمرير البيانات فوراً كـ Stream بدل تحميل الملف بالكامل
+        const stream = tgClient.iterDownload({
+            file: message.media,
+            offset: start,
+            limit: chunksize,
+            requestSize: 1024 * 512, // يطلب 512 كيلوبايت كل مرة لتسريع الاستجابة
+        });
+
+        // حماية السيرفر: لو المتصفح أغلق الاتصال، نوقف السحب من تيليجرام
+        let isClosed = false;
+        req.on('close', () => {
+            isClosed = true;
+        });
+
+        for await (const chunk of stream) {
+            if (isClosed) break; // أوقف التحميل فوراً!
+            
+            // الكتابة المباشرة في المتصفح
+            if (!res.write(chunk)) {
+                // انتظار المتصفح حتى يهضم البيانات
+                await new Promise(resolve => res.once('drain', resolve));
+            }
+        }
+        
+        if (!isClosed) res.end();
+
     } catch (error) {
         console.error("❌ خطأ في بث الفيديو:", error.message);
         if (!res.headersSent) res.status(500).send("حدث خطأ أثناء تحميل مشغل الفيديو المحمي");
@@ -415,7 +403,6 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
     } catch (err) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// دالة جلب بيانات لوحة الطالب لضخ مصفوفة الحصص بالكامل
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email; 
@@ -427,14 +414,13 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
         const contentCollection = db.collection('curriculum_content');  
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
 
-        // سحب كل الحصص المرفوعة للمرحلة الدراسية دي وترتيبها من الأقدم للأحدث ليتم عرضها كقائمة
         const coursesCollection = db.collection('courses');
         const courses = await coursesCollection.find({ grade: grade }).sort({ createdAt: 1 }).toArray();
 
         res.status(200).json({ 
             studentPoints, 
             content,
-            courses: courses // ضخ المصفوفة بالكامل للفرونت إند
+            courses: courses 
         });  
     } catch (error) { 
         console.error("❌ خطأ في جلب بيانات لوحة الطالب:", error);
@@ -494,7 +480,6 @@ app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
-// معالجة أخطاء الرفع الكبيرة لـ Multer من غير كراش
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         return res.status(400).json({
@@ -504,5 +489,4 @@ app.use((err, req, res, next) => {
     next(err);
 });
 
-// 🔥 تعديل المسار هنا: شيلنا السلاش الزيادة وبقى المسار مظبوط وجاهز للـ SPA وبدون أي أخطاء سينتاكس
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
