@@ -8,8 +8,6 @@ const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const multer = require('multer');
-const { TelegramClient } = require('telegram');
-const { StringSession } = require('telegram/sessions');
 
 // مكاتب التخزين السحابي (S3)
 const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
@@ -31,7 +29,7 @@ if (!fs.existsSync(uploadDir)) {
 }
 const upload = multer({ 
     dest: uploadDir,
-    limits: { fileSize: 2 * 1024 * 1024 * 1024 } 
+    limits: { fileSize: 2 * 1024 * 1024 * 1024 } // حد أقصى 2 جيجا
 });
 
 const loginLimiter = rateLimit({
@@ -52,7 +50,7 @@ const r2Client = new S3Client({
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
     },
 });
-const R2_BUCKET_NAME = 'eld7e7';
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'eld7e7';
 
 // ==================== 2. إعدادات Backblaze B2 ====================
 const b2Client = new S3Client({
@@ -65,25 +63,18 @@ const b2Client = new S3Client({
 });
 const B2_BUCKET_NAME = process.env.B2_BUCKET_NAME || 'eld7e7-courses';
 
-// ==================== 3. إعدادات تيليجرام (للأرشيف) ====================
-const botToken = (process.env.TELEGRAM_BOT_TOKEN || "").trim().replace(/['"]/g, '');
-const apiId = parseInt((process.env.TELEGRAM_API_ID || "0").toString().trim().replace(/['"]/g, ''));
-const apiHash = (process.env.TELEGRAM_API_HASH || "").trim().replace(/['"]/g, '');
-const stringSession = new StringSession(""); 
-const tgClient = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 10, useWSS: true });
+// ==================== 3. إعدادات IDrive e2 ====================
+const idriveClient = new S3Client({
+    region: process.env.IDRIVE_REGION || 'eu-west-4',
+    endpoint: process.env.IDRIVE_ENDPOINT,
+    credentials: {
+        accessKeyId: process.env.IDRIVE_ACCESS_KEY_ID,
+        secretAccessKey: process.env.IDRIVE_SECRET_ACCESS_KEY,
+    },
+});
+const IDRIVE_BUCKET_NAME = process.env.IDRIVE_BUCKET_NAME || 'eld7e7';
 
-async function ensureTelegramConnection() {
-    if (tgClient.connected) return true;
-    try {
-        await tgClient.start({ botAuthToken: botToken });
-        console.log("👑 سيرفر تيليجرام متصل (للأرشيف)");
-        return true;
-    } catch (err) {
-        console.error("❌ فشل اتصال تيليجرام:", err.message);
-        return false;
-    }
-}
-
+// ==================== تشغيل السيرفر وقاعدة البيانات ====================
 async function startServer() {
     try {
         if (process.env.MONGO_URL) {
@@ -93,8 +84,7 @@ async function startServer() {
             usersCollection = db.collection('users');
             console.log("✅ تم الاتصال بمونجو بنجاح..");
         }
-        await ensureTelegramConnection();
-        app.listen(PORT, () => console.log(`🚀 السيرفر شغال بدمج سحابي يوزع الأحمال مع إنقاذ تلقائي (B2 ⚖️ R2) على بورت ${PORT}`));
+        app.listen(PORT, () => console.log(`🚀 السيرفر شغال بنظام التوازن الثلاثي الموزع الذكي (R2 ⚖️ B2 ⚖️ IDrive) على بورت ${PORT}`));
     } catch (err) {
         console.error("❌ فشل تشغيل السيرفر الأساسي:", err);
     }
@@ -126,7 +116,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: (userRole === 'dev' || userRole === 'owner') ? '/admin-dashboard.html' : '/student-dashboard.html', role: userRole });
 });
 
-// 🔥 الرفع الذكي الموزع مع نظام الإنقاذ التلقائي (Failover System) 🔥
+// 🔥 الرفع الذكي الموزع مع تخطي السيرفر الممتلئ تلقائياً (Failover System لـ 3 منصات) 🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     let absoluteFilePath = null;
     try {
@@ -138,44 +128,50 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         absoluteFilePath = path.resolve(file.path);
         const fileKey = `videos/${Date.now()}_${path.basename(file.originalname).replace(/[^a-zA-Z0-9.]/g, "")}`;
         
-        // 🚀 تحديد الخيار الأساسي والاحتياطي عشوائياً (50% - 50%) لتوزيع الضغط 🚀
-        const useB2First = Math.random() < 0.5; 
+        // تجهيز مصفوفة الإعدادات الخاصة بالسيرفرات الثلاثة
+        const providers = [
+            { name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME },
+            { name: 'B2', client: b2Client, bucket: B2_BUCKET_NAME },
+            { name: 'IDRIVE', client: idriveClient, bucket: IDRIVE_BUCKET_NAME }
+        ];
+
+        // ترتيب السيرفرات عشوائياً في كل عملية رفع لتوزيع السعة بالتساوي
+        const shuffledProviders = providers.sort(() => Math.random() - 0.5);
         
-        const primaryConfig = useB2First ? { client: b2Client, bucket: B2_BUCKET_NAME, name: 'B2' } : { client: r2Client, bucket: R2_BUCKET_NAME, name: 'R2' };
-        const fallbackConfig = useB2First ? { client: r2Client, bucket: R2_BUCKET_NAME, name: 'R2' } : { client: b2Client, bucket: B2_BUCKET_NAME, name: 'B2' };
-
         let finalProvider = null;
+        let uploadSuccess = false;
 
-        console.log(`🚀 جاري محاولة الرفع إلى السيرفر الأساسي: ${primaryConfig.name}...`);
+        // محاولة الرفع بالترتيب، وإذا فشل خادم ينتقل للذي يليه فوراً
+        for (const providerConfig of shuffledProviders) {
+            console.log(`🚀 جاري محاولة الرفع إلى خادم: ${providerConfig.name}...`);
+            try {
+                const fileStream = fs.createReadStream(absoluteFilePath);
+                const parallelUploads3 = new Upload({
+                    client: providerConfig.client,
+                    params: { 
+                        Bucket: providerConfig.bucket, 
+                        Key: fileKey, 
+                        Body: fileStream, 
+                        ContentType: file.mimetype || 'video/mp4' 
+                    },
+                    queueSize: 4, 
+                    partSize: 1024 * 1024 * 5, 
+                });
 
-        try {
-            // المحاولة الأولى
-            const primaryStream = fs.createReadStream(absoluteFilePath);
-            const uploadPrimary = new Upload({
-                client: primaryConfig.client,
-                params: { Bucket: primaryConfig.bucket, Key: fileKey, Body: primaryStream, ContentType: file.mimetype || 'video/mp4' },
-                queueSize: 4, partSize: 1024 * 1024 * 5
-            });
-            await uploadPrimary.done();
-            finalProvider = primaryConfig.name;
-            console.log(`✅ تم الرفع لـ ${finalProvider} بنجاح!`);
-            
-        } catch (errPrimary) {
-            // 🚨 نظام الإنقاذ يتدخل فوراً في حال امتلاء مساحة السيرفر الأول 🚨
-            console.warn(`⚠️ فشل الرفع لـ ${primaryConfig.name} (قد تكون المساحة ممتلئة). جاري التحويل فوراً للسيرفر الاحتياطي ${fallbackConfig.name}...`);
-            
-            const fallbackStream = fs.createReadStream(absoluteFilePath);
-            const uploadFallback = new Upload({
-                client: fallbackConfig.client,
-                params: { Bucket: fallbackConfig.bucket, Key: fileKey, Body: fallbackStream, ContentType: file.mimetype || 'video/mp4' },
-                queueSize: 4, partSize: 1024 * 1024 * 5
-            });
-            await uploadFallback.done();
-            finalProvider = fallbackConfig.name;
-            console.log(`✅ تم إنقاذ الموقف والرفع لـ ${finalProvider} بنجاح!`);
+                await parallelUploads3.done();
+                finalProvider = providerConfig.name;
+                uploadSuccess = true;
+                console.log(`✅ تم الرفع لـ ${finalProvider} بنجاح تام!`);
+                break; // الخروج من الحلقة عند نجاح الرفع
+            } catch (err) {
+                console.warn(`⚠️ فشل الرفع على خادم ${providerConfig.name} (قد يكون ممتلئاً أو غير متاح). جاري تجربة الخادم البديل...`);
+            }
         }
 
-        // مسح الملف من سيرفر Railway بعد الانتهاء لتوفير المساحة
+        if (!uploadSuccess) {
+            throw new Error("جميع السيرفرات السحابية (R2, B2, IDrive) ممتلئة بالكامل أو غير متاحة حالياً!");
+        }
+
         if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
 
         const coursesCollection = db.collection('courses');
@@ -187,96 +183,62 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
             description,
             telegramMsgId: fakeMsgId, 
             fileKey: fileKey,       
-            provider: finalProvider, // بنسجل في الداتا بيس هو استقر في أي سيرفر فيهم
+            provider: finalProvider, 
             createdAt: new Date()
         });
 
-        res.status(200).json({ message: `✅ تم الرفع سحابياً بنجاح! (تم الاستقرار في خادم: ${finalProvider})` });
-        
+        res.status(200).json({ message: `✅ تم الرفع سحابياً بنجاح! (استقر في خادم: ${finalProvider})` });
     } catch (error) {
-        // لو الاتنين فشلوا (المساحة 20 جيجا خلصت)
         if (absoluteFilePath && fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
-        console.error("Upload Error:", error);
-        res.status(500).json({ message: "خطأ: كلا السيرفرين فشلا في الرفع. قد تكون المساحة المجانية ممتلئة تماماً في الاثنين!" });
+        console.error("Multi-Cloud Upload Error:", error);
+        res.status(500).json({ message: error.message || "حدث خطأ غير متوقع أثناء الرفع السحابي" });
     }
 });
 
-// 🔥 بث الفيديو الموزع (يجلب الفيديو من السيرفر الصحيح تلقائياً) 🔥
+// 🔥 بث الفيديو الموزع (التوجيه التلقائي للمنصة الصحيحة) 🔥
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
         const coursesCollection = db.collection('courses');
         const course = await coursesCollection.findOne({ telegramMsgId: msgId });
 
-        if (!course) return res.status(404).send("الفيديو غير متاح");
+        if (!course) return res.status(404).send("الفيديو غير متاح في قاعدة البيانات");
 
-        // 🔵 1. التشغيل من Backblaze B2
+        let targetClient = null;
+        let targetBucket = null;
+        const targetKey = course.fileKey || course.r2FileKey;
+
+        // تحديد منصة البث بناءً على البيانات المخزنة
         if (course.provider === 'B2') {
-            const command = new GetObjectCommand({ Bucket: B2_BUCKET_NAME, Key: course.fileKey, Range: req.headers.range });
-            const s3Response = await b2Client.send(command);
-            
-            const headers = {
-                'Accept-Ranges': 'bytes',
-                'Content-Length': s3Response.ContentLength,
-                'Content-Type': s3Response.ContentType || 'video/mp4'
-            };
-            if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
-            
-            res.writeHead(s3Response.$metadata.httpStatusCode || 200, headers);
-            s3Response.Body.pipe(res);
-            return;
+            targetClient = b2Client;
+            targetBucket = B2_BUCKET_NAME;
+        } else if (course.provider === 'IDRIVE') {
+            targetClient = idriveClient;
+            targetBucket = IDRIVE_BUCKET_NAME;
+        } else if (course.provider === 'R2' || course.r2FileKey) {
+            targetClient = r2Client;
+            targetBucket = R2_BUCKET_NAME;
         }
 
-        // 🟠 2. التشغيل من Cloudflare R2 (يدعم النظام القديم والجديد)
-        if (course.provider === 'R2' || course.r2FileKey) {
-            const targetKey = course.fileKey || course.r2FileKey;
-            const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: targetKey, Range: req.headers.range });
-            const r2Response = await r2Client.send(command);
-            
-            const headers = {
-                'Accept-Ranges': 'bytes',
-                'Content-Length': r2Response.ContentLength,
-                'Content-Type': r2Response.ContentType || 'video/mp4'
-            };
-            if (r2Response.ContentRange) headers['Content-Range'] = r2Response.ContentRange;
-            
-            res.writeHead(r2Response.$metadata.httpStatusCode || 200, headers);
-            r2Response.Body.pipe(res);
-            return;
-        }
+        if (!targetClient) return res.status(404).send("لم يتم تحديد مزود سحابي صالح لهذا الفيديو");
 
-        // 🟢 3. التشغيل من تيليجرام (للأرشيف)
-        await ensureTelegramConnection();
-        const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
-        if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
-
-        const message = messages[0];
-        const fileSize = Number(message.media.document.size);
-        const range = req.headers.range;
-
-        let start = 0; let end = fileSize - 1;
-        if (range) {
-            const parts = range.replace(/bytes=/, "").split("-");
-            start = parseInt(parts[0], 10);
-            end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        }
-
-        res.writeHead(range ? 206 : 200, {
-            'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-            'Accept-Ranges': 'bytes',
-            'Content-Length': (end - start) + 1,
-            'Content-Type': 'video/mp4'
+        const command = new GetObjectCommand({
+            Bucket: targetBucket,
+            Key: targetKey,
+            Range: req.headers.range 
         });
 
-        const stream = tgClient.iterDownload({ file: message.media, offset: start, limit: (end - start) + 1, requestSize: 1024 * 512 });
-        let isClosed = false;
-        req.on('close', () => { isClosed = true; });
-
-        for await (const chunk of stream) {
-            if (isClosed) break;
-            if (!res.write(chunk)) await new Promise(resolve => res.once('drain', resolve));
-        }
-        if (!isClosed) res.end();
+        const s3Response = await targetClient.send(command);
+        
+        const headers = {
+            'Accept-Ranges': 'bytes',
+            'Content-Length': s3Response.ContentLength,
+            'Content-Type': s3Response.ContentType || 'video/mp4'
+        };
+        if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
+        
+        res.writeHead(s3Response.$metadata.httpStatusCode || 200, headers);
+        s3Response.Body.pipe(res);
 
     } catch (error) {
         console.error("❌ خطأ في بث الفيديو:", error.message);
@@ -284,7 +246,6 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     }
 });
 
-// 🔥 حذف الفيديو (يحذفه من السيرفر اللي اترفع عليه) 🔥
 app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -303,6 +264,7 @@ app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (re
     } catch (error) { res.status(500).json({ message: "خطأ في السيرفر أثناء جلب البيانات" }); }
 });
 
+// 🔥 حذف الفيديو تلقائياً من السيرفر الصحيح المرفوع عليه 🔥
 app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const courseId = req.params.id;
@@ -310,11 +272,15 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
         const course = await coursesCollection.findOne({ _id: new ObjectId(courseId) });
 
         if (course) {
+            const targetKey = course.fileKey || course.r2FileKey;
+            
             if (course.provider === 'B2') {
-                try { await b2Client.send(new DeleteObjectCommand({ Bucket: B2_BUCKET_NAME, Key: course.fileKey })); } 
+                try { await b2Client.send(new DeleteObjectCommand({ Bucket: B2_BUCKET_NAME, Key: targetKey })); } 
                 catch (e) { console.error("⚠️ فشل حذف الملف من B2:", e.message); }
+            } else if (course.provider === 'IDRIVE') {
+                try { await idriveClient.send(new DeleteObjectCommand({ Bucket: IDRIVE_BUCKET_NAME, Key: targetKey })); } 
+                catch (e) { console.error("⚠️ فشل حذف الملف من IDrive:", e.message); }
             } else if (course.provider === 'R2' || course.r2FileKey) {
-                const targetKey = course.fileKey || course.r2FileKey;
                 try { await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: targetKey })); } 
                 catch (e) { console.error("⚠️ فشل حذف الملف من R2:", e.message); }
             }
