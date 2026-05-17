@@ -94,7 +94,7 @@ async function startServer() {
             console.log("✅ تم الاتصال بمونجو بنجاح..");
         }
         await ensureTelegramConnection();
-        app.listen(PORT, () => console.log(`🚀 السيرفر شغال بدمج سحابي (B2 + R2 + Telegram) على بورت ${PORT}`));
+        app.listen(PORT, () => console.log(`🚀 السيرفر شغال بدمج سحابي يوزع الأحمال مع إنقاذ تلقائي (B2 ⚖️ R2) على بورت ${PORT}`));
     } catch (err) {
         console.error("❌ فشل تشغيل السيرفر الأساسي:", err);
     }
@@ -126,7 +126,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "التوكن صالح", redirectTo: (userRole === 'dev' || userRole === 'owner') ? '/admin-dashboard.html' : '/student-dashboard.html', role: userRole });
 });
 
-// 🔥 رفع الفيديو (الافتراضي الآن هو Backblaze B2) 🔥
+// 🔥 الرفع الذكي الموزع مع نظام الإنقاذ التلقائي (Failover System) 🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     let absoluteFilePath = null;
     try {
@@ -136,23 +136,46 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
 
         absoluteFilePath = path.resolve(file.path);
-        const fileStream = fs.createReadStream(absoluteFilePath);
-        
-        // تسمية فريدة للملف
         const fileKey = `videos/${Date.now()}_${path.basename(file.originalname).replace(/[^a-zA-Z0-9.]/g, "")}`;
         
-        console.log("🚀 جاري رفع الفيديو إلى Backblaze B2...");
+        // 🚀 تحديد الخيار الأساسي والاحتياطي عشوائياً (50% - 50%) لتوزيع الضغط 🚀
+        const useB2First = Math.random() < 0.5; 
+        
+        const primaryConfig = useB2First ? { client: b2Client, bucket: B2_BUCKET_NAME, name: 'B2' } : { client: r2Client, bucket: R2_BUCKET_NAME, name: 'R2' };
+        const fallbackConfig = useB2First ? { client: r2Client, bucket: R2_BUCKET_NAME, name: 'R2' } : { client: b2Client, bucket: B2_BUCKET_NAME, name: 'B2' };
 
-        const parallelUploads3 = new Upload({
-            client: b2Client,
-            params: { Bucket: B2_BUCKET_NAME, Key: fileKey, Body: fileStream, ContentType: file.mimetype || 'video/mp4' },
-            queueSize: 4, 
-            partSize: 1024 * 1024 * 5, 
-        });
+        let finalProvider = null;
 
-        await parallelUploads3.done();
-        console.log("✅ تم الرفع لـ Backblaze B2 بنجاح!");
+        console.log(`🚀 جاري محاولة الرفع إلى السيرفر الأساسي: ${primaryConfig.name}...`);
 
+        try {
+            // المحاولة الأولى
+            const primaryStream = fs.createReadStream(absoluteFilePath);
+            const uploadPrimary = new Upload({
+                client: primaryConfig.client,
+                params: { Bucket: primaryConfig.bucket, Key: fileKey, Body: primaryStream, ContentType: file.mimetype || 'video/mp4' },
+                queueSize: 4, partSize: 1024 * 1024 * 5
+            });
+            await uploadPrimary.done();
+            finalProvider = primaryConfig.name;
+            console.log(`✅ تم الرفع لـ ${finalProvider} بنجاح!`);
+            
+        } catch (errPrimary) {
+            // 🚨 نظام الإنقاذ يتدخل فوراً في حال امتلاء مساحة السيرفر الأول 🚨
+            console.warn(`⚠️ فشل الرفع لـ ${primaryConfig.name} (قد تكون المساحة ممتلئة). جاري التحويل فوراً للسيرفر الاحتياطي ${fallbackConfig.name}...`);
+            
+            const fallbackStream = fs.createReadStream(absoluteFilePath);
+            const uploadFallback = new Upload({
+                client: fallbackConfig.client,
+                params: { Bucket: fallbackConfig.bucket, Key: fileKey, Body: fallbackStream, ContentType: file.mimetype || 'video/mp4' },
+                queueSize: 4, partSize: 1024 * 1024 * 5
+            });
+            await uploadFallback.done();
+            finalProvider = fallbackConfig.name;
+            console.log(`✅ تم إنقاذ الموقف والرفع لـ ${finalProvider} بنجاح!`);
+        }
+
+        // مسح الملف من سيرفر Railway بعد الانتهاء لتوفير المساحة
         if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
 
         const coursesCollection = db.collection('courses');
@@ -164,19 +187,21 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
             description,
             telegramMsgId: fakeMsgId, 
             fileKey: fileKey,       
-            provider: 'B2', // لتمييز مصدر الفيديو
+            provider: finalProvider, // بنسجل في الداتا بيس هو استقر في أي سيرفر فيهم
             createdAt: new Date()
         });
 
-        res.status(200).json({ message: "✅ تم رفع المحاضرة السحابية بنجاح!" });
+        res.status(200).json({ message: `✅ تم الرفع سحابياً بنجاح! (تم الاستقرار في خادم: ${finalProvider})` });
+        
     } catch (error) {
+        // لو الاتنين فشلوا (المساحة 20 جيجا خلصت)
         if (absoluteFilePath && fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
-        console.error("B2 Upload Error:", error);
-        res.status(500).json({ message: "خطأ في السيرفر السحابي: " + (error.message || "فشل غير معروف") });
+        console.error("Upload Error:", error);
+        res.status(500).json({ message: "خطأ: كلا السيرفرين فشلا في الرفع. قد تكون المساحة المجانية ممتلئة تماماً في الاثنين!" });
     }
 });
 
-// 🔥 بث الفيديو: نظام توجيه ذكي للثلاث منصات 🔥
+// 🔥 بث الفيديو الموزع (يجلب الفيديو من السيرفر الصحيح تلقائياً) 🔥
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
@@ -202,9 +227,10 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
             return;
         }
 
-        // 🟠 2. التشغيل من Cloudflare R2
-        if (course.r2FileKey) {
-            const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: course.r2FileKey, Range: req.headers.range });
+        // 🟠 2. التشغيل من Cloudflare R2 (يدعم النظام القديم والجديد)
+        if (course.provider === 'R2' || course.r2FileKey) {
+            const targetKey = course.fileKey || course.r2FileKey;
+            const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: targetKey, Range: req.headers.range });
             const r2Response = await r2Client.send(command);
             
             const headers = {
@@ -219,7 +245,7 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
             return;
         }
 
-        // 🟢 3. التشغيل من تيليجرام 
+        // 🟢 3. التشغيل من تيليجرام (للأرشيف)
         await ensureTelegramConnection();
         const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
         if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
@@ -258,6 +284,7 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     }
 });
 
+// 🔥 حذف الفيديو (يحذفه من السيرفر اللي اترفع عليه) 🔥
 app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -283,12 +310,12 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
         const course = await coursesCollection.findOne({ _id: new ObjectId(courseId) });
 
         if (course) {
-            // حذف من السحابة الصحيحة
             if (course.provider === 'B2') {
                 try { await b2Client.send(new DeleteObjectCommand({ Bucket: B2_BUCKET_NAME, Key: course.fileKey })); } 
                 catch (e) { console.error("⚠️ فشل حذف الملف من B2:", e.message); }
-            } else if (course.r2FileKey) {
-                try { await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: course.r2FileKey })); } 
+            } else if (course.provider === 'R2' || course.r2FileKey) {
+                const targetKey = course.fileKey || course.r2FileKey;
+                try { await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: targetKey })); } 
                 catch (e) { console.error("⚠️ فشل حذف الملف من R2:", e.message); }
             }
         }
