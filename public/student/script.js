@@ -245,21 +245,44 @@ function toggleTheaterMode() {
     });
 }
 
-// 🚨 الحل السحري لتكبير الفيديو فقط بشكل مثالي 🚨
+// 🚀 دالة تكبير الشاشة الذكية (محاكاة تجربة يوتيوب بالكامل بدوران الشاشة وعرضها الكامل) 🚀
 function toggleStudentFullScreen() {
-    // نحدد صندوق الفيديو فقط بدلاً من تحديد الصندوق الخارجي بالكامل
     const videoContainer = document.querySelector('.video-container');
+    const playerElement = document.getElementById('dahihPlayer');
     if (!videoContainer) return;
     
     if (!document.fullscreenElement) {
-        // نطلب وضع ملء الشاشة لحاوية الفيديو نفسها
-        videoContainer.requestFullscreen().catch(err => {
-            console.error("Error attempting to enable fullscreen:", err);
+        videoContainer.requestFullscreen().then(() => {
+            // 1. تدوير الشاشة تلقائياً للوضع الأفقي (Landscape) على الموبايلات والتابلت
+            if (window.screen && window.screen.orientation && window.screen.orientation.lock) {
+                window.screen.orientation.lock('landscape').catch(() => {});
+            }
+            // 2. تمدد الفيديو ليملأ عرض الحاوية بالكامل بدون حواف ميتة
+            if (playerElement) {
+                playerElement.style.setProperty('object-fit', 'cover', 'important');
+            }
+        }).catch(err => {
+            console.error("فشل الانتقال لكامل الشاشة:", err);
         });
     } else {
         document.exitFullscreen().catch(()=>{});
     }
 }
+
+// مراقبة الخروج من الشاشة الكاملة لإعادة تدوير الموبايل لوضعه الطبيعي وفك الحظر
+document.addEventListener('fullscreenchange', () => {
+    const playerElement = document.getElementById('dahihPlayer');
+    if (!document.fullscreenElement) {
+        // فك حظر تدوير الشاشة ليعود الموبايل رأسياً
+        if (window.screen && window.screen.orientation && window.screen.orientation.unlock) {
+            window.screen.orientation.unlock();
+        }
+        // إعادة وضع الفيديو للاحتواء الطبيعي عند التصغير
+        if (playerElement) {
+            playerElement.style.setProperty('object-fit', 'contain');
+        }
+    }
+});
 
 function toggleSection(sectionId, iconId) {
     try { sounds.click.play().catch(()=>{}); } catch(e) {}
