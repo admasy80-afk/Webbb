@@ -38,7 +38,7 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
 
-// إعدادات الـ CORS
+// إعدادات الـ CORS المحمية بدومين المنصة الفعلي
 const allowedOrigins = process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 app.use(cors({
     origin: function(origin, callback){
@@ -61,7 +61,7 @@ app.use((req, res, next) => {
     next();
 });
 
-// إعداد مجلد المجلدات المؤقتة
+// إعداد مجلد الملفات المؤقتة بشكل تكراري آمن
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -123,16 +123,22 @@ const IDRIVE_BUCKET_NAME = process.env.IDRIVE_BUCKET_NAME || 'eld7e7';
 // ==================== Core Server & DB Initialization ====================
 async function startServer() {
     try {
-        if (process.env.MONGO_URL) {
-            const client = new MongoClient(process.env.MONGO_URL);
-            await client.connect();
-            db = client.db('dahih_db');
-            usersCollection = db.collection('users');
-            console.log("Database connection established.");
+        // حماية النظام: إيقاف تشغيل الخادم فوراً إذا غاب رابط قاعدة البيانات لمنع الاتصال الوهمي
+        if (!process.env.MONGO_URL) {
+            console.error("FATAL ERROR: MONGO_URL environment variable is missing.");
+            process.exit(1);
         }
+
+        const client = new MongoClient(process.env.MONGO_URL);
+        await client.connect();
+        db = client.db('dahih_db');
+        usersCollection = db.collection('users');
+        console.log("Database connection established.");
+        
         app.listen(PORT, () => console.log(`Server started on port ${PORT}.`));
     } catch (err) {
-        console.error("Server startup failed:", err);
+        console.error("Server startup failed due to database error:", err.message);
+        process.exit(1);
     }
 }
 
@@ -284,7 +290,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
     }
 });
 
-// بث الفيديو الموزع والمحمي بالكامل
+// بث الفيديو الموزع والمحمي بالكامل مع تتبع الأخطاء بدقة
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = req.params.msgId;
