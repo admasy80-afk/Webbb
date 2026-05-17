@@ -92,7 +92,7 @@ if(video) {
         e.stopPropagation();
         video.muted = !video.muted;
         muteBtn.innerHTML = video.muted 
-            ? `<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>`
+            ? `<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>`
             : `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"></path></svg>`;
     });
 
@@ -122,39 +122,59 @@ if(video) {
     });
 }
 
-// دالة سحب وتشغيل المحاضرة سحابياً عند النقر عليها بالأنيميشن السلس
+// دالة سحب وتشغيل المحاضرة سحابياً عند النقر عليها (معدلة ومضمونة 100%)
 window.loadVideoToPlayer = function(msgId, title) {
-    if(!video || currentPlayingMsgId === msgId) return;
-    sounds.click.play().catch(()=>{});
+    // جلب العناصر وقت الضغط لضمان وجودها
+    const vid = document.getElementById('dahihPlayer');
+    const placeholder = document.getElementById('videoPlaceholder');
+    const tapLeft = document.getElementById('tapLeft');
+    const tapRight = document.getElementById('tapRight');
+    const controlsBar = document.querySelector('.custom-controls');
+    const playingTitle = document.getElementById('playingVideoTitle');
+
+    if(!vid) {
+        console.error("عنصر المشغل غير موجود!");
+        return;
+    }
+    
+    if (currentPlayingMsgId === msgId) return; // لو هو نفس الفيديو شغال متعملش حاجة
+    
+    try { sounds.click.play().catch(()=>{}); } catch(e) {}
     
     currentPlayingMsgId = msgId;
-    playingTitle.innerText = title;
+    if(playingTitle) playingTitle.innerText = title;
     
-    // 🎬 تأثير الـ Fade Out السلس والراقي للبوستر الملكي
-    placeholder.style.opacity = '0';
-    placeholder.style.transform = 'scale(1.05)';
-    
-    setTimeout(() => {
-        placeholder.classList.add('hidden');
+    // 🎬 تأثير الـ Fade Out السلس للبوستر الترحيبي
+    if(placeholder) {
+        placeholder.style.opacity = '0';
+        placeholder.style.transform = 'scale(1.05)';
         
-        // إظهار الفيديو وعناصر التحكم
-        video.classList.remove('hidden');
-        tapLeft.classList.remove('hidden');
-        tapRight.classList.remove('hidden');
-        controlsBar.classList.remove('hidden');
-        
-        // شحن بث المحاضرة مباشرة من التليجرام
-        video.pause();
-        video.src = `/api/video/stream/${msgId}`;
-        video.load();
-        
-        video.style.opacity = '1';
-        video.play().catch(()=>{});
-    }, 400); 
+        setTimeout(() => {
+            placeholder.classList.add('hidden');
+            
+            // إظهار الفيديو وعناصر التحكم
+            vid.classList.remove('hidden');
+            vid.style.opacity = '1';
+            
+            if(tapLeft) tapLeft.classList.remove('hidden');
+            if(tapRight) tapRight.classList.remove('hidden');
+            if(controlsBar) controlsBar.classList.remove('hidden');
+            
+            // شحن بث المحاضرة مباشرة مع إرسال توكن الحماية في الرابط
+            vid.pause();
+            vid.src = `/api/video/stream/${msgId}?token=${token}`; 
+            vid.load();
+            vid.play().catch(e => console.log("انتظار تفاعل الطالب للتشغيل"));
+        }, 400); 
+    }
 
-    // تمييز الكارد الفعال في الأرشيف
+    // تمييز الكارد الفعال في الأرشيف باللون الأصفر
     document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
-    document.getElementById(`course_${msgId}`)?.classList.add('card-active');
+    const activeCard = document.getElementById(`course_${msgId}`);
+    if(activeCard) activeCard.classList.add('card-active');
+    
+    // عمل سكرول لفوق (للمشغل) عشان لو الطالب تحت في الصفحة
+    document.getElementById('liveStreamSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
 
 // ==================== وضع السينما وتكبير الشاشة ====================
@@ -233,16 +253,20 @@ async function fetchDashboardData() {
                     let coursesHTML = '';
                     coursesList.slice().reverse().forEach((course, index) => {
                         const isActive = currentPlayingMsgId === course.telegramMsgId ? 'card-active' : '';
+                        
+                        // 🔥 السر هنا: منعنا خطأ علامات التنصيص في اسم الكورس اللي كان بيوقف الزرار
+                        const safeTitle = course.courseName ? course.courseName.replace(/"/g, '&quot;') : 'درس بدون عنوان';
+                        
                         coursesHTML += `
                         <div id="course_${course.telegramMsgId}" class="course-card ${isActive} bg-black/30 border border-white/5 rounded-xl p-4 md:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 transition-all hover:border-yellow-500/30">
                             <div class="flex-1">
                                 <div class="flex items-center gap-2">
                                     <span class="text-xs text-yellow-500 bg-yellow-500/10 px-2 py-0.5 rounded font-bold">الحصة ${coursesList.length - index}</span>
-                                    <h3 class="font-bold text-base md:text-lg text-white">${course.courseName}</h3>
+                                    <h3 class="font-bold text-base md:text-lg text-white">${safeTitle}</h3>
                                 </div>
                                 <p class="text-xs md:text-sm text-gray-400 mt-2 leading-relaxed">${course.description || 'لا يوجد وصف مضاف لهذه المحاضرة.'}</p>
                             </div>
-                            <button onclick="window.loadVideoToPlayer(${course.telegramMsgId}, '${course.courseName}')" class="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-yellow-500 hover:text-black text-yellow-500 font-bold px-5 py-2.5 rounded-xl border border-yellow-500/20 hover:border-transparent transition-all text-sm flex items-center justify-center gap-2 shadow-md">
+                            <button onclick="window.loadVideoToPlayer(${course.telegramMsgId}, this.getAttribute('data-title'))" data-title="${safeTitle}" class="w-full sm:w-auto shrink-0 bg-white/5 hover:bg-yellow-500 hover:text-black text-yellow-500 font-bold px-5 py-2.5 rounded-xl border border-yellow-500/20 hover:border-transparent transition-all text-sm flex items-center justify-center gap-2 shadow-md">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> تشغيل الدرس
                             </button>
                         </div>`;
@@ -283,7 +307,7 @@ async function fetchDashboardData() {
                 } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
             }
 
-            // تحديث الملاحظات وأهم نقاط المنهج
+            // تحديث الملاحظات والأسئلة المقالية
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
@@ -294,7 +318,6 @@ async function fetchDashboardData() {
                 } else { pContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد ملاحظات من المعلم.</p>'; }
             }
 
-            // تحديث الأسئلة المقالية والHints
             const qContainer = document.getElementById('questionsContainer');
             if (qContainer) {
                 if (data.content?.questions && data.content.questions.length > 0) {
