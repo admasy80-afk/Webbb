@@ -77,7 +77,6 @@ if(video) {
         setTimeout(() => skipIndicator.classList.add('hidden'), 800);
     };
 
-    // الـ RTL يخلي اليسار تقديم واليمين تأخير للمشاهدة المريحة
     tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(10, "⏩ +10 ثواني"); });
     tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); handleDoubleTap(-10, "⏪ -10 ثواني"); });
 
@@ -122,115 +121,59 @@ if(video) {
     });
 }
 
-// دالة سحب وتشغيل المحاضرة سحابياً عند النقر عليها (معدلة ومضمونة 100%)
+// 🔥 دالة سحب وتشغيل المحاضرة سحابياً (مدمج فيها كاشف أخطاء لطباعة المشكلة بالملي) 🔥
 window.loadVideoToPlayer = function(msgId, title) {
-    // جلب العناصر وقت الضغط لضمان وجودها
-    const vid = document.getElementById('dahihPlayer');
-    const placeholder = document.getElementById('videoPlaceholder');
-    const tapLeft = document.getElementById('tapLeft');
-    const tapRight = document.getElementById('tapRight');
-    const controlsBar = document.querySelector('.custom-controls');
-    const playingTitle = document.getElementById('playingVideoTitle');
+    console.log("🎯 تم الضغط على زرار تشغيل الدرس الحصة ID:", msgId, "بإسم:", title);
 
-    if(!vid) {
-        console.error("عنصر المشغل غير موجود!");
+    const vid = document.getElementById('dahihPlayer');
+    const bgPlaceholder = document.getElementById('videoPlaceholder');
+    const tLeft = document.getElementById('tapLeft');
+    const tRight = document.getElementById('tapRight');
+    const cBar = document.querySelector('.custom-controls');
+    const pTitle = document.getElementById('playingVideoTitle');
+
+    if (!vid) {
+        console.error("❌ خطأ كارثي: عنصر الفديو <video id='dahihPlayer'> غير موجود بالصفحة!");
+        alert("تنبيه الإدارة: عنصر المشغل غير موجود في كود HTML");
         return;
     }
-    
-    if (currentPlayingMsgId === msgId) return; // لو هو نفس الفيديو شغال متعملش حاجة
-    
+
     try { sounds.click.play().catch(()=>{}); } catch(e) {}
     
     currentPlayingMsgId = msgId;
-    if(playingTitle) playingTitle.innerText = title;
+    if(pTitle) pTitle.innerText = title;
     
-    // 🎬 تأثير الـ Fade Out السلس للبوستر الترحيبي
-    if(placeholder) {
-        placeholder.style.opacity = '0';
-        placeholder.style.transform = 'scale(1.05)';
+    if(bgPlaceholder) {
+        bgPlaceholder.style.opacity = '0';
+        bgPlaceholder.style.transform = 'scale(1.05)';
         
         setTimeout(() => {
-            placeholder.classList.add('hidden');
+            bgPlaceholder.classList.add('hidden');
             
-            // إظهار الفيديو وعناصر التحكم
             vid.classList.remove('hidden');
             vid.style.opacity = '1';
             
-            if(tapLeft) tapLeft.classList.remove('hidden');
-            if(tapRight) tapRight.classList.remove('hidden');
-            if(controlsBar) controlsBar.classList.remove('hidden');
+            if(tLeft) tLeft.classList.remove('hidden');
+            if(tRight) tRight.classList.remove('hidden');
+            if(cBar) cBar.classList.remove('hidden');
             
-            // شحن بث المحاضرة مباشرة مع إرسال توكن الحماية في الرابط
+            // شحن وتمرير الفديو من السيرفر
+            console.log("🎬 جاري تمرير المسار السحابي الآمن للمشغل...");
             vid.pause();
             vid.src = `/api/video/stream/${msgId}?token=${token}`; 
             vid.load();
-            vid.play().catch(e => console.log("انتظار تفاعل الطالب للتشغيل"));
+            vid.play()
+                .then(() => console.log("🚀 كفو! المحاضرة بدأت تعمل بنجاح!"))
+                .catch(e => console.log("⚠️ تم الإيقاف المؤقت في انتظار نقرة الطالب للتشغيل:", e.message));
         }, 400); 
     }
 
-    // تمييز الكارد الفعال في الأرشيف باللون الأصفر
     document.querySelectorAll('.course-card').forEach(card => card.classList.remove('card-active'));
     const activeCard = document.getElementById(`course_${msgId}`);
     if(activeCard) activeCard.classList.add('card-active');
     
-    // عمل سكرول لفوق (للمشغل) عشان لو الطالب تحت في الصفحة
     document.getElementById('liveStreamSection')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 };
-
-// ==================== وضع السينما وتكبير الشاشة ====================
-function toggleTheaterMode() {
-    sounds.click.play().catch(()=>{});
-    const body = document.body;
-    const streamSection = document.getElementById('liveStreamSection');
-    if(!streamSection) return;
-
-    body.classList.toggle('bg-black');
-    const isTheater = body.classList.contains('bg-black');
-
-    document.querySelectorAll('body > *:not(#liveStreamSection)').forEach(el => {
-        el.style.opacity = isTheater ? '0' : '1';
-        el.style.pointerEvents = isTheater ? 'none' : 'auto';
-        el.style.transition = 'opacity 0.4s ease';
-    });
-}
-
-function toggleStudentFullScreen() {
-    const fsWrapper = document.getElementById('fs-wrapper');
-    if (!fsWrapper) return;
-    if (!document.fullscreenElement) {
-        fsWrapper.requestFullscreen().catch(()=>{});
-    } else {
-        document.exitFullscreen().catch(()=>{});
-    }
-}
-
-function toggleSection(sectionId, iconId) {
-    sounds.click.play().catch(()=>{});
-    const section = document.getElementById(sectionId);
-    const icon = document.getElementById(iconId);
-    if (!section || !icon) return;
-    section.classList.toggle('collapsed');
-    icon.classList.toggle('collapsed');
-    if(section.classList.contains('collapsed')) { 
-        section.style.maxHeight = '0px'; 
-        section.style.opacity = '0.5';
-    } else { 
-        section.style.maxHeight = '1000px'; 
-        section.style.opacity = '1';
-    }
-}
-
-function animateValue(obj, start, end, duration) {
-    let startTimestamp = null;
-    const step = (timestamp) => {
-        if (!startTimestamp) startTimestamp = timestamp;
-        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-        const easeOut = progress * (2 - progress);
-        obj.innerText = Math.floor(easeOut * (end - start) + start) + '%';
-        if (progress < 1) window.requestAnimationFrame(step);
-    };
-    window.requestAnimationFrame(step);
-}
 
 // ==================== سحب وضخ البيانات من الباك إند المحمي ====================
 async function fetchDashboardData() {
@@ -244,7 +187,6 @@ async function fetchDashboardData() {
         if (res.ok) {
             const data = await res.json();
             
-            // 🎥 ضخ وعرض مصفوفة الحصص والأرشيف بالتفصيل والترتيب
             const coursesContainer = document.getElementById('studentCoursesContainer');
             if (coursesContainer) {
                 const coursesList = data.courses || data.content?.courses || [];
@@ -253,8 +195,6 @@ async function fetchDashboardData() {
                     let coursesHTML = '';
                     coursesList.slice().reverse().forEach((course, index) => {
                         const isActive = currentPlayingMsgId === course.telegramMsgId ? 'card-active' : '';
-                        
-                        // 🔥 السر هنا: منعنا خطأ علامات التنصيص في اسم الكورس اللي كان بيوقف الزرار
                         const safeTitle = course.courseName ? course.courseName.replace(/"/g, '&quot;') : 'درس بدون عنوان';
                         
                         coursesHTML += `
@@ -277,7 +217,6 @@ async function fetchDashboardData() {
                 }
             }
 
-            // تحديث التقييم العام
             const pointsDisplay = document.getElementById('studentPointsDisplay');
             const newPoints = parseInt(data.studentPoints || 0);
             if (pointsDisplay && currentPointsTracker !== newPoints) {
@@ -286,7 +225,6 @@ async function fetchDashboardData() {
                 currentPointsTracker = newPoints;
             }
 
-            // تحديث كروت الكويزات والاختبارات المتاحة
             window.availableQuizzes = data.content?.quizzes || [];
             const qzContainer = document.getElementById('onlineQuizzesContainer');
             if (qzContainer) {
@@ -307,7 +245,6 @@ async function fetchDashboardData() {
                 } else { qzContainer.innerHTML = '<p class="text-center text-gray-500 py-4">لا توجد اختبارات إلكترونية حالياً.</p>'; }
             }
 
-            // تحديث الملاحظات والأسئلة المقالية
             const pContainer = document.getElementById('pointsContainer');
             if (pContainer) {
                 if (data.content?.points && data.content.points.length > 0) {
