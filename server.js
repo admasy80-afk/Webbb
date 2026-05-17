@@ -11,6 +11,10 @@ const multer = require('multer');
 const { TelegramClient } = require('telegram');
 const { StringSession } = require('telegram/sessions');
 
+// مكاتب Cloudflare R2
+const { S3Client, GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { Upload } = require('@aws-sdk/lib-storage');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'dahih_super_secret_key_2026';
@@ -21,7 +25,6 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// إعداد مجلد الرفع وحماية الحجم (أقصى حاجة 2 جيجا)
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir);
@@ -40,24 +43,29 @@ const loginLimiter = rateLimit({
 let db;
 let usersCollection;
 
-// بيانات تيليجرام
-const botToken = (process.env.TELEGRAM_BOT_TOKEN || "8721699695:AAF_7GnXf9U4fGNm7VktRzjrpMg18KAtsig").trim().replace(/['"]/g, '');
-const apiId = parseInt((process.env.TELEGRAM_API_ID || "31618084").toString().trim().replace(/['"]/g, ''));
-const apiHash = (process.env.TELEGRAM_API_HASH || "530ee664dc425b824d896e0d65223cbf").trim().replace(/['"]/g, '');
-
-const stringSession = new StringSession(""); 
-
-const tgClient = new TelegramClient(stringSession, apiId, apiHash, {
-    connectionRetries: 10,
-    useWSS: true
+// ==================== إعدادات Cloudflare R2 ====================
+const r2Client = new S3Client({
+    region: 'auto',
+    endpoint: process.env.R2_ENDPOINT,
+    credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+    },
 });
+const BUCKET_NAME = 'eld7e7'; // اسم الباكت الخاص بك
+
+// ==================== إعدادات تيليجرام (للفيديوهات القديمة) ====================
+const botToken = (process.env.TELEGRAM_BOT_TOKEN || "").trim().replace(/['"]/g, '');
+const apiId = parseInt((process.env.TELEGRAM_API_ID || "0").toString().trim().replace(/['"]/g, ''));
+const apiHash = (process.env.TELEGRAM_API_HASH || "").trim().replace(/['"]/g, '');
+const stringSession = new StringSession(""); 
+const tgClient = new TelegramClient(stringSession, apiId, apiHash, { connectionRetries: 10, useWSS: true });
 
 async function ensureTelegramConnection() {
     if (tgClient.connected) return true;
     try {
-        console.log("⏳ جاري الاتصال بتيليجرام...");
         await tgClient.start({ botAuthToken: botToken });
-        console.log("👑 سيرفر تيليجرام MTProto متصل وجاهز طازة!");
+        console.log("👑 سيرفر تيليجرام متصل (جاهز لدعم الفيديوهات القديمة)");
         return true;
     } catch (err) {
         console.error("❌ فشل اتصال تيليجرام:", err.message);
@@ -72,11 +80,9 @@ async function startServer() {
             await client.connect();
             db = client.db('dahih_db');
             usersCollection = db.collection('users');
-            console.log("✅ تم الاتصال بمونجو بنجاح.. قاعدة البيانات جاهزة!");
+            console.log("✅ تم الاتصال بمونجو بنجاح..");
         }
-
         await ensureTelegramConnection();
-
         app.listen(PORT, () => console.log(`🚀 السيرفر شغال على بورت ${PORT}`));
     } catch (err) {
         console.error("❌ فشل تشغيل السيرفر الأساسي:", err);
@@ -85,24 +91,7 @@ async function startServer() {
 
 startServer();
 
-app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
-    res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4');
-});
-
-// تنظيف البث المباشر
-setInterval(async () => {
-    if (!db) return;
-    try {
-        const contentCollection = db.collection('curriculum_content');
-        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-        await contentCollection.updateMany(
-            { "liveStream.isLive": true, "liveStream.startedAt": { $lt: fourHoursAgo } },
-            { $unset: { "liveStream": "" } }
-        );
-    } catch (e) {
-        console.error("⚠️ خطأ في دورة تنظيف الموارد:", e);
-    }
-}, 60 * 60 * 1000);
+app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4'));
 
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -116,21 +105,17 @@ const authenticateToken = (req, res, next) => {
 
 const requireAdmin = (req, res, next) => {
     const role = (req.user && req.user.role) ? req.user.role : req.body.role;
-    if (role !== 'dev' && role !== 'owner') {
-        return res.status(403).json({ message: "غير مصرح لك" });
-    }
+    if (role !== 'dev' && role !== 'owner') return res.status(403).json({ message: "غير مصرح لك" });
     next();
 };
 
 app.get('/api/verify-session', authenticateToken, (req, res) => {
     if (!req.user) return res.status(401).json({ message: "انتهت الجلسة" });
     const userRole = req.user.role;
-    let redirectUrl = '/student-dashboard.html';
-    if (userRole === 'dev' || userRole === 'owner') redirectUrl = '/admin-dashboard.html';
-    res.status(200).json({ message: "التوكن صالح", redirectTo: redirectUrl, role: userRole });
+    res.status(200).json({ message: "التوكن صالح", redirectTo: (userRole === 'dev' || userRole === 'owner') ? '/admin-dashboard.html' : '/student-dashboard.html', role: userRole });
 });
 
-// رفع الفيديو لتيليجرام
+// 🔥 رفع الفيديو مباشرة لـ Cloudflare R2 🔥
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.single('videoFile'), async (req, res) => {
     let absoluteFilePath = null;
     try {
@@ -140,96 +125,112 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, upload.sin
         if (!file) return res.status(400).json({ message: "يرجى اختيار ملف الفيديو أولاً" });
 
         absoluteFilePath = path.resolve(file.path);
-        const connected = await ensureTelegramConnection();
-        if (!connected) throw new Error("فشل الاتصال بسيرفرات تيليجرام.");
+        const fileStream = fs.createReadStream(absoluteFilePath);
+        
+        // تسمية فريدة للملف في السحابة
+        const fileKey = `videos/${Date.now()}_${path.basename(file.originalname).replace(/[^a-zA-Z0-9.]/g, "")}`;
+        
+        console.log("🚀 جاري رفع الفيديو إلى Cloudflare R2...");
 
-        const message = await tgClient.sendFile('@mohamed293g', {
-            file: absoluteFilePath,
-            caption: `حصة: ${courseName} | الصف: ${grade}`,
-            workers: 1 
+        const parallelUploads3 = new Upload({
+            client: r2Client,
+            params: { Bucket: BUCKET_NAME, Key: fileKey, Body: fileStream, ContentType: file.mimetype || 'video/mp4' },
+            queueSize: 4, 
+            partSize: 1024 * 1024 * 5, 
         });
+
+        await parallelUploads3.done();
+        console.log("✅ تم الرفع لـ R2 بنجاح!");
 
         if (fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
 
         const coursesCollection = db.collection('courses');
+        
+        // استخدام رقم مميز ليتوافق مع كود الفرونت إند الحالي بدون تعديل
+        const fakeMsgId = Date.now(); 
+
         await coursesCollection.insertOne({
             courseName,
             grade,
             description,
-            telegramMsgId: message.id,
+            telegramMsgId: fakeMsgId, // متوافق مع الفرونت إند
+            r2FileKey: fileKey,       // مفتاح كلوفلير الجديد
             createdAt: new Date()
         });
 
-        res.status(200).json({ message: "✅ تم تشفير المحاضرة ورفعها بنجاح!" });
+        res.status(200).json({ message: "✅ تم رفع المحاضرة السحابية بنجاح!" });
     } catch (error) {
         if (absoluteFilePath && fs.existsSync(absoluteFilePath)) fs.unlinkSync(absoluteFilePath);
-        res.status(500).json({ message: "خطأ تليجرام: " + (error.message || "فشل غير معروف") });
+        console.error("R2 Upload Error:", error);
+        res.status(500).json({ message: "خطأ في السيرفر السحابي: " + (error.message || "فشل غير معروف") });
     }
 });
 
-// 🔥 بث الفيديو بنظام الأنبوب المباشر (Direct Streaming Generator) لحل الشاشة السوداء 🔥
+// 🔥 بث الفيديو: من كلوفلير للجديد، ومن تيليجرام للقديم 🔥
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     try {
         const msgId = parseInt(req.params.msgId);
-        await ensureTelegramConnection();
+        const coursesCollection = db.collection('courses');
+        const course = await coursesCollection.findOne({ telegramMsgId: msgId });
 
+        // 🟢 1. التشغيل من كلوفلير (الصاروخ) إذا كان مرفوع حديثاً
+        if (course && course.r2FileKey) {
+            const command = new GetObjectCommand({
+                Bucket: BUCKET_NAME,
+                Key: course.r2FileKey,
+                Range: req.headers.range 
+            });
+
+            const r2Response = await r2Client.send(command);
+            
+            const headers = {
+                'Accept-Ranges': 'bytes',
+                'Content-Length': r2Response.ContentLength,
+                'Content-Type': r2Response.ContentType || 'video/mp4'
+            };
+            if (r2Response.ContentRange) headers['Content-Range'] = r2Response.ContentRange;
+            
+            res.writeHead(r2Response.$metadata.httpStatusCode || 200, headers);
+            r2Response.Body.pipe(res);
+            return;
+        }
+
+        // 🟠 2. التشغيل من تيليجرام (إذا كان الفيديو قديم) باستخدام الأنبوب المباشر
+        await ensureTelegramConnection();
         const messages = await tgClient.getMessages('@mohamed293g', { ids: [msgId] });
         if (!messages || messages.length === 0 || !messages[0].media) return res.status(404).send("الفيديو غير متاح");
 
         const message = messages[0];
-        const document = message.media.document;
-        if (!document) return res.status(404).send("الملف المرفق ليس فيديو صالح");
-
-        const fileSize = Number(document.size);
+        const fileSize = Number(message.media.document.size);
         const range = req.headers.range;
 
-        let start = 0;
-        let end = fileSize - 1;
-
+        let start = 0; let end = fileSize - 1;
         if (range) {
             const parts = range.replace(/bytes=/, "").split("-");
             start = parseInt(parts[0], 10);
             end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
         }
 
-        const chunksize = (end - start) + 1;
-
         res.writeHead(range ? 206 : 200, {
             'Content-Range': `bytes ${start}-${end}/${fileSize}`,
             'Accept-Ranges': 'bytes',
-            'Content-Length': chunksize,
+            'Content-Length': (end - start) + 1,
             'Content-Type': 'video/mp4'
         });
 
-        // سحب وتمرير البيانات فوراً كـ Stream بدل تحميل الملف بالكامل
-        const stream = tgClient.iterDownload({
-            file: message.media,
-            offset: start,
-            limit: chunksize,
-            requestSize: 1024 * 512, // يطلب 512 كيلوبايت كل مرة لتسريع الاستجابة
-        });
-
-        // حماية السيرفر: لو المتصفح أغلق الاتصال، نوقف السحب من تيليجرام
+        const stream = tgClient.iterDownload({ file: message.media, offset: start, limit: (end - start) + 1, requestSize: 1024 * 512 });
         let isClosed = false;
-        req.on('close', () => {
-            isClosed = true;
-        });
+        req.on('close', () => { isClosed = true; });
 
         for await (const chunk of stream) {
-            if (isClosed) break; // أوقف التحميل فوراً!
-            
-            // الكتابة المباشرة في المتصفح
-            if (!res.write(chunk)) {
-                // انتظار المتصفح حتى يهضم البيانات
-                await new Promise(resolve => res.once('drain', resolve));
-            }
+            if (isClosed) break;
+            if (!res.write(chunk)) await new Promise(resolve => res.once('drain', resolve));
         }
-        
         if (!isClosed) res.end();
 
     } catch (error) {
         console.error("❌ خطأ في بث الفيديو:", error.message);
-        if (!res.headersSent) res.status(500).send("حدث خطأ أثناء تحميل مشغل الفيديو المحمي");
+        if (!res.headersSent) res.status(500).send("حدث خطأ أثناء تحميل مشغل الفيديو");
     }
 });
 
@@ -255,6 +256,13 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
     try {
         const courseId = req.params.id;
         const coursesCollection = db.collection('courses');
+        const course = await coursesCollection.findOne({ _id: new ObjectId(courseId) });
+
+        if (course && course.r2FileKey) {
+            try { await r2Client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: course.r2FileKey })); } 
+            catch (e) { console.error("⚠️ فشل حذف الملف من R2:", e.message); }
+        }
+
         const result = await coursesCollection.deleteOne({ _id: new ObjectId(courseId) });
         if (result.deletedCount === 0) return res.status(404).json({ message: "المحاضرة غير موجودة بالفعل" });
         res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
