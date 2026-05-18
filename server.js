@@ -56,13 +56,13 @@ let server;
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// CSP متوازن (يسمح بالـ inline والخطوط عشان تصميم الموقع ما يبوظش)
+// CSP متوازن ومحدث لحل مشكلة الأزرار والـ inline attributes تماماً
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "https:"], 
-            scriptSrcAttr: ["'unsafe-inline'"], // التعديل لحل مشكلة الأزرار
+            scriptSrcAttr: ["'unsafe-inline'"], 
             styleSrc: ["'self'", "'unsafe-inline'", "https:"], 
             fontSrc: ["'self'", "https:", "data:"],             
             imgSrc: ["'self'", "data:", "blob:", "https:"],
@@ -93,20 +93,22 @@ app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// حارس يدوي صارم لمنع NoSQL Injection
+// حارس متطور ومضمون لمنع NoSQL Injection يقوم بالتطهير المباشر دون تعطيل أو قفل الـ الاتصالات السليمة للمستخدمين
 app.use((req, res, next) => {
-    const hasDollarKey = (obj) => {
-        if (!obj || typeof obj !== 'object') return false;
-        for (let key in obj) {
-            if (key.startsWith('$')) return true;
-            if (typeof obj[key] === 'object' && hasDollarKey(obj[key])) return true;
+    const sanitize = (obj) => {
+        if (obj instanceof Object) {
+            for (let key in obj) {
+                if (/^\$/.test(key)) {
+                    delete obj[key];
+                } else if (typeof obj[key] === 'object') {
+                    sanitize(obj[key]);
+                }
+            }
         }
-        return false;
     };
-    if (hasDollarKey(req.body) || hasDollarKey(req.query)) {
-        logger.warn({ ip: req.ip, path: req.path }, "Illegal NoSQL operator injection attempt blocked.");
-        return res.status(400).json({ message: "Request contains illegal characters." });
-    }
+    if (req.body) sanitize(req.body);
+    if (req.query) sanitize(req.query);
+    if (req.params) sanitize(req.params);
     next();
 });
 
@@ -259,7 +261,6 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
         if (data.identifier === OWNER_EMAIL && OWNER_PASSWORD_HASH) isOwner = await bcrypt.compare(data.password, OWNER_PASSWORD_HASH);
         
         if (isDev || isOwner) {  
-            // التعديل هنا: إزالة كلمة "الدحيح" والاحتفاظ بـ "مستر" فقط
             const roleName = isDev ? "المطور" : "مستر";  
             const userRole = isDev ? "dev" : "owner";  
             const token = jwt.sign({ email: data.identifier, role: userRole, fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '30d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
@@ -429,6 +430,10 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                 logger.warn({ reqId: req.requestId }, "Client disconnected abruptly. Aborting upload.");
                 if (parallelUpload && !responded) parallelUpload.abort();
             }
+        });
+
+        req.on('error', (err) => {
+            logger.error({ err: err, reqId: req.requestId }, "Busboy form parse error.");
         });
 
         req.pipe(bb);
@@ -776,24 +781,3 @@ async function startServer() {
     server = app.listen(PORT, () => logger.info(`🚀 السيرفر شغال ومستعد لخدمة الطلبة على بورت ${PORT}`));
     
     server.headersTimeout = 15000;
-    server.requestTimeout = 30000;
-    server.keepAliveTimeout = 5000;
-}
-
-startServer();
-
-process.on('unhandledRejection', (err) => logger.error({ err: err }, 'Unhandled Rejection'));
-process.on('uncaughtException', (err) => logger.fatal({ err: err }, 'Uncaught Exception'));
-
-process.on('SIGINT', async () => {
-    logger.info('\nShutting down server safely...');
-    if (server) {
-        server.close(async () => {
-            logger.info('HTTP connections closed.');
-            try { if (mongoClient) await mongoClient.close(); } catch (e) {}
-            process.exit(0);
-        });
-    } else {
-        process.exit(0);
-    }
-});
