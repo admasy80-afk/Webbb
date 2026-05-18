@@ -94,6 +94,8 @@ app.use('/api/', (req, res, next) => {
     apiLimiter(req, res, next);
 });
 
+// متغيرات عامة لقاعدة البيانات
+const MONGO_URL = process.env.MONGO_URL;
 let db;
 let usersCollection;
 
@@ -121,29 +123,49 @@ const idriveClient = new S3Client({
 const IDRIVE_BUCKET_NAME = process.env.IDRIVE_BUCKET_NAME || 'eld7e7';
 
 // ==================== Core Server & DB Initialization ====================
-async function startServer() {
-    console.log("🔍 جاري فحص إعدادات البيئة...");
+
+// دالة الاتصال بقاعدة البيانات (مدمجة)
+async function connectMongo() {
     try {
-        // حماية النظام: إيقاف تشغيل الخادم فوراً إذا غاب رابط قاعدة البيانات لمنع الاتصال الوهمي
-        if (!process.env.MONGO_URL) {
-            console.error("🚨 خطأ قاتل: المتغير MONGO_URL غير موجود في Railway!");
+        if (!MONGO_URL) {
+            console.error("🚨 خطأ قاتل: المتغير MONGO_URL غير موجود في إعدادات البيئة!");
             process.exit(1);
         }
 
         console.log("⏳ رابط مونجو موجود، جاري محاولة الاتصال بقاعدة البيانات...");
-        const client = new MongoClient(process.env.MONGO_URL);
-        await client.connect();
-        db = client.db('dahih_db');
-        usersCollection = db.collection('users');
-        console.log("✅ تم الاتصال بقاعدة بيانات MongoDB بنجاح أسطوري!");
         
-        app.listen(PORT, () => console.log(`🚀 السيرفر شغال ومستعد لخدمة الطلبة على بورت ${PORT}`));
-    } catch (err) {
-        console.error("❌ فشل الاتصال بقاعدة البيانات بسبب هذا الخطأ:", err.message);
-        process.exit(1);
+        // إنشاء العميل والاتصال
+        const client = new MongoClient(MONGO_URL);
+        await client.connect();
+
+        console.log("✅ تم الاتصال بـ MongoDB بنجاح أسطوري");
+
+        // اختيار قاعدة البيانات
+        db = client.db('dahih_db');
+
+        // اختيار الكولكشن
+        usersCollection = db.collection('users');
+
+        console.log("🔥 قاعدة البيانات جاهزة للعمل");
+
+    } catch (error) {
+        console.error("❌ فشل الاتصال بمونجو بسبب هذا الخطأ:", error.message);
+        process.exit(1); // إنهاء الخادم إذا فشلت قاعدة البيانات
     }
 }
 
+// دالة التشغيل الأساسية
+async function startServer() {
+    console.log("🔍 جاري فحص إعدادات البيئة...");
+    
+    // استدعاء دالة قاعدة البيانات أولاً
+    await connectMongo();
+    
+    // تشغيل الخادم بعد التأكد من جاهزية قاعدة البيانات
+    app.listen(PORT, () => console.log(`🚀 السيرفر شغال ومستعد لخدمة الطلبة على بورت ${PORT}`));
+}
+
+// تشغيل النظام
 startServer();
 
 app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4'));
@@ -584,7 +606,6 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     }
 });
 
-// Note: Ensure this route is actually intended to be public or update auth.
 app.get('/api/public/quiz', async (req, res) => {
     try {
         const { id } = req.query; 
@@ -648,3 +669,37 @@ app.use((err, req, res, next) => {
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+/*
+====================================================================
+💡 التعديل المطلوب (Frontend Fetch Code)
+ملاحظة: هذا الجزء خاص بالواجهة الأمامية للمستخدم (Client-Side). 
+انسخه وضعه داخل ملفات الـ JavaScript الخاصة بلوحة تحكم الطالب لديك 
+(مثال: student-dashboard.js) أو داخل وسم <script> في صفحة الـ HTML.
+====================================================================
+
+fetch('/api/student/dashboard-data', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+    },
+    body: JSON.stringify({ grade: 'الصف الأول الثانوي' }) // تأكد إنك باعت الـ Grade الصح هنا
+})
+.then(res => {
+    // 💡 الحيلة هنا: لو السيرفر رجع خطأ (زي 401 أو 403 أو 500) الموبايل هيطلعلك رسالة برقم الخطأ فوراً
+    if (!res.ok) {
+        alert("🚨 خطأ من السيرفر برقم: " + res.status);
+    }
+    return res.json();
+})
+.then(data => {
+    // 💡 الحيلة الثانية: هيطبعلك البيانات اللي رجعت في نافذة على الموبايل عشان تشوفها بعينك
+    alert("📦 البيانات المستلمة: " + JSON.stringify(data));
+})
+.catch(err => {
+    alert("❌ فشل الطلب تماماً بسبب: " + err.message);
+});
+
+====================================================================
+*/
