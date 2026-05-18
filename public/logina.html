@@ -3,103 +3,348 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
     <title>تسجيل الدخول | منصة الدحيح</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <style>
-        body { 
-            font-family: 'Readex Pro', sans-serif; 
-            background: #070b19;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-            overflow: hidden;
-            perspective: 1200px;
+        /* تحسينات الـ Native Experience للموبايل */
+        html {
+            scroll-behavior: smooth;
         }
-
-        /* الطبقات السينمائية */
-        .orb { position: absolute; border-radius: 9999px; filter: blur(90px); opacity: 0.18; animation: float 12s ease-in-out infinite; z-index: 0; }
-        .orb1 { width: 300px; height: 300px; background: #eab308; top: -50px; right: -50px; }
-        .orb2 { width: 250px; height: 250px; background: #7c3aed; bottom: -50px; left: -50px; }
-        @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-30px); } }
-
-        .glass-card {
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 30px 60px rgba(0,0,0,0.5);
-            background: rgba(255, 255, 255, 0.03);
-            width: 100%;
-            max-width: 400px;
-            z-index: 2;
-            transition: transform 0.3s ease;
+        * {
+            -webkit-tap-highlight-color: transparent;
         }
-
-        /* الأنيميشن */
-        .animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
-        .hidden { display: none !important; }
+        body { font-family: 'Readex Pro', sans-serif; overflow-x: hidden; overflow-y: auto; }
+        
+        /* الخلفية المتحركة */
+        .bg-animated-gradient {
+            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
+            background-size: 400% 400%;
+            animation: gradientMove 15s ease infinite;
+        }
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* الطبقة السينمائية */
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 4px 4px; 
+            opacity: 0.15;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* كارت الزجاج */
+        .glass-card {
+            backdrop-filter: blur(14px); 
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* Glow Effect */
+        .glass-card::before {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            background: linear-gradient(45deg, #eab308, #7c3aed, #0ea5e9);
+            border-radius: inherit;
+            z-index: -1;
+            filter: blur(25px);
+            opacity: 0.25;
+            animation: pulseGlow 6s linear infinite;
+        }
+        @keyframes pulseGlow {
+            0% { transform: rotate(0deg) scale(1); }
+            50% { transform: rotate(180deg) scale(1.03); }
+            100% { transform: rotate(360deg) scale(1); }
+        }
+
+        /* دخول الكارت */
+        @keyframes customFadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-up {
+            opacity: 0;
+            animation: customFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        /* أنيميشن الاهتزاز عند الخطأ (UX) */
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .shake-animation {
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        .input-error {
+            border-color: #ef4444 !important; 
+        }
+
+        /* حماية الأداء للأجهزة الضعيفة وخيارات تقليل الحركة */
+        @media (prefers-reduced-motion: reduce) {
+            .bg-animated-gradient,
+            .glass-card::before,
+            .animate-fade-up,
+            .shake-animation {
+                animation: none !important;
+            }
+        }
     </style>
 </head>
 
-<body>
+<body class="bg-animated-gradient text-white min-h-screen flex items-center justify-center p-6">
 
-    <div class="orb orb1"></div>
-    <div class="orb orb2"></div>
-
-    <!-- كارت تسجيل الدخول -->
-    <div class="glass-card rounded-[2.5rem] p-8 animate-fade-in">
+    <div id="loginCard" class="glass-card bg-white/5 w-full max-w-md rounded-[2.5rem] p-10 relative overflow-hidden animate-fade-up my-auto">
+        
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-black text-yellow-500 mb-2">الدحيح.</h1>
-            <p class="text-gray-400 text-sm">أهلاً بك مجدداً، سجل دخولك</p>
+            <div class="text-4xl font-black text-yellow-500 mb-2 tracking-tight">الدحيح<span class="text-white">.</span></div>
+            <h2 class="text-xl font-bold mt-4 mb-2">تسجيل الدخول</h2>
+            <p class="text-gray-400 text-xs leading-relaxed">سجل دخولك بواسطة البريد أو رقم الهاتف</p>
         </div>
 
-        <form id="loginForm" class="space-y-4">
-            <input type="text" id="loginIdentifier" placeholder="البريد أو رقم الهاتف" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 focus:border-yellow-500 focus:outline-none transition-all text-right" dir="ltr">
-            
-            <div class="relative">
-                <input type="password" id="password" placeholder="كلمة المرور" class="w-full bg-black/40 border border-white/10 text-white rounded-xl px-4 py-3 focus:border-yellow-500 focus:outline-none transition-all text-right" dir="ltr">
-                <button type="button" id="togglePassword" class="absolute left-3 top-3.5 text-gray-500 hover:text-yellow-500 transition-all">
-                    <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                </button>
+        <form id="loginForm">
+
+            <div class="mb-5">
+                <label class="block text-xs font-medium text-gray-300 mb-2 flex justify-between">
+                    <span>البريد أو رقم الهاتف</span>
+                </label>
+                <!-- إضافة autocomplete للـ UX والـ Password Managers -->
+                <input type="text" id="loginIdentifier" required autocomplete="username" placeholder="example@mail.com أو 010..."
+                    class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
+                    dir="ltr">
             </div>
 
-            <button type="submit" id="submitBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all">تسجيل الدخول</button>
-            <p id="msg" class="text-red-400 text-xs text-center hidden"></p>
+            <div class="mb-6">
+                <label class="block text-xs font-medium text-gray-300 mb-2 flex justify-between">
+                    <span>كلمة السر</span>
+                </label>
+                <div class="relative">
+                    <!-- إضافة autocomplete -->
+                    <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••"
+                        class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 pl-10 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
+                        dir="ltr">
+                    
+                    <button type="button" id="togglePassword" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-yellow-500 transition-colors p-1" aria-label="إظهار/إخفاء كلمة المرور">
+                        <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" id="submitBtn"
+                class="w-full bg-yellow-500 text-black font-bold py-3.5 rounded-xl hover:bg-yellow-400 transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.3)] transform hover:scale-[1.02] flex items-center justify-center">
+                تسجيل الدخول
+            </button>
+
+            <div class="mt-6 text-center">
+                <p class="text-gray-400 text-sm">معندكش حساب؟ 
+                    <a href="/register.html" class="text-yellow-500 font-bold hover:underline">إضغط هنا</a>
+                </p>
+            </div>
+
+            <p id="successMessage" class="text-green-400 text-xs text-center mt-4 hidden p-2 bg-green-400/10 rounded-lg"></p>
+            <p id="errorMessage" class="text-red-400 text-xs text-center mt-4 hidden p-2 bg-red-400/10 rounded-lg"></p>
+
         </form>
     </div>
 
 <script>
-    const form = document.getElementById('loginForm');
-    const passwordInput = document.getElementById('password');
-    const toggleBtn = document.getElementById('togglePassword');
-    const eyeIcon = document.getElementById('eyeIcon');
+// --- التحقق من الجلسة أولاً وتدمير الجثث القديمة ---
+async function verifySession() {
+    const token = localStorage.getItem('userToken');
+    if (!token) return;
 
-    // تصحيح العين (مع أنيميشن بسيط)
-    toggleBtn.onclick = () => {
-        const isPass = passwordInput.type === 'password';
-        passwordInput.type = isPass ? 'text' : 'password';
-        eyeIcon.style.transform = "scale(0.8)";
-        setTimeout(() => eyeIcon.style.transform = "scale(1)", 100);
-    };
+    try {
+        const res = await fetch('/api/verify-session', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            if (data.redirectTo) {
+                window.location.replace(data.redirectTo);
+            }
+        } else {
+            localStorage.removeItem('userToken');
+            localStorage.removeItem('dahih_token');
+            localStorage.removeItem('userData');
+            localStorage.removeItem('dahih_user');
+        }
+    } catch (e) {
+        console.log("فشل التحقق من الجلسة:", e);
+    }
+}
+verifySession(); 
 
-    // تصحيح منطق التسجيل (لا يطردك إلا لو السيرفر أرجع خطأ)
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const msg = document.getElementById('msg');
-        const btn = document.getElementById('submitBtn');
+// --- كود برمجة العين ---
+const toggleBtn = document.getElementById('togglePassword');
+const passwordInput = document.getElementById('password');
+const eyeIcon = document.getElementById('eyeIcon');
+const loginIdentifierInput = document.getElementById('loginIdentifier');
+const formContainer = document.getElementById('loginForm');
+
+toggleBtn.onclick = () => {
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>';
+    } else {
+        passwordInput.type = 'password';
+        eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+    }
+};
+
+// --- اللوجيك الخاص بالدخول وإدارة الحالة (State Management) ---
+const form = document.getElementById('loginForm');
+const btn = document.getElementById('submitBtn');
+const errorMsg = document.getElementById('errorMessage');
+const successMsg = document.getElementById('successMessage');
+
+function setLoading(state) {
+    if (state) {
+        // إضافة SVG Spinner احترافي
+        btn.innerHTML = `
+            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-current inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            جاري التحقق...
+        `;
+        btn.disabled = true;
+        btn.style.opacity = "0.7";
+        btn.classList.remove('hover:scale-[1.02]');
+    } else {
+        // إرجاع النص الأساسي وإزالة الـ Spinner
+        btn.innerText = "تسجيل الدخول";
+        btn.disabled = false;
+        btn.style.opacity = "1";
+        btn.classList.add('hover:scale-[1.02]');
+    }
+}
+
+function showError(msg) {
+    errorMsg.innerText = msg;
+    errorMsg.classList.remove('hidden');
+    successMsg.classList.add('hidden');
+    
+    formContainer.classList.remove('shake-animation');
+    void formContainer.offsetWidth; // Trigger reflow
+    formContainer.classList.add('shake-animation');
+    
+    loginIdentifierInput.classList.add('input-error');
+    passwordInput.classList.add('input-error');
+    
+    setTimeout(() => {
+        loginIdentifierInput.classList.remove('input-error');
+        passwordInput.classList.remove('input-error');
+    }, 1500);
+}
+
+function showSuccess(msg) {
+    successMsg.innerText = msg;
+    successMsg.classList.remove('hidden');
+    errorMsg.classList.add('hidden');
+}
+
+function validate(identifier, password) {
+    if (!identifier) return "اكتب البريد أو رقم الهاتف";
+    
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+    const isPhone = /^[0-9+]{8,15}$/.test(identifier);
+
+    if (!isEmail && !isPhone) return "اكتب إيميل صحيح أو رقم هاتف صحيح";
+    if (!password || password.length < 4) return "كلمة المرور قصيرة جدًا";
+    return null;
+}
+
+form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const identifier = loginIdentifierInput.value.trim();
+    const passwordVal = passwordInput.value;
+
+    const validationError = validate(identifier, passwordVal);
+    if (validationError) { showError(validationError); return; }
+
+    setLoading(true);
+    errorMsg.classList.add('hidden');
+    successMsg.classList.add('hidden');
+
+    btn.classList.remove('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
+    btn.classList.add('bg-yellow-500', 'hover:bg-yellow-400', 'text-black', 'shadow-[0_0_15px_rgba(234,179,8,0.3)]');
+
+    try {
+        const response = await fetch('/api/saveUser', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier, password: passwordVal })
+        });
+
+        const text = await response.text();
+        let result = {};
+        try { result = text ? JSON.parse(text) : {}; } catch (e) { throw new Error("استجابة السيرفر غير صالحة"); }
+
+        if (!response.ok) throw new Error(result.message || "فشل تسجيل الدخول");
+
+        showSuccess("تم بنجاح تسجيل الدخول");
+        btn.innerText = "تم بنجاح";
         
-        btn.innerText = "جاري الدخول...";
-        
-        // محاكاة التحقق (استبدلها بـ fetch الحقيقي الخاص بك)
+        btn.classList.remove('bg-yellow-500', 'hover:bg-yellow-400', 'text-black', 'shadow-[0_0_15px_rgba(234,179,8,0.3)]');
+        btn.classList.add('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]'); 
+
+        if (result.token) {
+            localStorage.setItem('userToken', result.token);
+            localStorage.setItem('dahih_token', result.token); 
+        }
+        if (result.userData) {
+            localStorage.setItem('userData', JSON.stringify(result.userData));
+            localStorage.setItem('dahih_user', JSON.stringify(result.userData)); 
+        }
+
         setTimeout(() => {
-            // هنا الكود اللي يوديك للصفحة
-            window.location.href = "/student/"; 
-        }, 1500);
-    });
+            const user = result.userData;
+            if (user.role === 'dev' || user.role === 'owner') {
+                window.location.replace("/admin.html");
+            } else if (user.status === 'pending' || user.status === 'rejected') {
+                window.location.replace("/status.html");
+            } else {
+                window.location.replace("/student/");
+            }
+        }, 1000);
+
+    } catch (error) {
+        showError(error.message);
+        // تم الاعتماد على setLoading(false) في الـ finally لإرجاع حالة الزر الطبيعية بدلاً من التكرار هنا
+    } finally {
+        if (!successMsg.classList.contains('hidden')) return;
+        setLoading(false);
+    }
+});
 </script>
 </body>
 </html>
