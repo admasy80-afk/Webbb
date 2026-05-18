@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#070b19">
+    <meta name="description" content="لوحة الطالب - منصة الدحيح التعليمية">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <title>لوحة الطالب | منصة الدحيح</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-bg" aria-hidden="true"></div>
+
+    <!-- ══════════ التنقّل ══════════ -->
+    <nav class="sticky top-0 z-40 panel" style="border-radius:0;border-left:0;border-right:0;border-top:0;">
+        <div class="mx-auto" style="max-width:1280px;padding:0.85rem 1rem;display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:1.4rem;font-weight:900;letter-spacing:-0.02em;">
+                الدحيح<span style="color:var(--accent);">.</span>
+            </div>
+            <button onclick="DahihApp.logout()" class="btn btn-danger" type="button">تسجيل الخروج</button>
+        </div>
+    </nav>
+
+    <main class="mx-auto" style="max-width:1280px;padding:1.5rem 1rem;">
+
+        <!-- ══════════ الترحيب ══════════ -->
+        <header class="hero fade-in" style="margin-bottom:1.5rem;">
+            <div style="position:relative;z-index:1;">
+                <div class="badge" style="margin-bottom:1rem;">
+                    <span class="badge-dot"></span>
+                    <span>المرحلة:</span>
+                    <strong id="studentGrade" style="color:#fff;font-weight:700;">جاري التحميل...</strong>
+                </div>
+                <h1 style="font-size:clamp(1.5rem,4vw,2.5rem);font-weight:900;margin:0 0 0.5rem;letter-spacing:-0.02em;line-height:1.2;">
+                    مرحباً بك،
+                    <span id="studentName" style="color:var(--accent);">...</span>
+                </h1>
+                <p style="color:var(--text-muted);font-size:0.95rem;margin:0;">نتمنى لك التوفيق في رحلتك الدراسية</p>
+            </div>
+        </header>
+
+        <!-- ══════════ شبكة المحتوى ══════════ -->
+        <div style="display:grid;grid-template-columns:1fr;gap:1.5rem;" id="mainGrid">
+
+            <!-- العمود الأساسي -->
+            <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+                <!-- ══ المشغّل ══ -->
+                <section class="panel panel-accent fade-in">
+                    <div style="padding:1rem 1.25rem;border-bottom:1px solid var(--border);background:rgba(255,255,255,0.02);display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:0.6rem;min-width:0;flex:1;">
+                            <span class="badge-dot" style="width:8px;height:8px;flex-shrink:0;"></span>
+                            <h2 id="playingVideoTitle" style="font-size:1rem;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                اختر محاضرة لبدء الشرح
+                            </h2>
+                        </div>
+                        <div style="display:flex;gap:0.5rem;flex-shrink:0;">
+                            <button class="icon-btn" onclick="DahihApp.toggleTheater()" title="وضع السينما" type="button" aria-label="وضع السينما">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                            </button>
+                            <button class="icon-btn" onclick="DahihApp.toggleFullscreen()" title="ملء الشاشة" type="button" aria-label="ملء الشاشة">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style="padding:1rem;background:rgba(0,0,0,0.4);" id="fs-wrapper">
+                        <div class="video-container" id="videoContainer">
+
+                            <div class="video-poster" id="videoPoster">
+                                <div class="poster-icon">
+                                    <svg style="width:2rem;height:2rem;color:var(--accent);padding-right:4px;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                                <h3 style="font-size:clamp(1.25rem,3vw,2rem);font-weight:900;margin:0 0 0.75rem;letter-spacing:-0.01em;">
+                                    منصة الدحيح <span style="color:var(--accent);">التعليمية</span>
+                                </h3>
+                                <p style="color:#cbd5e1;font-size:0.85rem;max-width:32ch;margin:0;line-height:1.6;">
+                                    اختر محاضرتك من الأرشيف بالأسفل وانطلق في رحلة التعلم
+                                </p>
+                            </div>
+
+                            <video id="dahihPlayer" playsinline preload="metadata" style="display:none;"></video>
+
+                            <div class="tap-zone left"  id="tapLeft"></div>
+                            <div class="tap-zone right" id="tapRight"></div>
+
+                            <div class="skip-indicator" id="skipIndicator" aria-hidden="true">
+                                <div><span id="skipText">+10</span></div>
+                            </div>
+
+                            <div class="center-play" id="centerPlay">
+                                <div>
+                                    <svg style="width:2rem;height:2rem;color:#000;padding-right:4px;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                            </div>
+
+                            <div class="controls">
+                                <div class="progress" id="progressContainer" role="slider" aria-label="موضع التشغيل">
+                                    <div class="progress-fill" id="progressBar"></div>
+                                </div>
+                                <div class="controls-bar">
+                                    <div class="group" dir="ltr" style="font-variant-numeric:tabular-nums;">
+                                        <span id="currentTimeDisplay">00:00</span>
+                                        <span style="opacity:0.5;">/</span>
+                                        <span id="durationDisplay">00:00</span>
+                                    </div>
+                                    <div class="group">
+                                        <button id="speedBtn" type="button" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);padding:0.3rem 0.7rem;border-radius:0.5rem;color:#fff;font-weight:700;font-size:0.8rem;cursor:pointer;">1x</button>
+                                        <button id="muteBtn" type="button" aria-label="كتم الصوت" style="background:transparent;border:0;color:#fff;cursor:pointer;display:inline-flex;">
+                                            <svg style="width:1.4rem;height:1.4rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p style="color:var(--text-dim);font-size:0.75rem;text-align:center;margin:0.85rem 0 0;">انقر مرتين على الجوانب للتقديم أو التأخير</p>
+                    </div>
+                </section>
+
+                <!-- ══ المحاضرات ══ -->
+                <section class="panel panel-accent">
+                    <div class="section-head" data-section="coursesBody">
+                        <h2>المحاضرات والحصص المتوفرة</h2>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </div>
+                    <div class="section-body" id="coursesBody">
+                        <div id="studentCoursesContainer" style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <p class="loading">جاري جلب المحاضرات</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ══ الكويزات ══ -->
+                <section class="panel panel-accent">
+                    <div class="section-head" data-section="quizzesBody">
+                        <h2>الاختبارات الإلكترونية</h2>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </div>
+                    <div class="section-body" id="quizzesBody">
+                        <div id="onlineQuizzesContainer" style="display:flex;flex-direction:column;gap:0.75rem;">
+                            <p class="loading">جاري التحميل</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ══ نقاط المنهج ══ -->
+                <section class="panel panel-accent">
+                    <div class="section-head" data-section="pointsBody">
+                        <h2>أهم نقاط المنهج</h2>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </div>
+                    <div class="section-body" id="pointsBody">
+                        <div id="pointsContainer"></div>
+                    </div>
+                </section>
+
+                <!-- ══ الأسئلة المقالية ══ -->
+                <section class="panel panel-accent">
+                    <div class="section-head" data-section="questionsBody">
+                        <h2>أهم الأسئلة المقالية</h2>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </div>
+                    <div class="section-body" id="questionsBody">
+                        <div id="questionsContainer" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- العمود الجانبي -->
+            <aside style="display:flex;flex-direction:column;gap:1.5rem;" id="sideCol">
+                <section class="panel panel-accent" style="padding:1.25rem;">
+                    <h2 style="font-size:1rem;font-weight:700;margin:0 0 1rem;">التقييم المستمر</h2>
+                    <div class="score-display">
+                        <div id="studentPointsDisplay" class="score-value" dir="ltr">0%</div>
+                        <p class="score-label">النسبة المئوية لتقييم الأداء العام</p>
+                    </div>
+                </section>
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- ══════════ مودال الكويز ══════════ -->
+    <div id="quizModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="quizModalTitle">
+        <div class="modal-box" id="quizModalBox">
+            <div id="quizModalContent"></div>
+        </div>
+    </div>
+
+    <!-- شبكة لجين العمودين على الشاشات الكبيرة -->
+    <style>
+        @media (min-width: 1024px) {
+            #mainGrid {
+                grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important;
+            }
+        }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+    <script src="script.js" defer></script>
+</body>
+</html>
