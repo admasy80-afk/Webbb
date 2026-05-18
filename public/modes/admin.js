@@ -4,22 +4,38 @@ import { user, sessionToken } from './state.js';
 
 let currentGradeData = null;
 
+// 🔥 دالة مساعدة لمرة واحدة: تقوم بالتحقق من حالة الرد وطرد المستخدم إن لزم الأمر
+function checkAuthError(res) {
+    if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem('token');
+        window.location.href = '/index.html'; // توجيه لصفحة الدخول
+        return true; // تعني أن هناك خطأ توثيق
+    }
+    return false; // تعني أن التوثيق سليم
+}
+
 export async function fetchStats() {
     try {
-        const token = localStorage.getItem('token'); // سحب التوكن الجديد
+        const token = localStorage.getItem('token'); 
         const res = await fetch('/api/admin/stats', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // تمرير التوكن في الـ Headers
+                'Authorization': `Bearer ${token}` 
             },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
         });
+        
+        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        
+        if (!res.ok) throw new Error("Network response was not ok");
         const data = await res.json();
         
         animateValue("stats-students", parseInt(document.getElementById('stats-students').innerText) || 0, data.studentsCount || 0, 1000);
         animateValue("stats-pending", parseInt(document.getElementById('stats-pending').innerText) || 0, data.pendingCount || 0, 1000);
-    } catch (err) {}
+    } catch (err) {
+        console.error("fetchStats Error:", err);
+    }
 }
 
 export function animateValue(id, start, end, duration) {
@@ -48,6 +64,10 @@ export async function fetchPendingRequests() {
             },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
         });
+        
+        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        
+        if (!res.ok) throw new Error("Network response was not ok");
         const students = await res.json();
         if (students.length === 0) { 
             container.innerHTML = '<p class="text-gray-500 text-center mt-10 transition-opacity duration-500 opacity-0" id="emptyReqMsg">لا توجد طلبات جديدة حالياً.</p>'; 
@@ -94,6 +114,9 @@ export async function updateStudentStatus(email, newStatus, reason = '', btnElem
             }, 
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) 
         });
+        
+        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        
         if(res.ok) {
             SysUI.toast('success', newStatus === 'accepted' ? 'تم قبول الطالب بنجاح' : 'تم رفض الطالب');
             if(newStatus === 'accepted') SysUI.confetti();
@@ -130,6 +153,10 @@ export async function fetchStudentsByGrade() {
             },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
         });
+        
+        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        
+        if (!res.ok) throw new Error("Network response was not ok");
         const students = await res.json();
         if (students.length === 0) { 
             container.innerHTML = `<p class="text-gray-500 text-center py-10 col-span-full opacity-0 transition-opacity duration-500" id="emptyStMsg">لا يوجد طلاب مقبولين في هذه الدفعة.</p>`; 
@@ -176,6 +203,9 @@ export async function fetchGradeContent() {
             },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
         });
+        
+        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        
         if (res.ok) {
             currentGradeData = await res.json();
             renderManageContent(grade);
@@ -271,6 +301,9 @@ export function deleteContent(grade, itemType, identifier, trashIconElement = nu
                 },
                 body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade, itemType, identifier })
             });
+            
+            if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+
             if (res.ok) {
                 SysUI.toast('success', "تم الحذف بنجاح");
                 setTimeout(() => fetchGradeContent(), trashIconElement ? 400 : 0);
@@ -401,7 +434,7 @@ export function closeResultsModal() {
 
 export function logout() {
     localStorage.removeItem('token');
-    window.location.href = '/login.html';
+    window.location.href = '/index.html'; // تم تعديلها لتتناسب مع اسم ملف تسجيل الدخول غالباً
 }
 
 // تأكيد ربط الدوال بالنطاق العام (Global Scope)
