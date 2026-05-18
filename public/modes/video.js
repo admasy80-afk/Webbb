@@ -10,8 +10,9 @@ function escapeHTML(str = '') {
         .replace(/'/g, '&#039;');
 }
 
+// ✅ تم التصليح: تحديث أسماء التوكن لتطابق صفحة الدخول تماماً
 function getValidToken() {
-    return localStorage.getItem('token') || localStorage.getItem('dahih_token') || sessionToken;
+    return localStorage.getItem('userToken') || localStorage.getItem('dahih_token') || sessionToken;
 }
 
 // حماية السيرفر لو المستخدم قفل الصفحة فجأة والرفع شغال
@@ -91,11 +92,12 @@ export const VideoSystem = {
             return SysUI.toast('error', 'يرجى تعبئة جميع الحقول المطلوبة');
         }
 
+        // ✅ تم التصليح: ترتيب عناصر الـ FormData (النصوص أولاً ثم ملف الفيديو في الآخر خالص)
         const formData = new FormData();
-        formData.append('videoFile', file);
         formData.append('courseName', courseName);
         formData.append('grade', grade);
         formData.append('description', description);
+        formData.append('videoFile', file); // الملف آخر حاجة عشان السيرفر يقرا البيانات قبله
 
         const progressContainer = document.getElementById('videoProgressContainer');
         const progressBar = document.getElementById('videoProgressBar');
