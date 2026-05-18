@@ -7,7 +7,7 @@ let currentGradeData = null;
 // 🔥 دالة مساعدة لمرة واحدة: تقوم بالتحقق من حالة الرد وطرد المستخدم إن لزم الأمر
 function checkAuthError(res) {
     if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('token');
+        localStorage.removeItem('userToken');
         window.location.href = '/index.html'; // توجيه لصفحة الدخول
         return true; // تعني أن هناك خطأ توثيق
     }
