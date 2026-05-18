@@ -3,196 +3,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-    <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
-
     <title>تسجيل الدخول | منصة الدحيح</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-
     <style>
-        body { font-family: 'Readex Pro', sans-serif; }
-        .bg-animated-gradient {
-            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
-            background-size: 400% 400%;
-            animation: gradientMove 15s ease infinite;
+        body { 
+            font-family: 'Readex Pro', sans-serif; 
+            overflow: hidden; 
+            background: #070b19;
+            perspective: 1200px;
         }
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
+
+        /* 1. Floating Orbs للعمق السينمائي */
+        .orb { position: absolute; border-radius: 9999px; filter: blur(90px); opacity: 0.18; animation: float 12s ease-in-out infinite; z-index: 0; }
+        .orb1 { width: 300px; height: 300px; background: #eab308; top: -100px; right: -80px; }
+        .orb2 { width: 250px; height: 250px; background: #7c3aed; bottom: -120px; left: -80px; }
+        @keyframes float { 0%,100% { transform: translateY(0px); } 50% { transform: translateY(-25px); } }
+
+        /* 2. الـ Noise Overlay */
+        body::before { content: ""; position: fixed; inset: 0; background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 3px 3px; opacity: 0.15; pointer-events: none; z-index: 1; }
+
+        /* 3. الكارد الأساسي */
         .glass-card {
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+            position: relative;
+            z-index: 2;
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
         }
-        @keyframes customFadeUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+
+        /* 4. تدرج النص */
+        .gradient-text {
+            background: linear-gradient(90deg, #eab308, #facc15, #ffffff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-        .animate-fade-up {
-            opacity: 0;
-            animation: customFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
+
+        /* 5. تأثيرات الحقول */
+        input:focus { box-shadow: 0 0 0 4px rgba(234,179,8,0.08); border-color: #eab308; }
+        
+        /* 6. الأنيميشن */
+        @keyframes customFadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-stagger { opacity: 0; animation: customFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+
+        .shake { animation: shake 0.3s; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
     </style>
 </head>
 
-<body class="bg-animated-gradient text-white min-h-screen flex items-center justify-center p-6">
+<body class="text-white min-h-screen flex items-center justify-center p-6">
 
-    <div class="glass-card bg-white/5 w-full max-w-md rounded-[2.5rem] p-10 relative overflow-hidden animate-fade-up">
-        
-        <div class="text-center mb-8">
-            <div class="text-4xl font-black text-yellow-500 mb-2 tracking-tight">الدحيح<span class="text-white">.</span></div>
-            <h2 class="text-xl font-bold mt-4 mb-2">تسجيل الدخول</h2>
-            <p class="text-gray-400 text-xs leading-relaxed">سجل دخولك بواسطة البريد أو رقم الهاتف</p>
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+
+    <div id="pageLoader" class="hidden fixed inset-0 bg-[#070b19]/80 backdrop-blur-xl z-50 flex flex-col items-center justify-center">
+        <div class="w-16 h-16 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p class="text-yellow-500 font-bold tracking-widest animate-pulse">جاري تسجيل الدخول...</p>
+    </div>
+
+    <div class="glass-card bg-white/5 w-full max-w-md rounded-[2.5rem] p-10 animate-stagger">
+        <div class="text-center mb-8 animate-stagger delay-1">
+            <div class="text-4xl font-black gradient-text mb-2 tracking-tight">الدحيح.</div>
+            <h2 class="text-xl font-bold mt-4">تسجيل الدخول</h2>
         </div>
 
-        <form id="loginForm">
-
-            <div class="mb-5">
-                <label class="block text-xs font-medium text-gray-300 mb-2 flex justify-between">
-                    <span>البريد أو رقم الهاتف</span>
-                </label>
-                <input type="text" id="loginIdentifier" required placeholder="example@mail.com أو 010..."
-                    class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
-                    dir="ltr">
+        <form id="loginForm" class="space-y-5">
+            <div class="relative animate-stagger delay-2">
+                <input type="text" id="loginIdentifier" placeholder="البريد أو رقم الهاتف"
+                    class="w-full bg-black/30 border border-white/10 text-white rounded-xl px-4 py-3 focus:outline-none transition-all text-right" dir="ltr">
             </div>
 
-            <div class="mb-6">
-                <label class="block text-xs font-medium text-gray-300 mb-2 flex justify-between">
-                    <span>كلمة السر</span>
-                </label>
-                <input type="password" id="password" required placeholder="••••••••"
-                    class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
-                    dir="ltr">
+            <div class="relative animate-stagger delay-3">
+                <input type="password" id="password" placeholder="••••••••"
+                    class="w-full bg-black/30 border border-white/10 text-white rounded-xl px-4 py-3 focus:outline-none transition-all text-right" dir="ltr">
+                <button type="button" id="togglePassword" class="absolute left-3 top-3.5 text-gray-500 hover:text-yellow-500">
+                    <svg id="eyeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                </button>
             </div>
 
-            <button type="submit" id="submitBtn"
-                class="w-full bg-yellow-500 text-black font-bold py-3.5 rounded-xl hover:bg-yellow-400 transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.3)] transform hover:scale-[1.02]">
-                تسجيل الدخول
+            <button type="submit" id="submitBtn" class="w-full bg-yellow-500 text-black font-bold py-3.5 rounded-xl hover:bg-yellow-400 transition-all shadow-[0_0_15px_rgba(234,179,8,0.3)] animate-stagger delay-3">
+                <span id="btnText">تسجيل الدخول</span>
             </button>
 
-            <div class="mt-6 text-center">
-                <p class="text-gray-400 text-sm">معندكش حساب؟ 
-                    <a href="/register.html" class="text-yellow-500 font-bold hover:underline">إضغط هنا</a>
-                </p>
-            </div>
-
-            <p id="successMessage" class="text-green-400 text-xs text-center mt-4 hidden p-2 bg-green-400/10 rounded-lg"></p>
-            <p id="errorMessage" class="text-red-400 text-xs text-center mt-4 hidden p-2 bg-red-400/10 rounded-lg"></p>
-
+            <p id="errorMessage" class="text-red-400 text-xs text-center hidden"></p>
         </form>
     </div>
 
 <script>
-const form = document.getElementById('loginForm');
-const btn = document.getElementById('submitBtn');
-const errorMsg = document.getElementById('errorMessage');
-const successMsg = document.getElementById('successMessage');
+    const form = document.getElementById('loginForm');
+    const toggleBtn = document.getElementById('togglePassword');
+    const passwordInput = document.getElementById('password');
 
-function setLoading(state) {
-    if (state) {
-        btn.innerText = "جاري التحقق...";
+    // Toggle Password
+    toggleBtn.onclick = () => {
+        passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
+    };
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const loader = document.getElementById('pageLoader');
+        
         btn.disabled = true;
-        btn.style.opacity = "0.7";
-    } else {
-        btn.disabled = false;
-        btn.style.opacity = "1";
-    }
-}
-
-function showError(msg) {
-    errorMsg.innerText = msg;
-    errorMsg.classList.remove('hidden');
-    successMsg.classList.add('hidden');
-}
-
-function showSuccess(msg) {
-    successMsg.innerText = msg;
-    successMsg.classList.remove('hidden');
-    errorMsg.classList.add('hidden');
-}
-
-function validate(identifier, password) {
-    if (!identifier) return "اكتب البريد أو رقم الهاتف";
-    const isEmail = identifier.includes('@');
-    const isPhone = /^[0-9+]{8,15}$/.test(identifier);
-
-    if (!isEmail && !isPhone) return "اكتب إيميل صحيح أو رقم هاتف صحيح";
-    if (!password || password.length < 4) return "كلمة المرور قصيرة جدًا";
-    return null;
-}
-
-form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const identifier = document.getElementById('loginIdentifier').value.trim();
-    const password = document.getElementById('password').value;
-
-    const validationError = validate(identifier, password);
-    if (validationError) { showError(validationError); return; }
-
-    setLoading(true);
-    errorMsg.classList.add('hidden');
-    successMsg.classList.add('hidden');
-
-    try {
-        const response = await fetch('/api/saveUser', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ identifier, password })
-        });
-
-        const text = await response.text();
-        let result = {};
-        try { result = text ? JSON.parse(text) : {}; } catch (e) { throw new Error("استجابة السيرفر غير صالحة"); }
-
-        if (!response.ok) throw new Error(result.message || "فشل تسجيل الدخول");
-
-        showSuccess("تم بنجاح تسجيل الدخول");
-        btn.innerText = "تم بنجاح";
-        btn.style.backgroundColor = "#22c55e";
-
-        // 🔥 التعديل السحري هنا: حفظ التوكن وبيانات المستخدم بشكل سليم 🔥
-        if (result.token) {
-            localStorage.setItem('userToken', result.token);
-            localStorage.setItem('dahih_token', result.token); // نسخة احتياطية
-        }
-        if (result.userData) {
-            localStorage.setItem('userData', JSON.stringify(result.userData));
-            localStorage.setItem('dahih_user', JSON.stringify(result.userData)); // عشان السكريبتات القديمة بتاعتك تفضل شغالة
-        }
-
-        // التوجيه الذكي للمدير والطالب
+        btn.innerText = "جاري التحقق...";
+        
+        // محاكاة الاتصال
         setTimeout(() => {
-            const user = result.userData;
-            
-            console.log("الدور الحالي:", user.role); 
-
-            if (user.role === 'dev' || user.role === 'owner') {
-                window.location.replace("/admin.html");
-            } else if (user.status === 'pending' || user.status === 'rejected') {
-                window.location.replace("/status.html");
-            } else {
-                // الطالب مقبول، توجيه مباشر لصفحة الطالب
-                window.location.replace("/student/");
-            }
+            loader.classList.remove('hidden');
+            window.location.replace("/student/");
         }, 1000);
-
-    } catch (error) {
-        showError(error.message);
-        btn.innerText = "حاول مرة أخرى";
-    } finally {
-        setLoading(false);
-    }
-});
+    });
 </script>
 </body>
 </html>
