@@ -6,9 +6,13 @@ let currentGradeData = null;
 
 export async function fetchStats() {
     try {
+        const token = localStorage.getItem('token'); // سحب التوكن الجديد
         const res = await fetch('/api/admin/stats', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // تمرير التوكن في الـ Headers
+            },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
         });
         const data = await res.json();
@@ -35,9 +39,13 @@ export async function fetchPendingRequests() {
     const container = document.getElementById('pendingRequestsContainer');
     container.innerHTML = '<p class="text-gray-500 text-center py-10 animate-pulse">جاري جلب الطلبات الأساسية...</p>';
     try {
+        const token = localStorage.getItem('token');
         const res = await fetch('/api/admin/pending', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
         });
         const students = await res.json();
@@ -77,7 +85,15 @@ export async function updateStudentStatus(email, newStatus, reason = '', btnElem
     }
     
     try {
-        const res = await fetch('/api/admin/update-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) });
+        const token = localStorage.getItem('token');
+        const res = await fetch('/api/admin/update-status', { 
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }, 
+            body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) 
+        });
         if(res.ok) {
             SysUI.toast('success', newStatus === 'accepted' ? 'تم قبول الطالب بنجاح' : 'تم رفض الطالب');
             if(newStatus === 'accepted') SysUI.confetti();
@@ -105,9 +121,13 @@ export async function fetchStudentsByGrade() {
     const container = document.getElementById('studentsListContainer');
     container.innerHTML = '<p class="text-gray-500 text-center py-10 col-span-full animate-pulse">جاري تحميل قائمة الطلاب...</p>';
     try {
+        const token = localStorage.getItem('token');
         const res = await fetch('/api/admin/students-by-grade', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
         });
         const students = await res.json();
@@ -147,9 +167,13 @@ export async function fetchGradeContent() {
     loading.classList.remove('hidden');
     
     try {
+        const token = localStorage.getItem('token');
         const res = await fetch('/api/admin/get-grade-content', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
         });
         if (res.ok) {
@@ -238,8 +262,13 @@ export function deleteContent(grade, itemType, identifier, trashIconElement = nu
         }
 
         try {
+            const token = localStorage.getItem('token');
             const res = await fetch('/api/admin/delete-item', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
                 body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade, itemType, identifier })
             });
             if (res.ok) {
