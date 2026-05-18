@@ -375,15 +375,17 @@ export function logout() {
     window.location.href = '/login.html';
 }
 
-// ربط الدوال بالـ window لتعمل في الـ HTML
-window.fetchStats = fetchStats;
-window.fetchPendingRequests = fetchPendingRequests;
-window.updateStudentStatus = updateStudentStatus;
-window.rejectStudent = rejectStudent;
-window.fetchStudentsByGrade = fetchStudentsByGrade;
-window.fetchGradeContent = fetchGradeContent;
-window.deleteContent = deleteContent;
-window.showDetailedResults = showDetailedResults;
-window.toggleStudentDetails = toggleStudentDetails;
-window.closeResultsModal = closeResultsModal;
-window.logout = logout;
+// تأكيد ربط الدوال بالنطاق العام (Global Scope)
+if (typeof window !== 'undefined') {
+    window.fetchStats = fetchStats;
+    window.fetchPendingRequests = fetchPendingRequests;
+    window.updateStudentStatus = updateStudentStatus;
+    window.rejectStudent = rejectStudent;
+    window.fetchStudentsByGrade = fetchStudentsByGrade;
+    window.fetchGradeContent = fetchGradeContent;
+    window.deleteContent = deleteContent;
+    window.showDetailedResults = showDetailedResults;
+    window.toggleStudentDetails = toggleStudentDetails;
+    window.closeResultsModal = closeResultsModal;
+    window.logout = logout;
+}
