@@ -2,51 +2,63 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم | منصة الدحيح</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#070b19">
+    <meta name="description" content="لوحة الطالب - منصة الدحيح التعليمية">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
+    <title>لوحة الطالب | منصة الدحيح</title>
+
+    <!-- استدعاء Tailwind CSS و الخطوط -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
     <style>
         body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
-        
         html { background-color: #070b19; overscroll-behavior: none; }
         * { -webkit-tap-highlight-color: transparent; }
         *:focus, button:focus, input:focus, select:focus, textarea:focus { outline: none !important; box-shadow: none !important; }
 
+        /* تأثيرات الزجاج والتبويبات */
         .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
         .tab-btn { transition: all 0.3s ease; position: relative; }
         .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); color: white; }
         .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-right: 4px solid #eab308; }
         @media (max-width: 767px) { .tab-btn.active { border-right: none; border-bottom: 3px solid #eab308; } }
+        
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
-        select option { background-color: #0f172a; color: white; }
+        
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .trash-icon { transition: all 0.2s ease; cursor: pointer; color: #64748b; }
-        .trash-icon:hover { color: #ef4444; transform: scale(1.1); }
-        .pulse-live { animation: pulseLive 2s infinite; }
-        @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+
+        /* مشغل الفيديو المخصص */
         #videoContainer:fullscreen { background-color: #000; display: flex; align-items: center; justify-content: center; }
         #videoContainer:fullscreen video { height: 100vh; width: 100vw; object-fit: contain; border: none; border-radius: 0; }
         
-        .student-details { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
-        .student-details.open { max-height: 2000px; padding-top: 1rem; opacity: 1; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
+        .tap-zone { position: absolute; top: 0; bottom: 15%; width: 30%; z-index: 10; cursor: pointer; }
+        .tap-zone.left { left: 0; }
+        .tap-zone.right { right: 0; }
+        
+        .center-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5; }
+        .center-play > div { background: rgba(234, 179, 8, 0.9); border-radius: 50%; width: 4rem; height: 4rem; display: flex; align-items: center; justify-content: center; color: black; opacity: 0; transform: scale(0.5); transition: all 0.2s; }
+        
+        .skip-indicator { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 2rem; color: white; font-weight: bold; opacity: 0; pointer-events: none; z-index: 20; transition: opacity 0.2s; }
+        .skip-indicator.show { opacity: 1; animation: flash 0.5s ease-out; }
+        @keyframes flash { 0%, 100% { opacity: 0; transform: translateY(-50%) scale(0.9); } 50% { opacity: 1; transform: translateY(-50%) scale(1.1); } }
+
+        /* ستايل شريط التقدم */
+        .progress { height: 6px; background: rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer; position: relative; overflow: hidden; margin-bottom: 0.5rem; }
+        .progress-fill { height: 100%; background: #eab308; width: 0%; border-radius: 4px; transition: width 0.1s linear; }
     </style>
 
     <script>
-        window.addEventListener('error', function(e) {
-            alert("🚨 خطأ في السطر " + e.lineno + "\nالملف: " + e.filename + "\nالخطأ: " + e.message);
-        });
-        window.addEventListener('unhandledrejection', function(e) {
-            alert("🚨 خطأ استيراد الملفات:\n" + (e.reason.message || e.reason));
-        });
-    </script>
-
-    <script>
+        // دالة التبديل بين الأقسام
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.remove('active');
@@ -65,460 +77,195 @@
                     activeTab.style.opacity = '1';
                     activeTab.style.transform = 'translateY(0)';
                 }, 50);
-
-                if(tabId === 'requests' && typeof window.fetchPendingRequests === 'function') window.fetchPendingRequests();
-                if(tabId === 'dashboard' && typeof window.fetchStats === 'function') window.fetchStats();
-                if(tabId === 'videos' && typeof window.loadCourses === 'function') window.loadCourses();
             }
-        };
-
-        window.toggleContentFields = function() {
-            const type = document.getElementById('contentType')?.value;
-            const pointF = document.getElementById('pointField');
-            const qFields = document.getElementById('questionFields');
-            if(!type || !pointF || !qFields) return;
-
-            if(type !== 'point') {
-                pointF.style.opacity = '0';
-                setTimeout(() => { pointF.classList.add('hidden'); qFields.classList.remove('hidden'); qFields.style.opacity = '0'; setTimeout(() => { qFields.style.transition = 'opacity 0.3s'; qFields.style.opacity = '1'; }, 50); }, 150);
-            } else {
-                qFields.style.opacity = '0';
-                setTimeout(() => { qFields.classList.add('hidden'); pointF.classList.remove('hidden'); pointF.style.opacity = '0'; setTimeout(() => { pointF.style.transition = 'opacity 0.3s'; pointF.style.opacity = '1'; }, 50); }, 150);
-            }
-        };
-
-        window.addScoreRow = function() {
-            const container = document.getElementById('scoresContainer');
-            const row = document.createElement('div');
-            row.className = 'flex gap-3 items-center animate-fade-in-up mb-3';
-            row.innerHTML = `
-                <input type="text" placeholder="اسم الطالب (رباعي)" required class="test-student-name flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base transition-colors">
-                <input type="number" placeholder="الدرجة" required class="test-student-score w-24 md:w-32 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base text-center transition-colors">
-                <button type="button" onclick="this.parentElement.remove()" class="shrink-0 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 p-3 rounded-xl transition-all font-bold">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                </button>
-            `;
-            container.appendChild(row);
         };
     </script>
 </head>
 <body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
 
+    <!-- ══════════ القائمة الجانبية (Sidebar) ══════════ -->
     <aside class="w-full md:w-72 glass-panel h-auto md:h-full flex flex-col border-b md:border-b-0 md:border-l border-white/10 shrink-0 z-10 md:overflow-y-auto">
-        <div class="p-4 md:p-6 border-b border-white/10 shrink-0 flex justify-between items-center">
-            <div>
-                <div class="text-xl md:text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-                <p class="text-xs text-gray-400 mt-1">إدارة المنصة</p>
+        
+        <!-- الهيدر والترحيب -->
+        <div class="p-4 md:p-6 border-b border-white/10 shrink-0">
+            <div class="flex justify-between items-center mb-4">
+                <div class="text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
+                <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">خروج</button>
             </div>
-            <button onclick="logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors">خروج</button>
+            
+            <div class="bg-black/30 border border-white/5 rounded-xl p-3 backdrop-blur-sm">
+                <p class="text-xs text-gray-400 mb-1">المرحلة: <span id="studentGrade" class="text-yellow-500 font-bold">جاري التحميل...</span></p>
+                <h2 class="text-sm font-bold leading-tight">مرحباً، <span id="studentName" class="text-yellow-500 text-base">...</span></h2>
+            </div>
         </div>
         
+        <!-- روابط التنقل -->
         <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-1 p-2 md:py-4 md:px-0 scrollbar-hide shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نظرة عامة</button>
-            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
-            <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
-            <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
-            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
-            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">كورسات</button>
-            <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
-            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار المنصة</button>
-            <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار عام (رابط)</button>
-            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى والنتائج</button>
-            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">البث المباشر</button>
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">لوحة المذاكرة</button>
+            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحاضرات والحصص</button>
+            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">الاختبارات الإلكترونية</button>
+            <button onclick="switchTab('points')" id="btn-points" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">أهم نقاط المنهج</button>
+            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">الأسئلة المقالية</button>
         </nav>
 
+        <!-- زر تسجيل الخروج للشاشات الكبيرة -->
         <div class="hidden md:block p-4 border-t border-white/10 shrink-0 mt-auto">
-            <button onclick="logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3 rounded-xl text-sm font-bold transition-all">تسجيل الخروج</button>
+            <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2">
+                تسجيل الخروج
+            </button>
         </div>
     </aside>
 
-    <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 relative">
+    <!-- ══════════ منطقة المحتوى الرئيسية ══════════ -->
+    <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 relative" id="mainGrid">
+        <!-- تأثير الإضاءة في الخلفية -->
         <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
 
-        <div id="tab-stream" class="tab-content">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">البث المباشر</h1>
-                    <p class="text-gray-400 text-sm">اضغط لبدء البث المباشر علي الزر أدناه.</p>
-                </div>
-                <div id="streamStatusBadge" class="bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3">
-                    <span class="w-2.5 h-2.5 rounded-full bg-gray-500 block"></span> النظام في وضع الاستعداد
-                </div>
-            </div>
+        <!-- 1. لوحة المذاكرة (الفيديو والتقييم) -->
+        <div id="tab-dashboard" class="tab-content active space-y-6">
             
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl mx-auto border-t-4 border-yellow-500 animate-fade-in-up">
-                
-                <div id="videoContainer" class="relative w-full aspect-video bg-[#0a0f1c] rounded-xl border border-white/10 mb-6 overflow-hidden group shadow-xl">
-                    <video id="localVideo" autoplay muted playsinline class="w-full h-full object-cover"></video>
-                    
-                    <div id="camOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#070b19]/90 text-center p-4">
-                        <svg class="w-14 h-14 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        <h3 class="text-lg font-bold text-gray-300 mb-2">الكاميرا في وضع الإيقاف</h3>
-                        <p class="text-gray-500 text-xs">يرجى بدء البث ومنح الصلاحيات لعرض المعاينة.</p>
-                    </div>
-
-                    <div id="videoControlsOverlay" class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div class="flex gap-2">
-                            <button id="toggleMicBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="كتم/تشغيل المايك">
-                                <svg id="micIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- قسم المشغل -->
+                <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-xl animate-fade-in-up">
+                    <div class="p-4 border-b border-white/10 bg-white/5 flex items-center justify-between gap-4 flex-wrap">
+                        <div class="flex items-center gap-2 flex-1 min-w-0">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0 animate-pulse"></span>
+                            <h2 id="playingVideoTitle" class="font-bold text-sm md:text-base truncate">اختر محاضرة لبدء الشرح</h2>
+                        </div>
+                        <div class="flex gap-2 flex-shrink-0">
+                            <button onclick="DahihApp.toggleTheater()" class="text-gray-400 hover:text-white p-2 rounded-lg bg-white/5 hover:bg-white/10 transition" title="وضع السينما">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
                             </button>
-                            <button id="toggleCamBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="إيقاف/تشغيل الكاميرا">
-                                <svg id="camIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            <button onclick="DahihApp.toggleFullscreen()" class="text-gray-400 hover:text-white p-2 rounded-lg bg-white/5 hover:bg-white/10 transition" title="ملء الشاشة">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
                             </button>
                         </div>
-                        <button id="fullscreenBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="ملء الشاشة">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
-                        </button>
                     </div>
-                </div>
-                
-                <div class="flex justify-center border-t border-white/5 pt-6 mt-2">
-                    <button id="startStreamBtn" class="w-full md:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-10 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        بدء البث المباشر
-                    </button>
-                    <button id="stopStreamBtn" class="w-full md:w-auto bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-10 rounded-xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
-                        إنهاء البث الحالي
-                    </button>
-                </div>
 
-            </div>
-        </div>
-
-        <div id="tab-dashboard" class="tab-content active">
-            <h1 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-500 transition-transform hover:scale-[1.02]"><p class="text-gray-400 text-sm mb-1">الطلاب المقبولين</p><h3 id="stats-students" class="text-3xl font-black text-white">0</h3></div>
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-600 transition-transform hover:scale-[1.02]"><p class="text-gray-400 text-sm mb-1">طلبات قيد المراجعة</p><h3 id="stats-pending" class="text-3xl font-black text-yellow-500">0</h3></div>
-            </div>
-        </div>
-
-        <div id="tab-requests" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">طلبات التسجيل</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">مراجعة بيانات الطلاب الجدد.</p>
-            <div id="pendingRequestsContainer" class="space-y-4 min-h-[300px]"></div>
-        </div>
-
-        <div id="tab-students-list" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">قائمة الطلاب الحاليين</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">عرض بيانات الطلاب المسجلين بالاسم الرباعي.</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl border-t-4 border-yellow-500">
-                <select id="listGradeSelect" onchange="fetchStudentsByGrade()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
-                    <option value="" disabled selected>اختر الصف لعرض الطلاب...</option>
-                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                </select>
-                <div id="studentsListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <p class="text-gray-500 text-sm text-center py-10 col-span-full">يرجى اختيار الصف لعرض البيانات.</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-students" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">التقييم المستمر</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl border-t-4 border-yellow-500">
-                <form id="pointsForm" class="space-y-5">
-                    <div><label class="block text-sm text-gray-400 mb-2">بريد الطالب</label><input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" dir="ltr"></div>
-                    <div><label class="block text-sm text-gray-400 mb-2">النسبة المئوية (%)</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base"></div>
-                    <button type="submit" id="savePointsBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors">تحديث التقييم</button>
-                    <p id="pointsMsg" class="text-sm text-center hidden mt-2"></p>
-                </form>
-            </div>
-        </div>
-
-        <div id="tab-tests" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">نتائج الاختبارات الورقية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="testsForm" class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><input type="text" id="testName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار"></div>
-                        <div>
-                            <select id="testGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base">
-                                <option value="" disabled selected>اختر الصف...</option>
-                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="scoresContainer" class="space-y-3"></div>
-                    <button type="button" onclick="addScoreRow()" class="w-full bg-white/5 border border-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base">+ إضافة اسم طالب ودرجته</button>
-                    <button type="submit" id="saveTestBtn" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10">نشر النتائج للطلاب</button>
-                    <p id="testMsg" class="text-sm text-center hidden mt-2"></p>
-                </form>
-            </div>
-        </div>
-
-        <div id="tab-videos" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة الكورسات السحابية</h1>
-            <p class="text-gray-400 mb-6">ارفع ملفات الفيديو الكبيرة مباشرة إلى السيرفر المشفر الآمن حتى حده الأقصى 2GB.</p>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 h-fit animate-fade-in-up">
-                    <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2">
-                        <span>🎬</span> رفع حصة جديدة
-                    </h2>
-                    
-                    <form id="uploadVideoForm" class="space-y-5">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">اسم الحصة / المحاضرة</label>
-                            <input type="text" id="courseName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm transition-colors" placeholder="مثال: الباب الأول - المحاضرة الثالثة">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">السنة الدراسية المستهدفة</label>
-                            <select id="videoGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer transition-colors">
-                                <option value="" disabled selected>اختر الدفعة...</option>
-                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">وصف أو محتوى الحصة (اختياري)</label>
-                            <textarea id="videoDescription" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm transition-colors" placeholder="اكتب مخرجات التعلم أو ملفات الشرح المرفقة هنا..."></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">اختر ملف الفيديو (MP4, MKV, MOV)</label>
-                            <input type="file" id="videoFile" accept="video/*" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 text-sm transition-colors">
-                        </div>
-
-                        <div id="videoProgressContainer" class="hidden bg-black/40 p-4 rounded-xl border border-white/5 space-y-2">
-                            <div class="flex justify-between text-xs font-semibold">
-                                <span class="text-yellow-500">جاري البث والتشفير السحابي السري...</span>
-                                <span id="videoProgressText" class="text-yellow-500">0% • 0MB / 0MB</span>
+                    <div class="p-4 md:p-6 bg-black/40" id="fs-wrapper">
+                        <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl border border-white/10 overflow-hidden group">
+                            
+                            <!-- بوستر البداية -->
+                            <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black z-10 p-6 text-center">
+                                <div class="bg-yellow-500/20 p-4 rounded-full mb-4 text-yellow-500">
+                                    <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                                <h3 class="text-xl md:text-3xl font-black mb-2">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
+                                <p class="text-gray-400 text-xs md:text-sm max-w-sm">اختر محاضرتك من تبويب المحاضرات وانطلق في رحلة التعلم</p>
                             </div>
-                            <div class="w-full bg-white/5 rounded-full h-2">
-                                <div id="videoProgressBar" class="bg-yellow-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+
+                            <!-- المشغل -->
+                            <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full hidden"></video>
+
+                            <!-- مناطق اللمس للتقديم والتأخير -->
+                            <div class="tap-zone left" id="tapLeft"></div>
+                            <div class="tap-zone right" id="tapRight"></div>
+
+                            <div class="skip-indicator left-10" id="skipIndicator" aria-hidden="true">
+                                <span id="skipText">+10</span>
+                            </div>
+
+                            <div class="center-play" id="centerPlay">
+                                <div><svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                            </div>
+
+                            <!-- شريط التحكم -->
+                            <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                                <div class="progress" id="progressContainer" role="slider">
+                                    <div class="progress-fill" id="progressBar"></div>
+                                </div>
+                                <div class="flex justify-between items-center mt-2">
+                                    <div class="flex items-center gap-2 text-xs md:text-sm font-mono" dir="ltr">
+                                        <span id="currentTimeDisplay">00:00</span>
+                                        <span class="text-gray-500">/</span>
+                                        <span id="durationDisplay">00:00</span>
+                                    </div>
+                                    <div class="flex items-center gap-3">
+                                        <button id="speedBtn" type="button" class="bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-xs font-bold transition">1x</button>
+                                        <button id="muteBtn" type="button" class="text-white hover:text-yellow-500 transition">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
-                        <button type="submit" id="videoSubmitBtn" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/10 text-sm">
-                            🚀 ابدأ الرفع والمعالجة السحابية
-                        </button>
-                    </form>
-                </div>
-
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 lg:col-span-2 h-fit">
-                    <h2 class="text-lg font-bold text-white mb-5">📚 أرشيف الكورسات المنشورة</h2>
-                    <div id="coursesList" class="space-y-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-hide">
-                        <div class="text-center py-10 text-gray-500">جاري قراءة الملفات السحابية...</div>
+                        <p class="text-center text-gray-500 text-xs mt-3">انقر مرتين على الجوانب للتقديم أو التأخير</p>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div id="tab-content" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى والأسئلة المقالية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl border-t-4 border-yellow-500">
-                <form id="contentForm" class="space-y-5">
-                    <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500">
-                        <option value="" disabled selected>اختر الصف...</option>
-                        <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                        <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                        <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                        <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                        <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                        <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                        <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                        <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                    </select>
-                    <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500">
-                        <option value="point">نقطة هامة في المنهج</option>
-                        <option value="question">سؤال متوقع بالحل</option>
-                    </select>
-                    <div id="pointField"><textarea id="pointText" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="اكتب الملاحظة هنا..."></textarea></div>
-                    <div id="questionFields" class="hidden space-y-5"><textarea id="questionText" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="نص السؤال المقالي..."></textarea><textarea id="questionHint" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="الإجابة النموذجية..."></textarea></div>
-                    <button type="submit" id="saveContentBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all">نشر المحتوى</button>
-                    <p id="contentMsg" class="text-sm text-center hidden mt-2"></p>
-                </form>
-            </div>
-        </div>
-
-        <div id="tab-quiz" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إنشاء اختبار إلكتروني</h1>
-            <p class="text-gray-400 mb-6">هذا الاختبار يظهر فقط للطلاب المسجلين بالمنصة فقط.</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="quizForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
-                        <select id="quizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
-                            <option value="" disabled selected>الدفعة المستهدفة...</option>
-                            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                        </select>
-                        <input type="text" id="quizTitle" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار الشامل">
-                    </div>
-
-                    <div id="dynamicQuestionsContainer" class="space-y-6 mt-6"></div>
-
-                    <div class="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-6 mt-4">
-                        <button type="button" onclick="addMCQBlock()" class="flex-1 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base flex items-center justify-center gap-2">
-                            + إضافة سؤال جديد
-                        </button>
-                        <button type="submit" id="saveQuizBtn" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/10">نشر الاختبار للطلاب</button>
-                    </div>
-                    <p id="quizMsg" class="text-sm text-center hidden mt-2 font-bold"></p>
-                </form>
-            </div>
-        </div>
-
-        <div id="tab-public-quiz" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-yellow-500">إنشاء اختبار عام</h1>
-            <p class="text-gray-400 mb-6">الاختبار العام يمكن لأي طالب حله من خلال رابط خارجي .</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="publicQuizForm" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
-                        <select id="publicQuizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
-                            <option value="" disabled selected>السنة الدراسية للتصنيف...</option>
-                            <option value="عام">اختبار عام لجميع المستويات</option>
-                            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                            <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                        </select>
-                        <input type="text" id="publicQuizTitle" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار العام (مثال: مسابقة نص السنة)">
-                    </div>
-
-                    <div id="smart-import-btn-container" class="mt-6 flex justify-end"></div>
-
-                    <div id="dynamicPublicQuestionsContainer" class="space-y-6 mt-6"></div>
-
-                    <div class="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-6 mt-4">
-                        <button type="button" onclick="addPublicMCQBlock()" class="flex-1 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base flex items-center justify-center gap-2">
-                            + إضافة سؤال جديد
-                        </button>
-                        <button type="submit" id="savePublicQuizBtn" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/20">حفظ وتوليد رابط الاختبار</button>
-                    </div>
-                    <p id="publicQuizMsg" class="text-sm text-center hidden mt-2 font-bold"></p>
-
-                    <div id="publicQuizLinkArea" class="hidden mt-6 p-5 bg-green-500/10 border border-green-500/30 rounded-2xl text-center">
-                        <p class="text-green-400 font-bold mb-3 text-lg">تم إنشاء الاختبار العام بنجاح!</p>
-                        <p class="text-gray-400 text-sm mb-3">انسخ الرابط التالي من فضلك:</p>
-                        <div class="flex flex-col md:flex-row gap-2">
-                            <input type="text" id="publicQuizLinkInput" readonly class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-green-300 font-bold outline-none text-center md:text-left" dir="ltr">
-                            <button type="button" onclick="copyPublicLink()" class="bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-xl text-sm font-bold transition whitespace-nowrap">نسخ الرابط</button>
+                <!-- قسم التقييم المستمر -->
+                <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
+                    <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up" style="animation-delay: 0.1s;">
+                        <h2 class="text-lg font-bold mb-6 text-white">التقييم المستمر</h2>
+                        <div class="relative w-32 h-32 mx-auto bg-black/30 rounded-full border-[6px] border-yellow-500/20 flex items-center justify-center shadow-inner mb-4">
+                            <div id="studentPointsDisplay" class="text-4xl font-black text-yellow-500" dir="ltr">0%</div>
                         </div>
+                        <p class="text-gray-400 text-sm">النسبة المئوية لتقييم الأداء العام</p>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
 
-        <div id="tab-manage" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة المحتوى والمتابعة</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">استعرض نتائج الطلاب في الاختبارات الإلكترونية واحذف المحتوى القديم.</p>
+        <!-- 2. المحاضرات -->
+        <div id="tab-courses" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
             
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl border-t-4 border-yellow-500">
-                <select id="manageGradeSelect" onchange="fetchGradeContent()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
-                    <option value="" disabled selected>اختر الصف لعرض بياناته...</option>
-                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                    <option value="عام">الاختبارات العامة (بدون صف محدد)</option>
-                </select>
-
-                <div id="manageContainer" class="hidden space-y-8">
-                    <section>
-                        <h2 class="text-xl font-bold text-yellow-500 border-b border-white/10 pb-2 mb-4">الاختبارات العامة (بالرابط)</h2>
-                        <div id="managePublicQuizzes" class="space-y-3"></div>
-                    </section>
-
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">اختبارات المنصة (MCQ)</h2>
-                        <div id="manageQuizzes" class="space-y-3"></div>
-                    </section>
-                    
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">درجات الاختبارات الورقية</h2>
-                        <div id="manageTests" class="space-y-3"></div>
-                    </section>
-
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">الأسئلة المقالية</h2>
-                        <div id="manageQuestions" class="space-y-3"></div>
-                    </section>
-
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">أهم نقاط المنهج</h2>
-                        <div id="managePoints" class="space-y-3"></div>
-                    </section>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500 animate-fade-in-up">
+                <div id="studentCoursesContainer" class="flex flex-col gap-4">
+                    <div class="text-center py-10 text-gray-500 flex flex-col items-center">
+                        <svg class="animate-spin h-8 w-8 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <p>جاري جلب المحاضرات...</p>
+                    </div>
                 </div>
-                
-                <p id="manageLoading" class="text-gray-500 text-center py-10 hidden">جاري جلب البيانات من السيرفر...</p>
+            </div>
+        </div>
+
+        <!-- 3. الاختبارات -->
+        <div id="tab-quizzes" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">الاختبارات الإلكترونية</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">قم باختبار مستواك من خلال الكويزات المتاحة.</p>
+            
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500 animate-fade-in-up">
+                <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <p class="text-center py-10 text-gray-500 col-span-full">جاري التحميل...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. نقاط المنهج -->
+        <div id="tab-points" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">ملاحظات وتلخيصات سريعة لتثبيت المعلومات.</p>
+            
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500 animate-fade-in-up">
+                <div id="pointsContainer" class="flex flex-col gap-3"></div>
+            </div>
+        </div>
+
+        <!-- 5. الأسئلة المقالية -->
+        <div id="tab-questions" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم الأسئلة المقالية</h1>
+            <p class="text-gray-400 mb-6 md:mb-8">تدرب على الأسئلة المقالية المتوقعة مع الإجابات النموذجية.</p>
+            
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500 animate-fade-in-up">
+                <div id="questionsContainer" class="flex flex-col gap-4"></div>
             </div>
         </div>
 
     </main>
 
-    <div id="resultsModal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-md">
-        <div class="bg-gray-900 border border-white/10 w-full max-w-4xl rounded-[2rem] p-6 max-h-[90vh] overflow-y-auto relative shadow-2xl">
-            <button onclick="closeResultsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/5 rounded-full w-10 h-10 flex items-center justify-center font-bold">X</button>
-            <h2 id="resultsModalTitle" class="text-2xl font-bold text-yellow-500 mb-6 pr-8">نتائج الطلاب</h2>
-            <div id="resultsModalContent" class="space-y-4"></div>
+    <!-- ══════════ مودال الكويز ══════════ -->
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-md" role="dialog" aria-modal="true">
+        <div class="bg-gray-900 border border-white/10 w-full max-w-3xl rounded-[2rem] p-6 max-h-[90vh] overflow-y-auto relative shadow-2xl" id="quizModalBox">
+            <div id="quizModalContent">
+                <!-- المحتوى يولد ديناميكياً من script.js -->
+            </div>
         </div>
     </div>
 
-    <script type="module" src="./modes/main.js"></script>
+    <!-- استدعاء سكريبت المنصة والاحتفالات -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+    <script src="script.js" defer></script>
 </body>
 </html>
