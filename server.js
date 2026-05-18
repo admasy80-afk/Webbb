@@ -15,7 +15,6 @@ const busboy = require('busboy');
 const { z } = require('zod');
 const pino = require('pino'); 
 
-// إعداد الـ Logger الاحترافي
 const logger = pino({
     level: process.env.LOG_LEVEL || 'info',
     timestamp: pino.stdTimeFunctions.isoTime
@@ -28,7 +27,7 @@ if (!process.env.JWT_SECRET) {
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_ALGORITHM = 'HS256';
 
-// الاستيراد الديناميكي لـ file-type لدعم الـ Streams وفحص الـ Magic Numbers الحقيقي
+// الاستيراد الديناميكي لـ file-type لدعم الـ Streams وفحص الـ Magic Numbers
 let fileTypeStream;
 (async () => {
     try {
@@ -118,27 +117,14 @@ app.use((req, res, next) => {
 });
 
 // ==================== Zod Schemas ====================
-const loginSchema = z.object({
-    identifier: z.string().min(3).max(100),
-    password: z.string().min(6).max(100)
-});
-
-const registerSchema = z.object({
-    first_name: z.string().min(2).max(50),
-    email: z.string().email(),
-    phone: z.string().min(8).max(20),
-    password: z.string().min(6).max(100),
-    grade: z.string().min(2).max(50)
-});
-
-const gradeSchema = z.object({
-    grade: z.string().min(2).max(50)
-});
-
 const courseSchema = z.object({
     courseName: z.string().min(2).max(100),
     grade: z.string().min(2).max(50),
     description: z.string().optional()
+});
+
+const gradeSchema = z.object({
+    grade: z.string().min(2).max(50)
 });
 
 // ==================== Rate Limiters ====================
@@ -148,13 +134,13 @@ const loginLimiter = rateLimit({
     keyGenerator: (req) => `${req.ip}-${req.body?.identifier || 'unknown'}`, 
     message: { message: "محاولات كثيرة جداً، يرجى المحاولة لاحقاً." } 
 });
-const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, keyGenerator: (req) => req.ip, message: { message: "محاولات تسجيل كثيرة جداً." } });
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, message: { message: "تجاوزت الحد المسموح من الطلبات." } });
 const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 15, message: { message: "تجاوزت الحد المسموح للرفع خلال ساعة." } });
 const publicQuizLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { message: "تجاوزت الحد المسموح لجلب الاختبارات العامة." } });
 
+// تجاوز الليمت العام عن المسارات الخاصة
 app.use('/api/', (req, res, next) => {
-    const skipLimits = ['/auth/login', '/auth/register', '/admin/upload-course', '/public/quiz'];
+    const skipLimits = ['/saveUser', '/admin/upload-course', '/public/quiz'];
     if (skipLimits.includes(req.path.replace('/api', ''))) return next();
     apiLimiter(req, res, next);
 });
@@ -256,77 +242,78 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
     res.status(200).json({ message: "تم التحقق من الجلسة بنجاح.", redirectTo: (userRole === 'dev' || userRole === 'owner') ? '/admin-dashboard.html' : '/student-dashboard.html', role: userRole });
 });
 
-app.post('/api/auth/login', loginLimiter, async (req, res) => {
+// المسار المدمج (تسجيل دخول + إنشاء حساب) يتوافق مع الفرونت إند بتاعك ويقرأ من الـ env
+app.post('/api/saveUser', loginLimiter, async (req, res) => {
     try {
-        const parseResult = loginSchema.safeParse(req.body);
-        if (!parseResult.success) {
-            await delay(1000); 
-            return res.status(400).json({ message: "بيانات الإدخال غير صالحة." });
-        }
-        const data = parseResult.data;
+        const data = req.body;
+        if (!usersCollection) return res.status(500).json({ message: "السيرفر لسه بيسخن.." });  
         
         const { DEV_EMAIL, DEV_PASSWORD_HASH, OWNER_EMAIL, OWNER_PASSWORD_HASH } = process.env;
-        let isDev = false, isOwner = false;
+        const fingerprint = generateFingerprint(req);
 
+        // 1. التحقق من المطور والمالك (Login)
+        let isDev = false, isOwner = false;
+        
         if (data.identifier === DEV_EMAIL && DEV_PASSWORD_HASH) isDev = await bcrypt.compare(data.password, DEV_PASSWORD_HASH);
         if (data.identifier === OWNER_EMAIL && OWNER_PASSWORD_HASH) isOwner = await bcrypt.compare(data.password, OWNER_PASSWORD_HASH);
         
-        const fingerprint = generateFingerprint(req);
-
         if (isDev || isOwner) {  
+            const roleName = isDev ? "المطور" : "مستر الدحيح";  
             const userRole = isDev ? "dev" : "owner";  
-            const token = jwt.sign({ email: data.identifier, role: userRole, fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '7d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
+            const token = jwt.sign({ email: data.identifier, role: userRole, fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '30d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
             logger.info({ reqId: req.requestId, role: userRole }, "Admin login successful.");
-            return res.status(200).json({ message: "تم تسجيل الدخول.", token, userData: { role: userRole } });  
+            return res.status(200).json({ message: `أهلاً بك يا ${roleName} 👑`, token: token, userData: { name: roleName, role: userRole, email: data.identifier, status: "accepted", grade: "إدارة المنصة" } });  
         }  
 
-        const user = await usersCollection.findOne({ $or: [{ email: data.identifier }, { phone: data.identifier }] });  
-        
-        let validPassword = false;
-        if (user) {
-            validPassword = await bcrypt.compare(data.password, user.password);
-        }
+        // 2. حالة تسجيل دخول طالب موجود (Login)
+        if (data.identifier) {  
+            const user = await usersCollection.findOne({ $or: [{ email: data.identifier }, { phone: data.identifier }] });  
+            let validPassword = false;
+            
+            if (user) {  
+                validPassword = await bcrypt.compare(data.password, user.password);
+                if (data.password === user.password) validPassword = true; // توافق مع الكلمات غير المشفرة القديمة
+            }
+            
+            if (user && validPassword) { 
+                if (user.status !== 'accepted') return res.status(403).json({ message: 'الحساب قيد المراجعة أو مرفوض.' });
+                
+                const token = jwt.sign({ email: user.email, role: "student", fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '30d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
+                return res.status(200).json({ message: "تم الدخول ✓", token: token, userData: { name: user.first_name, grade: user.grade, status: user.status || "pending", email: user.email, phone: user.phone, role: "student", phoneVerified: user.phoneVerified || false } });  
+            } 
+            
+            await delay(1500); 
+            return res.status(401).json({ message: "خطأ في بيانات الدخول" });  
+        }  
 
-        if (user && validPassword && user.status === 'accepted') {
-            const token = jwt.sign({ email: user.email, role: "student", fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '7d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
-            return res.status(200).json({ message: "تم تسجيل الدخول.", token, userData: { name: user.first_name, role: "student" } });  
-        } 
-        
-        await delay(1500); 
-        return res.status(401).json({ message: "بيانات تسجيل الدخول غير صحيحة." });  
+        // 3. حالة إنشاء حساب جديد (Register)
+        if (data.first_name) {  
+            const existing = await usersCollection.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });  
+            if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });  
+            
+            const hashedPassword = await bcrypt.hash(data.password, 10);
+            const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false };
+            
+            try {
+                await usersCollection.insertOne(newUser);  
+            } catch (err) {
+                if (err.code === 11000) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });
+                throw err;
+            }
+            
+            const token = jwt.sign({ email: data.email, role: "student", fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '30d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
+            return res.status(200).json({ message: "تم إنشاء حساب بنجاح", token: token, userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } });  
+        }  
+
+        return res.status(400).json({ message: "بيانات غير مكتملة." });
+
     } catch (error) { 
-        logger.error({ err: error, reqId: req.requestId }, "Login error");
-        res.status(500).json({ message: "حدث خطأ داخلي." }); 
+        logger.error({ err: error, reqId: req.requestId }, "saveUser error");
+        res.status(500).json({ message: "حدث خطأ داخلي" }); 
     }
 });
 
-app.post('/api/auth/register', registerLimiter, async (req, res) => {
-    try {
-        const parseResult = registerSchema.safeParse(req.body);
-        if (!parseResult.success) return res.status(400).json({ message: "البيانات غير مطابقة للمواصفات." });
-        const data = parseResult.data;
-
-        const existing = await usersCollection.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });
-        if (existing) return res.status(400).json({ message: "البريد أو الهاتف مستخدم بالفعل." });
-
-        const hashedPassword = await bcrypt.hash(data.password, 10);
-        const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false };
-        
-        try {
-            await usersCollection.insertOne(newUser);
-        } catch (err) {
-            if (err.code === 11000) return res.status(400).json({ message: "البريد أو الهاتف مستخدم بالفعل." });
-            throw err;
-        }
-        
-        return res.status(200).json({ message: "تم إنشاء الحساب، بانتظار موافقة الإدارة." });  
-    } catch (error) { 
-        logger.error({ err: error, reqId: req.requestId }, "Registration error");
-        res.status(500).json({ message: "حدث خطأ داخلي." }); 
-    }
-});
-
-// الرفع الحصين لملفات الفيديو
+// الرفع الحصين لملفات الفيديو للسحابة
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimiter, async (req, res) => {
     let responded = false;
     let parallelUpload = null;
@@ -766,7 +753,7 @@ setInterval(async () => {
     }
 }, 24 * 60 * 60 * 1000); // كل 24 ساعة
 
-// تنظيف البث المباشر (الاسترجاع من النسخة القديمة للتأكد من إنهاء البث التلقائي)
+// تنظيف البث المباشر 
 setInterval(async () => {
     if (!db) return;
     try {
