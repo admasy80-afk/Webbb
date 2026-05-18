@@ -211,13 +211,17 @@ const generateFingerprint = (req) => {
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // ==================== Middlewares ====================
-// تم التعديل: السماح بالمرور (next) حتى لو اختلفت البصمة
+// تم التعديل: مراقبة التوكن ومعالجة كلمة null
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
     
-    if (!token) {
-        logger.warn({ path: req.path }, "🛡️ محاولة دخول مرفوضة: التوكن مفقود (Token Missing)");
+    // السطر ده هيكشفلك المستخبي ويطبع التوكن اللي جاي من المتصفح
+    console.log("🔍 التوكن اللي مبعوت من المتصفح للمسار " + req.path + " هو: ", token);
+    
+    // فحص إذا كان التوكن مفقود أو مبعوث كنص null/undefined
+    if (!token || token === 'null' || token === 'undefined') {
+        logger.warn({ path: req.path }, "🛡️ محاولة دخول مرفوضة: التوكن مفقود أو null");
         return res.status(401).json({ message: "غير مصرح بالوصول.", reason: "Token missing" });
     }
     
