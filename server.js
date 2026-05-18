@@ -93,7 +93,7 @@ app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// حارس متطور ومضمون لمنع NoSQL Injection يقوم بالتطهير المباشر دون تعطيل أو قفل الـ الاتصالات السليمة للمستخدمين
+// حارس متطور وآمن لمنع NoSQL Injection يقوم بالتطهير المباشر دون تعطيل أو قفل الـ الاتصالات السليمة للمصنفات
 app.use((req, res, next) => {
     const sanitize = (obj) => {
         if (obj instanceof Object) {
@@ -781,3 +781,24 @@ async function startServer() {
     server = app.listen(PORT, () => logger.info(`🚀 السيرفر شغال ومستعد لخدمة الطلبة على بورت ${PORT}`));
     
     server.headersTimeout = 15000;
+    server.requestTimeout = 30000;
+    server.keepAliveTimeout = 5000;
+}
+
+startServer();
+
+process.on('unhandledRejection', (err) => logger.error({ err: err }, 'Unhandled Rejection'));
+process.on('uncaughtException', (err) => logger.fatal({ err: err }, 'Uncaught Exception'));
+
+process.on('SIGINT', async () => {
+    logger.info('\nShutting down server safely...');
+    if (server) {
+        server.close(async () => {
+            logger.info('HTTP connections closed.');
+            try { if (mongoClient) await mongoClient.close(); } catch (e) {}
+            process.exit(0);
+        });
+    } else {
+        process.exit(0);
+    }
+});
