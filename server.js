@@ -62,6 +62,7 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", "https:"], 
+            scriptSrcAttr: ["'unsafe-inline'"], // التعديل لحل مشكلة الأزرار
             styleSrc: ["'self'", "'unsafe-inline'", "https:"], 
             fontSrc: ["'self'", "https:", "data:"],             
             imgSrc: ["'self'", "data:", "blob:", "https:"],
@@ -258,7 +259,8 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
         if (data.identifier === OWNER_EMAIL && OWNER_PASSWORD_HASH) isOwner = await bcrypt.compare(data.password, OWNER_PASSWORD_HASH);
         
         if (isDev || isOwner) {  
-            const roleName = isDev ? "المطور" : "مستر الدحيح";  
+            // التعديل هنا: إزالة كلمة "الدحيح" والاحتفاظ بـ "مستر" فقط
+            const roleName = isDev ? "المطور" : "مستر";  
             const userRole = isDev ? "dev" : "owner";  
             const token = jwt.sign({ email: data.identifier, role: userRole, fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '30d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
             logger.info({ reqId: req.requestId, role: userRole }, "Admin login successful.");
