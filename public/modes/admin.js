@@ -8,15 +8,17 @@ let currentGradeData = null;
 function checkAuthError(res) {
     if (res.status === 401 || res.status === 403) {
         localStorage.removeItem('userToken');
+        localStorage.removeItem('dahih_token');
         window.location.href = '/index.html'; // توجيه لصفحة الدخول
         return true; // تعني أن هناك خطأ توثيق
     }
-    return false; // تعني أن التوثيق سليم
+    return false; // تعني أن التاضرور توثيق سليم
 }
 
 export async function fetchStats() {
     try {
-        const token = localStorage.getItem('token'); 
+        // ✅ تم التصليح: سحب التوكن بالاسم الفعلي السليم والمطابق لصفحة الدخول
+        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token'); 
         const res = await fetch('/api/admin/stats', {
             method: 'POST',
             headers: { 
@@ -55,7 +57,8 @@ export async function fetchPendingRequests() {
     const container = document.getElementById('pendingRequestsContainer');
     container.innerHTML = '<p class="text-gray-500 text-center py-10 animate-pulse">جاري جلب الطلبات الأساسية...</p>';
     try {
-        const token = localStorage.getItem('token');
+        // ✅ تم التصليح: سحب التوكن بالاسم الفعلي السليم
+        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/pending', {
             method: 'POST',
             headers: { 
@@ -105,7 +108,8 @@ export async function updateStudentStatus(email, newStatus, reason = '', btnElem
     }
     
     try {
-        const token = localStorage.getItem('token');
+        // ✅ تم التصليح: سحب التوكن بالاسم الفعلي السليم
+        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/update-status', { 
             method: 'POST', 
             headers: { 
@@ -144,7 +148,8 @@ export async function fetchStudentsByGrade() {
     const container = document.getElementById('studentsListContainer');
     container.innerHTML = '<p class="text-gray-500 text-center py-10 col-span-full animate-pulse">جاري تحميل قائمة الطلاب...</p>';
     try {
-        const token = localStorage.getItem('token');
+        // ✅ تم التصليح: سحب التوكن بالاسم الفعلي السليم
+        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/students-by-grade', {
             method: 'POST',
             headers: { 
@@ -194,7 +199,8 @@ export async function fetchGradeContent() {
     loading.classList.remove('hidden');
     
     try {
-        const token = localStorage.getItem('token');
+        // ✅ تم التصليح: سحب التوكن بالاسم الفعلي السليم
+        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/get-grade-content', {
             method: 'POST',
             headers: { 
@@ -292,7 +298,8 @@ export function deleteContent(grade, itemType, identifier, trashIconElement = nu
         }
 
         try {
-            const token = localStorage.getItem('token');
+            // ✅ تم التصليح: سحب التوكن بالاسم الفعلي السليم
+            const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
             const res = await fetch('/api/admin/delete-item', {
                 method: 'POST', 
                 headers: { 
@@ -358,96 +365,3 @@ export function showDetailedResults(quizId, isPublic) {
                 
                 <div id="detail-${index}" class="student-details bg-black/60 px-3 sm:px-5 pb-5 max-h-0 overflow-hidden transition-all duration-500 ease-in-out opacity-0">
                     <h4 class="text-white font-bold text-sm mb-4 border-b border-white/10 pb-2 mt-2">مراجعة الإجابات:</h4>
-                    <div class="space-y-4">`;
-
-            if (res.userAnswers && res.userAnswers.length > 0) {
-                quiz.questions.forEach((q, qIdx) => {
-                    const sAns = res.userAnswers[qIdx];
-                    const cAns = q.correctAnswer;
-                    const isCorrect = sAns === cAns;
-                    
-                    html += `
-                        <div class="bg-black/50 p-3 sm:p-4 rounded-xl border ${isCorrect ? 'border-green-500/20' : 'border-red-500/20'} transition-all hover:scale-[1.01]">
-                            <p class="text-sm font-semibold text-gray-200 mb-3 leading-relaxed">${qIdx + 1}. ${q.questionText}</p>
-                            <div class="space-y-2 text-xs md:text-sm">`;
-                    
-                    q.options.forEach((opt, optIdx) => {
-                        let optStyle = "text-gray-500 transition-colors";
-                        let optIcon = "○";
-                        
-                        if (optIdx === sAns && !isCorrect) {
-                            optStyle = "text-red-400 font-bold bg-red-500/10 px-2 py-1.5 rounded border border-red-500/20";
-                            optIcon = "❌";
-                        } else if (optIdx === cAns) {
-                            optStyle = "text-green-400 font-bold bg-green-500/10 px-2 py-1.5 rounded border border-green-500/20";
-                            optIcon = "✅";
-                        } else if (optIdx === sAns && isCorrect) {
-                            optStyle = "text-green-400 font-bold bg-green-500/10 px-2 py-1.5 rounded border border-green-500/20";
-                            optIcon = "✅ (إجابة الطالب)";
-                        }
-
-                        html += `<div class="${optStyle} flex items-center gap-2"><span class="w-5 flex-shrink-0 text-center text-base">${optIcon}</span> <span class="leading-relaxed break-words">${opt}</span></div>`;
-                    });
-                    
-                    html += `</div></div>`;
-                });
-            } else {
-                html += `<p class="text-xs text-gray-500 py-2">تفاصيل الإجابات غير متوفرة لهذا السجل.</p>`;
-            }
-
-            html += `</div></div></div>`; 
-        });
-        
-        container.innerHTML = html;
-    }
-    
-    const modal = document.getElementById('resultsModal');
-    modal.classList.remove('hidden');
-    modal.style.opacity = '0';
-    setTimeout(() => {
-        modal.style.transition = 'opacity 0.3s ease';
-        modal.style.opacity = '1';
-    }, 10);
-}
-
-export function toggleStudentDetails(id) {
-    const el = document.getElementById(id);
-    const icon = document.getElementById(`icon-${id}`);
-    if(el) {
-        if (el.style.maxHeight && el.style.maxHeight !== "0px") {
-            el.style.maxHeight = "0px";
-            el.style.opacity = "0";
-            icon.style.transform = "rotate(0deg)";
-        } else {
-            el.style.maxHeight = el.scrollHeight + 100 + "px"; 
-            el.style.opacity = "1";
-            icon.style.transform = "rotate(180deg)";
-        }
-    }
-}
-
-export function closeResultsModal() { 
-    const modal = document.getElementById('resultsModal');
-    modal.style.opacity = '0';
-    setTimeout(() => modal.classList.add('hidden'), 300);
-}
-
-export function logout() {
-    localStorage.removeItem('token');
-    window.location.href = '/index.html'; // تم تعديلها لتتناسب مع اسم ملف تسجيل الدخول غالباً
-}
-
-// تأكيد ربط الدوال بالنطاق العام (Global Scope)
-if (typeof window !== 'undefined') {
-    window.fetchStats = fetchStats;
-    window.fetchPendingRequests = fetchPendingRequests;
-    window.updateStudentStatus = updateStudentStatus;
-    window.rejectStudent = rejectStudent;
-    window.fetchStudentsByGrade = fetchStudentsByGrade;
-    window.fetchGradeContent = fetchGradeContent;
-    window.deleteContent = deleteContent;
-    window.showDetailedResults = showDetailedResults;
-    window.toggleStudentDetails = toggleStudentDetails;
-    window.closeResultsModal = closeResultsModal;
-    window.logout = logout;
-}
