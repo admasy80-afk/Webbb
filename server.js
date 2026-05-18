@@ -93,12 +93,13 @@ app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// حارس متطور وآمن لمنع NoSQL Injection يقوم بالتطهير المباشر دون تعطيل أو قفل الـ الاتصالات السليمة للمصنفات
+// حارس متطور وآمن لمنع NoSQL Injection يقوم بالتطهير وطباعة السبب لو تم رصد محاولة تلاعب
 app.use((req, res, next) => {
     const sanitize = (obj) => {
         if (obj instanceof Object) {
             for (let key in obj) {
                 if (/^\$/.test(key)) {
+                    logger.warn({ key, path: req.path, ip: req.ip }, "🚨 تم رصد ومسح كود مشبوه (NoSQL Operators)");
                     delete obj[key];
                 } else if (typeof obj[key] === 'object') {
                     sanitize(obj[key]);
@@ -212,7 +213,10 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ message: "غير مصرح بالوصول." });
+    if (!token) {
+        logger.warn({ path: req.path }, "🛡️ محاولة دخول مرفوضة: التوكن مفقود (Token Missing)");
+        return res.status(401).json({ message: "غير مصرح بالوصول.", reason: "Token missing" });
+    }
     
     jwt.verify(token, JWT_SECRET, { 
         algorithms: [JWT_ALGORITHM], 
@@ -220,12 +224,15 @@ const authenticateToken = (req, res, next) => {
         audience: 'eld7e7-users',
         clockTolerance: 5 
     }, (err, decoded) => {
-        if (err) return res.status(403).json({ message: "انتهت صلاحية الجلسة أو غير صالحة." });
+        if (err) {
+            logger.warn({ path: req.path, error: err.message }, "🛡️ محاولة دخول مرفوضة: توكن غير صالح أو منتهي");
+            return res.status(403).json({ message: "انتهت صلاحية الجلسة أو غير صالحة.", reason: err.message });
+        }
         
         const currentFingerprint = generateFingerprint(req);
         if (decoded.fingerprint && decoded.fingerprint !== currentFingerprint) {
-            logger.warn({ reqId: req.requestId, email: decoded.email }, "محاولة وصول غير معتادة ببصمة مختلفة.");
-            return res.status(403).json({ message: "تم اكتشاف محاولة وصول غير معتادة." });
+            logger.warn({ reqId: req.requestId, email: decoded.email, savedFingerprint: decoded.fingerprint, currentFingerprint }, "🛡️ محاولة دخول مرفوضة: بصمة المتصفح غير مطابقة");
+            return res.status(403).json({ message: "تم اكتشاف محاولة وصول غير معتادة.", reason: "Fingerprint mismatch" });
         }
         req.user = decoded;
         next();
@@ -233,14 +240,17 @@ const authenticateToken = (req, res, next) => {
 };
 
 const requireAdmin = (req, res, next) => {
-    if (req.user?.role !== 'dev' && req.user?.role !== 'owner') return res.status(403).json({ message: "مطلوب صلاحيات مسؤول." });
+    if (req.user?.role !== 'dev' && req.user?.role !== 'owner') {
+        logger.warn({ email: req.user?.email, role: req.user?.role }, "🛡️ محاولة دخول مرفوضة: لا يمتلك صلاحيات مسؤول");
+        return res.status(403).json({ message: "مطلوب صلاحيات مسؤول.", reason: "Admin role required" });
+    }
     next();
 };
 
 // ==================== Routes ====================
 
 app.get('/api/verify-session', authenticateToken, (req, res) => {
-    if (!req.user) return res.status(401).json({ message: "انتهت صلاحية الجلسة." });
+    if (!req.user) return res.status(401).json({ message: "انتهت صلاحية الجلسة.", reason: "User payload empty" });
     const userRole = req.user.role;
     res.status(200).json({ message: "تم التحقق من الجلسة بنجاح.", redirectTo: (userRole === 'dev' || userRole === 'owner') ? '/admin-dashboard.html' : '/student-dashboard.html', role: userRole });
 });
@@ -249,7 +259,7 @@ app.get('/api/verify-session', authenticateToken, (req, res) => {
 app.post('/api/saveUser', loginLimiter, async (req, res) => {
     try {
         const data = req.body;
-        if (!usersCollection) return res.status(500).json({ message: "السيرفر لسه بيسخن.." });  
+        if (!usersCollection) return res.status(500).json({ message: "السيرفر لسه بيسخن..", reason: "Database collection not ready" });  
         
         const { DEV_EMAIL, DEV_PASSWORD_HASH, OWNER_EMAIL, OWNER_PASSWORD_HASH } = process.env;
         const fingerprint = generateFingerprint(req);
@@ -279,20 +289,27 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             }
             
             if (user && validPassword) { 
-                if (user.status !== 'accepted') return res.status(403).json({ message: 'الحساب قيد المراجعة أو مرفوض.' });
+                if (user.status !== 'accepted') {
+                    logger.warn({ identifier: data.identifier, status: user.status }, "⚠️ محاولة دخول طالب مرفوضة: الحساب معلق أو مرفوض");
+                    return res.status(403).json({ message: 'الحساب قيد المراجعة أو مرفوض.', reason: `Account status is ${user.status}` });
+                }
                 
                 const token = jwt.sign({ email: user.email, role: "student", fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '30d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
                 return res.status(200).json({ message: "تم الدخول ✓", token: token, userData: { name: user.first_name, grade: user.grade, status: user.status || "pending", email: user.email, phone: user.phone, role: "student", phoneVerified: user.phoneVerified || false } });  
             } 
             
             await delay(1500); 
-            return res.status(401).json({ message: "خطأ في بيانات الدخول" });  
+            logger.warn({ identifier: data.identifier }, "⚠️ فشل تسجيل الدخول: خطأ في الباسورد أو المعرف");
+            return res.status(401).json({ message: "خطأ في بيانات الدخول", reason: "Invalid credentials" });  
         }  
 
         // 3. حالة إنشاء حساب جديد (Register)
         if (data.first_name) {  
             const existing = await usersCollection.findOne({ $or: [{ email: data.email }, { phone: data.phone }] });  
-            if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });  
+            if (existing) {
+                logger.warn({ email: data.email, phone: data.phone }, "⚠️ فشل التسجيل: البريد أو الهاتف مستخدم بالفعل");
+                return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل", reason: "Email or Phone already exists" });
+            }
             
             const hashedPassword = await bcrypt.hash(data.password, 10);
             const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false };
@@ -300,7 +317,7 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             try {
                 await usersCollection.insertOne(newUser);  
             } catch (err) {
-                if (err.code === 11000) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });
+                if (err.code === 11000) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل", reason: "Duplicate key index error" });
                 throw err;
             }
             
@@ -308,11 +325,12 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             return res.status(200).json({ message: "تم إنشاء حساب بنجاح", token: token, userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } });  
         }  
 
-        return res.status(400).json({ message: "بيانات غير مكتملة." });
+        logger.warn("⚠️ طلب غريب مجهول وصل لمسار saveUser بدون بيانات معروفة");
+        return res.status(400).json({ message: "بيانات غير مكتملة.", reason: "Missing required fields" });
 
     } catch (error) { 
         logger.error({ err: error, reqId: req.requestId }, "saveUser error");
-        res.status(500).json({ message: "حدث خطأ داخلي" }); 
+        res.status(500).json({ message: "حدث خطأ داخلي", reason: error.message }); 
     }
 });
 
@@ -340,7 +358,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
         bb.on('file', async (name, file, info) => {
             if (!fieldsReceived) {
                 file.resume(); 
-                if (!responded) { responded = true; return res.status(400).json({ message: "يجب إرسال بيانات الدورة قبل ملف الفيديو." }); }
+                if (!responded) { responded = true; return res.status(400).json({ message: "يجب إرسال بيانات الدورة قبل ملف الفيديو.", reason: "Fields trailing behind file stream" }); }
                 return;
             }
 
@@ -349,7 +367,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
             const parseResult = courseSchema.safeParse(courseData);
             if (!parseResult.success) {
                 file.resume();
-                if (!responded) { responded = true; return res.status(400).json({ message: "بيانات الدورة غير صالحة." }); }
+                if (!responded) { responded = true; return res.status(400).json({ message: "بيانات الدورة غير صالحة.", reason: parseResult.error.errors }); }
                 return;
             }
 
@@ -363,19 +381,19 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                     
                     if (!type || !['video/mp4', 'video/webm', 'video/x-matroska'].includes(type.mime)) {
                         streamWithFileType.resume();
-                        if (!responded) { responded = true; return res.status(400).json({ message: "صيغة الفيديو غير مدعومة أو الملف مزيف." }); }
+                        if (!responded) { responded = true; return res.status(400).json({ message: "صيغة الفيديو غير مدعومة أو الملف مزيف.", reason: `Unsupported magic number mime: ${type?.mime}` }); }
                         return;
                     }
                     mimeType = type.mime;
                     uploadStream = streamWithFileType;
                 } catch (e) {
                     file.resume();
-                    if (!responded) { responded = true; return res.status(500).json({ message: "خطأ في فحص توقيع الملف." }); }
+                    if (!responded) { responded = true; return res.status(500).json({ message: "خطأ في فحص توقيع الملف.", reason: e.message }); }
                     return;
                 }
             } else if (!['video/mp4', 'video/webm', 'video/x-matroska'].includes(mimeType)) {
                 file.resume();
-                if (!responded) { responded = true; return res.status(400).json({ message: "صيغة غير مدعومة." }); }
+                if (!responded) { responded = true; return res.status(400).json({ message: "صيغة غير مدعومة.", reason: `MimeType rejected: ${mimeType}` }); }
                 return;
             }
 
@@ -416,12 +434,12 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                     } catch (cleanupError) {
                         logger.error({ err: cleanupError, reqId: req.requestId, fileKey }, "Failed to clean up orphaned file.");
                     }
-                    if (!responded) { responded = true; res.status(500).json({ message: "حدث خطأ أثناء حفظ الدورة وتم إلغاء الرفع." }); }
+                    if (!responded) { responded = true; res.status(500).json({ message: "حدث خطأ أثناء حفظ الدورة وتم إلغاء الرفع.", reason: dbError.message }); }
                 }
 
             } catch (err) {
                 logger.error({ err: err, reqId: req.requestId }, "Cloud Upload Error.");
-                if (!responded) { responded = true; res.status(500).json({ message: "فشل الرفع للسحابة." }); }
+                if (!responded) { responded = true; res.status(500).json({ message: "فشل الرفع للسحابة.", reason: err.message }); }
             }
         });
 
@@ -439,7 +457,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
         req.pipe(bb);
     } catch (error) {
         logger.error({ err: error, reqId: req.requestId }, "Unexpected upload error.");
-        if (!responded) { responded = true; res.status(500).json({ message: "خطأ غير متوقع." }); }
+        if (!responded) { responded = true; res.status(500).json({ message: "خطأ غير متوقع.", reason: error.message }); }
     }
 });
 
@@ -513,7 +531,7 @@ app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (re
             id: c._id.toString(), courseName: c.courseName, grade: c.grade, description: c.description, telegramMsgId: c.telegramMsgId
         }));
         res.status(200).json({ courses: formattedCourses });
-    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر أثناء جلب البيانات" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر أثناء جلب البيانات", reason: error.message }); }
 });
 
 app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
@@ -528,9 +546,9 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
             try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.fileKey })); } catch (e) { logger.warn("Failed to delete cloud file"); }
         }
         const result = await db.collection('courses').deleteOne({ _id: new ObjectId(courseId) });
-        if (result.deletedCount === 0) return res.status(404).json({ message: "المحاضرة غير موجودة بالفعل" });
+        if (result.deletedCount === 0) return res.status(404).json({ message: "المحاضرة غير موجودة بالفعل", reason: "Document not found" });
         res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
-    } catch (error) { res.status(500).json({ message: "فشل الحذف، معرف غير صالح" }); }
+    } catch (error) { res.status(500).json({ message: "فشل الحذف، معرف غير صالح", reason: error.message }); }
 });
 
 app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
@@ -538,14 +556,14 @@ app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) =
         const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });  
         const pendingCount = await usersCollection.countDocuments({ role: "student", status: "pending" });  
         res.status(200).json({ studentsCount, pendingCount, questionsCount: "نشط" });   
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.post('/api/admin/pending', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const pendingUsers = await usersCollection.find({ status: "pending", role: "student" }).toArray();
         res.status(200).json(pendingUsers);
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.post('/api/admin/update-status', authenticateToken, requireAdmin, async (req, res) => {
@@ -553,7 +571,7 @@ app.post('/api/admin/update-status', authenticateToken, requireAdmin, async (req
         const { studentEmail, newStatus, reason } = req.body;
         await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { status: newStatus, rejection_reason: reason || "" } });
         res.status(200).json({ message: "تم التحديث" });
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.post('/api/admin/students-by-grade', authenticateToken, requireAdmin, async (req, res) => {
@@ -561,7 +579,7 @@ app.post('/api/admin/students-by-grade', authenticateToken, requireAdmin, async 
         const { grade } = req.body;
         const students = await usersCollection.find({ status: "accepted", role: "student", grade: grade }).toArray();  
         res.status(200).json(students);  
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.post('/api/admin/add-content', authenticateToken, requireAdmin, async (req, res) => {
@@ -571,7 +589,7 @@ app.post('/api/admin/add-content', authenticateToken, requireAdmin, async (req, 
         if (type === 'point') await contentCollection.updateOne({ grade: grade }, { $push: { points: pointText } }, { upsert: true });
         else await contentCollection.updateOne({ grade: grade }, { $push: { questions: { question: questionText, hint: questionHint } } }, { upsert: true });
         res.status(200).json({ message: "تمت الإضافة" });
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.post('/api/admin/update-points', authenticateToken, requireAdmin, async (req, res) => {
@@ -579,7 +597,7 @@ app.post('/api/admin/update-points', authenticateToken, requireAdmin, async (req
         const { studentEmail, points } = req.body;
         await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { points: parseInt(points) } }); 
         res.status(200).json({ message: "تم التحديث" });
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.post('/api/admin/toggle-stream', authenticateToken, requireAdmin, async (req, res) => {
@@ -593,7 +611,7 @@ app.post('/api/admin/toggle-stream', authenticateToken, requireAdmin, async (req
             await contentCollection.updateMany({}, { $unset: { "liveStream": "" } });  
             res.status(200).json({ message: "تم إيقاف البث بنجاح" });  
         }
-    } catch (error) { res.status(500).json({ message: "خطأ في تحديث حالة البث" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ في تحديث حالة البث", reason: error.message }); }
 });
 
 app.post('/api/admin/add-mcq-quiz', authenticateToken, requireAdmin, async (req, res) => {
@@ -603,7 +621,7 @@ app.post('/api/admin/add-mcq-quiz', authenticateToken, requireAdmin, async (req,
         const contentCollection = db.collection('curriculum_content');
         await contentCollection.updateOne({ grade: grade }, { $push: { quizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } }, { upsert: true });
         res.status(200).json({ message: "تمت إضافة الاختبار بنجاح", quizId: quizId });
-    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+    } catch (err) { res.status(500).json({ message: "خطأ", reason: err.message }); }
 });
 
 app.post('/api/admin/add-public-quiz', authenticateToken, requireAdmin, async (req, res) => {
@@ -613,7 +631,7 @@ app.post('/api/admin/add-public-quiz', authenticateToken, requireAdmin, async (r
         const contentCollection = db.collection('curriculum_content');
         await contentCollection.updateOne({ grade: grade || "عام" }, { $push: { publicQuizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } }, { upsert: true });
         res.status(200).json({ success: true, message: "تمت إضافة الاختبار العام", quizId: quizId });
-    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+    } catch (err) { res.status(500).json({ message: "خطأ", reason: err.message }); }
 });
 
 app.post('/api/admin/get-grade-content', authenticateToken, requireAdmin, async (req, res) => {
@@ -622,7 +640,7 @@ app.post('/api/admin/get-grade-content', authenticateToken, requireAdmin, async 
         const contentCollection = db.collection('curriculum_content');
         const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [], publicQuizzes: [] };
         res.status(200).json(content);
-    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+    } catch (err) { res.status(500).json({ message: "خطأ", reason: err.message }); }
 });
 
 app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, res) => {
@@ -637,13 +655,16 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
         else if (itemType === 'publicQuiz') updateQuery = { $pull: { publicQuizzes: { id: identifier } } };
         await contentCollection.updateOne({ grade: grade }, updateQuery);
         res.status(200).json({ message: "تم الحذف بنجاح" });
-    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+    } catch (err) { res.status(500).json({ message: "خطأ", reason: err.message }); }
 });
 
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
         const parseResult = gradeSchema.safeParse(req.body);
-        if (!parseResult.success) return res.status(400).json({ message: "البيانات المدخلة غير صحيحة." });
+        if (!parseResult.success) {
+            logger.warn({ reqId: req.requestId, errors: parseResult.error.errors }, "⚠️ فشل جلب لوحة الطالب: البيانات المرسلة غير مطابقة للـ Zod Schema");
+            return res.status(400).json({ message: "البيانات المدخلة غير صحيحة.", reason: parseResult.error.errors });
+        }
         const { grade } = parseResult.data;
         
         const user = await usersCollection.findOne({ email: req.user.email });
@@ -654,32 +675,32 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
         res.status(200).json({ studentPoints, content, courses });  
     } catch (error) { 
         logger.error({ err: error, reqId: req.requestId }, "Dashboard data fetch error");
-        res.status(500).json({ message: "فشل جلب البيانات." }); 
+        res.status(500).json({ message: "فشل جلب البيانات.", reason: error.message }); 
     }
 });
 
 app.get('/api/public/quiz', publicQuizLimiter, async (req, res) => {
     try {
-        if (req.headers['x-public-access'] !== 'eld7e7-web-client') return res.status(403).json({ message: "وصول غير مصرح." });
+        if (req.headers['x-public-access'] !== 'eld7e7-web-client') return res.status(403).json({ message: "وصول غير مصرح.", reason: "Missing secure web client verification header" });
         const { id, device } = req.query; 
-        if (typeof id !== 'string' || id.length > 50) return res.status(400).json({ message: "معرف غير صالح." });
+        if (typeof id !== 'string' || id.length > 50) return res.status(400).json({ message: "معرف غير صالح.", reason: "ID parameter validation failed" });
         
         const doc = await db.collection('curriculum_content').findOne({ "publicQuizzes.id": id });
-        if (!doc) return res.status(404).json({ message: "تعذر العثور على الاختبار." });
+        if (!doc) return res.status(404).json({ message: "تعذر العثور على الاختبار.", reason: "Quiz ID not found inside database" });
         
         const quiz = doc.publicQuizzes.find(q => q.id === id);
-        if (!quiz) return res.status(404).json({ message: "الاختبار غير موجود." }); 
+        if (!quiz) return res.status(404).json({ message: "الاختبار غير موجود.", reason: "Target quiz extraction failed" }); 
 
         if (device && quiz.results) {
             const alreadyTaken = quiz.results.some(r => r.visitorId === device);
-            if (alreadyTaken) return res.status(403).json({ message: "كان غيرك اشطر😂😂" });
+            if (alreadyTaken) return res.status(403).json({ message: "كان غيرك اشطر😂😂", reason: "Visitor device signature has already taken this test" });
         }
         
         quiz.grade = doc.grade; 
         res.status(200).json(quiz);
     } catch (err) { 
         logger.error({ err: err, reqId: req.requestId }, "Public quiz fetch error");
-        res.status(500).json({ message: "حدث خطأ داخلي." }); 
+        res.status(500).json({ message: "حدث خطأ داخلي.", reason: err.message }); 
     }
 });
 
@@ -692,22 +713,22 @@ app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
 
         if (quizId && quizId.startsWith('pub_')) {
             const existingDoc = await contentCollection.findOne({ grade: grade, publicQuizzes: { $elemMatch: { id: quizId, results: { $elemMatch: { $or: [{ visitorId: visitorId }, { email: email }] } } } } });
-            if (existingDoc) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
+            if (existingDoc) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!", reason: "Double submit blocked" });
             await contentCollection.updateOne({ grade: grade, "publicQuizzes.id": quizId }, { $push: { "publicQuizzes.$.results": resultObj } });
         } else {
             await contentCollection.updateOne({ grade: grade, "quizzes.id": quizId }, { $push: { "quizzes.$.results": resultObj } });
         }
         res.status(200).json({ message: "تم حفظ النتيجة واعتمادها بنجاح" });
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.post('/api/check-status', authenticateToken, async (req, res) => {
     try {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email;
         const user = await usersCollection.findOne({ email: email });
-        if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+        if (!user) return res.status(404).json({ message: "المستخدم غير موجود", reason: "Target email not found" });
         res.status(200).json({ status: user.status, reason: user.rejection_reason, phoneVerified: user.phoneVerified || false });
-    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر", reason: error.message }); }
 });
 
 app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
@@ -715,7 +736,7 @@ app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
         const email = (req.user && req.user.email) ? req.user.email : req.body.email;
         await usersCollection.updateOne({ email: email }, { $set: { phoneVerified: true } });
         res.status(200).json({ message: "تم توثيق الهاتف بنجاح" });
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) { res.status(500).json({ message: "خطأ", reason: error.message }); }
 });
 
 app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
@@ -723,7 +744,7 @@ app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
 });
 
 app.use('/api/*', (req, res) => {
-    res.status(404).json({ message: "المسار غير موجود (API 404)." });
+    res.status(404).json({ message: "المسار غير موجود (API 404).", reason: "Route endpoints mismatch" });
 });
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
