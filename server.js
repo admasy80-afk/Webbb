@@ -15,6 +15,7 @@ const busboy = require('busboy');
 const { z } = require('zod');
 const pino = require('pino'); 
 
+// إعداد الـ Logger الاحترافي
 const logger = pino({
     level: process.env.LOG_LEVEL || 'info',
     timestamp: pino.stdTimeFunctions.isoTime
@@ -27,7 +28,7 @@ if (!process.env.JWT_SECRET) {
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_ALGORITHM = 'HS256';
 
-// الاستيراد الديناميكي لـ file-type لدعم الـ Streams وفحص الـ Magic Numbers
+// الاستيراد الديناميكي لـ file-type لدعم الـ Streams وفحص الـ Magic Numbers الحقيقي
 let fileTypeStream;
 (async () => {
     try {
@@ -38,7 +39,7 @@ let fileTypeStream;
     }
 })();
 
-// دوال الـ AWS SDK المطلوبة (بما فيها تنظيف الـ Multipart والـ HeadObject)
+// دوال الـ AWS SDK المطلوبة 
 const { 
     S3Client, 
     GetObjectCommand, 
@@ -56,23 +57,24 @@ let server;
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-// CSP متوازن (يسمح بالـ inline مؤقتاً لتجنب كسر الفرونت إند، الأفضل مستقبلاً استخدام Nonce)
+// CSP متوازن (يسمح بالـ inline والخطوط عشان تصميم الموقع ما يبوظش)
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"], 
-            styleSrc: ["'self'", "'unsafe-inline'"], 
-            imgSrc: ["'self'", "data:", "blob:"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https:"], 
+            styleSrc: ["'self'", "'unsafe-inline'", "https:"], 
+            fontSrc: ["'self'", "https:", "data:"],             
+            imgSrc: ["'self'", "data:", "blob:", "https:"],
             mediaSrc: ["'self'", "blob:", "https:"], 
             connectSrc: ["'self'", "https:"]
         }
     },
     crossOriginEmbedderPolicy: false,
     hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
-    dnsPrefetchControl: { allow: false }, // إغلاق ثغرة الـ DNS Prefetching
-    frameguard: { action: 'deny' },       // منع Clickjacking
-    noSniff: true                         // تفعيل X-Content-Type-Options
+    dnsPrefetchControl: { allow: false }, 
+    frameguard: { action: 'deny' },       
+    noSniff: true                         
 }));
 
 const allowedOrigins = process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : ['http://localhost:3000', 'http://127.0.0.1:3000'];
@@ -91,7 +93,7 @@ app.use(compression());
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// حارس يدوي صارم لمنع NoSQL Injection (أقوى وأسرع من express-mongo-sanitize)
+// حارس يدوي صارم لمنع NoSQL Injection
 app.use((req, res, next) => {
     const hasDollarKey = (obj) => {
         if (!obj || typeof obj !== 'object') return false;
@@ -143,7 +145,6 @@ const courseSchema = z.object({
 const loginLimiter = rateLimit({ 
     windowMs: 15 * 60 * 1000, 
     max: 20, 
-    // ربط الـ IP بالـ Identifier لمنع الهجمات الموزعة أو التبديل العشوائي للإيميلات
     keyGenerator: (req) => `${req.ip}-${req.body?.identifier || 'unknown'}`, 
     message: { message: "محاولات كثيرة جداً، يرجى المحاولة لاحقاً." } 
 });
@@ -325,7 +326,7 @@ app.post('/api/auth/register', registerLimiter, async (req, res) => {
     }
 });
 
-// الرفع الحصين مع Dynamic Extensions
+// الرفع الحصين لملفات الفيديو
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimiter, async (req, res) => {
     let responded = false;
     let parallelUpload = null;
@@ -388,7 +389,6 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                 return;
             }
 
-            // تحديد الامتداد بشكل ديناميكي لتجنب تعارض المشغلات
             const extMap = { 'video/mp4': 'mp4', 'video/webm': 'webm', 'video/x-matroska': 'mkv' };
             const ext = extMap[mimeType] || 'mp4';
             const fileKey = `videos/${crypto.randomUUID()}.${ext}`;
@@ -438,7 +438,6 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
         req.on('close', () => {
             if (!req.complete) {
                 logger.warn({ reqId: req.requestId }, "Client disconnected abruptly. Aborting upload.");
-                // منع تشغيل الـ abort على مسار تم إنهاؤه بنجاح
                 if (parallelUpload && !responded) parallelUpload.abort();
             }
         });
@@ -450,7 +449,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
     }
 });
 
-// بث الفيديو الموزع (فحص الـ Range عبر HeadObject + Pipeline)
+// بث الفيديو الموزع (فحص الـ Range + Pipeline)
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     let streamTimeout;
     try {
@@ -468,7 +467,6 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         else if (course.provider === 'IDRIVE') { targetClient = idriveClient; targetBucket = IDRIVE_BUCKET_NAME; } 
         else { targetClient = r2Client; targetBucket = R2_BUCKET_NAME; }
 
-        // التحقق من صلاحية الـ Range مقابل الحجم الفعلي للملف لمنع دوس السيرفر
         const headCommand = new HeadObjectCommand({ Bucket: targetBucket, Key: course.fileKey });
         const headResponse = await targetClient.send(headCommand);
         const fileSize = headResponse.ContentLength;
@@ -510,6 +508,144 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     }
 });
 
+// بقية المسارات لإدارة المنصة والاختبارات
+app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        const courses = await db.collection('courses').find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
+        const formattedCourses = courses.map(c => ({
+            id: c._id.toString(), courseName: c.courseName, grade: c.grade, description: c.description, telegramMsgId: c.telegramMsgId
+        }));
+        res.status(200).json({ courses: formattedCourses });
+    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر أثناء جلب البيانات" }); }
+});
+
+app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const courseId = req.params.id;
+        const course = await db.collection('courses').findOne({ _id: new ObjectId(courseId) });
+        if (course && course.fileKey) {
+            let targetClient, targetBucket;
+            if (course.provider === 'B2') { targetClient = b2Client; targetBucket = B2_BUCKET_NAME; } 
+            else if (course.provider === 'IDRIVE') { targetClient = idriveClient; targetBucket = IDRIVE_BUCKET_NAME; } 
+            else { targetClient = r2Client; targetBucket = R2_BUCKET_NAME; }
+            try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.fileKey })); } catch (e) { logger.warn("Failed to delete cloud file"); }
+        }
+        const result = await db.collection('courses').deleteOne({ _id: new ObjectId(courseId) });
+        if (result.deletedCount === 0) return res.status(404).json({ message: "المحاضرة غير موجودة بالفعل" });
+        res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
+    } catch (error) { res.status(500).json({ message: "فشل الحذف، معرف غير صالح" }); }
+});
+
+app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const studentsCount = await usersCollection.countDocuments({ role: "student", status: "accepted" });  
+        const pendingCount = await usersCollection.countDocuments({ role: "student", status: "pending" });  
+        res.status(200).json({ studentsCount, pendingCount, questionsCount: "نشط" });   
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/pending', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const pendingUsers = await usersCollection.find({ status: "pending", role: "student" }).toArray();
+        res.status(200).json(pendingUsers);
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/update-status', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { studentEmail, newStatus, reason } = req.body;
+        await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { status: newStatus, rejection_reason: reason || "" } });
+        res.status(200).json({ message: "تم التحديث" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/students-by-grade', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { grade } = req.body;
+        const students = await usersCollection.find({ status: "accepted", role: "student", grade: grade }).toArray();  
+        res.status(200).json(students);  
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/add-content', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { grade, type, pointText, questionText, questionHint } = req.body;
+        const contentCollection = db.collection('curriculum_content');
+        if (type === 'point') await contentCollection.updateOne({ grade: grade }, { $push: { points: pointText } }, { upsert: true });
+        else await contentCollection.updateOne({ grade: grade }, { $push: { questions: { question: questionText, hint: questionHint } } }, { upsert: true });
+        res.status(200).json({ message: "تمت الإضافة" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/update-points', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { studentEmail, points } = req.body;
+        await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { points: parseInt(points) } }); 
+        res.status(200).json({ message: "تم التحديث" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/toggle-stream', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { isLive } = req.body; 
+        const contentCollection = db.collection('curriculum_content');  
+        if (isLive) {
+            await contentCollection.updateMany({}, { $set: { "liveStream": { isLive: true, startedAt: new Date() } } }, { upsert: true });  
+            res.status(200).json({ message: "تم إطلاق البث بنجاح" });  
+        } else {
+            await contentCollection.updateMany({}, { $unset: { "liveStream": "" } });  
+            res.status(200).json({ message: "تم إيقاف البث بنجاح" });  
+        }
+    } catch (error) { res.status(500).json({ message: "خطأ في تحديث حالة البث" }); }
+});
+
+app.post('/api/admin/add-mcq-quiz', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { grade, quizTitle, questionsArray } = req.body;
+        const quizId = 'quiz_' + Date.now();
+        const contentCollection = db.collection('curriculum_content');
+        await contentCollection.updateOne({ grade: grade }, { $push: { quizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } }, { upsert: true });
+        res.status(200).json({ message: "تمت إضافة الاختبار بنجاح", quizId: quizId });
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/add-public-quiz', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { grade, quizTitle, questionsArray } = req.body;
+        const quizId = 'pub_' + Date.now(); 
+        const contentCollection = db.collection('curriculum_content');
+        await contentCollection.updateOne({ grade: grade || "عام" }, { $push: { publicQuizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } }, { upsert: true });
+        res.status(200).json({ success: true, message: "تمت إضافة الاختبار العام", quizId: quizId });
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/get-grade-content', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { grade } = req.body;
+        const contentCollection = db.collection('curriculum_content');
+        const content = await contentCollection.findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [], publicQuizzes: [] };
+        res.status(200).json(content);
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, res) => {
+    try {
+        const { grade, itemType, identifier } = req.body;
+        const contentCollection = db.collection('curriculum_content');
+        let updateQuery = {};
+        if (itemType === 'point') updateQuery = { $pull: { points: identifier } };
+        else if (itemType === 'question') updateQuery = { $pull: { questions: { question: identifier } } };
+        else if (itemType === 'test') updateQuery = { $pull: { tests: { testName: identifier } } };
+        else if (itemType === 'quiz') updateQuery = { $pull: { quizzes: { id: identifier } } };
+        else if (itemType === 'publicQuiz') updateQuery = { $pull: { publicQuizzes: { id: identifier } } };
+        await contentCollection.updateOne({ grade: grade }, updateQuery);
+        res.status(200).json({ message: "تم الحذف بنجاح" });
+    } catch (err) { res.status(500).json({ message: "خطأ" }); }
+});
+
 app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     try {
         const parseResult = gradeSchema.safeParse(req.body);
@@ -531,7 +667,7 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
 app.get('/api/public/quiz', publicQuizLimiter, async (req, res) => {
     try {
         if (req.headers['x-public-access'] !== 'eld7e7-web-client') return res.status(403).json({ message: "وصول غير مصرح." });
-        const { id } = req.query; 
+        const { id, device } = req.query; 
         if (typeof id !== 'string' || id.length > 50) return res.status(400).json({ message: "معرف غير صالح." });
         
         const doc = await db.collection('curriculum_content').findOne({ "publicQuizzes.id": id });
@@ -539,6 +675,11 @@ app.get('/api/public/quiz', publicQuizLimiter, async (req, res) => {
         
         const quiz = doc.publicQuizzes.find(q => q.id === id);
         if (!quiz) return res.status(404).json({ message: "الاختبار غير موجود." }); 
+
+        if (device && quiz.results) {
+            const alreadyTaken = quiz.results.some(r => r.visitorId === device);
+            if (alreadyTaken) return res.status(403).json({ message: "كان غيرك اشطر😂😂" });
+        }
         
         quiz.grade = doc.grade; 
         res.status(200).json(quiz);
@@ -548,6 +689,45 @@ app.get('/api/public/quiz', publicQuizLimiter, async (req, res) => {
     }
 });
 
+app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
+    try {
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
+        const { studentName, grade, quizId, score, percentage, visitorId, userAnswers } = req.body;
+        const contentCollection = db.collection('curriculum_content');
+        const resultObj = { email, studentName, score, percentage, visitorId: visitorId || null, userAnswers: userAnswers || [], date: new Date() };
+
+        if (quizId && quizId.startsWith('pub_')) {
+            const existingDoc = await contentCollection.findOne({ grade: grade, publicQuizzes: { $elemMatch: { id: quizId, results: { $elemMatch: { $or: [{ visitorId: visitorId }, { email: email }] } } } } });
+            if (existingDoc) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
+            await contentCollection.updateOne({ grade: grade, "publicQuizzes.id": quizId }, { $push: { "publicQuizzes.$.results": resultObj } });
+        } else {
+            await contentCollection.updateOne({ grade: grade, "quizzes.id": quizId }, { $push: { "quizzes.$.results": resultObj } });
+        }
+        res.status(200).json({ message: "تم حفظ النتيجة واعتمادها بنجاح" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/check-status', authenticateToken, async (req, res) => {
+    try {
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
+        const user = await usersCollection.findOne({ email: email });
+        if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+        res.status(200).json({ status: user.status, reason: user.rejection_reason, phoneVerified: user.phoneVerified || false });
+    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر" }); }
+});
+
+app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
+    try {
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
+        await usersCollection.updateOne({ email: email }, { $set: { phoneVerified: true } });
+        res.status(200).json({ message: "تم توثيق الهاتف بنجاح" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => {
+    res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4');
+});
+
 app.use('/api/*', (req, res) => {
     res.status(404).json({ message: "المسار غير موجود (API 404)." });
 });
@@ -555,7 +735,7 @@ app.use('/api/*', (req, res) => {
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 // ==================== Cron Jobs (Background Tasks) ====================
-// تنظيف الـ Multipart Uploads المهجورة (Orphaned) كل 24 ساعة لعدم استنزاف المساحة
+// تنظيف الـ Multipart Uploads المهجورة
 setInterval(async () => {
     logger.info("Running daily cleanup for orphaned multipart uploads...");
     const providers = [
@@ -584,7 +764,22 @@ setInterval(async () => {
             logger.error({ err: err.message, provider: provider.name }, "Failed to cleanup orphaned multipart uploads.");
         }
     }
-}, 24 * 60 * 60 * 1000); // 24 Hours
+}, 24 * 60 * 60 * 1000); // كل 24 ساعة
+
+// تنظيف البث المباشر (الاسترجاع من النسخة القديمة للتأكد من إنهاء البث التلقائي)
+setInterval(async () => {
+    if (!db) return;
+    try {
+        const contentCollection = db.collection('curriculum_content');
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+        await contentCollection.updateMany(
+            { "liveStream.isLive": true, "liveStream.startedAt": { $lt: fourHoursAgo } },
+            { $unset: { "liveStream": "" } }
+        );
+    } catch (e) {
+        logger.error({ err: e }, "خطأ في دورة تنظيف البث المباشر");
+    }
+}, 60 * 60 * 1000);
 
 // ==================== Server Boot & Graceful Shutdown ====================
 async function startServer() {
