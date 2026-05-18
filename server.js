@@ -201,18 +201,21 @@ function shuffleArray(array) {
     return array;
 }
 
+// تم التعديل: إزالة accept-language لتقليل الحساسية
 const generateFingerprint = (req) => {
     return crypto.createHash('sha256')
-        .update((req.headers['user-agent'] || '') + (req.headers['accept-language'] || ''))
+        .update((req.headers['user-agent'] || ''))
         .digest('hex');
 };
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // ==================== Middlewares ====================
+// تم التعديل: السماح بالمرور (next) حتى لو اختلفت البصمة
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
+    
     if (!token) {
         logger.warn({ path: req.path }, "🛡️ محاولة دخول مرفوضة: التوكن مفقود (Token Missing)");
         return res.status(401).json({ message: "غير مصرح بالوصول.", reason: "Token missing" });
@@ -231,11 +234,12 @@ const authenticateToken = (req, res, next) => {
         
         const currentFingerprint = generateFingerprint(req);
         if (decoded.fingerprint && decoded.fingerprint !== currentFingerprint) {
-            logger.warn({ reqId: req.requestId, email: decoded.email, savedFingerprint: decoded.fingerprint, currentFingerprint }, "🛡️ محاولة دخول مرفوضة: بصمة المتصفح غير مطابقة");
-            return res.status(403).json({ message: "تم اكتشاف محاولة وصول غير معتادة.", reason: "Fingerprint mismatch" });
+            // تسجيل تحذير فقط بدون عمل return أو بلوك
+            logger.warn({ reqId: req.requestId, email: decoded.email, savedFingerprint: decoded.fingerprint, currentFingerprint }, "⚠️ بصمة المتصفح اتغيرت، بس هنسمحله يعدي للداتا بيس");
         }
+        
         req.user = decoded;
-        next();
+        next(); // الكلمة السحرية اللي بتعدي الطلب للداتا بيس
     });
 };
 
