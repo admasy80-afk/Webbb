@@ -220,8 +220,14 @@ if(quizForm) {
         });
         
         try {
+            // ✅ تم التصليح: سحب وتمرير التوكن الصحيح للامتحان الداخلي
+            const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
             const res = await fetch('/api/admin/add-mcq-quiz', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}` // تمرير الهيدر لحارس الباك إند
+                },
                 body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: document.getElementById('quizGrade').value, quizTitle: document.getElementById('quizTitle').value, questionsArray: questions })
             });
             if (res.ok) {
@@ -380,8 +386,14 @@ export async function submitPublicQuiz(questionsSourceArray, isForced = false) {
     btn.disabled = true;
 
     try {
+        // ✅ تم التصليح: سحب وتمرير التوكن الصحيح للاختبار العام بالرابط
+        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/add-public-quiz', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            method: 'POST', 
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` // ربط تذكرة الدخول الرسمية بالأدمن
+            },
             body: JSON.stringify({ 
                 role: user.role, sessionToken: sessionToken, 
                 grade: isForced ? "الصف الثاني الثانوي" : (document.getElementById('publicQuizGrade').value || "عام"), 
@@ -491,7 +503,7 @@ export const SmartImportSystem = {
                     <div class="relative bg-gradient-to-b from-gray-900 to-black border border-green-500/30 p-5 sm:p-6 rounded-3xl shadow-[0_20px_50px_rgba(16,185,129,0.2)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-2xl mx-auto pointer-events-auto flex flex-col max-h-[90vh]" id="smart-modal-box">
                         <div class="flex justify-between items-center mb-4">
                             <h3 class="text-white font-bold text-lg flex items-center gap-2">
-                                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
                                 لصق الأسئلة  (Smart Paste)
                             </h3>
                             <button id="smart-modal-close" class="text-gray-500 hover:text-red-500 transition-colors">
