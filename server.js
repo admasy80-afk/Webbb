@@ -122,22 +122,24 @@ const IDRIVE_BUCKET_NAME = process.env.IDRIVE_BUCKET_NAME || 'eld7e7';
 
 // ==================== Core Server & DB Initialization ====================
 async function startServer() {
+    console.log("🔍 جاري فحص إعدادات البيئة...");
     try {
         // حماية النظام: إيقاف تشغيل الخادم فوراً إذا غاب رابط قاعدة البيانات لمنع الاتصال الوهمي
         if (!process.env.MONGO_URL) {
-            console.error("FATAL ERROR: MONGO_URL environment variable is missing.");
+            console.error("🚨 خطأ قاتل: المتغير MONGO_URL غير موجود في Railway!");
             process.exit(1);
         }
 
+        console.log("⏳ رابط مونجو موجود، جاري محاولة الاتصال بقاعدة البيانات...");
         const client = new MongoClient(process.env.MONGO_URL);
         await client.connect();
         db = client.db('dahih_db');
         usersCollection = db.collection('users');
-        console.log("Database connection established.");
+        console.log("✅ تم الاتصال بقاعدة بيانات MongoDB بنجاح أسطوري!");
         
-        app.listen(PORT, () => console.log(`Server started on port ${PORT}.`));
+        app.listen(PORT, () => console.log(`🚀 السيرفر شغال ومستعد لخدمة الطلبة على بورت ${PORT}`));
     } catch (err) {
-        console.error("Server startup failed due to database error:", err.message);
+        console.error("❌ فشل الاتصال بقاعدة البيانات بسبب هذا الخطأ:", err.message);
         process.exit(1);
     }
 }
@@ -582,6 +584,7 @@ app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
     }
 });
 
+// Note: Ensure this route is actually intended to be public or update auth.
 app.get('/api/public/quiz', async (req, res) => {
     try {
         const { id } = req.query; 
