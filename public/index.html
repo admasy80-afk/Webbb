@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+    <script>
+        (function() {
+            try {
+                const savedUserStr = localStorage.getItem('userData') || localStorage.getItem('dahih_user');
+                if (savedUserStr) {
+                    const user = JSON.parse(savedUserStr);
+                    if (user && user.role) {
+                        const redirectUrl = (user.role === 'dev' || user.role === 'owner') ? '/admin.html' : '/student/';
+                        window.location.replace(redirectUrl);
+                    }
+                }
+            } catch (e) {} 
+        })();
+    </script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>منصة الدحيح التعليمية | رحلة من ميح لـ دحيح</title>
@@ -85,49 +100,15 @@
         .delay-500 { animation-delay: 0.5s; }
         .delay-700 { animation-delay: 0.7s; }
 
-        #loading-overlay {
-            position: fixed;
-            inset: 0;
-            background: #0f172a;
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
-        }
-        #loading-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(234,179,8,0.2);
-            border-top-color: #eab308;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-
-        /* 🔥 أسلوب احتياطي لزر التسجيل لضمان ظهوره دائماً */
         .fallback-button {
             background-color: #eab308;
             color: #000;
             text-decoration: none;
             display: inline-block;
         }
-        
     </style>
 </head>
 <body class="bg-animated-gradient text-white min-h-screen flex flex-col justify-between selection:bg-yellow-500 selection:text-black overflow-x-hidden p-4 md:p-6">
-
-    <div id="loading-overlay">
-        <div class="spinner mb-4"></div>
-        <p class="text-yellow-500 font-semibold animate-pulse">جاري تسجيل الدخول...</p>
-    </div>
 
     <nav class="w-full flex justify-between items-center py-4 md:py-6 max-w-7xl mx-auto animate-slide-down">
         <div class="text-2xl md:text-3xl font-extrabold text-yellow-500 tracking-tight cursor-pointer hover:scale-105 transition-transform">
@@ -139,7 +120,7 @@
             <a href="#" class="hover:text-yellow-500 transition-all duration-300 transform hover:-translate-y-1">المناهج</a>
         </div>
         
-        <a href="/logina.html" class="fallback-button bg-yellow-500 text-black px-5 py-2 md:px-6 md:py-2.5 rounded-full text-sm md:text-base font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-110 shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]">
+        <a href="/login.html" class="fallback-button bg-yellow-500 text-black px-5 py-2 md:px-6 md:py-2.5 rounded-full text-sm md:text-base font-bold hover:bg-yellow-400 transition-all duration-500 transform hover:scale-110 shadow-[0_0_15px_rgba(234,179,8,0.3)] hover:shadow-[0_0_25px_rgba(234,179,8,0.6)]">
             التسجيل
         </a>
     </nav>
@@ -160,12 +141,10 @@
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 sm:gap-5 w-full max-w-xl justify-center items-center mb-16">
-                <!-- 🔥 تم إضافة خصائص الحجم (padding و display) لضمان ظهور الزر بقوة -->
                 <a href="/register.html" class="animate-pop-in delay-400 w-full sm:w-1/2 text-center px-8 py-4 bg-white text-black font-bold rounded-2xl pulse-glow hover:bg-yellow-500 hover:text-black transition-all duration-500 transform hover:scale-105" style="background-color: white; color: black; text-decoration: none; display: inline-block; padding: 15px 30px; border-radius: 15px; margin-bottom: 10px;">
                     ابدأ التعلم الآن
                 </a>
                 
-                <!-- 🔥 تم إضافة خصائص الحجم (padding و display) لضمان ظهور الزر بقوة -->
                 <a href="#" class="animate-pop-in delay-500 w-full sm:w-1/2 text-center px-8 py-4 border-2 border-gray-700 text-gray-300 font-bold rounded-2xl hover:text-white hover:border-yellow-500 hover:bg-yellow-500/10 transition-all duration-500 transform hover:scale-105" style="border: 2px solid #374151; color: #d1d5db; text-decoration: none; display: inline-block; padding: 15px 30px; border-radius: 15px;">
                     جرب بنك الأسئلة
                 </a>
@@ -201,35 +180,5 @@
         <p>جميع الحقوق محفوظة لمنصة الدحيح التعليمية &copy; 2026</p>
     </footer>
 
-    <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
-            
-            if (token) {
-                const loader = document.getElementById('loading-overlay');
-                loader.classList.add('active');
-                
-                fetch('/api/verify-session', {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                })
-                .then(res => {
-                    if (res.ok) return res.json();
-                    throw new Error("انتهت الجلسة");
-                })
-                .then(data => {
-                    window.location.href = data.redirectTo; 
-                })
-                .catch(err => {
-                    console.warn(err.message);
-                    localStorage.removeItem('userToken'); 
-                    localStorage.removeItem('dahih_token'); 
-                    loader.classList.remove('active'); 
-                });
-            }
-        });
-    </script>
 </body>
 </html>
