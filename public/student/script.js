@@ -353,6 +353,7 @@
         renderScore(parseInt(data.studentPoints || 0));
     }
 
+    // التعديل الرئيسي هنا: تحسين هيكلة الكرت والزر
     function renderCourses(list, initial) {
         const container = $('studentCoursesContainer');
         if (!container) return;
@@ -374,18 +375,19 @@
             const title = escapeHTML(course.courseName || 'محاضرة');
             const desc = escapeHTML(course.description || 'لا يوجد وصف');
 
+            // تم إضافة flex-col و flex-row للشاشات الكبيرة مع ضبط المسافات والأزرار
             return `
-                <article id="course_${id}" class="course-card${isActive ? ' is-active' : ''}">
-                    <div style="flex:1;min-width:0;">
+                <article id="course_${id}" class="course-card${isActive ? ' is-active' : ''} flex flex-col md:flex-row justify-between h-full">
+                    <div class="mb-4 md:mb-0" style="flex:1;min-width:0;">
                         <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;flex-wrap:wrap;">
                             <span class="tag">الحصة ${num}</span>
-                            <h3>${title}</h3>
+                            <h3 class="text-white font-bold text-lg m-0">${title}</h3>
                         </div>
-                        <p>${desc}</p>
+                        <p class="text-gray-400 text-sm m-0">${desc}</p>
                     </div>
-                    <button class="btn btn-ghost course-play" data-msgid="${id}" data-title="${title}" type="button">
-                        <svg style="width:1rem;height:1rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        تشغيل
+                    <button class="btn btn-primary course-play w-full md:w-auto mt-auto md:mt-0" data-msgid="${id}" data-title="${title}" type="button">
+                        <svg style="width:1.2rem;height:1.2rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        تشغيل الحصة
                     </button>
                 </article>
             `;
@@ -404,6 +406,7 @@
         });
     }
 
+    // وتعديل كرت الكويزات أيضاً ليطابق التصميم
     function renderQuizzes(list) {
         const container = $('onlineQuizzesContainer');
         if (!container) return;
@@ -421,17 +424,17 @@
         const html = list.slice().reverse().map(quiz => {
             const result = quiz.results ? quiz.results.find(r => r.email === state.user.email) : null;
             const action = result
-                ? `<div class="btn" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.25);cursor:default;">
+                ? `<div class="btn w-full md:w-auto mt-auto md:mt-0" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.25);cursor:default;">
                        <svg style="width:1rem;height:1rem;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
                        مكتمل (${result.percentage}%)
                    </div>`
-                : `<button class="btn btn-primary quiz-start" data-quizid="${escapeHTML(quiz.id)}" type="button">بدء الاختبار</button>`;
+                : `<button class="btn btn-primary quiz-start w-full md:w-auto mt-auto md:mt-0" data-quizid="${escapeHTML(quiz.id)}" type="button">بدء الاختبار</button>`;
 
             return `
-                <article class="course-card">
-                    <div style="flex:1;">
-                        <h3>${escapeHTML(quiz.title)}</h3>
-                        <p>${quiz.questions.length} أسئلة</p>
+                <article class="course-card flex flex-col md:flex-row justify-between h-full">
+                    <div class="mb-4 md:mb-0" style="flex:1;">
+                        <h3 class="text-white font-bold text-lg m-0">${escapeHTML(quiz.title)}</h3>
+                        <p class="text-gray-400 text-sm m-0">${quiz.questions.length} أسئلة</p>
                     </div>
                     ${action}
                 </article>
