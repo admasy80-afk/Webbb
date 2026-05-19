@@ -389,8 +389,14 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const s3Response = await targetClient.send(command, { abortSignal: abortController.signal });
         clearTimeout(streamTimeout);
         
-        // 🌟 إجبار السيرفر على اعتبار الملف video/mp4 🌟
-        const headers = { 'Accept-Ranges': 'bytes', 'Content-Length': s3Response.ContentLength, 'Content-Type': 'video/mp4', 'Cache-Control': 'private, max-age=3600', 'X-Content-Type-Options': 'nosniff' };
+        // 🌟 التعديل الخارق هنا: قراءة نوع الملف الحقيقي من S3 بدلاً من إجبار المتصفح على MP4 🌟
+        const headers = { 
+            'Accept-Ranges': 'bytes', 
+            'Content-Length': s3Response.ContentLength, 
+            'Content-Type': s3Response.ContentType || 'video/mp4', // تمرير الـ MIME Type الأصلي للملف
+            'Cache-Control': 'private, max-age=3600', 
+            'X-Content-Type-Options': 'nosniff' 
+        };
         if (s3Response.ContentRange) headers['Content-Range'] = s3Response.ContentRange;
         
         res.writeHead(range ? 206 : 200, headers);
