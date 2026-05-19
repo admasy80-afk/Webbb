@@ -172,9 +172,14 @@ function shuffleArray(array) {
 const generateFingerprint = (req) => crypto.createHash('sha256').update((req.headers['user-agent'] || '')).digest('hex');
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// 🌟 الإصلاح الجوهري هنا: قبول التوكن من الهيدر أو من الرابط 🌟
 const authenticateToken = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    let token = req.query.token; // نبحث في الرابط أولاً (عشان مشغل الفيديو)
+    
+    if (!token) {
+        const authHeader = req.headers['authorization'];
+        token = authHeader && authHeader.split(' ')[1]; // إذا مو في الرابط، ندور في الهيدر
+    }
     
     if (!token || token === 'null' || token === 'undefined') {
         return res.status(401).json({ message: "غير مصرح بالوصول.", reason: "Token missing" });
@@ -350,7 +355,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
     } catch (error) { if (!responded) { responded = true; res.status(500).json({ message: "خطأ غير متوقع." }); } }
 });
 
-// 🌟 هذا هو المسار اللي صلحناه بالكامل لتشغيل الفيديو 🌟
+// 🌟 تصليح قراءة الـ ID هنا أيضاً 🌟
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     let streamTimeout;
     try {
