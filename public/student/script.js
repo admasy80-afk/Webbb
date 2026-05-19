@@ -1,8 +1,5 @@
 /* ════════════════════════════════════════════════════════════
-   منصة الدحيح | لوحة الطالب — JavaScript محسّن
-   - بدون إعادة بناء DOM كاملة
-   - تحديث ذكي (diff) للقوائم
-   - مشغّل خفيف، أحداث nettoyée، احترام تفضيل الحركة
+   منصة الدحيح | لوحة الطالب — JavaScript محسّن (مع نظام كشف الأخطاء للجوال)
    ════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -53,7 +50,6 @@
         return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
     };
 
-    // اهتزاز خفيف (يحترم الأجهزة الضعيفة)
     const haptic = (ms = 30) => {
         if (state.reduceMotion) return;
         if ('vibrate' in navigator) {
@@ -163,23 +159,37 @@
         load(msgId, title) {
             if (!this.video) return;
 
-            // إذا نفس الدرس قيد التشغيل: تبديل play/pause فقط
             if (String(state.currentMsgId) === String(msgId)) {
                 this.togglePlay();
                 return;
             }
 
             state.currentMsgId = String(msgId);
-            this.titleEl.textContent = title || 'محاضرة';
+            this.titleEl.textContent = title || 'جاري التحميل...';
 
-            // إخفاء البوستر بانتقال خفيف
             this.poster.classList.add('is-hidden');
-
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
 
             this.video.pause();
-            this.video.src = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
+            
+            const videoUrl = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
+
+            // 🕵️‍♂️ الجاسوس اللي بيفضح السيرفر ويطبع لك الخطأ على شاشة الجوال
+            fetch(videoUrl, { headers: { 'Range': 'bytes=0-100' } })
+                .then(async (response) => {
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        // ظهور رسالة التنبيه في وجهك
+                        alert(`🚨 السيرفر زعلان!\nكود الخطأ: ${response.status}\nرسالة السيرفر: ${errorText}\nرقم الـ ID المطلوب: ${msgId}`);
+                        this.titleEl.textContent = `خطأ ${response.status}: ${errorText}`;
+                    }
+                })
+                .catch(err => {
+                    alert(`🚨 مشكلة في الاتصال بالإنترنت أو السيرفر طافي:\n${err.message}`);
+                });
+
+            this.video.src = videoUrl;
             this.video.load();
 
             const playPromise = this.video.play();
@@ -189,12 +199,10 @@
                 });
             }
 
-            // تمييز الكرت النشط
             document.querySelectorAll('.course-card').forEach(c => c.classList.remove('is-active'));
             const card = $(`course_${msgId}`);
             if (card) card.classList.add('is-active');
 
-            // تمرير سلس
             this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
         },
 
@@ -225,14 +233,23 @@
         },
 
         onError() {
+            const err = this.video.error;
+            const code = err ? err.code : 0;
+            const message = err ? err.message : 'بدون تفاصيل';
+            
             const codes = {
                 1: 'تم إيقاف تحميل الفيديو.',
                 2: 'خطأ في الشبكة.',
                 3: 'صيغة الفيديو غير مدعومة.',
                 4: 'الفيديو غير متاح حالياً.'
             };
-            const code = this.video.error ? this.video.error.code : 0;
-            this.titleEl.textContent = codes[code] || 'تعذّر تشغيل المحاضرة';
+            const text = codes[code] || 'تعذّر تشغيل المحاضرة';
+            this.titleEl.textContent = text;
+            
+            // عشان نعرف لو المشكلة من متصفح الجوال نفسه
+            if(code !== 0) {
+                alert(`⚠️ خطأ في المشغل نفسه!\nالكود: ${code}\nالرسالة: ${text}\nالسبب التقني: ${message}`);
+            }
         },
 
         skip(seconds, label) {
@@ -240,7 +257,6 @@
             this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
             this.skipText.textContent = label;
             this.skipIndicator.classList.remove('is-active');
-            // إعادة تشغيل الأنيميشن
             void this.skipIndicator.offsetWidth;
             this.skipIndicator.classList.add('is-active');
             haptic(35);
@@ -393,22 +409,17 @@
 
         container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${html}</div>`;
 
-        // ربط أحداث (مرة واحدة لكل عرض) مع التعديل المطلوب لنقل التبويب
         container.querySelectorAll('.course-play').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const msgId = btn.dataset.msgid;
                 const title = btn.dataset.title;
                 
-                // 1. التبديل لتبويب لوحة المذاكرة
                 if (typeof window.switchTab === 'function') {
                     window.switchTab('dashboard');
                 }
                 
-                // 2. تشغيل الفيديو
                 player.load(msgId, title);
-                
-                // 3. التمرير للأعلى لرؤية المشغل بوضوح
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
@@ -628,7 +639,7 @@
         }
     }
 
-    // ─────────── إغلاق المودال بالـ Escape والكليك خارج الصندوق ───────────
+    // ─────────── إغلاق المودال ───────────
     function bindModalDismiss() {
         const modal = $('quizModal');
         if (!modal) return;
@@ -654,10 +665,8 @@
         bindSections();
         bindModalDismiss();
 
-        // مرة أولى
         fetchData(true);
 
-        // تحديث دوري ذكي (يتوقف عند إخفاء التبويب لتوفير الموارد)
         const startPolling = () => {
             if (state.pollTimer) return;
             state.pollTimer = setInterval(() => fetchData(false), 10000);
@@ -677,7 +686,6 @@
         startPolling();
     }
 
-    // ─────────── الواجهة العامة ───────────
     window.DahihApp = {
         logout,
         toggleTheater,
