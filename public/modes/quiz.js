@@ -136,7 +136,7 @@ export function addMCQBlock() {
             currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.classList.add('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
             setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'), 1000);
-            SysUI.toast('success', 'تم التوزيع الذكي للسؤال والخيارات! 🪄');
+            SysUI.toast('success', 'تم كتابة الاسئلة والخيارات');
             SysUI.confetti();
         }
     });
@@ -262,7 +262,7 @@ export function addPublicMCQBlock() {
         <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
             <h3 class="text-base sm:text-lg font-bold text-yellow-500 flex items-center gap-2">
                 <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
-                السؤال العام رقم <span class="q-number">${publicQuestionCounter}</span>
+                السؤال رقم <span class="q-number">${publicQuestionCounter}</span>
             </h3>
             <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-1 sm:p-0">${trashSVG}</div>
         </div>
@@ -298,7 +298,7 @@ export function addPublicMCQBlock() {
             currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.classList.add('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
             setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'), 1000);
-            SysUI.toast('success', 'تم التوزيع الذكي للسؤال والخيارات! 🪄');
+            SysUI.toast('success', 'تم كتابة الاسئلة والخيارات');
             SysUI.confetti();
         }
     });
@@ -620,7 +620,7 @@ export const SmartImportSystem = {
     },
 
     async animateInsertion(questions) {
-        SysUI.toast('success', `تم التعرف على ${questions.length} أسئلة! جاري الإدراج السحري...`);
+        SysUI.toast('success', `تم التعرف على ${questions.length}أسئلة! جاري الإدراج ...`);
         
         const container = document.getElementById('dynamicPublicQuestionsContainer');
         
