@@ -353,7 +353,6 @@
         renderScore(parseInt(data.studentPoints || 0));
     }
 
-    // التعديل الرئيسي هنا: تحسين هيكلة الكرت والزر
     function renderCourses(list, initial) {
         const container = $('studentCoursesContainer');
         if (!container) return;
@@ -375,7 +374,6 @@
             const title = escapeHTML(course.courseName || 'محاضرة');
             const desc = escapeHTML(course.description || 'لا يوجد وصف');
 
-            // تم إضافة flex-col و flex-row للشاشات الكبيرة مع ضبط المسافات والأزرار
             return `
                 <article id="course_${id}" class="course-card${isActive ? ' is-active' : ''} flex flex-col md:flex-row justify-between h-full">
                     <div class="mb-4 md:mb-0" style="flex:1;min-width:0;">
@@ -395,18 +393,27 @@
 
         container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${html}</div>`;
 
-        // ربط أحداث (مرة واحدة لكل عرض)
+        // ربط أحداث (مرة واحدة لكل عرض) مع التعديل المطلوب لنقل التبويب
         container.querySelectorAll('.course-play').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const msgId = btn.dataset.msgid;
                 const title = btn.dataset.title;
+                
+                // 1. التبديل لتبويب لوحة المذاكرة
+                if (typeof window.switchTab === 'function') {
+                    window.switchTab('dashboard');
+                }
+                
+                // 2. تشغيل الفيديو
                 player.load(msgId, title);
+                
+                // 3. التمرير للأعلى لرؤية المشغل بوضوح
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             });
         });
     }
 
-    // وتعديل كرت الكويزات أيضاً ليطابق التصميم
     function renderQuizzes(list) {
         const container = $('onlineQuizzesContainer');
         if (!container) return;
