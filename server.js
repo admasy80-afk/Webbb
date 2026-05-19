@@ -350,6 +350,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
     } catch (error) { if (!responded) { responded = true; res.status(500).json({ message: "خطأ غير متوقع." }); } }
 });
 
+// 🌟 هذا هو المسار اللي صلحناه بالكامل لتشغيل الفيديو 🌟
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     let streamTimeout;
     try {
@@ -358,7 +359,7 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         
         if (range && !/^bytes=\d+-\d*$/.test(range)) return res.status(416).send("نطاق البث غير صالح.");
 
-        const queryId = isNaN(parseInt(msgId, 10)) ? msgId : parseInt(msgId, 10);
+        const queryId = /^\d+$/.test(msgId) ? parseInt(msgId, 10) : msgId;
         const course = await db.collection('courses').findOne({ telegramMsgId: queryId });
         if (!course || !course.fileKey) return res.status(404).send("الفيديو مفقود.");
 
