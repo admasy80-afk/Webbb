@@ -63,7 +63,6 @@
         const userStr = localStorage.getItem('dahih_user');
         const token = localStorage.getItem('dahih_token');
         if (!userStr || !token) {
-            // توجيه لصفحة الدخول إذا لم يكن هناك جلسة نشطة
             window.location.replace('/logina.html'); 
             return false;
         }
@@ -110,9 +109,8 @@
             this.tapLeft       = $('tapLeft');
             this.tapRight      = $('tapRight');
 
-            if (!this.video) return;
+            if (!this.video) return; // توقف هنا إذا كنا في صفحة لا تحتوي على مشغل (مثل courses.html)
 
-            // أحداث التشغيل والإيقاف
             const togglePlayHandler = () => this.togglePlay();
             this.video.addEventListener('click', togglePlayHandler);
             this.centerPlay.addEventListener('click', togglePlayHandler);
@@ -126,7 +124,6 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
-            // نظام تقديم وتأخير ذكي للجوال (دبل كليك وللمس المزدوج)
             let lastTapLeft = 0, lastTapRight = 0;
             this.tapLeft.addEventListener('touchstart', (e) => {
                 const now = Date.now();
@@ -142,7 +139,6 @@
             });
             this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, '-10 ثواني'); });
 
-            // التحكم في السرعة
             if (this.speedBtn) {
                 this.speedBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -152,7 +148,6 @@
                 });
             }
 
-            // التحكم في كتم الصوت
             if (this.muteBtn) {
                 this.muteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -162,7 +157,6 @@
                 });
             }
 
-            // التحكم في شريط الصوت
             if (this.volumeSlider) {
                 this.volumeSlider.addEventListener('input', (e) => {
                     e.stopPropagation();
@@ -172,7 +166,6 @@
                 });
             }
 
-            // زر صورة في صورة (PiP)
             if (this.pipBtn) {
                 this.pipBtn.addEventListener('click', async (e) => {
                     e.stopPropagation();
@@ -186,13 +179,11 @@
                 });
             }
 
-            // شريط التقدم الزمني
             if (this.progress) {
                 this.progress.addEventListener('click', (e) => {
                     e.stopPropagation();
                     if (!this.video.src) return;
                     const r = this.progress.getBoundingClientRect();
-                    // تصحيح الاتجاه إذا كان الموقع RTL
                     const isRTL = getComputedStyle(this.progress).direction === 'rtl';
                     let pos = (e.clientX - r.left) / r.width;
                     if (isRTL) pos = 1 - pos; 
@@ -223,7 +214,6 @@
             
             const videoUrl = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
-            // 🕵️‍♂️ الجاسوس اللي بيفضح السيرفر ويطبع لك الخطأ على شاشة الجوال
             fetch(videoUrl, { headers: { 'Range': 'bytes=0-100' } })
                 .then(async (response) => {
                     if (!response.ok) {
@@ -246,7 +236,7 @@
                 });
             }
 
-            document.querySelectorAll('.course-card').forEach(c => c.classList.remove('is-active'));
+            document.querySelectorAll('.card-course').forEach(c => c.classList.remove('is-active'));
             const card = $(`course_${msgId}`);
             if (card) card.classList.add('is-active');
 
@@ -298,10 +288,6 @@
             };
             const text = codes[code] || 'تعذّر تشغيل المحاضرة';
             if(this.titleEl) this.titleEl.textContent = text;
-            
-            if(code !== 0) {
-                alert(`⚠️ خطأ في المشغل نفسه!\nالكود: ${code}\nالرسالة: ${text}\nالسبب التقني: ${message}`);
-            }
         },
 
         skip(seconds, label) {
@@ -310,7 +296,7 @@
             if(this.skipText) this.skipText.textContent = label;
             if(this.skipIndicator) {
                 this.skipIndicator.classList.remove('is-active');
-                void this.skipIndicator.offsetWidth; // إعادة تشغيل الأنيميشن
+                void this.skipIndicator.offsetWidth; 
                 this.skipIndicator.classList.add('is-active');
             }
             haptic(35);
@@ -324,7 +310,6 @@
         }
     };
 
-    // ─────────── ملء الشاشة (Fullscreen) ───────────
     function toggleFullscreen() {
         const wrapper = $('fs-wrapper');
         if (!wrapper) return;
@@ -344,13 +329,6 @@
         }
     }
 
-    document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement && screen.orientation && screen.orientation.unlock) {
-            try { screen.orientation.unlock(); } catch (e) { /* ignore */ }
-        }
-    });
-
-    // ─────────── أنيميشن الرقم ───────────
     function animateNumber(el, from, to, duration = 1200) {
         if (!el) return;
         if (state.reduceMotion) {
@@ -367,7 +345,6 @@
         requestAnimationFrame(step);
     }
 
-    // ─────────── جلب البيانات ───────────
     async function fetchData(initial = false) {
         try {
             const res = await fetch('/api/student/dashboard-data', {
@@ -391,13 +368,12 @@
         }
     }
 
-    // ─────────── العرض (مع DOM diffing) ───────────
     function renderAll(data, initial) {
         renderCourses(data.courses || data.content?.courses || [], initial);
         renderScore(parseInt(data.studentPoints || 0));
-        // يمكنك تفعيل الكويزات والنقاط إذا كانت موجودة في HTML الصفحات الأخرى
     }
 
+    // 🔥 التعديل الجوهري هنا ليتطابق مع تصميم V4
     function renderCourses(list, initial) {
         const container = $('studentCoursesContainer');
         if (!container) return;
@@ -407,11 +383,13 @@
         state.coursesHash = h;
 
         if (!list.length) {
-            container.innerHTML = '<div class="text-center py-12 text-gray-500 col-span-full flex flex-col items-center justify-center bg-black/20 rounded-xl border border-white/5 loading"><p class="font-bold">لا توجد محاضرات متاحة حالياً.</p></div>';
+            container.innerHTML = '<div class="col-span-full text-center py-12 text-gray-500 loading"><p class="font-bold">لا توجد محاضرات متاحة حالياً.</p></div>';
             return;
         }
 
         const reversed = list.slice().reverse();
+        
+        // رسم الكروت بتصميم V4 الجديد
         const html = reversed.map((course, idx) => {
             const id = course.telegramMsgId;
             const num = list.length - idx;
@@ -420,18 +398,26 @@
             const desc = escapeHTML(course.description || 'لا يوجد وصف');
 
             return `
-                <article id="course_${id}" class="course-card${isActive ? ' is-active' : ''} col-span-1">
-                    <div class="mb-4 md:mb-0 w-full">
-                        <div class="flex items-center gap-2 mb-2 flex-wrap">
-                            <span class="tag">الحصة ${num}</span>
-                            <h3 class="text-white font-bold text-lg m-0">${title}</h3>
-                        </div>
-                        <p class="text-gray-400 text-sm m-0">${desc}</p>
+                <article id="course_${id}" class="card-course ${isActive ? 'is-active' : ''}">
+                    <div class="card-thumb">
+                        <span class="thumb-badge ${isActive ? 'accent' : ''}">الدرس ${num}</span>
+                        <div class="text-white/60 text-sm font-medium">محتوى المنهج</div>
                     </div>
-                    <button class="btn btn-primary course-play w-full mt-2" data-msgid="${id}" data-title="${title}" type="button">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                        تشغيل الحصة
-                    </button>
+                    <div class="card-body">
+                        <h3 class="card-title">${title}</h3>
+                        
+                        <div class="meta-row">
+                            <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> متاح للمشاهدة</span>
+                        </div>
+                        
+                        <p class="text-xs text-muted mb-4 line-clamp-2">${desc}</p>
+                        
+                        <div class="card-footer mt-auto">
+                            <button class="btn ${isActive ? 'btn-primary' : 'btn-ghost'} w-full course-play" data-msgid="${id}" data-title="${title}" type="button">
+                                ${isActive ? 'استكمال المشاهدة' : 'بدء المحاضرة'}
+                            </button>
+                        </div>
+                    </div>
                 </article>
             `;
         }).join('');
@@ -443,7 +429,15 @@
                 e.stopPropagation();
                 const msgId = btn.dataset.msgid;
                 const title = btn.dataset.title;
-                player.load(msgId, title);
+                
+                // ميزة ذكية: إذا كنا في صفحة لا يوجد بها مشغل فيديو (مثل courses.html) 
+                // نأخذ الطالب لصفحة index.html ونشغل له الفيديو تلقائياً
+                if (!player.video) {
+                    window.location.href = `../index.html?play=${msgId}`;
+                } else {
+                    player.load(msgId, title);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
             });
         });
     }
@@ -456,7 +450,6 @@
         state.currentPoints = newPoints;
     }
 
-    // ─────────── البدء ───────────
     function init() {
         if (!authGate()) return;
 
@@ -465,6 +458,13 @@
         if($('studentGrade')) $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
 
         player.init();
+
+        // ميزة إضافية: إذا جاء من صفحة أخرى وكان الرابط فيه id للفيديو (play=...)
+        const urlParams = new URLSearchParams(window.location.search);
+        const playId = urlParams.get('play');
+        if (playId && player.video) {
+            setTimeout(() => player.load(playId, 'جاري تهيئة المحاضرة...'), 300);
+        }
 
         fetchData(true);
 
@@ -487,7 +487,6 @@
         startPolling();
     }
 
-    // تصدير دوال عامة
     window.DahihApp = {
         logout,
         toggleFullscreen,
