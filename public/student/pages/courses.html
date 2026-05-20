@@ -3,59 +3,342 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#070b19">
+    <meta name="theme-color" content="#02050e">
     <title>المحاضرات | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-    <script src="js/main.js" defer></script>
-</head>
-<body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* ════════════════════════════════════════════════════════════
+           منصة الدحيح | V4 - Product UX & Academic Restraint
+           ════════════════════════════════════════════════════════════ */
 
-    <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
-        <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
-            <div class="flex justify-between w-full items-center">
-                <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-                <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">خروج</button>
-            </div>
-            <div class="hidden md:block w-full bg-black/40 border border-white/5 rounded-2xl p-4 mt-2">
-                <p class="text-xs text-gray-400 mb-1">المرحلة الدراسية:</p>
-                <p id="studentGrade" class="text-yellow-500 font-bold text-sm mb-3">جاري التحميل...</p>
-                <div class="h-px w-full bg-white/10 my-2"></div>
-                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">...</span></h2>
-            </div>
-        </div>
+        :root {
+            --bg-base: #02050e; 
+            --bg-elev: rgba(14, 20, 36, 0.4); 
+            --bg-surface: #0f1629;
+            
+            --accent: #eab308;
+            --accent-hover: #fde047;
+            --accent-soft: rgba(234, 179, 8, 0.08);
+            
+            --text-pure: #ffffff;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            
+            --border: rgba(255, 255, 255, 0.06); 
+            --border-highlight: rgba(255, 255, 255, 0.12);
+            
+            --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.2);
+            
+            --radius: 1rem; 
+            --radius-sm: 0.75rem;
+            --transition-smooth: 0.2s ease-out; /* أسرع قليلاً لاستجابة أفضل */
+        }
+
+        /* ─── Typography & Base ─── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Readex Pro', system-ui, sans-serif;
+            background: var(--bg-base);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            font-weight: 400;
+            line-height: 1.8; 
+        }
+
+        h1, h2, h3, h4, .heading-pro {
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            color: var(--text-pure);
+        }
+
+        .text-accent { color: var(--accent); }
+        .text-muted { color: var(--text-muted); }
+
+        /* ─── Academic Grid Background ─── */
+        .app-bg {
+            position: fixed; inset: 0; z-index: -1; pointer-events: none;
+            background-color: var(--bg-base);
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        .app-bg::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(234, 179, 8, 0.03) 0%, transparent 60%);
+        }
+
+        /* ─── Base Panel ─── */
+        .panel {
+            background: var(--bg-elev);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        /* ─── Sidebar Nav ─── */
+        .nav-link {
+            display: flex; align-items: center; gap: 0.75rem;
+            padding: 0.85rem 1.25rem;
+            color: var(--text-muted);
+            font-weight: 600; font-size: 0.95rem;
+            border-radius: var(--radius-sm);
+            border-right: 3px solid transparent; /* مساحة جاهزة للحالة النشطة */
+            transition: all var(--transition-smooth);
+        }
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text);
+        }
+        .nav-link.active {
+            background: var(--accent-soft);
+            color: var(--text-pure);
+            border-right-color: var(--accent); /* اللمسة الاحترافية الهادئة */
+        }
+
+        /* ─── Buttons ─── */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+            font-weight: 700; font-size: 0.9rem; padding: 0.65rem 1.25rem;
+            border-radius: 0.5rem; transition: all var(--transition-smooth);
+            cursor: pointer; user-select: none; border: 1px solid transparent;
+        }
+        .btn:active { transform: scale(0.98); }
         
-        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 scrollbar-hide flex-shrink-0">
-            <a href="index.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">لوحة المذاكرة</a>
-            <a href="courses.html" class="tab-btn active block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">المحاضرات والحصص</a>
-            <a href="quizzes.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">الاختبارات الإلكترونية</a>
-            <a href="points.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">أهم نقاط المنهج</a>
-            <a href="questions.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">الأسئلة المقالية</a>
-        </nav>
+        .btn-primary {
+            background: var(--accent); color: #000;
+        }
+        .btn-primary:hover { background: var(--accent-hover); }
+        
+        .btn-ghost {
+            background: rgba(255, 255, 255, 0.03); color: var(--text); border-color: var(--border);
+        }
+        .btn-ghost:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--border-highlight); }
 
-        <div class="hidden md:block p-4 mt-auto">
-            <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2">تسجيل الخروج</button>
-        </div>
+        /* ─── Lecture Card Architecture ─── */
+        .card-course {
+            display: flex; flex-direction: column;
+            background: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            transition: transform var(--transition-smooth), border-color var(--transition-smooth);
+            will-change: transform;
+            line-height: 1.5; /* ملموم واحترافي */
+        }
+        @media (hover: hover) {
+            .card-course:hover {
+                border-color: var(--border-highlight);
+                transform: translateY(-2px); /* هدوء بصري بدون Scale أو Bounce */
+                box-shadow: var(--shadow-sm);
+            }
+        }
+
+        /* غلاف الكرت (Thumbnail) */
+        .card-thumb {
+            position: relative;
+            height: 130px;
+            padding: 1.25rem;
+            display: flex; flex-direction: column; justify-content: space-between;
+            background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.5) 100%);
+            border-bottom: 1px solid var(--border);
+        }
+        /* تدرج خاص للدرس الحالي/النشط */
+        .card-course.is-active .card-thumb {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(0,0,0,0.6) 100%);
+        }
+        .card-course.is-active { border-color: rgba(234, 179, 8, 0.3); }
+
+        .thumb-badge {
+            align-self: flex-start;
+            padding: 0.2rem 0.6rem; border-radius: 0.25rem;
+            font-size: 0.7rem; font-weight: 800; background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.1);
+        }
+        .thumb-badge.accent { color: var(--accent); border-color: rgba(234, 179, 8, 0.3); }
+
+        .card-body { padding: 1.25rem; display: flex; flex-direction: column; flex-grow: 1; }
+        .card-title { font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text-pure); }
+        
+        /* السطر التعريفي (Meta Row) */
+        .meta-row {
+            display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;
+            font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;
+        }
+        .meta-item { display: flex; align-items: center; gap: 0.35rem; }
+        .meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border-highlight); }
+
+        /* تتبع المشاهدة */
+        .last-watched {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            font-size: 0.75rem; color: var(--text); background: rgba(255,255,255,0.04);
+            padding: 0.4rem 0.75rem; border-radius: 0.3rem; margin-bottom: 1rem; border: 1px solid var(--border);
+        }
+
+        .card-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); }
+        
+        /* ─── Chapter Grouping ─── */
+        .chapter-section { margin-bottom: 3rem; }
+        .chapter-title {
+            font-size: 1.25rem; color: var(--text-pure); margin-bottom: 1.25rem;
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .chapter-title::before {
+            content: ''; display: block; width: 4px; height: 1.2em;
+            background: var(--border-highlight); border-radius: 2px;
+        }
+
+        /* ─── Animations ─── */
+        .fade-in { animation: fadeInUp 0.5s ease-out both; }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .stagger-1 { animation-delay: 0.05s; }
+        .stagger-2 { animation-delay: 0.1s; }
+        .stagger-3 { animation-delay: 0.15s; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden">
+
+    <div class="app-bg"></div>
+
+    <!-- Sidebar الأكاديمي -->
+    <aside class="w-full md:w-64 flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/5 bg-[#02050e]/95 panel md:rounded-none md:border-y-0 md:border-r-0">
+        <header class="p-6 flex justify-between items-center border-b border-white/5">
+            <div class="text-2xl font-black text-accent tracking-tight heading-pro">الدحيح<span class="text-pure">.</span></div>
+        </header>
+        
+        <nav class="flex flex-row md:flex-col overflow-x-auto w-full p-3 gap-1 scrollbar-hide flex-shrink-0">
+            <a href="#" class="nav-link">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                لوحة المذاكرة
+            </a>
+            <!-- Active State الهادئ والواضح -->
+            <a href="#" class="nav-link active">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                المحاضرات والحصص
+            </a>
+            <a href="#" class="nav-link">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                الاختبارات الإلكترونية
+            </a>
+        </nav>
     </aside>
 
-    <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth">
-        <div class="fixed top-0 right-0 w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-
-        <div>
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="studentCoursesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    <div class="text-center py-12 text-gray-500 col-span-full flex flex-col items-center justify-center bg-black/20 rounded-xl border border-white/5">
-                        <svg class="animate-spin h-8 w-8 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                        <p class="font-bold">جاري البحث عن محاضراتك...</p>
+    <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 md:px-12 relative">
+        <header class="mb-10 mt-4 fade-in">
+            <h1 class="text-3xl mb-2">المحاضرات والحصص</h1>
+            <p class="text-muted text-sm md:text-base">أكمل مسيرتك بخطى ثابتة. هنا تجد كل فصول المنهج مرتبة.</p>
+        </header>
+        
+        <!-- تقسيم المنهج بالأبواب (Chapter Grouping) -->
+        <section class="chapter-section fade-in stagger-1">
+            <h2 class="chapter-title">الباب الأول: الحركة والديناميكا</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                
+                <!-- كرت: محاضرة مكتملة -->
+                <article class="card-course">
+                    <div class="card-thumb">
+                        <span class="thumb-badge">الدرس 1</span>
+                        <div class="text-white/60 text-sm font-medium">مقدمة في علم الحركة</div>
                     </div>
-                </div>
+                    <div class="card-body">
+                        <h3 class="card-title">مفاهيم أساسية في الإزاحة والسرعة</h3>
+                        
+                        <!-- Meta Row المنظم -->
+                        <div class="meta-row">
+                            <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 45 دقيقة</span>
+                            <span class="meta-dot"></span>
+                            <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> 2 ملفات</span>
+                        </div>
+                        
+                        <div class="card-footer">
+                            <button class="btn btn-ghost w-full">مراجعة المحاضرة</button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- كرت: المحاضرة الحالية (Active State + Last Watched) -->
+                <article class="card-course is-active">
+                    <div class="card-thumb">
+                        <span class="thumb-badge accent">الدرس 2</span>
+                        <div class="text-white/80 text-sm font-medium">قوانين نيوتن</div>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="card-title">تطبيقات على قانون نيوتن الثاني</h3>
+                        
+                        <div class="meta-row">
+                            <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 1 س 12 د</span>
+                            <span class="meta-dot"></span>
+                            <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> 4 ملفات</span>
+                        </div>
+                        
+                        <!-- الخطاف النفسي -->
+                        <div class="last-watched">
+                            <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                            آخر مشاهدة: الدقيقة 18:42
+                        </div>
+                        
+                        <div class="card-footer">
+                            <!-- CTA واضح وقوي -->
+                            <button class="btn btn-primary w-full">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
+                                استكمال المشاهدة
+                            </button>
+                        </div>
+                    </div>
+                </article>
+
+                <!-- كرت: محاضرة لم تبدأ بعد -->
+                <article class="card-course">
+                    <div class="card-thumb">
+                        <span class="thumb-badge">الدرس 3</span>
+                        <div class="text-white/60 text-sm font-medium">الجاذبية الكونية</div>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="card-title">حركة الأقمار الصناعية والسرعة المدارية</h3>
+                        
+                        <div class="meta-row">
+                            <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 55 دقيقة</span>
+                            <span class="meta-dot"></span>
+                            <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> 1 ملف</span>
+                        </div>
+                        
+                        <div class="card-footer">
+                            <button class="btn btn-ghost w-full">بدء المحاضرة</button>
+                        </div>
+                    </div>
+                </article>
+
             </div>
-        </div>
+        </section>
+
+        <section class="chapter-section fade-in stagger-2">
+            <h2 class="chapter-title">الباب الثاني: الحرارة والموائع</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <!-- كروت الباب الثاني توضع هنا بنفس الهيكل -->
+                 <article class="card-course opacity-70 pointer-events-none">
+                    <div class="card-thumb" style="background: rgba(255,255,255,0.02);">
+                        <span class="thumb-badge border-none text-muted bg-transparent p-0">قريباً</span>
+                    </div>
+                    <div class="card-body">
+                        <h3 class="card-title text-muted">خواص الموائع الساكنة</h3>
+                        <p class="text-xs text-muted mt-2">تُفتح المحاضرة في 12 أكتوبر</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+
     </main>
 
-    <script src="js/script.js" defer></script>
 </body>
 </html>
