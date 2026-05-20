@@ -11,6 +11,7 @@
     <style>
         /* ════════════════════════════════════════════════════════════
            منصة الدحيح | V4 - Product UX & Academic Restraint
+           (تنسيقات خاصة بهذه الصفحة فقط)
            ════════════════════════════════════════════════════════════ */
 
         :root {
@@ -33,7 +34,7 @@
             
             --radius: 1rem; 
             --radius-sm: 0.75rem;
-            --transition-smooth: 0.2s ease-out; /* أسرع قليلاً لاستجابة أفضل */
+            --transition-smooth: 0.2s ease-out;
         }
 
         /* ─── Typography & Base ─── */
@@ -90,7 +91,7 @@
             color: var(--text-muted);
             font-weight: 600; font-size: 0.95rem;
             border-radius: var(--radius-sm);
-            border-right: 3px solid transparent; /* مساحة جاهزة للحالة النشطة */
+            border-right: 3px solid transparent;
             transition: all var(--transition-smooth);
         }
         .nav-link:hover {
@@ -100,7 +101,7 @@
         .nav-link.active {
             background: var(--accent-soft);
             color: var(--text-pure);
-            border-right-color: var(--accent); /* اللمسة الاحترافية الهادئة */
+            border-right-color: var(--accent);
         }
 
         /* ─── Buttons ─── */
@@ -112,14 +113,10 @@
         }
         .btn:active { transform: scale(0.98); }
         
-        .btn-primary {
-            background: var(--accent); color: #000;
-        }
+        .btn-primary { background: var(--accent); color: #000; }
         .btn-primary:hover { background: var(--accent-hover); }
         
-        .btn-ghost {
-            background: rgba(255, 255, 255, 0.03); color: var(--text); border-color: var(--border);
-        }
+        .btn-ghost { background: rgba(255, 255, 255, 0.03); color: var(--text); border-color: var(--border); }
         .btn-ghost:hover { background: rgba(255, 255, 255, 0.06); border-color: var(--border-highlight); }
 
         /* ─── Lecture Card Architecture ─── */
@@ -131,17 +128,16 @@
             overflow: hidden;
             transition: transform var(--transition-smooth), border-color var(--transition-smooth);
             will-change: transform;
-            line-height: 1.5; /* ملموم واحترافي */
+            line-height: 1.5;
         }
         @media (hover: hover) {
             .card-course:hover {
                 border-color: var(--border-highlight);
-                transform: translateY(-2px); /* هدوء بصري بدون Scale أو Bounce */
+                transform: translateY(-2px);
                 box-shadow: var(--shadow-sm);
             }
         }
 
-        /* غلاف الكرت (Thumbnail) */
         .card-thumb {
             position: relative;
             height: 130px;
@@ -150,7 +146,6 @@
             background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(0,0,0,0.5) 100%);
             border-bottom: 1px solid var(--border);
         }
-        /* تدرج خاص للدرس الحالي/النشط */
         .card-course.is-active .card-thumb {
             background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(0,0,0,0.6) 100%);
         }
@@ -167,7 +162,6 @@
         .card-body { padding: 1.25rem; display: flex; flex-direction: column; flex-grow: 1; }
         .card-title { font-size: 1.05rem; margin-bottom: 0.5rem; color: var(--text-pure); }
         
-        /* السطر التعريفي (Meta Row) */
         .meta-row {
             display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem;
             font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;
@@ -175,7 +169,6 @@
         .meta-item { display: flex; align-items: center; gap: 0.35rem; }
         .meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--border-highlight); }
 
-        /* تتبع المشاهدة */
         .last-watched {
             display: inline-flex; align-items: center; gap: 0.4rem;
             font-size: 0.75rem; color: var(--text); background: rgba(255,255,255,0.04);
@@ -203,7 +196,6 @@
         }
         .stagger-1 { animation-delay: 0.05s; }
         .stagger-2 { animation-delay: 0.1s; }
-        .stagger-3 { animation-delay: 0.15s; }
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden">
@@ -214,26 +206,39 @@
     <aside class="w-full md:w-64 flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/5 bg-[#02050e]/95 panel md:rounded-none md:border-y-0 md:border-r-0">
         <header class="p-6 flex justify-between items-center border-b border-white/5">
             <div class="text-2xl font-black text-accent tracking-tight heading-pro">الدحيح<span class="text-pure">.</span></div>
+            <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-red-500/20">خروج</button>
         </header>
         
+        <!-- روابط التنقل المربوطة بمسارات الصفحات الصحيحة -->
         <nav class="flex flex-row md:flex-col overflow-x-auto w-full p-3 gap-1 scrollbar-hide flex-shrink-0">
-            <a href="#" class="nav-link">
+            <a href="../index.html" class="nav-link">
                 <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                 لوحة المذاكرة
             </a>
-            <!-- Active State الهادئ والواضح -->
-            <a href="#" class="nav-link active">
+            <a href="courses.html" class="nav-link active">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 المحاضرات والحصص
             </a>
-            <a href="#" class="nav-link">
+            <a href="quizzes.html" class="nav-link">
                 <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                 الاختبارات الإلكترونية
             </a>
+            <a href="points.html" class="nav-link">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                أهم نقاط المنهج
+            </a>
+            <a href="questions.html" class="nav-link">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                الأسئلة المقالية
+            </a>
         </nav>
+
+        <div class="hidden md:block p-4 mt-auto border-t border-white/5">
+            <button onclick="DahihApp.logout()" class="btn btn-ghost w-full text-red-400 border-red-500/20 hover:bg-red-500/10 hover:border-red-500/50">تسجيل الخروج</button>
+        </div>
     </aside>
 
-    <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 md:px-12 relative">
+    <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 md:px-12 relative" id="studentCoursesContainer">
         <header class="mb-10 mt-4 fade-in">
             <h1 class="text-3xl mb-2">المحاضرات والحصص</h1>
             <p class="text-muted text-sm md:text-base">أكمل مسيرتك بخطى ثابتة. هنا تجد كل فصول المنهج مرتبة.</p>
@@ -254,7 +259,6 @@
                     <div class="card-body">
                         <h3 class="card-title">مفاهيم أساسية في الإزاحة والسرعة</h3>
                         
-                        <!-- Meta Row المنظم -->
                         <div class="meta-row">
                             <span class="meta-item"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> 45 دقيقة</span>
                             <span class="meta-dot"></span>
@@ -325,7 +329,6 @@
         <section class="chapter-section fade-in stagger-2">
             <h2 class="chapter-title">الباب الثاني: الحرارة والموائع</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                <!-- كروت الباب الثاني توضع هنا بنفس الهيكل -->
                  <article class="card-course opacity-70 pointer-events-none">
                     <div class="card-thumb" style="background: rgba(255,255,255,0.02);">
                         <span class="thumb-badge border-none text-muted bg-transparent p-0">قريباً</span>
@@ -340,5 +343,7 @@
 
     </main>
 
+    <!-- الربط مع السكربت المشترك للمنصة عشان تسجيل الخروج وجلب البيانات -->
+    <script src="../script.js" defer></script>
 </body>
 </html>
