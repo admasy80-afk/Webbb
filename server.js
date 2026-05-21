@@ -37,6 +37,7 @@ let fileTypeStream;
     }
 })();
 
+// الاعتماد على Cloudflare R2 فقط حسب طلبك
 const { 
     S3Client, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListMultipartUploadsCommand, AbortMultipartUploadCommand
 } = require('@aws-sdk/client-s3');
@@ -111,10 +112,13 @@ app.use((req, res, next) => {
     next();
 });
 
+// تحديث الـ Schema لتشمل المدة والصورة
 const courseSchema = z.object({
     courseName: z.string().min(2).max(100),
     grade: z.string().min(2).max(50),
-    description: z.string().optional()
+    description: z.string().optional(),
+    duration: z.string().optional(), // مدة الكورس (مثال: 45 دقيقة)
+    imageUrl: z.string().optional()  // رابط صورة الكورس
 });
 
 const gradeSchema = z.object({
@@ -127,7 +131,7 @@ const uploadLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 15, message: { 
 const publicQuizLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 15, message: { message: "تجاوزت الحد المسموح." } });
 
 app.use('/api/', (req, res, next) => {
-    const skipLimits = ['/saveUser', '/admin/upload-course', '/public/quiz'];
+    const skipLimits = ['/saveUser', '/admin/upload-course', '/public/quiz', '/student/save-progress'];
     if (skipLimits.includes(req.path.replace('/api', ''))) return next();
     apiLimiter(req, res, next);
 });
@@ -153,21 +157,16 @@ async function connectMongo() {
     } catch (error) { logger.fatal({ err: error }, "فشل الاتصال بمونجو"); process.exit(1); }
 }
 
-const r2Client = new S3Client({ region: 'auto', endpoint: process.env.R2_ENDPOINT, credentials: { accessKeyId: process.env.R2_ACCESS_KEY_ID, secretAccessKey: process.env.R2_SECRET_ACCESS_KEY }});
-const b2Client = new S3Client({ region: process.env.B2_REGION || 'us-east-005', endpoint: process.env.B2_ENDPOINT, credentials: { accessKeyId: process.env.B2_ACCESS_KEY_ID, secretAccessKey: process.env.B2_SECRET_ACCESS_KEY }});
-const idriveClient = new S3Client({ region: process.env.IDRIVE_REGION || 'eu-west-4', endpoint: process.env.IDRIVE_ENDPOINT, credentials: { accessKeyId: process.env.IDRIVE_ACCESS_KEY_ID, secretAccessKey: process.env.IDRIVE_SECRET_ACCESS_KEY }});
-
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'eld7e7';
-const B2_BUCKET_NAME = process.env.B2_BUCKET_NAME || 'eld7e7-courses';
-const IDRIVE_BUCKET_NAME = process.env.IDRIVE_BUCKET_NAME || 'eld7e7';
-
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+// تعريف كلاود فلير (R2) فقط وإزالة الباقي
+const r2Client = new S3Client({ 
+    region: 'auto', 
+    endpoint: process.env.R2_ENDPOINT, 
+    credentials: { 
+        accessKeyId: process.env.R2_ACCESS_KEY_ID, 
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY 
     }
-    return array;
-}
+});
+const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'eld7e7';
 
 const generateFingerprint = (req) => crypto.createHash('sha256').update((req.headers['user-agent'] || '')).digest('hex');
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -195,6 +194,14 @@ const requireAdmin = (req, res, next) => {
     if (req.user?.role !== 'dev' && req.user?.role !== 'owner') return res.status(403).json({ message: "مطلوب صلاحيات مسؤول." });
     next();
 };
+
+// دالة مساعدة لتحويل الثواني إلى صيغة مفهومة لـ "آخر مشاهدة"
+function formatProgressTime(t) {
+    if (!isFinite(t) || t <= 0) return null;
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+}
 
 app.get('/api/verify-session', authenticateToken, async (req, res) => {
     try {
@@ -265,7 +272,8 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             if (existing) return res.status(400).json({ message: "البريد أو الهاتف مسجل بالفعل" });
             
             const hashedPassword = await bcrypt.hash(data.password, 10);
-            const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false };
+            // إضافة مصفوفة/أوبجكت progress لحفظ تقدم الطالب في الكورسات
+            const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false, progress: {} };
             
             try { await usersCollection.insertOne(newUser); } catch (err) { throw err; }
             
@@ -282,7 +290,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
     let parallelUpload = null;
 
     try {
-        const bb = busboy({ headers: req.headers, limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1, fields: 10 } });
+        const bb = busboy({ headers: req.headers, limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1, fields: 15 } });
         let courseData = {};
         let fieldsReceived = false;
 
@@ -313,18 +321,11 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
             const ext = extMap[mimeType] || 'mp4';
             const fileKey = `videos/${crypto.randomUUID()}.${ext}`;
 
-            const providers = [
-                { name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME },
-                { name: 'B2', client: b2Client, bucket: B2_BUCKET_NAME },
-                { name: 'IDRIVE', client: idriveClient, bucket: IDRIVE_BUCKET_NAME }
-            ];
-
-            const targetProvider = shuffleArray(providers)[0];
-            
             try {
+                // الاعتماد حصرياً على R2
                 parallelUpload = new Upload({
-                    client: targetProvider.client,
-                    params: { Bucket: targetProvider.bucket, Key: fileKey, Body: uploadStream, ContentType: mimeType },
+                    client: r2Client,
+                    params: { Bucket: R2_BUCKET_NAME, Key: fileKey, Body: uploadStream, ContentType: mimeType },
                     queueSize: 4, partSize: 5 * 1024 * 1024, leavePartsOnError: false 
                 });
 
@@ -332,20 +333,27 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                 
                 try {
                     await db.collection('courses').insertOne({
-                        courseName: courseData.courseName, grade: courseData.grade, description: courseData.description || "",
-                        telegramMsgId: crypto.randomUUID(), fileKey: fileKey, provider: targetProvider.name, createdAt: new Date()
+                        courseName: courseData.courseName, 
+                        grade: courseData.grade, 
+                        description: courseData.description || "",
+                        duration: courseData.duration || "غير محدد", // المدة
+                        image: courseData.imageUrl || "",            // رابط الصورة
+                        telegramMsgId: crypto.randomUUID(), 
+                        fileKey: fileKey, 
+                        provider: 'R2', // R2 فقط
+                        createdAt: new Date()
                     });
-                    if (!responded) { responded = true; res.status(200).json({ message: "تم الرفع السحابي بنجاح." }); }
+                    if (!responded) { responded = true; res.status(200).json({ message: "تم الرفع السحابي على R2 بنجاح." }); }
 
                 } catch (dbError) {
-                    logger.error({ provider: targetProvider.name }, `❌ فشلت إضافة الكورس للداتا بيس للمنصة: ${targetProvider.name}`);
-                    try { await targetProvider.client.send(new DeleteObjectCommand({ Bucket: targetProvider.bucket, Key: fileKey })); } catch (cleanupError) {}
+                    logger.error({ provider: 'R2' }, `❌ فشلت إضافة الكورس للداتا بيس`);
+                    try { await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: fileKey })); } catch (cleanupError) {}
                     if (!responded) { responded = true; res.status(500).json({ message: "حدث خطأ أثناء حفظ الدورة." }); }
                 }
 
             } catch (err) {
-                logger.error({ provider: targetProvider.name, error: err.message }, `🚨 فشل الرفع السحابي! المنصة التي تحتوي على المشكلة هي: [${targetProvider.name}]`);
-                if (!responded) { responded = true; res.status(500).json({ message: `فشل الرفع السحابي على منصة ${targetProvider.name}` }); }
+                logger.error({ provider: 'R2', error: err.message }, `🚨 فشل الرفع السحابي!`);
+                if (!responded) { responded = true; res.status(500).json({ message: `فشل الرفع السحابي` }); }
             }
         });
 
@@ -366,13 +374,9 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const course = await db.collection('courses').findOne({ telegramMsgId: queryId });
         if (!course || !course.fileKey) return res.status(404).send("الفيديو مفقود.");
 
-        let targetClient, targetBucket;
-        if (course.provider === 'B2') { targetClient = b2Client; targetBucket = B2_BUCKET_NAME; } 
-        else if (course.provider === 'IDRIVE') { targetClient = idriveClient; targetBucket = IDRIVE_BUCKET_NAME; } 
-        else { targetClient = r2Client; targetBucket = R2_BUCKET_NAME; }
-
-        const headCommand = new HeadObjectCommand({ Bucket: targetBucket, Key: course.fileKey });
-        const headResponse = await targetClient.send(headCommand);
+        // استخدام R2 فقط
+        const headCommand = new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: course.fileKey });
+        const headResponse = await r2Client.send(headCommand);
         const fileSize = headResponse.ContentLength;
 
         if (range) {
@@ -385,15 +389,14 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const abortController = new AbortController();
         streamTimeout = setTimeout(() => abortController.abort(), 15000); 
         
-        const command = new GetObjectCommand({ Bucket: targetBucket, Key: course.fileKey, Range: range });
-        const s3Response = await targetClient.send(command, { abortSignal: abortController.signal });
+        const command = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: course.fileKey, Range: range });
+        const s3Response = await r2Client.send(command, { abortSignal: abortController.signal });
         clearTimeout(streamTimeout);
         
-        // 🌟 التعديل الخارق هنا: قراءة نوع الملف الحقيقي من S3 بدلاً من إجبار المتصفح على MP4 🌟
         const headers = { 
             'Accept-Ranges': 'bytes', 
             'Content-Length': s3Response.ContentLength, 
-            'Content-Type': s3Response.ContentType || 'video/mp4', // تمرير الـ MIME Type الأصلي للملف
+            'Content-Type': s3Response.ContentType || 'video/mp4',
             'Cache-Control': 'private, max-age=3600', 
             'X-Content-Type-Options': 'nosniff' 
         };
@@ -408,13 +411,62 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
     }
 });
 
+// 📌 راوت جديد: حفظ الدقيقة التي توقف عندها الطالب (آخر مشاهدة)
+app.post('/api/student/save-progress', authenticateToken, async (req, res) => {
+    try {
+        const { msgId, currentTime } = req.body;
+        if (!msgId || currentTime === undefined) return res.status(400).json({ message: "بيانات غير مكتملة" });
+
+        // حفظ التقدم داخل أوبجكت progress الخاص بالطالب
+        await usersCollection.updateOne(
+            { email: req.user.email },
+            { $set: { [`progress.${msgId}`]: Math.floor(currentTime) } }
+        );
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(500).json({ message: "فشل حفظ تقدم الطالب." });
+    }
+});
+
+// دمج بيانات (آخر مشاهدة) مع الكورسات وعرضها في لوحة التحكم
+app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
+    try {
+        const parseResult = gradeSchema.safeParse(req.body);
+        if (!parseResult.success) return res.status(400).json({ message: "البيانات المدخلة غير صحيحة." });
+        const { grade } = parseResult.data;
+        
+        const user = await usersCollection.findOne({ email: req.user.email });
+        const studentPoints = user?.points || 0;
+        const studentProgress = user?.progress || {}; // التقدم الخاص بالطالب
+        
+        const content = await db.collection('curriculum_content').findOne({ grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
+        const rawCourses = await db.collection('courses').find({ grade }).sort({ createdAt: 1 }).toArray();
+
+        // دمج الكورسات مع تقدم الطالب
+        const courses = rawCourses.map(course => {
+            const rawTime = studentProgress[course.telegramMsgId];
+            return {
+                id: course._id,
+                courseName: course.courseName,
+                description: course.description,
+                telegramMsgId: course.telegramMsgId,
+                duration: course.duration || "غير محدد",
+                image: course.image || "", 
+                lastWatched: rawTime ? formatProgressTime(rawTime) : null // إرجاع الوقت بصيغة (دقيقة:ثانية)
+            };
+        });
+
+        res.status(200).json({ studentPoints, content, courses });  
+    } catch (error) { res.status(500).json({ message: "فشل جلب البيانات." }); }
+});
+
 app.get('/api/admin/get-all-courses', authenticateToken, requireAdmin, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         const courses = await db.collection('courses').find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
-        const formattedCourses = courses.map(c => ({ id: c._id.toString(), courseName: c.courseName, grade: c.grade, description: c.description, telegramMsgId: c.telegramMsgId }));
+        const formattedCourses = courses.map(c => ({ id: c._id.toString(), courseName: c.courseName, grade: c.grade, description: c.description, telegramMsgId: c.telegramMsgId, duration: c.duration, image: c.image }));
         res.status(200).json({ courses: formattedCourses });
     } catch (error) { res.status(500).json({ message: "خطأ في السيرفر" }); }
 });
@@ -424,11 +476,7 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
         const courseId = req.params.id;
         const course = await db.collection('courses').findOne({ _id: new ObjectId(courseId) });
         if (course && course.fileKey) {
-            let targetClient, targetBucket;
-            if (course.provider === 'B2') { targetClient = b2Client; targetBucket = B2_BUCKET_NAME; } 
-            else if (course.provider === 'IDRIVE') { targetClient = idriveClient; targetBucket = IDRIVE_BUCKET_NAME; } 
-            else { targetClient = r2Client; targetBucket = R2_BUCKET_NAME; }
-            try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.fileKey })); } catch (e) {}
+            try { await r2Client.send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: course.fileKey })); } catch (e) {}
         }
         await db.collection('courses').deleteOne({ _id: new ObjectId(courseId) });
         res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
@@ -542,21 +590,6 @@ app.post('/api/admin/delete-item', authenticateToken, requireAdmin, async (req, 
     } catch (err) { res.status(500).json({ message: "خطأ" }); }
 });
 
-app.post('/api/student/dashboard-data', authenticateToken, async (req, res) => {
-    try {
-        const parseResult = gradeSchema.safeParse(req.body);
-        if (!parseResult.success) return res.status(400).json({ message: "البيانات المدخلة غير صحيحة." });
-        const { grade } = parseResult.data;
-        
-        const user = await usersCollection.findOne({ email: req.user.email });
-        const studentPoints = user?.points || 0;
-        const content = await db.collection('curriculum_content').findOne({ grade }) || { points: [], questions: [], tests: [], quizzes: [] };  
-        const courses = await db.collection('courses').find({ grade }).sort({ createdAt: 1 }).toArray();
-
-        res.status(200).json({ studentPoints, content, courses });  
-    } catch (error) { res.status(500).json({ message: "فشل جلب البيانات." }); }
-});
-
 app.get('/api/public/quiz', publicQuizLimiter, async (req, res) => {
     try {
         if (req.headers['x-public-access'] !== 'eld7e7-web-client') return res.status(403).json({ message: "وصول غير مصرح." });
@@ -620,20 +653,18 @@ app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 
 // ==================== Cron Jobs ====================
 setInterval(async () => {
-    const providers = [ { name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME }, { name: 'B2', client: b2Client, bucket: B2_BUCKET_NAME }, { name: 'IDRIVE', client: idriveClient, bucket: IDRIVE_BUCKET_NAME } ];
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    for (const provider of providers) {
-        try {
-            const data = await provider.client.send(new ListMultipartUploadsCommand({ Bucket: provider.bucket }));
-            if (data.Uploads) {
-                for (const upload of data.Uploads) {
-                    if (upload.Initiated < oneDayAgo) {
-                        await provider.client.send(new AbortMultipartUploadCommand({ Bucket: provider.bucket, Key: upload.Key, UploadId: upload.UploadId }));
-                    }
+    try {
+        // تنظيف الملفات المعلقة من R2 فقط
+        const data = await r2Client.send(new ListMultipartUploadsCommand({ Bucket: R2_BUCKET_NAME }));
+        if (data.Uploads) {
+            const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            for (const upload of data.Uploads) {
+                if (upload.Initiated < oneDayAgo) {
+                    await r2Client.send(new AbortMultipartUploadCommand({ Bucket: R2_BUCKET_NAME, Key: upload.Key, UploadId: upload.UploadId }));
                 }
             }
-        } catch (err) {}
-    }
+        }
+    } catch (err) {}
 }, 24 * 60 * 60 * 1000); 
 
 setInterval(async () => {
