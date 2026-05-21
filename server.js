@@ -340,7 +340,6 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             const user = await usersCollection.findOne({
                 $or: [{ email: data.identifier }, { phone: data.identifier }]
             });
-            // مقارنة آمنة فقط — حذفت فحص النص الصريح الكارثي
             const validPassword = user ? await bcrypt.compare(data.password, user.password) : false;
 
             if (user && validPassword) {
@@ -414,7 +413,6 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
         res.status(status).json({ message });
     };
 
-    // ✅ تايم آوت طويل للرفع
     req.setTimeout(30 * 60 * 1000);
     res.setTimeout(30 * 60 * 1000);
 
@@ -1003,9 +1001,8 @@ async function startServer() {
     await connectMongo();
     server = app.listen(PORT, () => logger.info(`السيرفر شغّال على بورت ${PORT}`));
 
-    // ✅ التايم آوتس الصحيحة — كانت كارثية في النسخة السابقة
     server.headersTimeout = 65 * 1000;
-    server.requestTimeout = 0;       // الرفع يحتاج وقت — تايم آوت يدوي على الراوت
+    server.requestTimeout = 0;       
     server.keepAliveTimeout = 60 * 1000;
     server.timeout = 0;
 }
@@ -1038,4 +1035,3 @@ startServer().catch((err) => {
     logger.fatal({ err: err.message }, 'failed to start server');
     process.exit(1);
 });
-
