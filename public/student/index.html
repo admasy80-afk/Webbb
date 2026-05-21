@@ -4,23 +4,154 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#070b19">
+    <meta name="description" content="لوحة الطالب - منصة الدحيح التعليمية">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+
     <title>لوحة الطالب | منصة الدحيح</title>
 
+    <!-- استدعاء Tailwind CSS و الخطوط -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- تم جلب جميع أوزان الخط لضمان دقة العرض -->
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- الاستدعاءات من المجلد الرئيسي -->
-    <link rel="stylesheet" href="css/style.css">
-    <script src="js/main.js" defer></script>
+    <style>
+        /* 1. توحيد الخط إجبارياً على كافة عناصر الصفحة */
+        :root { --accent: #eab308; }
+        * { 
+            font-family: 'Readex Pro', sans-serif !important; 
+            -webkit-tap-highlight-color: transparent; 
+            box-sizing: border-box;
+        }
+        body, html { 
+            background-color: #070b19; 
+            color: white; 
+            overscroll-behavior-y: none; /* لمنع السحب المزعج في الجوال */
+        }
+        *:focus { outline: none !important; }
+
+        /* 2. تأثيرات الزجاج والتبويبات المطورة */
+        .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+        
+        .tab-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
+        .tab-btn::before { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity 0.3s; z-index: -1; border-radius: inherit; }
+        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); }
+        .tab-btn.active { color: #000; font-weight: 700; background: var(--accent); box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2); }
+        
+        .tab-content { display: none; opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease; transform: translateY(15px); }
+        .tab-content.active { display: block; opacity: 1; transform: translateY(0); }
+        
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        
+        /* إخفاء شريط التمرير مع الإبقاء على الوظيفة */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* 3. مشغل الفيديو الاحترافي */
+        #videoContainer:fullscreen { background-color: #000; width: 100vw; height: 100vh; }
+        #videoContainer:fullscreen video { width: 100%; height: 100%; object-fit: contain; }
+        
+        .tap-zone { position: absolute; top: 0; bottom: 20%; width: 35%; z-index: 10; cursor: pointer; }
+        .tap-zone.left { left: 0; }
+        .tap-zone.right { right: 0; }
+        
+        .center-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5; }
+        .center-play > div { background: rgba(234, 179, 8, 0.9); border-radius: 50%; width: 4.5rem; height: 4.5rem; display: flex; align-items: center; justify-content: center; color: black; opacity: 0; transform: scale(0.5); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
+        
+        .skip-indicator { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.8); padding: 0.6rem 1.2rem; border-radius: 2rem; color: white; font-weight: 800; font-size: 1.1rem; opacity: 0; pointer-events: none; z-index: 20; backdrop-filter: blur(4px); }
+        .skip-indicator.show { animation: popFlash 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        @keyframes popFlash { 0% { opacity: 0; transform: translateY(-50%) scale(0.8); } 20% { opacity: 1; transform: translateY(-50%) scale(1.1); } 80% { opacity: 1; transform: translateY(-50%) scale(1); } 100% { opacity: 0; transform: translateY(-50%) scale(0.9); } }
+
+        /* شريط التقدم التفاعلي المطور (Ltr ليتوافق مع الفيديو) */
+        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 4px; cursor: pointer; position: relative; transition: height 0.2s; }
+        .progress-container:hover { height: 8px; }
+        .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 4px; position: relative; }
+        .progress-thumb { position: absolute; right: -6px; top: 50%; transform: translateY(-50%) scale(0); width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.2s; }
+        .progress-container:hover .progress-thumb { transform: translateY(-50%) scale(1); }
+
+        /* شريط التحكم في الصوت */
+        input[type=range].volume-slider { -webkit-appearance: none; background: transparent; height: 4px; border-radius: 2px; }
+        input[type=range].volume-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
+        input[type=range].volume-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: var(--accent); margin-top: -4px; cursor: pointer; }
+    </style>
+
+    <script>
+        // نظام التبويبات المحدث
+        window.switchTab = function(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+                setTimeout(() => el.style.display = 'none', 300); // إخفاء بعد الأنيمشن
+            });
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if(activeTab) {
+                setTimeout(() => {
+                    activeTab.style.display = 'block';
+                    // Force reflow
+                    void activeTab.offsetWidth;
+                    activeTab.classList.add('active');
+                }, 310);
+                
+                const btn = document.getElementById(`btn-${tabId}`);
+                if(btn) btn.classList.add('active');
+            }
+        };
+
+        // وظائف إضافية للمشغل الجديد (PiP - تشغيل/إيقاف) يتم ربطها بعد تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('dahihPlayer');
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const pipBtn = document.getElementById('pipBtn');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeContainer = document.getElementById('volumeContainer');
+
+            if(video) {
+                // التشغيل والإيقاف من الزر السفلي
+                if(playPauseBtn) {
+                    playPauseBtn.addEventListener('click', () => {
+                        if (video.paused) video.play();
+                        else video.pause();
+                    });
+                    video.addEventListener('play', () => playPauseBtn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>');
+                    video.addEventListener('pause', () => playPauseBtn.innerHTML = '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>');
+                }
+
+                // صورة في صورة (PiP)
+                if(pipBtn && document.pictureInPictureEnabled) {
+                    pipBtn.addEventListener('click', async () => {
+                        try {
+                            if (document.pictureInPictureElement) await document.exitPictureInPicture();
+                            else await video.requestPictureInPicture();
+                        } catch (err) { console.error(err); }
+                    });
+                } else if(pipBtn) {
+                    pipBtn.style.display = 'none'; // إخفاء الزر إذا كان المتصفح لا يدعمه
+                }
+
+                // التحكم في الصوت
+                if(volumeSlider) {
+                    volumeSlider.addEventListener('input', (e) => {
+                        video.volume = e.target.value;
+                        video.muted = (e.target.value === "0");
+                    });
+                }
+            }
+        });
+    </script>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
 
+    <!-- ══════════ الهيدر والقائمة (متجاوبة تماماً) ══════════ -->
     <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
+        
+        <!-- القسم العلوي: اللوجو وبيانات الطالب -->
         <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
             <div class="flex justify-between w-full items-center">
                 <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
+                <!-- زر الخروج يظهر في الجوال هنا -->
                 <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-red-500/20">خروج</button>
             </div>
             
@@ -32,96 +163,200 @@
             </div>
         </div>
         
-        <!-- روابط التنقل (توجه إلى مجلد pages) -->
+        <!-- روابط التنقل (تتحول لشريط تمرير أفقي في الجوال) -->
         <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 scrollbar-hide flex-shrink-0">
-            <a href="index.html" class="tab-btn active block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">لوحة المذاكرة</a>
-            <a href="pages/courses.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">المحاضرات والحصص</a>
-            <a href="pages/quizzes.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">الاختبارات الإلكترونية</a>
-            <a href="pages/points.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">أهم نقاط المنهج</a>
-            <a href="pages/questions.html" class="tab-btn block shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300">الأسئلة المقالية</a>
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
+            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
+            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
+            <button onclick="switchTab('points')" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
+            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
         </nav>
 
+        <!-- زر الخروج للشاشات الكبيرة -->
         <div class="hidden md:block p-4 mt-auto">
             <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3.5 rounded-xl text-sm font-bold transition-all border border-red-500/20 flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 تسجيل الخروج
             </button>
         </div>
     </aside>
 
-    <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth">
+    <!-- ══════════ منطقة المحتوى الرئيسية ══════════ -->
+    <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth" id="mainGrid">
+        <!-- إضاءة خلفية -->
         <div class="fixed top-0 right-0 w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-        <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
-            <!-- قسم المشغل -->
-            <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl bg-[#0a0f1c]">
-                <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
-                    <div class="flex items-center gap-3 flex-1 min-w-0">
-                        <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                            <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        <!-- 1. لوحة المذاكرة -->
+        <div id="tab-dashboard" class="tab-content active space-y-4 md:space-y-6">
+            
+            <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
+                <!-- قسم المشغل (تم تحديثه بالكامل) -->
+                <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up bg-[#0a0f1c]">
+                    
+                    <!-- شريط عنوان الفيديو -->
+                    <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3 flex-1 min-w-0">
+                            <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </div>
+                            <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
                         </div>
-                        <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
+                    </div>
+
+                    <!-- حاوية الفيديو -->
+                    <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
+                        <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl border border-white/5 overflow-hidden group shadow-lg">
+                            
+                            <!-- بوستر البداية -->
+                            <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black z-10 p-4 text-center">
+                                <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-bounce">
+                                    <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                </div>
+                                <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
+                                <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل وانطلق في رحلة التعلم والتفوق</p>
+                            </div>
+
+                            <!-- عنصر الفيديو -->
+                            <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full hidden bg-black"></video>
+
+                            <!-- مناطق اللمس الذكية -->
+                            <div class="tap-zone left" id="tapLeft"></div>
+                            <div class="tap-zone right" id="tapRight"></div>
+                            <div class="skip-indicator left-8 md:left-12" id="skipIndicator" aria-hidden="true"><span id="skipText">+10</span></div>
+
+                            <!-- أنيمشن النقر في المنتصف -->
+                            <div class="center-play" id="centerPlay">
+                                <div><svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                            </div>
+
+                            <!-- شريط التحكم السفلي (مخفي ويظهر عند التحويم) -->
+                            <div class="absolute bottom-0 left-0 right-0 p-3 md:p-5 bg-gradient-to-t from-black via-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 translate-y-2 group-hover:translate-y-0" dir="ltr">
+                                
+                                <!-- شريط التقدم الجديد -->
+                                <div class="progress-container mb-2 md:mb-3" id="progressContainer" role="slider">
+                                    <div class="progress-fill" id="progressBar">
+                                        <div class="progress-thumb"></div>
+                                    </div>
+                                </div>
+
+                                <!-- أزرار التحكم -->
+                                <div class="flex justify-between items-center text-white">
+                                    <!-- الجانب الأيسر (تشغيل، صوت، وقت) -->
+                                    <div class="flex items-center gap-3 md:gap-5">
+                                        <button id="playPauseBtn" class="hover:text-yellow-500 transition-colors transform hover:scale-110 active:scale-95">
+                                            <svg class="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                        </button>
+                                        
+                                        <!-- التحكم في الصوت (يظهر في الشاشات الأكبر) -->
+                                        <div class="hidden md:flex items-center gap-2 group/volume" id="volumeContainer">
+                                            <button id="muteBtn" class="hover:text-yellow-500 transition-colors">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
+                                            </button>
+                                            <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="volume-slider w-0 opacity-0 group-hover/volume:w-20 group-hover/volume:opacity-100 transition-all duration-300">
+                                        </div>
+
+                                        <div class="text-[10px] md:text-xs font-mono font-bold tracking-wider opacity-80" dir="ltr">
+                                            <span id="currentTimeDisplay">00:00</span> <span class="mx-1 text-gray-500">/</span> <span id="durationDisplay">00:00</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- الجانب الأيمن (السرعة، شاشة كاملة، الخ) -->
+                                    <div class="flex items-center gap-3 md:gap-4">
+                                        <button id="speedBtn" class="bg-white/10 hover:bg-white/20 px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-colors border border-white/10">1x</button>
+                                        
+                                        <button id="pipBtn" class="hidden md:block hover:text-yellow-500 transition-colors" title="صورة في صورة">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                        </button>
+
+                                        <button onclick="DahihApp.toggleFullscreen()" class="hover:text-yellow-500 transition-colors transform hover:scale-110 active:scale-95">
+                                            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="text-center text-gray-500 text-[10px] md:text-xs mt-3 flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"/></svg>
+                            انقر مرتين على أطراف الفيديو للتقديم أو التأخير 10 ثوانٍ
+                        </p>
                     </div>
                 </div>
 
-                <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
-                    <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl border border-white/5 overflow-hidden group shadow-lg">
-                        <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black z-10 p-4 text-center">
-                            <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-bounce">
-                                <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
-                            <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
-                            <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل وانطلق في رحلة التعلم والتفوق</p>
+                <!-- قسم التقييم المستمر -->
+                <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
+                    <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up bg-gradient-to-b from-white/5 to-transparent">
+                        <h2 class="text-lg font-bold mb-6 text-white flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                            مؤشر الأداء العام
+                        </h2>
+                        <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
+                            <!-- دائرة الإضاءة -->
+                            <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-yellow-500 border-l-yellow-500 opacity-50 animate-spin" style="animation-duration: 3s;"></div>
+                            
+                            <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
                         </div>
-                        <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full hidden bg-black"></video>
-                        <div class="tap-zone left" id="tapLeft"></div>
-                        <div class="tap-zone right" id="tapRight"></div>
-                        <div class="skip-indicator left-8 md:left-12" id="skipIndicator" aria-hidden="true"><span id="skipText">+10</span></div>
-                        <div class="center-play" id="centerPlay">
-                            <div><svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                        </div>
-
-                        <div class="absolute bottom-0 left-0 right-0 p-3 md:p-5 bg-gradient-to-t from-black via-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 translate-y-2 group-hover:translate-y-0" dir="ltr">
-                            <div class="progress-container mb-2 md:mb-3" id="progressContainer">
-                                <div class="progress-fill" id="progressBar"><div class="progress-thumb"></div></div>
-                            </div>
-                            <div class="flex justify-between items-center text-white">
-                                <div class="flex items-center gap-3 md:gap-5">
-                                    <button id="playPauseBtn" class="hover:text-yellow-500 transition-colors transform hover:scale-110 active:scale-95"><svg class="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></button>
-                                    <div class="hidden md:flex items-center gap-2 group/volume" id="volumeContainer">
-                                        <button id="muteBtn" class="hover:text-yellow-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg></button>
-                                        <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1" class="volume-slider w-0 opacity-0 group-hover/volume:w-20 group-hover/volume:opacity-100 transition-all duration-300">
-                                    </div>
-                                    <div class="text-[10px] md:text-xs font-mono font-bold tracking-wider opacity-80" dir="ltr"><span id="currentTimeDisplay">00:00</span> <span class="mx-1 text-gray-500">/</span> <span id="durationDisplay">00:00</span></div>
-                                </div>
-                                <div class="flex items-center gap-3 md:gap-4">
-                                    <button id="speedBtn" class="bg-white/10 hover:bg-white/20 px-2 py-1 md:px-3 md:py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-colors border border-white/10">1x</button>
-                                    <button id="pipBtn" class="hidden md:block hover:text-yellow-500 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg></button>
-                                    <button onclick="DahihApp.toggleFullscreen()" class="hover:text-yellow-500 transition-colors transform hover:scale-110 active:scale-95"><svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg></button>
-                                </div>
-                            </div>
-                        </div>
+                        <p class="text-gray-400 text-sm leading-relaxed max-w-[250px] mx-auto">هذه النسبة تعكس تفاعلك وحلك للاختبارات على المنصة. استمر في التقدم!</p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- قسم التقييم المستمر -->
-            <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center bg-gradient-to-b from-white/5 to-transparent">
-                    <h2 class="text-lg font-bold mb-6 text-white flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                        مؤشر الأداء العام
-                    </h2>
-                    <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
-                        <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-yellow-500 border-l-yellow-500 opacity-50 animate-spin" style="animation-duration: 3s;"></div>
-                        <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
+        <!-- 2. المحاضرات -->
+        <div id="tab-courses" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
+            <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
+                <div id="studentCoursesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <div class="text-center py-12 text-gray-500 col-span-full flex flex-col items-center justify-center bg-black/20 rounded-xl border border-white/5">
+                        <svg class="animate-spin h-8 w-8 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        <p class="font-bold">جاري البحث عن محاضراتك...</p>
                     </div>
-                    <p class="text-gray-400 text-sm leading-relaxed max-w-[250px] mx-auto">هذه النسبة تعكس تفاعلك وحلك للاختبارات على المنصة. استمر في التقدم!</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- 3. الاختبارات -->
+        <div id="tab-quizzes" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">الاختبارات الإلكترونية</h1>
+            <p class="text-gray-400 text-sm md:text-base mb-6">اختبر مستواك باستمرار لضمان تثبيت المعلومات.</p>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
+                <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <p class="text-center py-10 text-gray-500 col-span-full font-bold">جاري التحميل...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. نقاط المنهج -->
+        <div id="tab-points" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
+            <p class="text-gray-400 text-sm md:text-base mb-6">ملاحظات وتلخيصات سريعة لتثبيت المعلومات.</p>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
+                <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            </div>
+        </div>
+
+        <!-- 5. الأسئلة المقالية -->
+        <div id="tab-questions" class="tab-content">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم الأسئلة المقالية</h1>
+            <p class="text-gray-400 text-sm md:text-base mb-6">تدرب على نمط الأسئلة المقالية المتوقعة مع معرفة الإجابات النموذجية.</p>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
+                <div id="questionsContainer" class="flex flex-col gap-4"></div>
             </div>
         </div>
 
     </main>
 
+    <!-- ══════════ مودال الكويز ══════════ -->
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-xl" role="dialog" aria-modal="true">
+        <div class="bg-[#0a0f1c] border border-white/10 w-full max-w-3xl rounded-[2rem] p-5 md:p-8 max-h-[95vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)]" id="quizModalBox">
+            <div id="quizModalContent">
+                <!-- المحتوى يولد ديناميكياً -->
+            </div>
+        </div>
+    </div>
+
+    <!-- استدعاء سكريبت المنصة والاحتفالات -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <script src="script.js" defer></script>
 </body>
 </html>
