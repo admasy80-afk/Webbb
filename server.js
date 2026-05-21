@@ -116,9 +116,9 @@ app.use((req, res, next) => {
 const courseSchema = z.object({
     courseName: z.string().min(2).max(100),
     grade: z.string().min(2).max(50),
-    description: z.string().optional(),
-    duration: z.string().optional(), // مدة الكورس (مثال: 45 دقيقة)
-    imageUrl: z.string().optional()  // رابط صورة الكورس
+    description: z.string().max(2000).optional(),
+    duration: z.string().max(50).optional(),
+    imageUrl: z.string().max(15 * 1024 * 1024).optional() // يقبل Base64 حتى 15MB
 });
 
 const gradeSchema = z.object({
@@ -184,7 +184,7 @@ const authenticateToken = (req, res, next) => {
     }
     
     jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM], issuer: 'eld7e7-platform', audience: 'eld7e7-users', clockTolerance: 5 }, (err, decoded) => {
-        if (err) return res.status(403).json({ message: "انتهت صلاحية الجلسة أو غير صالحة.", reason: err.message });
+        if (err) return res.status(403).json({ message: "انتهت صلاحية الجلسة أو غير ��الحة.", reason: err.message });
         req.user = decoded;
         next(); 
     });
@@ -290,16 +290,53 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
     let parallelUpload = null;
 
     try {
-        const bb = busboy({ headers: req.headers, limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1, fields: 15 } });
+        // ✅ زيادة fieldSize لأن imageUrl يُرسَل كـ Base64 ضخم (الافتراضي 1MB يكسر الرفع)
+        const bb = busboy({
+            headers: req.headers,
+            limits: {
+                fileSize: 2 * 1024 * 1024 * 1024, // 2GB للفيديو
+                fieldSize: 15 * 1024 * 1024,      // 15MB لكل حقل نصي (يغطي صور Base64)
+                files: 1,
+                fields: 15
+            }
+        });
         let courseData = {};
         let fieldsReceived = false;
 
-        bb.on('field', (name, val) => { 
-            courseData[name] = val; 
+        bb.on('field', (name, val, info) => {
+            // تجاهل الحقول المقطوعة (لو تجاوزت الحد)
+            if (info && (info.nameTruncated || info.valueTruncated)) {
+                logger.warn({ field: name }, '⚠️ حقل مقطوع — تجاوز الحد المسموح');
+                if (!responded) { responded = true; res.status(413).json({ message: `الحقل "${name}" أكبر من الحد المسموح. قلّل حجم الصورة.` }); }
+                return;
+            }
+            courseData[name] = val;
             if (courseData.courseName && courseData.grade) fieldsReceived = true;
         });
 
+        // ✅ معالج أخطاء busboy — كان غائباً ويُسبب فشل صامت
+        bb.on('error', (err) => {
+            logger.error({ err: err.message }, '🚨 busboy error');
+            if (parallelUpload) { try { parallelUpload.abort(); } catch (_) {} }
+            if (!responded) { responded = true; res.status(400).json({ message: `خطأ في قراءة البيانات: ${err.message}` }); }
+        });
+
+        bb.on('filesLimit', () => {
+            if (!responded) { responded = true; res.status(400).json({ message: 'تم تجاوز عدد الملفات المسموح.' }); }
+        });
+
+        bb.on('fieldsLimit', () => {
+            if (!responded) { responded = true; res.status(400).json({ message: 'تم تجاوز عدد الحقول المسموح.' }); }
+        });
+
         bb.on('file', async (name, file, info) => {
+            // ✅ كشف تجاوز حجم الفيديو (2GB)
+            file.on('limit', () => {
+                logger.warn('⚠️ تجاوز ملف الفيديو الحد المسموح (2GB)');
+                if (parallelUpload) { try { parallelUpload.abort(); } catch (_) {} }
+                if (!responded) { responded = true; res.status(413).json({ message: 'حجم الفيديو يتجاوز 2GB.' }); }
+            });
+
             if (!fieldsReceived) {
                 file.resume(); 
                 if (!responded) { responded = true; return res.status(400).json({ message: "يجب إرسال بيانات الدورة قبل ملف الفيديو." }); }
@@ -310,8 +347,9 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
 
             const parseResult = courseSchema.safeParse(courseData);
             if (!parseResult.success) {
+                logger.warn({ errors: parseResult.error.flatten() }, '⚠️ بيانات الكورس غير صالحة');
                 file.resume();
-                if (!responded) { responded = true; return res.status(400).json({ message: "بيانات الدورة غير صالحة." }); }
+                if (!responded) { responded = true; return res.status(400).json({ message: `بيانات الدورة غير صالحة: ${parseResult.error.issues.map(i => i.path.join('.') + ' ' + i.message).join(' | ')}` }); }
                 return;
             }
 
@@ -359,7 +397,10 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
 
         req.on('close', () => { if (!req.complete && parallelUpload && !responded) parallelUpload.abort(); });
         req.pipe(bb);
-    } catch (error) { if (!responded) { responded = true; res.status(500).json({ message: "خطأ غير متوقع." }); } }
+    } catch (error) {
+        logger.error({ err: error.message, stack: error.stack }, '🚨 خطأ غير متوقع في رفع الكورس');
+        if (!responded) { responded = true; res.status(500).json({ message: `خطأ غير متوقع: ${error.message}` }); }
+    }
 });
 
 app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
