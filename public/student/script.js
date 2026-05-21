@@ -73,7 +73,7 @@
         input[type=range].volume-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
         input[type=range].volume-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: var(--accent); margin-top: -4px; cursor: pointer; }
 
-        /* 4. تنسيقات الكروت المحقونة عبر الجافاسكريبت */
+        /* 4. تنسيقات الكروت القديمة (للكويزات) */
         .course-card {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -85,24 +85,6 @@
             transform: translateY(-4px);
             border-color: rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.05);
-        }
-        .course-card.is-active {
-            border-color: rgba(234, 179, 8, 0.5);
-            background: rgba(234, 179, 8, 0.05);
-            box-shadow: 0 4px 20px rgba(234, 179, 8, 0.1);
-        }
-        .tag {
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            padding: 0.2rem 0.6rem;
-            border-radius: 0.4rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-        .course-card.is-active .tag {
-            color: #eab308;
-            border-color: rgba(234, 179, 8, 0.4);
         }
         .btn {
             display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
@@ -143,7 +125,33 @@
     </style>
 
     <script>
-        // نظام التبويبات المحدث (يستخدمه زر التحويل من الجافاسكريبت ايضاً)
+        // 🌟 نظام الإشعارات (Toasts) بدل الـ alert 🌟
+        window.showToast = function(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+            const icon = type === 'error' 
+                ? `<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                : `<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                
+            toast.className = `${bgColor} text-white px-4 md:px-6 py-3 rounded-xl shadow-2xl transform transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-3 font-bold text-sm z-50`;
+            toast.innerHTML = `${icon} <span>${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => toast.classList.remove('translate-y-10', 'opacity-0'));
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        window.addEventListener('error', function(e) {
+            window.showToast("خطأ: " + e.message, 'error');
+        });
+
+        // نظام التبويبات المحدث 
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.remove('active');
@@ -166,6 +174,9 @@
     </script>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
+
+    <!-- حاوية الإشعارات العصرية -->
+    <div id="toast-container" class="fixed bottom-5 left-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
     <!-- ══════════ الهيدر والقائمة ══════════ -->
     <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
@@ -302,12 +313,13 @@
             </div>
         </div>
 
-        <!-- 2. المحاضرات (يتم حقن البيانات ديناميكياً هنا عبر الـ JavaScript) -->
+        <!-- 2. المحاضرات -->
         <div id="tab-courses" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
             <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
             
             <div id="studentCoursesContainer" class="flex flex-col gap-8">
+                <!-- حالة التحميل الافتراضية -->
                 <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-fade-in-up">
                     <svg class="animate-spin h-10 w-10 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -351,7 +363,7 @@
     </main>
 
     <!-- ══════════ مودال الكويز ══════════ -->
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-xl" role="dialog" aria-modal="true">
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-xl opacity-0 pointer-events-none transition-opacity duration-300" role="dialog" aria-modal="true">
         <div class="bg-[#0a0f1c] border border-white/10 w-full max-w-3xl rounded-[2rem] p-5 md:p-8 max-h-[95vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)]" id="quizModalBox">
             <div id="quizModalContent">
                 <!-- المحتوى يولد ديناميكياً -->
@@ -464,6 +476,7 @@
             titleEl: null,
             tapLeft: null,
             tapRight: null,
+            lastSentTime: -1,
 
             init() {
                 this.video         = $('dahihPlayer');
@@ -532,6 +545,7 @@
 
                 state.currentMsgId = String(msgId);
                 this.titleEl.textContent = title || 'جاري التحميل...';
+                this.lastSentTime = -1; // Reset progress tracker
 
                 this.poster.classList.add('is-hidden');
                 this.video.style.display = 'block';
@@ -541,18 +555,16 @@
                 
                 const videoUrl = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
-                // 🕵️‍♂️ الجاسوس اللي بيفضح السيرفر ويطبع لك الخطأ على شاشة الجوال
                 fetch(videoUrl, { headers: { 'Range': 'bytes=0-100' } })
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorText = await response.text();
-                            // ظهور رسالة التنبيه في وجهك
-                            alert(`🚨 السيرفر زعلان!\nكود الخطأ: ${response.status}\nرسالة السيرفر: ${errorText}\nرقم الـ ID المطلوب: ${msgId}`);
+                            window.showToast(`خطأ ${response.status}: لا يمكن تشغيل المحاضرة`, 'error');
                             this.titleEl.textContent = `خطأ ${response.status}: ${errorText}`;
                         }
                     })
                     .catch(err => {
-                        alert(`🚨 مشكلة في الاتصال بالإنترنت أو السيرفر طافي:\n${err.message}`);
+                        window.showToast(`مشكلة في الاتصال بالإنترنت`, 'error');
                     });
 
                 this.video.src = videoUrl;
@@ -565,9 +577,15 @@
                     });
                 }
 
-                document.querySelectorAll('.course-card').forEach(c => c.classList.remove('is-active'));
+                document.querySelectorAll('.course-card-v4').forEach(c => {
+                    c.classList.remove('border-yellow-500/40', 'shadow-[0_4px_20px_rgba(234,179,8,0.1)]');
+                    c.classList.add('border-white/10', 'shadow-lg');
+                });
                 const card = $(`course_${msgId}`);
-                if (card) card.classList.add('is-active');
+                if (card) {
+                    card.classList.remove('border-white/10', 'shadow-lg');
+                    card.classList.add('border-yellow-500/40', 'shadow-[0_4px_20px_rgba(234,179,8,0.1)]');
+                }
 
                 this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
             },
@@ -596,6 +614,23 @@
                 const pct = (this.video.currentTime / this.video.duration) * 100;
                 this.progressBar.style.width = pct + '%';
                 this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+
+                // إرسال التقدم للسيرفر كل 10 ثواني لحفظ (آخر مشاهدة)
+                const currentSec = Math.floor(this.video.currentTime);
+                if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
+                    this.lastSentTime = currentSec;
+                    fetch('/api/student/save-progress', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${state.token}`
+                        },
+                        body: JSON.stringify({
+                            msgId: state.currentMsgId,
+                            currentTime: this.video.currentTime
+                        })
+                    }).catch(() => {}); // نتجاهل الأخطاء الصامتة حتى لا نزعج الطالب
+                }
             },
 
             onError() {
@@ -612,9 +647,8 @@
                 const text = codes[code] || 'تعذّر تشغيل المحاضرة';
                 this.titleEl.textContent = text;
                 
-                // عشان نعرف لو المشكلة من متصفح الجوال نفسه
                 if(code !== 0) {
-                    alert(`⚠️ خطأ في المشغل نفسه!\nالكود: ${code}\nالرسالة: ${text}\nالسبب التقني: ${message}`);
+                    window.showToast(`خطأ في المشغل: ${text}`, 'error');
                 }
             },
 
@@ -739,41 +773,67 @@
             const container = $('studentCoursesContainer');
             if (!container) return;
 
-            const h = hash(list.map(c => [c.telegramMsgId, c.courseName, c.description]));
+            list = list || [];
+
+            const h = hash(list.map(c => [c.telegramMsgId, c.courseName, c.description, c.duration, c.lastWatched, c.image]));
             if (h === state.coursesHash && !initial) return;
             state.coursesHash = h;
 
-            if (!list.length) {
-                container.innerHTML = '<p class="empty">لا توجد محاضرات متاحة حالياً لهذه المرحلة.</p>';
+            if (list.length === 0) {
+                container.className = "flex flex-col gap-8";
+                container.innerHTML = '<div class="text-center py-16 text-gray-500 bg-white/5 rounded-2xl border border-white/10">لا توجد محاضرات متاحة حالياً.</div>';
                 return;
             }
 
-            const reversed = list.slice().reverse();
-            const html = reversed.map((course, idx) => {
+            container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
+
+            const html = list.map((course, idx) => {
                 const id = course.telegramMsgId;
-                const num = list.length - idx;
+                const num = idx + 1;
                 const isActive = String(state.currentMsgId) === String(id);
                 const title = escapeHTML(course.courseName || 'محاضرة');
                 const desc = escapeHTML(course.description || 'لا يوجد وصف');
+                const duration = escapeHTML(course.duration || 'غير محدد');
+                const image = course.image && course.image.length > 10 ? course.image : 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
+                const lastWatched = course.lastWatched;
+                
+                const borderColor = isActive ? 'border-yellow-500/40' : 'border-white/10';
+                const shadow = isActive ? 'shadow-[0_4px_20px_rgba(234,179,8,0.1)]' : 'shadow-lg';
+                const badgeBg = isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white';
+
+                const actionBtn = isActive 
+                    ? `<button class="w-full flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg> استكمال المشاهدة</button>`
+                    : `<button class="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-2.5 rounded-lg transition-colors border border-white/10">تشغيل المحاضرة</button>`;
+
+                const lastWatchedHTML = lastWatched 
+                    ? `<div class="inline-flex items-center gap-2 text-[0.75rem] text-white bg-white/5 px-3 py-1.5 rounded-md mb-4 border border-white/10 w-fit">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                            آخر مشاهدة: الدقيقة ${lastWatched}
+                       </div>` 
+                    : '<div class="h-8 mb-4"></div>';
 
                 return `
-                    <article id="course_${id}" class="course-card${isActive ? ' is-active' : ''} flex flex-col md:flex-row justify-between h-full">
-                        <div class="mb-4 md:mb-0" style="flex:1;min-width:0;">
-                            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.25rem;flex-wrap:wrap;">
-                                <span class="tag">الحصة ${num}</span>
-                                <h3 class="text-white font-bold text-lg m-0">${title}</h3>
-                            </div>
-                            <p class="text-gray-400 text-sm m-0">${desc}</p>
+                    <div class="flex flex-col bg-white/5 border ${borderColor} rounded-xl overflow-hidden hover:-translate-y-1 hover:border-white/20 transition-all duration-300 ${shadow} course-card-v4" id="course_${id}">
+                        <div class="relative h-36 p-4 flex flex-col justify-between border-b border-white/10" 
+                             style="background: linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url('${image}'); background-size: cover; background-position: center;">
+                            <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${badgeBg}">الدرس ${num}</span>
+                            <div class="text-white/90 text-xs font-medium drop-shadow-md truncate">${desc}</div>
                         </div>
-                        <button class="btn btn-primary course-play w-full md:w-auto mt-auto md:mt-0" data-msgid="${id}" data-title="${title}" type="button">
-                            <svg style="width:1.2rem;height:1.2rem;" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            تشغيل الحصة
-                        </button>
-                    </article>
+                        <div class="p-5 flex flex-col flex-grow">
+                            <h3 class="text-lg font-bold text-white mb-3 truncate" title="${title}">${title}</h3>
+                            <div class="flex items-center gap-2 text-xs text-gray-400 mb-4">
+                                <span class="bg-black/30 px-2 py-1 rounded border border-white/5">⏱️ ${duration}</span>
+                            </div>
+                            ${lastWatchedHTML}
+                            <div class="mt-auto pt-4 border-t border-white/10 course-play cursor-pointer" data-msgid="${id}" data-title="${title}">
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    </div>
                 `;
             }).join('');
 
-            container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${html}</div>`;
+            container.innerHTML = html;
 
             container.querySelectorAll('.course-play').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -939,13 +999,16 @@
             `;
 
             modal.classList.add('is-open');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
             document.body.style.overflow = 'hidden';
 
             $('activeQuizForm').addEventListener('submit', (e) => submitQuiz(e, quiz));
         }
 
         function closeQuiz() {
-            $('quizModal').classList.remove('is-open');
+            const modal = $('quizModal');
+            modal.classList.remove('is-open');
+            modal.classList.add('opacity-0', 'pointer-events-none');
             document.body.style.overflow = '';
         }
 
