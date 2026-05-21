@@ -57,7 +57,7 @@ export const VideoSystem = {
 
         const token = getValidToken();
         if (!token) {
-            return SysUI.toast('error', 'انتهت الجلسة، يرجى تسجيل الدخول بحساب الإدارة');
+            return SysUI.toast('error', 'انتهت الجلسة يرجى تسجيل الدخول مجددا');
         }
 
         const uploadForm = document.getElementById('uploadVideoForm');
@@ -76,29 +76,13 @@ export const VideoSystem = {
             return SysUI.toast('error', 'حجم الفيديو أكبر من 2GB');
         }
 
-        // ✅ المتصفحات تدعم فقط MP4 (H.264/AAC) و WebM (VP8/VP9/Opus) بشكل أصلي.
-        // أي صيغة أخرى مثل MKV/MOV/AVI أو MP4 بترميز HEVC تجعل الصوت يشتغل بدون صورة.
-        const allowedExtensions = ['mp4', 'webm'];
+        // فحص الامتدادات الذكي (لأن المتصفحات بتخرف في الـ MIME Types)
+        const allowedExtensions = ['mp4', 'mkv', 'mov', 'avi', 'webm'];
         const extension = file.name.split('.').pop().toLowerCase();
 
-        if (!allowedExtensions.includes(extension)) {
-            return SysUI.toast(
-                'error',
-                'صيغة غير مدعومة. ارفع MP4 (H.264 + AAC) أو WebM فقط — أي صيغة أخرى تشغّل الصوت بدون فيديو.'
-            );
+        if (!file.type.startsWith('video/') && !allowedExtensions.includes(extension)) {
+            return SysUI.toast('error', 'الملف المختار ليس فيديو صالح');
         }
-
-        // اختبار قابلية التشغيل في نفس متصفح الرافع قبل الإرسال للسيرفر
-        try {
-            const probe = document.createElement('video');
-            const canPlay = probe.canPlayType(file.type || (extension === 'webm' ? 'video/webm' : 'video/mp4'));
-            if (canPlay === '') {
-                return SysUI.toast(
-                    'error',
-                    'هذا الملف غير قابل للتشغيل في المتصفح (غالباً ترميز HEVC/H.265). أعد ضغطه بترميز H.264.'
-                );
-            }
-        } catch (_) { /* تجاهل */ }
 
         const courseName = courseNameInput.value.trim();
         const grade = gradeInput.value.trim();
@@ -123,7 +107,7 @@ export const VideoSystem = {
 
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '⏳ جاري الرفع والمعالجة السحابية...';
+            submitBtn.innerHTML = ' جاري الرفع...';
         }
 
         const xhr = new XMLHttpRequest();
@@ -156,7 +140,7 @@ export const VideoSystem = {
             try {
                 const response = JSON.parse(xhr.responseText);
                 if (xhr.status >= 200 && xhr.status < 300) {
-                    SysUI.toast('success', '✅ تم رفع ونشر الكورس بنجاح');
+                    SysUI.toast('success', 'تم رفع الكورس بنجاح');
                     uploadForm?.reset();
                     await this.loadCourses();
                 } else {
@@ -188,7 +172,7 @@ export const VideoSystem = {
         if (progressContainer) progressContainer.classList.add('hidden');
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = '🚀 ابدأ الرفع والمعالجة السحابية';
+            submitBtn.innerHTML = 'نشر الكورس ';
         }
     },
 
