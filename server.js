@@ -182,30 +182,12 @@ const r2Client = new S3Client({
     requestHandler: buildHttpHandler(),
     maxAttempts: 5
 });
-const b2Client = new S3Client({
-    region: process.env.B2_REGION || 'us-east-005',
-    endpoint: process.env.B2_ENDPOINT,
-    credentials: { accessKeyId: process.env.B2_ACCESS_KEY_ID, secretAccessKey: process.env.B2_SECRET_ACCESS_KEY },
-    requestHandler: buildHttpHandler(),
-    maxAttempts: 5
-});
-const idriveClient = new S3Client({
-    region: process.env.IDRIVE_REGION || 'eu-west-4',
-    endpoint: process.env.IDRIVE_ENDPOINT,
-    credentials: { accessKeyId: process.env.IDRIVE_ACCESS_KEY_ID, secretAccessKey: process.env.IDRIVE_SECRET_ACCESS_KEY },
-    requestHandler: buildHttpHandler(),
-    maxAttempts: 5
-});
 
 const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'eld7e7';
-const B2_BUCKET_NAME = process.env.B2_BUCKET_NAME || 'eld7e7-courses';
-const IDRIVE_BUCKET_NAME = process.env.IDRIVE_BUCKET_NAME || 'eld7e7';
 
-// 🩺 سجل صحة المزودين (Provider Health Tracker)
+// 🩺 سجل صحة المزودين (Provider Health Tracker) - تم الإبقاء على R2 فقط
 const providerHealth = {
-    R2: { failures: 0, lastFailure: 0, lastSuccess: Date.now(), totalUploads: 0, totalBytes: 0 },
-    B2: { failures: 0, lastFailure: 0, lastSuccess: Date.now(), totalUploads: 0, totalBytes: 0 },
-    IDRIVE: { failures: 0, lastFailure: 0, lastSuccess: Date.now(), totalUploads: 0, totalBytes: 0 }
+    R2: { failures: 0, lastFailure: 0, lastSuccess: Date.now(), totalUploads: 0, totalBytes: 0 }
 };
 
 const markProviderFailure = (name) => {
@@ -482,24 +464,15 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
             const fileKey = `videos/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${crypto.randomUUID()}.${ext}`;
             fileKeyGlobal = fileKey;
 
-            // 🎯 اختيار المزود بذكاء (Smart Provider Selection): استبعد غير الصحيين
-            const allProviders = [
-                { name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME },
-                { name: 'B2', client: b2Client, bucket: B2_BUCKET_NAME },
-                { name: 'IDRIVE', client: idriveClient, bucket: IDRIVE_BUCKET_NAME }
-            ];
-            const healthyProviders = allProviders.filter(p => isProviderHealthy(p.name));
-            const candidatePool = healthyProviders.length > 0 ? healthyProviders : allProviders;
-            chosenProvider = shuffleArray([...candidatePool])[0];
+            // 🎯 تم تعيين المزود بشكل ثابت ليكون R2 فقط
+            chosenProvider = { name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME };
 
             log.info({
                 provider: chosenProvider.name,
                 bucket: chosenProvider.bucket,
                 fileKey,
                 ext,
-                mimeType,
-                healthyCount: healthyProviders.length,
-                totalCount: allProviders.length
+                mimeType
             }, `🎯 [${uploadId}] تم اختيار المزود السحابي`);
 
             // 📊 تتبع حجم البيانات
@@ -775,10 +748,9 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const course = await db.collection('courses').findOne({ telegramMsgId: queryId });
         if (!course || !course.fileKey) return res.status(404).send("الفيديو مفقود.");
 
-        let targetClient, targetBucket;
-        if (course.provider === 'B2') { targetClient = b2Client; targetBucket = B2_BUCKET_NAME; }
-        else if (course.provider === 'IDRIVE') { targetClient = idriveClient; targetBucket = IDRIVE_BUCKET_NAME; }
-        else { targetClient = r2Client; targetBucket = R2_BUCKET_NAME; }
+        // تم تعيين المزود بشكل ثابت ليكون R2 فقط
+        let targetClient = r2Client;
+        let targetBucket = R2_BUCKET_NAME;
 
         const headCommand = new HeadObjectCommand({ Bucket: targetBucket, Key: course.fileKey });
         const headResponse = await targetClient.send(headCommand);
@@ -832,10 +804,10 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
         const courseId = req.params.id;
         const course = await db.collection('courses').findOne({ _id: new ObjectId(courseId) });
         if (course && course.fileKey) {
-            let targetClient, targetBucket;
-            if (course.provider === 'B2') { targetClient = b2Client; targetBucket = B2_BUCKET_NAME; }
-            else if (course.provider === 'IDRIVE') { targetClient = idriveClient; targetBucket = IDRIVE_BUCKET_NAME; }
-            else { targetClient = r2Client; targetBucket = R2_BUCKET_NAME; }
+            // تم تعيين المزود بشكل ثابت ليكون R2 فقط
+            let targetClient = r2Client;
+            let targetBucket = R2_BUCKET_NAME;
+
             try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.fileKey })); } catch (e) { }
             
             // تنظيف الغلاف لو موجود
@@ -1050,7 +1022,8 @@ app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 
 // ==================== Cron Jobs ====================
 setInterval(async () => {
-    const providers = [{ name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME }, { name: 'B2', client: b2Client, bucket: B2_BUCKET_NAME }, { name: 'IDRIVE', client: idriveClient, bucket: IDRIVE_BUCKET_NAME }];
+    // تم تعيين المزود بشكل ثابت ليكون R2 فقط في وظيفة الكرون
+    const providers = [{ name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME }];
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     for (const provider of providers) {
         try {
