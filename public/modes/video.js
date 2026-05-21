@@ -76,13 +76,29 @@ export const VideoSystem = {
             return SysUI.toast('error', 'حجم الفيديو أكبر من 2GB');
         }
 
-        // فحص الامتدادات الذكي (لأن المتصفحات بتخرف في الـ MIME Types)
-        const allowedExtensions = ['mp4', 'mkv', 'mov', 'avi', 'webm'];
+        // ✅ المتصفحات تدعم فقط MP4 (H.264/AAC) و WebM (VP8/VP9/Opus) بشكل أصلي.
+        // أي صيغة أخرى مثل MKV/MOV/AVI أو MP4 بترميز HEVC تجعل الصوت يشتغل بدون صورة.
+        const allowedExtensions = ['mp4', 'webm'];
         const extension = file.name.split('.').pop().toLowerCase();
 
-        if (!file.type.startsWith('video/') && !allowedExtensions.includes(extension)) {
-            return SysUI.toast('error', 'الملف المختار ليس فيديو صالح');
+        if (!allowedExtensions.includes(extension)) {
+            return SysUI.toast(
+                'error',
+                'صيغة غير مدعومة. ارفع MP4 (H.264 + AAC) أو WebM فقط — أي صيغة أخرى تشغّل الصوت بدون فيديو.'
+            );
         }
+
+        // اختبار قابلية التشغيل في نفس متصفح الرافع قبل الإرسال للسيرفر
+        try {
+            const probe = document.createElement('video');
+            const canPlay = probe.canPlayType(file.type || (extension === 'webm' ? 'video/webm' : 'video/mp4'));
+            if (canPlay === '') {
+                return SysUI.toast(
+                    'error',
+                    'هذا الملف غير قابل للتشغيل في المتصفح (غالباً ترميز HEVC/H.265). أعد ضغطه بترميز H.264.'
+                );
+            }
+        } catch (_) { /* تجاهل */ }
 
         const courseName = courseNameInput.value.trim();
         const grade = gradeInput.value.trim();
