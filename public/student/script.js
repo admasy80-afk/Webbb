@@ -13,7 +13,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght=200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         /* 1. توحيد الخط إجبارياً على كافة عناصر الصفحة */
@@ -143,9 +143,10 @@
     </style>
 
     <script>
-        // 🌟 نظام الإشعارات (Toasts) بدل الـ alert 🌟
+        // نظام الإشعارات (Toasts)
         window.showToast = function(msg, type = 'success') {
             const container = document.getElementById('toast-container');
+            if(!container) return;
             const toast = document.createElement('div');
             const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
             const icon = type === 'error' 
@@ -156,7 +157,6 @@
             toast.innerHTML = `${icon} <span>${msg}</span>`;
             
             container.appendChild(toast);
-            
             requestAnimationFrame(() => toast.classList.remove('translate-y-10', 'opacity-0'));
             
             setTimeout(() => {
@@ -165,8 +165,9 @@
             }, 3000);
         }
 
+        // 🚨 صائد أخطاء الـ JavaScript العام للـ alert الفوري على الجوال 🚨
         window.addEventListener('error', function(e) {
-            window.showToast("خطأ: " + e.message, 'error');
+            alert("🚨 خطأ برمجي داخلي (JS Error):\n" + e.message + "\nفي السطر: " + e.lineno + "\nالملف: " + e.filename);
         });
 
         // نظام التبويبات المحدث 
@@ -394,14 +395,9 @@
     
     <!-- ══════════ الجافاسكريبت الرئيسي المدمج ══════════ -->
     <script>
-    /* ════════════════════════════════════════════════════════════
-       منصة الدحيح | لوحة الطالب — JavaScript محسّن (مع نظام كشف الأخطاء للجوال)
-       ════════════════════════════════════════════════════════════ */
-
     (function () {
         'use strict';
 
-        // ─────────── الحالة ───────────
         const state = {
             user: null,
             token: null,
@@ -418,7 +414,6 @@
             reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
         };
 
-        // ─────────── أدوات مساعدة ───────────
         const $ = (id) => document.getElementById(id);
 
         const escapeHTML = (str) => {
@@ -432,11 +427,7 @@
         };
 
         const hash = (obj) => {
-            try {
-                return JSON.stringify(obj);
-            } catch (e) {
-                return Math.random().toString();
-            }
+            try { return JSON.stringify(obj); } catch (e) { return Math.random().toString(); }
         };
 
         const formatTime = (t) => {
@@ -448,16 +439,15 @@
 
         const haptic = (ms = 30) => {
             if (state.reduceMotion) return;
-            if ('vibrate' in navigator) {
-                try { navigator.vibrate(ms); } catch (e) { /* ignore */ }
-            }
+            if ('vibrate' in navigator) { try { navigator.vibrate(ms); } catch (e) {} }
         };
 
-        // ─────────── المصادقة ───────────
+        // المصادقة مع فحص وحقن تنبيهات الـ alert لمعرفة النقص
         function authGate() {
             const userStr = localStorage.getItem('dahih_user');
             const token = localStorage.getItem('dahih_token');
             if (!userStr || !token) {
+                alert("⚠️ المصادقة فشلت: لم يتم العثور على التوكن أو بيانات المستخدم في الـ LocalStorage. سيتم توجيهك لصفحة تسجيل الدخول.");
                 window.location.replace('/logina.html');
                 return false;
             }
@@ -466,6 +456,7 @@
                 state.token = token;
                 return true;
             } catch (e) {
+                alert("🚨 خطأ في قراءة بيانات الجلسة: " + e.message);
                 window.location.replace('/logina.html');
                 return false;
             }
@@ -477,36 +468,22 @@
             window.location.replace('/logina.html');
         }
 
-        // دالة الـ fetch المنيعة ضد التعليق
-        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+        async function fetchWithTimeout(url, options = {}, timeout = 15000) {
             const controller = new AbortController();
             const id = setTimeout(() => controller.abort(), timeout);
             try {
-                const response = await fetch(url, { ...options, signal: controller.signal });
-                return response;
+                return await fetch(url, { ...options, signal: controller.signal });
             } finally {
                 clearTimeout(id);
             }
         }
 
-        // ─────────── المشغّل ───────────
+        // كائن المشغل
         const player = {
-            video: null,
-            poster: null,
-            container: null,
-            progress: null,
-            progressBar: null,
-            currentTimeEl: null,
-            durationEl: null,
-            speedBtn: null,
-            muteBtn: null,
-            centerPlay: null,
-            skipIndicator: null,
-            skipText: null,
-            titleEl: null,
-            tapLeft: null,
-            tapRight: null,
-            lastSentTime: -1,
+            video: null, poster: null, container: null, progress: null, progressBar: null,
+            currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
+            centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
+            tapLeft: null, tapRight: null, lastSentTime: -1,
 
             init() {
                 this.video         = $('dahihPlayer');
@@ -529,7 +506,6 @@
 
                 this.video.addEventListener('click', () => this.togglePlay());
                 this.centerPlay.addEventListener('click', () => this.togglePlay());
-
                 this.video.addEventListener('play',  () => this.onPlay());
                 this.video.addEventListener('pause', () => this.onPause());
                 this.video.addEventListener('timeupdate', () => this.onTimeUpdate());
@@ -567,7 +543,6 @@
 
             load(msgId, title) {
                 if (!this.video) return;
-
                 if (String(state.currentMsgId) === String(msgId)) {
                     this.togglePlay();
                     return;
@@ -575,27 +550,24 @@
 
                 state.currentMsgId = String(msgId);
                 this.titleEl.textContent = title || 'جاري التحميل...';
-                this.lastSentTime = -1; // Reset progress tracker
+                this.lastSentTime = -1;
 
                 this.poster.classList.add('is-hidden');
                 this.video.style.display = 'block';
                 this.container.classList.add('is-active');
-
                 this.video.pause();
                 
                 const videoUrl = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
-                // 🕵️‍♂️ الجاسوس اللي بيفضح السيرفر ويطبع لك الخطأ على شاشة الجوال
                 fetch(videoUrl, { headers: { 'Range': 'bytes=0-100' } })
                     .then(async (response) => {
                         if (!response.ok) {
                             const errorText = await response.text();
-                            window.showToast(`خطأ ${response.status}: لا يمكن تشغيل المحاضرة`, 'error');
-                            this.titleEl.textContent = `خطأ ${response.status}: ${errorText}`;
+                            alert(`🚨 خطأ سيرفر الفيديو (${response.status}):\n${errorText}`);
                         }
                     })
                     .catch(err => {
-                        window.showToast(`مشكلة في الاتصال بالإنترنت`, 'error');
+                        alert(`🚨 خطأ في شبكة البث الفيديوي:\n${err.message}`);
                     });
 
                 this.video.src = videoUrl;
@@ -603,9 +575,7 @@
 
                 const playPromise = this.video.play();
                 if (playPromise && playPromise.catch) {
-                    playPromise.catch(() => {
-                        this.centerPlay.classList.add('is-visible');
-                    });
+                    playPromise.catch(() => { this.centerPlay.classList.add('is-visible'); });
                 }
 
                 document.querySelectorAll('.course-card-v4').forEach(c => {
@@ -617,72 +587,35 @@
                     card.classList.remove('border-white/10', 'shadow-lg');
                     card.classList.add('border-yellow-500/40', 'shadow-[0_4px_20px_rgba(234,179,8,0.1)]');
                 }
-
                 this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
             },
 
             togglePlay() {
                 if (!this.video.src) return;
-                if (this.video.paused) {
-                    this.video.play().catch(() => {});
-                } else {
-                    this.video.pause();
-                }
+                if (this.video.paused) { this.video.play().catch(() => {}); } else { this.video.pause(); }
             },
-
-            onPlay() {
-                this.centerPlay.classList.remove('is-visible');
-                this.video.classList.remove('is-paused');
-            },
-
-            onPause() {
-                this.centerPlay.classList.add('is-visible');
-                this.video.classList.add('is-paused');
-            },
-
+            onPlay() { this.centerPlay.classList.remove('is-visible'); },
+            onPause() { this.centerPlay.classList.add('is-visible'); },
             onTimeUpdate() {
                 if (!isFinite(this.video.duration)) return;
                 const pct = (this.video.currentTime / this.video.duration) * 100;
                 this.progressBar.style.width = pct + '%';
                 this.currentTimeEl.textContent = formatTime(this.video.currentTime);
 
-                // إرسال التقدم للسيرفر كل 10 ثواني لحفظ (آخر مشاهدة)
                 const currentSec = Math.floor(this.video.currentTime);
                 if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
                     this.lastSentTime = currentSec;
                     fetch('/api/student/save-progress', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${state.token}`
-                        },
-                        body: JSON.stringify({
-                            msgId: state.currentMsgId,
-                            currentTime: this.video.currentTime
-                        })
-                    }).catch(() => {}); // نتجاهل الأخطاء الصامتة حتى لا نزعج الطالب
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+                        body: JSON.stringify({ msgId: state.currentMsgId, currentTime: this.video.currentTime })
+                    }).catch(() => {});
                 }
             },
-
             onError() {
                 const err = this.video.error;
-                const code = err ? err.code : 0;
-                const message = err ? err.message : 'بدون تفاصيل';
-                
-                const codes = {
-                    1: 'تم إيقاف تحميل الفيديو.',
-                    2: 'خطأ في الشبكة.',
-                    3: 'صيغة الفيديو غير مدعومة.',
-                    4: 'الفيديو غير متاح حالياً.'
-                };
-                const text = codes[code] || 'تعذّر تشغيل المحاضرة';
-                this.titleEl.textContent = text;
-                
-                if(code !== 0) {
-                    window.showToast(`خطأ في المشغل: ${text}`, 'error');
-                }
+                alert(`🚨 خطأ في مشغل الفيديو المتصفح:\nالكود: ${err ? err.code : 'مجهول'}\nالرسالة: ${err ? err.message : 'لا توجد تفاصيل'}`);
             },
-
             skip(seconds, label) {
                 if (!this.video.src || !isFinite(this.video.duration)) return;
                 this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
@@ -692,7 +625,6 @@
                 this.skipIndicator.classList.add('is-active');
                 haptic(35);
             },
-
             updateMuteIcon() {
                 this.muteBtn.innerHTML = this.video.muted
                     ? '<svg style="width:1.4rem;height:1.4rem;color:#f87171;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l4-4m0 4l-4-4"/></svg>'
@@ -700,27 +632,14 @@
             }
         };
 
-        // ─────────── وضع السينما + ملء الشاشة ───────────
-        function toggleTheater() {
-            document.body.classList.toggle('theater-mode');
-            const isOn = document.body.classList.contains('theater-mode');
-            document.querySelectorAll('main > *:not(:has(#videoContainer))').forEach(el => {
-                el.style.transition = 'opacity 0.3s ease';
-                el.style.opacity = isOn ? '0.15' : '1';
-            });
-        }
-
         function toggleFullscreen() {
             const wrapper = $('fs-wrapper');
             if (!wrapper) return;
-
             if (!document.fullscreenElement) {
                 const req = wrapper.requestFullscreen || wrapper.webkitRequestFullscreen;
                 if (req) {
                     req.call(wrapper).then(() => {
-                        if (screen.orientation && screen.orientation.lock) {
-                            screen.orientation.lock('landscape').catch(() => {});
-                        }
+                        if (screen.orientation && screen.orientation.lock) { screen.orientation.lock('landscape').catch(() => {}); }
                     }).catch(() => {});
                 }
             } else {
@@ -729,32 +648,9 @@
             }
         }
 
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement && screen.orientation && screen.orientation.unlock) {
-                try { screen.orientation.unlock(); } catch (e) { /* ignore */ }
-            }
-        });
-
-        // ─────────── أقسام قابلة للطي ───────────
-        function bindSections() {
-            document.querySelectorAll('.section-head').forEach(head => {
-                head.addEventListener('click', () => {
-                    const id = head.dataset.section;
-                    const body = $(id);
-                    if (!body) return;
-                    head.classList.toggle('is-collapsed');
-                    body.classList.toggle('is-collapsed');
-                });
-            });
-        }
-
-        // ─────────── أنيميشن الرقم ───────────
         function animateNumber(el, from, to, duration = 1200) {
             if (!el) return;
-            if (state.reduceMotion) {
-                el.textContent = to + '%';
-                return;
-            }
+            if (state.reduceMotion) { el.textContent = to + '%'; return; }
             const start = performance.now();
             const step = (now) => {
                 const p = Math.min((now - start) / duration, 1);
@@ -765,12 +661,12 @@
             requestAnimationFrame(step);
         }
 
-        // ─────────── جلب البيانات المنيع ───────────
+        // 📡 دالة جلب البيانات من السيرفر مع إظهار الـ Alert الفوري عند الفشل 📡
         async function fetchData(initial = false) {
             const container = $('studentCoursesContainer');
             if (initial && container) {
                 container.innerHTML = `
-                    <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-fade-in-up w-full">
+                    <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 w-full">
                         <svg class="animate-spin h-10 w-10 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -780,8 +676,6 @@
                     </div>`;
             }
 
-            console.log('📡 جاري طلب البيانات من السيرفر...');
-            
             try {
                 const res = await fetchWithTimeout('/api/student/dashboard-data', {
                     method: 'POST',
@@ -790,57 +684,51 @@
                         'Authorization': `Bearer ${state.token}`
                     },
                     body: JSON.stringify({ email: state.user.email, grade: state.user.grade })
-                }, 15000); // 15 ثانية كحد أقصى
-
-                console.log('✅ تم استلام الرد، الحالة:', res.status);
+                }, 15000);
 
                 if (!res.ok) {
                     if (res.status === 401 || res.status === 403) {
+                        alert("🚨 انتهت صلاحية الجلسة (401/403)، يرجى إعادة تسجيل الدخول.");
                         logout();
                         return;
                     }
-                    throw new Error(`السيرفر رفض الطلب: ${res.status}`);
+                    throw new Error(`رفض السيرفر الطلب برمز الحالة: ${res.status}`);
                 }
 
                 const data = await res.json();
-                console.log('📦 البيانات المستلمة:', data);
-                
                 renderAll(data, initial);
                 
             } catch (err) {
-                console.warn('[Dahih] فشل جلب البيانات:', err.message);
+                // 🚨 إطلاق تنبيه فوري يحتوي تفاصيل المشكلة لرؤيتها من الجوال
+                alert(`🚨 فشل جلب بيانات الـ Dashboard:\nالسبب: ${err.message}\n\nتأكد من عمل السيرفر الداخلي على مسار /api/student/dashboard-data بشكل سليم.`);
 
                 if (container) {
                     container.innerHTML = `
-                        <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full animate-fade-in-up">
+                        <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full">
                             <p class="font-bold text-xl mb-2">فشل تحميل المحاضرات 😔</p>
-                            <p class="text-sm text-gray-400 mb-6">
-                                ${err.message === 'The operation was aborted' ? 'انتهت مهلة الاتصال (الإنترنت ضعيف)' : 'يبدو أن هناك مشكلة في السيرفر أو اتصال الإنترنت'}
-                            </p>
-                            <button onclick="DahihApp.refresh()" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-6 py-2 rounded-xl transition-colors font-bold">
-                                🔄 أعد المحاولة
-                            </button>
-                        </div>
-                    `;
+                            <p class="text-sm text-gray-400 mb-6">${err.message}</p>
+                            <button onclick="DahihApp.refresh()" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-6 py-2 rounded-xl transition-colors font-bold">🔄 أعد المحاولة</button>
+                        </div>`;
                 }
-
-                if (initial) window.showToast('تعذر الاتصال بالسيرفر. يرجى إعادة المحاولة.', 'error');
             }
         }
 
-        // ─────────── العرض (مع DOM diffing) ───────────
+        // توزيع مخرجات التصاميم
         function renderAll(data, initial) {
-            renderCourses(data.courses || data.content?.courses || [], initial);
-            renderQuizzes(data.content?.quizzes || []);
-            renderPoints(data.content?.points || []);
-            renderQuestions(data.content?.questions || []);
-            renderScore(parseInt(data.studentPoints || 0));
+            try {
+                renderCourses(data.courses || data.content?.courses || [], initial);
+                renderQuizzes(data.content?.quizzes || []);
+                renderPoints(data.content?.points || []);
+                renderQuestions(data.content?.questions || []);
+                renderScore(parseInt(data.studentPoints || 0));
+            } catch(e) {
+                alert("🚨 خطأ أثناء توزيع وتصنيع عناصر الـ DOM المعادة من السيرفر:\n" + e.message);
+            }
         }
 
         function renderCourses(list, initial) {
             const container = $('studentCoursesContainer');
             if (!container) return;
-
             list = list || [];
 
             const h = hash(list.map(c => [c.telegramMsgId, c.courseName, c.description, c.duration, c.lastWatched, c.image]));
@@ -854,7 +742,6 @@
             }
 
             container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
-
             const html = list.map((course, idx) => {
                 const id = course.telegramMsgId;
                 const num = idx + 1;
@@ -870,20 +757,16 @@
                 const badgeBg = isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white';
 
                 const actionBtn = isActive 
-                    ? `<button class="w-full flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 rounded-lg transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg> استكمال المشاهدة</button>`
+                    ? `<button class="w-full flex items-center justify-center gap-2 bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2.5 rounded-lg transition-colors">استكمال المشاهدة</button>`
                     : `<button class="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-2.5 rounded-lg transition-colors border border-white/10">تشغيل المحاضرة</button>`;
 
                 const lastWatchedHTML = lastWatched 
-                    ? `<div class="inline-flex items-center gap-2 text-[0.75rem] text-white bg-white/5 px-3 py-1.5 rounded-md mb-4 border border-white/10 w-fit">
-                            <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-                            آخر مشاهدة: الدقيقة ${lastWatched}
-                       </div>` 
+                    ? `<div class="inline-flex items-center gap-2 text-[0.75rem] text-white bg-white/5 px-3 py-1.5 rounded-md mb-4 border border-white/10 w-fit"><span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>آخر مشاهدة: الدقيقة ${lastWatched}</div>` 
                     : '<div class="h-8 mb-4"></div>';
 
                 return `
                     <div class="flex flex-col bg-white/5 border ${borderColor} rounded-xl overflow-hidden hover:-translate-y-1 hover:border-white/20 transition-all duration-300 ${shadow} course-card-v4" id="course_${id}">
-                        <div class="relative h-36 p-4 flex flex-col justify-between border-b border-white/10" 
-                             style="background: linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url('${image}'); background-size: cover; background-position: center;">
+                        <div class="relative h-36 p-4 flex flex-col justify-between border-b border-white/10" style="background: linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url('${image}'); background-size: cover; background-position: center;">
                             <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${badgeBg}">الدرس ${num}</span>
                             <div class="text-white/90 text-xs font-medium drop-shadow-md truncate">${desc}</div>
                         </div>
@@ -897,23 +780,15 @@
                                 ${actionBtn}
                             </div>
                         </div>
-                    </div>
-                `;
+                    </div>`;
             }).join('');
 
             container.innerHTML = html;
-
             container.querySelectorAll('.course-play').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const msgId = btn.dataset.msgid;
-                    const title = btn.dataset.title;
-                    
-                    if (typeof window.switchTab === 'function') {
-                        window.switchTab('dashboard');
-                    }
-                    
-                    player.load(msgId, title);
+                    if (typeof window.switchTab === 'function') { window.switchTab('dashboard'); }
+                    player.load(btn.dataset.msgid, btn.dataset.title);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 });
             });
@@ -922,7 +797,6 @@
         function renderQuizzes(list) {
             const container = $('onlineQuizzesContainer');
             if (!container) return;
-
             const h = hash(list.map(q => [q.id, q.title, q.questions.length, (q.results || []).length]));
             if (h === state.quizzesHash) return;
             state.quizzesHash = h;
@@ -936,10 +810,7 @@
             const html = list.slice().reverse().map(quiz => {
                 const result = quiz.results ? quiz.results.find(r => r.email === state.user.email) : null;
                 const action = result
-                    ? `<div class="btn w-full md:w-auto mt-auto md:mt-0" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.25);cursor:default;">
-                           <svg style="width:1rem;height:1rem;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-                           مكتمل (${result.percentage}%)
-                       </div>`
+                    ? `<div class="btn w-full md:w-auto mt-auto md:mt-0" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.25);cursor:default;">مكتمل (${result.percentage}%)</div>`
                     : `<button class="btn btn-primary quiz-start w-full md:w-auto mt-auto md:mt-0" data-quizid="${escapeHTML(quiz.id)}" type="button">بدء الاختبار</button>`;
 
                 return `
@@ -949,12 +820,9 @@
                             <p class="text-gray-400 text-sm m-0">${quiz.questions.length} أسئلة</p>
                         </div>
                         ${action}
-                    </article>
-                `;
+                    </article>`;
             }).join('');
-
             container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${html}</div>`;
-
             container.querySelectorAll('.quiz-start').forEach(btn => {
                 btn.addEventListener('click', () => openQuizModal(btn.dataset.quizid));
             });
@@ -966,21 +834,8 @@
             const h = hash(list);
             if (h === state.pointsHash) return;
             state.pointsHash = h;
-
-            if (!list.length) {
-                container.innerHTML = '<p class="empty">لا توجد ملاحظات حالياً.</p>';
-                return;
-            }
-            container.innerHTML = `
-                <ul class="fade-in-stagger" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.65rem;">
-                    ${list.map(p => `
-                        <li style="display:flex;gap:0.65rem;color:#cbd5e1;font-size:0.9rem;line-height:1.7;">
-                            <span style="color:var(--accent);flex-shrink:0;line-height:1.7;">▸</span>
-                            <span>${escapeHTML(p)}</span>
-                        </li>
-                    `).join('')}
-                </ul>
-            `;
+            if (!list.length) { container.innerHTML = '<p class="empty">لا توجد ملاحظات حالياً.</p>'; return; }
+            container.innerHTML = `<ul class="fade-in-stagger" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.65rem;">${list.map(p => `<li style="display:flex;gap:0.65rem;color:#cbd5e1;font-size:0.9rem;line-height:1.7;"><span style="color:var(--accent);flex-shrink:0;line-height:1.7;">▸</span><span>${escapeHTML(p)}</span></li>`).join('')}</ul>`;
         }
 
         function renderQuestions(list) {
@@ -989,25 +844,8 @@
             const h = hash(list);
             if (h === state.questionsHash) return;
             state.questionsHash = h;
-
-            if (!list.length) {
-                container.innerHTML = '<p class="empty">لا توجد أسئلة مقالية حالياً.</p>';
-                return;
-            }
-            container.innerHTML = `
-                <div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">
-                    ${list.map((q, i) => `
-                        <article style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:0.75rem;padding:1rem;">
-                            <h3 style="font-size:0.9rem;font-weight:700;color:#fff;margin:0 0 0.5rem;line-height:1.5;">
-                                <span style="color:var(--text-dim);margin-left:0.4rem;">${i + 1}.</span>${escapeHTML(q.question)}
-                            </h3>
-                            <p style="color:var(--text-muted);font-size:0.85rem;line-height:1.7;border-top:1px solid var(--border);padding-top:0.5rem;margin:0;">
-                                <span style="color:var(--accent);font-weight:700;margin-left:0.4rem;">الإجابة:</span>${escapeHTML(q.hint)}
-                            </p>
-                        </article>
-                    `).join('')}
-                </div>
-            `;
+            if (!list.length) { container.innerHTML = '<p class="empty">لا توجد أسئلة مقالية حالياً.</p>'; return; }
+            container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;font-weight:700;color:#fff;margin:0 0 0.5rem;line-height:1.5;"><span style="color:var(--text-dim);margin-left:0.4rem;">${i + 1}.</span>${escapeHTML(q.question)}</h3><p style="color:var(--text-muted);font-size:0.85rem;line-height:1.7;border-top:1px solid var(--border);padding-top:0.5rem;margin:0;"><span style="color:var(--accent);font-weight:700;margin-left:0.4rem;">الإجابة:</span>${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
         }
 
         function renderScore(newPoints) {
@@ -1018,59 +856,63 @@
             state.currentPoints = newPoints;
         }
 
-        // ─────────── الكويز ───────────
         function openQuizModal(quizId) {
             const quiz = state.availableQuizzes.find(q => q.id === quizId);
             if (!quiz) return;
-
             const content = $('quizModalContent');
             const modal = $('quizModal');
             if (!content || !modal) return;
 
             const letters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'];
-
             const questionsHTML = quiz.questions.map((q, qi) => `
                 <div style="background:rgba(0,0,0,0.4);padding:1rem;border-radius:0.75rem;border:1px solid var(--border);margin-bottom:1rem;">
-                    <h4 style="font-size:0.95rem;font-weight:600;margin:0 0 0.85rem;line-height:1.6;color:white;">
-                        <span style="color:var(--accent);margin-left:0.4rem;">${qi + 1}.</span>${escapeHTML(q.questionText)}
-                    </h4>
+                    <h4 style="font-size:0.95rem;font-weight:600;margin:0 0 0.85rem;line-height:1.6;color:white;"><span style="color:var(--accent);margin-left:0.4rem;">${qi + 1}.</span>${escapeHTML(q.questionText)}</h4>
                     <div style="display:grid;grid-template-columns:1fr;gap:0.5rem;">
-                        ${q.options.map((opt, oi) => `
-                            <label class="quiz-option">
-                                <input type="radio" name="q_${qi}" value="${oi}" required>
-                                <div class="opt">
-                                    <span class="opt-letter">${letters[oi] || (oi + 1)}</span>
-                                    <span style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;">${escapeHTML(opt)}</span>
-                                </div>
-                            </label>
-                        `).join('')}
+                        ${q.options.map((opt, oi) => `<label class="quiz-option"><input type="radio" name="q_${qi}" value="${oi}" required><div class="opt"><span class="opt-letter">${letters[oi] || (oi + 1)}</span><span style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;">${escapeHTML(opt)}</span></div></label>`).join('')}
                     </div>
-                </div>
-            `).join('');
+                </div>`).join('');
 
             content.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.25rem;">
                     <h2 id="quizModalTitle" style="font-size:1.15rem;font-weight:700;margin:0;color:white;">${escapeHTML(quiz.title)}</h2>
-                    <span class="badge" style="color:var(--accent);background:rgba(234,179,8,0.1);padding:0.25rem 0.75rem;border-radius:0.5rem;font-size:0.85rem;border:1px solid rgba(234,179,8,0.25);">${quiz.questions.length} أسئلة</span>
                 </div>
                 <form id="activeQuizForm" style="display:flex;flex-direction:column;">
                     ${questionsHTML}
-                    <div style="display:flex;flex-direction:column;gap:0.6rem;padding-top:1rem;border-top:1px solid var(--border);">
-                        <button type="submit" id="btnSubmitQuiz" class="btn btn-primary" style="padding:0.85rem;">
-                            إنهاء وتسليم الإجابات
-                        </button>
-                        <button type="button" class="btn" onclick="DahihApp.closeQuiz()" style="background:transparent;border:1px solid var(--border);color:var(--text-muted);">
-                            إلغاء
-                        </button>
-                    </div>
-                </form>
-            `;
+                    <button type="submit" id="btnSubmitQuiz" class="btn btn-primary" style="padding:0.85rem;">إنهاء وتسليم الإجابات</button>
+                    <button type="button" class="btn mt-2" onclick="DahihApp.closeQuiz()" style="background:transparent;border:1px solid var(--border);color:white;">إلغاء</button>
+                </form>`;
 
             modal.classList.add('is-open');
             modal.classList.remove('opacity-0', 'pointer-events-none');
-            document.body.style.overflow = 'hidden';
-
             $('activeQuizForm').addEventListener('submit', (e) => submitQuiz(e, quiz));
+        }
+
+        async function submitQuiz(event, quiz) {
+            event.preventDefault();
+            const btn = $('btnSubmitQuiz');
+            if (btn) { btn.disabled = true; btn.textContent = 'جاري التصحيح...'; }
+
+            const form = event.target;
+            let score = 0;
+            quiz.questions.forEach((q, qi) => {
+                const el = form.elements[`q_${qi}`];
+                if (el && parseInt(el.value) === q.correctAnswer) score++;
+            });
+            const percentage = Math.round((score / quiz.questions.length) * 100);
+
+            try {
+                await fetchWithTimeout('/api/student/submit-quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+                    body: JSON.stringify({ email: state.user.email, studentName: state.user.name, grade: state.user.grade, quizId: quiz.id, score, percentage })
+                });
+                if (percentage >= 85 && typeof confetti === 'function' && !state.reduceMotion) { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); }
+                closeQuiz();
+                fetchData(true);
+            } catch (err) {
+                alert(`🚨 فشل إرسال نتيجة الاختبار:\n${err.message}`);
+                if (btn) { btn.disabled = false; btn.textContent = 'حاول مجدداً'; }
+            }
         }
 
         function closeQuiz() {
@@ -1080,78 +922,6 @@
             document.body.style.overflow = '';
         }
 
-        async function submitQuiz(event, quiz) {
-            event.preventDefault();
-            const btn = $('btnSubmitQuiz');
-            if (btn) {
-                btn.disabled = true;
-                btn.textContent = 'جاري التصحيح...';
-            }
-
-            const form = event.target;
-            let score = 0;
-
-            quiz.questions.forEach((q, qi) => {
-                const el = form.elements[`q_${qi}`];
-                if (el && parseInt(el.value) === q.correctAnswer) score++;
-            });
-
-            const percentage = Math.round((score / quiz.questions.length) * 100);
-
-            try {
-                await fetchWithTimeout('/api/student/submit-quiz', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${state.token}`
-                    },
-                    body: JSON.stringify({
-                        email: state.user.email,
-                        studentName: state.user.name,
-                        grade: state.user.grade,
-                        quizId: quiz.id,
-                        score,
-                        percentage
-                    })
-                }, 10000);
-
-                if (percentage >= 85 && typeof confetti === 'function' && !state.reduceMotion) {
-                    confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
-                }
-
-                const color = percentage >= 85 ? '#4ade80' : (percentage >= 50 ? '#60a5fa' : '#f87171');
-                $('quizModalContent').innerHTML = `
-                    <div style="text-align:center;padding:2.5rem 1rem;">
-                        <h2 style="font-size:1.25rem;font-weight:700;margin:0 0 0.5rem;color:white;">تم تسجيل النتيجة</h2>
-                        <div style="font-size:clamp(3rem,10vw,5rem);font-weight:900;color:${color};margin:1.25rem 0;letter-spacing:-0.02em;" dir="ltr">${percentage}%</div>
-                        <p style="color:var(--text-muted);margin:0 0 1.5rem;">الإجابات الصحيحة: ${score} من ${quiz.questions.length}</p>
-                        <button class="btn btn-primary" onclick="DahihApp.closeQuiz();DahihApp.refresh();" style="padding:0.85rem 2rem;">العودة للوحة</button>
-                    </div>
-                `;
-            } catch (err) {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.textContent = 'حاول مجدداً';
-                }
-                window.showToast('تعذر إرسال الإجابات، يرجى التأكد من اتصال الإنترنت.', 'error');
-            }
-        }
-
-        // ─────────── إغلاق المودال ───────────
-        function bindModalDismiss() {
-            const modal = $('quizModal');
-            if (!modal) return;
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) closeQuiz();
-            });
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape' && modal.classList.contains('is-open')) {
-                    closeQuiz();
-                }
-            });
-        }
-
-        // ─────────── البدء ───────────
         function init() {
             if (!authGate()) return;
 
@@ -1160,37 +930,16 @@
             $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
 
             player.init();
-            bindSections();
-            bindModalDismiss();
-
-            // الاستدعاء المنيع لأول مرة
             fetchData(true);
 
-            const startPolling = () => {
-                if (state.pollTimer) return;
+            if (!state.pollTimer) {
                 state.pollTimer = setInterval(() => fetchData(false), 10000);
-            };
-            const stopPolling = () => {
-                if (state.pollTimer) {
-                    clearInterval(state.pollTimer);
-                    state.pollTimer = null;
-                }
-            };
-
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) stopPolling();
-                else { fetchData(false); startPolling(); }
-            });
-
-            startPolling();
+            }
         }
 
         window.DahihApp = {
-            logout,
-            toggleTheater,
-            toggleFullscreen,
-            closeQuiz,
-            refresh: () => fetchData(true) // تحديث مع عرض التحميل عند الضغط يدوياً
+            logout, toggleFullscreen, closeQuiz,
+            refresh: () => fetchData(true)
         };
 
         if (document.readyState === 'loading') {
