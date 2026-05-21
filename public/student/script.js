@@ -73,7 +73,7 @@
         input[type=range].volume-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
         input[type=range].volume-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: var(--accent); margin-top: -4px; cursor: pointer; }
 
-        /* 4. تنسيقات الكروت القديمة (للكويزات) */
+        /* 4. تنسيقات الكروت المحقونة عبر الجافاسكريبت */
         .course-card {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -85,6 +85,24 @@
             transform: translateY(-4px);
             border-color: rgba(255, 255, 255, 0.2);
             background: rgba(255, 255, 255, 0.05);
+        }
+        .course-card.is-active {
+            border-color: rgba(234, 179, 8, 0.5);
+            background: rgba(234, 179, 8, 0.05);
+            box-shadow: 0 4px 20px rgba(234, 179, 8, 0.1);
+        }
+        .tag {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 0.2rem 0.6rem;
+            border-radius: 0.4rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .course-card.is-active .tag {
+            color: #eab308;
+            border-color: rgba(234, 179, 8, 0.4);
         }
         .btn {
             display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
@@ -319,15 +337,7 @@
             <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
             
             <div id="studentCoursesContainer" class="flex flex-col gap-8">
-                <!-- حالة التحميل الافتراضية -->
-                <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-fade-in-up">
-                    <svg class="animate-spin h-10 w-10 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات...</p>
-                    <p class="text-sm mt-2 text-gray-500">جاري الاتصال بقاعدة البيانات</p>
-                </div>
+                <!-- سيتم تفريغه واستبداله بالبيانات -->
             </div>
         </div>
 
@@ -459,6 +469,18 @@
             window.location.replace('/logina.html');
         }
 
+        // دالة الـ fetch المنيعة ضد التعليق
+        async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+            const controller = new AbortController();
+            const id = setTimeout(() => controller.abort(), timeout);
+            try {
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                return response;
+            } finally {
+                clearTimeout(id);
+            }
+        }
+
         // ─────────── المشغّل ───────────
         const player = {
             video: null,
@@ -555,6 +577,7 @@
                 
                 const videoUrl = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
+                // 🕵️‍♂️ الجاسوس اللي بيفضح السيرفر ويطبع لك الخطأ على شاشة الجوال
                 fetch(videoUrl, { headers: { 'Range': 'bytes=0-100' } })
                     .then(async (response) => {
                         if (!response.ok) {
@@ -734,29 +757,66 @@
             requestAnimationFrame(step);
         }
 
-        // ─────────── جلب البيانات ───────────
+        // ─────────── جلب البيانات المنيع ───────────
         async function fetchData(initial = false) {
+            const container = $('studentCoursesContainer');
+            if (initial && container) {
+                container.innerHTML = `
+                    <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-fade-in-up w-full">
+                        <svg class="animate-spin h-10 w-10 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات...</p>
+                        <p class="text-sm mt-2 text-gray-500">جاري الاتصال بقاعدة البيانات</p>
+                    </div>`;
+            }
+
+            console.log('📡 جاري طلب البيانات من السيرفر...');
+            
             try {
-                const res = await fetch('/api/student/dashboard-data', {
+                const res = await fetchWithTimeout('/api/student/dashboard-data', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${state.token}`
                     },
                     body: JSON.stringify({ email: state.user.email, grade: state.user.grade })
-                });
+                }, 15000); // 15 ثانية كحد أقصى
+
+                console.log('✅ تم استلام الرد، الحالة:', res.status);
 
                 if (!res.ok) {
                     if (res.status === 401 || res.status === 403) {
                         logout();
+                        return;
                     }
-                    return;
+                    throw new Error(`السيرفر رفض الطلب: ${res.status}`);
                 }
 
                 const data = await res.json();
+                console.log('📦 البيانات المستلمة:', data);
+                
                 renderAll(data, initial);
+                
             } catch (err) {
                 console.warn('[Dahih] فشل جلب البيانات:', err.message);
+
+                if (container) {
+                    container.innerHTML = `
+                        <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full animate-fade-in-up">
+                            <p class="font-bold text-xl mb-2">فشل تحميل المحاضرات 😔</p>
+                            <p class="text-sm text-gray-400 mb-6">
+                                ${err.message === 'The operation was aborted' ? 'انتهت مهلة الاتصال (الإنترنت ضعيف)' : 'يبدو أن هناك مشكلة في السيرفر أو اتصال الإنترنت'}
+                            </p>
+                            <button onclick="DahihApp.refresh()" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-6 py-2 rounded-xl transition-colors font-bold">
+                                🔄 أعد المحاولة
+                            </button>
+                        </div>
+                    `;
+                }
+
+                if (initial) window.showToast('تعذر الاتصال بالسيرفر. يرجى إعادة المحاولة.', 'error');
             }
         }
 
@@ -781,7 +841,7 @@
 
             if (list.length === 0) {
                 container.className = "flex flex-col gap-8";
-                container.innerHTML = '<div class="text-center py-16 text-gray-500 bg-white/5 rounded-2xl border border-white/10">لا توجد محاضرات متاحة حالياً.</div>';
+                container.innerHTML = '<div class="text-center py-16 text-gray-400 bg-white/5 rounded-2xl border border-white/10 w-full">لا توجد محاضرات متاحة حالياً لصفك الدراسي.</div>';
                 return;
             }
 
@@ -1031,7 +1091,7 @@
             const percentage = Math.round((score / quiz.questions.length) * 100);
 
             try {
-                await fetch('/api/student/submit-quiz', {
+                await fetchWithTimeout('/api/student/submit-quiz', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1045,7 +1105,7 @@
                         score,
                         percentage
                     })
-                });
+                }, 10000);
 
                 if (percentage >= 85 && typeof confetti === 'function' && !state.reduceMotion) {
                     confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } });
@@ -1065,6 +1125,7 @@
                     btn.disabled = false;
                     btn.textContent = 'حاول مجدداً';
                 }
+                window.showToast('تعذر إرسال الإجابات، يرجى التأكد من اتصال الإنترنت.', 'error');
             }
         }
 
@@ -1094,6 +1155,7 @@
             bindSections();
             bindModalDismiss();
 
+            // الاستدعاء المنيع لأول مرة
             fetchData(true);
 
             const startPolling = () => {
@@ -1120,7 +1182,7 @@
             toggleTheater,
             toggleFullscreen,
             closeQuiz,
-            refresh: () => fetchData(false)
+            refresh: () => fetchData(true) // تحديث مع عرض التحميل عند الضغط يدوياً
         };
 
         if (document.readyState === 'loading') {
