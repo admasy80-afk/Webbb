@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const crypto = require('crypto');
+const fs = require('fs');
 const { pipeline } = require('stream');
 const { MongoClient, ObjectId } = require('mongodb');
 const bcrypt = require('bcryptjs');
@@ -15,6 +16,7 @@ const busboy = require('busboy');
 const { z } = require('zod');
 const pino = require('pino');
 const os = require('os');
+const ffmpeg = require('fluent-ffmpeg');
 
 const logger = pino({
     level: process.env.LOG_LEVEL || 'info',
@@ -40,8 +42,9 @@ let fileTypeStream;
 })();
 
 const {
-    S3Client, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListMultipartUploadsCommand, AbortMultipartUploadCommand
+    S3Client, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListMultipartUploadsCommand, AbortMultipartUploadCommand, PutObjectCommand
 } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { Upload } = require('@aws-sdk/lib-storage');
 const { NodeHttpHandler } = require('@smithy/node-http-handler');
 const https = require('https');
@@ -73,7 +76,7 @@ app.use(helmet({
     noSniff: true
 }));
 
-const allowedOrigins = process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : ['[localhost](http://localhost:3000)', '[127.0.0.1](http://127.0.0.1:3000)'];
+const allowedOrigins = process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : ['http://localhost:3000', 'http://127.0.0.1:3000'];
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
@@ -575,12 +578,73 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                 markProviderSuccess(chosenProvider.name, bytesReceived);
                 if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null; }
 
+                // =========================================================================
+                // 🪄 عملية استخراج الميتاداتا (الغلاف والمدة) آلياً عبر رابط مؤقت و ffmpeg
+                // =========================================================================
+                let finalDuration = courseData.duration || 'غير محدد';
+                let finalImageUrl = courseData.imageUrl || '';
+
+                try {
+                    log.info(`[${uploadId}] بدء استخراج الغلاف والمدة من الفيديو...`);
+                    const getCmd = new GetObjectCommand({ Bucket: chosenProvider.bucket, Key: fileKey });
+                    const signedUrl = await getSignedUrl(chosenProvider.client, getCmd, { expiresIn: 3600 });
+
+                    // استخراج المدة
+                    finalDuration = await new Promise((resolve) => {
+                        ffmpeg.ffprobe(signedUrl, (err, metadata) => {
+                            if (err || !metadata || !metadata.format) return resolve('غير محدد');
+                            const d = metadata.format.duration;
+                            const mins = Math.floor(d / 60);
+                            const secs = Math.floor(d % 60);
+                            resolve(`${mins}:${secs < 10 ? '0' : ''}${secs}`);
+                        });
+                    });
+
+                    // استخراج صورة الغلاف
+                    const thumbFilename = `thumb_${crypto.randomUUID()}.jpg`;
+                    const thumbPath = path.join(os.tmpdir(), thumbFilename);
+
+                    await new Promise((resolve) => {
+                        ffmpeg(signedUrl)
+                            .screenshots({
+                                timestamps: ['00:00:03.000'],
+                                filename: thumbFilename,
+                                folder: os.tmpdir(),
+                                size: '1280x720'
+                            })
+                            .on('end', resolve)
+                            .on('error', (err) => {
+                                log.warn({ err: err.message }, `⚠️ [${uploadId}] فشل استخراج الغلاف`);
+                                resolve();
+                            });
+                    });
+
+                    // رفع الغلاف لنفس المزود السحابي الذي تم رفع الفيديو عليه
+                    if (fs.existsSync(thumbPath)) {
+                        const thumbKey = `thumbnails/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${thumbFilename}`;
+                        await chosenProvider.client.send(new PutObjectCommand({
+                            Bucket: chosenProvider.bucket,
+                            Key: thumbKey,
+                            Body: fs.createReadStream(thumbPath),
+                            ContentType: 'image/jpeg'
+                        }));
+                        finalImageUrl = thumbKey; // تحديث المسار
+                        fs.unlinkSync(thumbPath); // مسح الصورة المؤقتة من السيرفر
+                        log.info(`✅ [${uploadId}] تم استخراج ورفع الغلاف بنجاح`);
+                    }
+
+                } catch (metaErr) {
+                    log.warn({ err: metaErr.message }, `⚠️ [${uploadId}] فشل سحب الميتاداتا، جاري إكمال حفظ الدورة`);
+                }
+
                 // 💾 حفظ في قاعدة البيانات
                 try {
                     const insertResult = await db.collection('courses').insertOne({
                         courseName: courseData.courseName,
                         grade: courseData.grade,
                         description: courseData.description || "",
+                        duration: finalDuration,
+                        image: finalImageUrl,
                         telegramMsgId: crypto.randomUUID(),
                         fileKey: fileKey,
                         provider: chosenProvider.name,
@@ -600,6 +664,8 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                         courseId: insertResult.insertedId.toString(),
                         uploadId,
                         provider: chosenProvider.name,
+                        duration: finalDuration,
+                        image: finalImageUrl,
                         fileSize: bytesReceived,
                         humanSize: formatBytes(bytesReceived),
                         durationSec: parseFloat(durationSec),
@@ -771,6 +837,11 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
             else if (course.provider === 'IDRIVE') { targetClient = idriveClient; targetBucket = IDRIVE_BUCKET_NAME; }
             else { targetClient = r2Client; targetBucket = R2_BUCKET_NAME; }
             try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.fileKey })); } catch (e) { }
+            
+            // تنظيف الغلاف لو موجود
+            if (course.image && course.image.startsWith('thumbnails/')) {
+                 try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.image })); } catch (e) { }
+            }
         }
         await db.collection('courses').deleteOne({ _id: new ObjectId(courseId) });
         res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
