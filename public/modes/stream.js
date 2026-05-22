@@ -1,11 +1,11 @@
 // ==================== 4. سكريبت البث المباشر (المطور بواسطة VideoSDK) ====================
-// تأكد أنك استدعيت مكتبة VideoSDK في ملف admin.html هكذا:
-// <script src="https://sdk.videosdk.live/js-sdk/0.1.21/videosdk.js"></script>
+// تأكد أنك استدعيت النسخة الجديدة في HTML:
+// <script src="https://sdk.videosdk.live/rtc-js-prebuilt/0.3.31/rtc-js-prebuilt.js"></script>
 
 import { SysUI } from './ui.js';
 import { user, sessionToken } from './state.js';
 
-// التوكن الصحيح الخاص بك
+// ⚠️ خطر أمني: التوكن مكشوف هنا. يجب جلبه لاحقاً من الـ Backend عبر API (مثال: fetch('/api/get-token'))
 const VIDEOSDK_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiI3YWRiNmM1Ny1lMjUyLTRkNDktOTQyYS0zMWYxMjNmMzUxYjQiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTc3OTQ2MzY0OCwiZXhwIjoxOTM3MjUxNjQ4fQ.Xv1g9Hf4yg_fW26n2lO-zcNQ9Y9EesHZZm9nBajPb2A"; 
 
 let meeting = null;
@@ -22,7 +22,6 @@ const toggleCamBtn = document.getElementById('toggleCamBtn');
 const fullscreenBtn = document.getElementById('fullscreenBtn');
 const streamStatusBadge = document.getElementById('streamStatusBadge');
 
-// إعداد وضع ملء الشاشة
 if(fullscreenBtn) {
     fullscreenBtn.addEventListener('click', () => {
         if (!document.fullscreenElement) {
@@ -31,7 +30,6 @@ if(fullscreenBtn) {
     });
 }
 
-// دالة إنشاء غرفة بث جديدة برمجياً عبر سيرفرات VideoSDK 
 async function createNewMeetingId() {
     const url = `https://api.videosdk.live/v2/rooms`;
     const options = {
@@ -68,28 +66,37 @@ if(startStreamBtn) {
             
             if (!meetingId) throw new Error("فشل تكوين اتصال مع سيرفرات البث.");
 
-            // الاعتماد على المكتبة المستدعاة من الـ HTML
-            if (typeof window.VideoSDK === 'undefined') {
-                 throw new Error("لم يتم العثور على مكتبة VideoSDK. تأكد من إضافتها في ملف الـ HTML.");
+            const VideoSDK = window.VideoSDK;
+            if (!VideoSDK) {
+                throw new Error("فشل تحميل VideoSDK من الـ CDN");
             }
 
-            window.VideoSDK.config(VIDEOSDK_TOKEN);
+            VideoSDK.config(VIDEOSDK_TOKEN);
 
-            meeting = window.VideoSDK.initMeeting({
+            meeting = VideoSDK.initMeeting({
                 meetingId: meetingId,
-                name: user?.name || "المعلم / الأدمن", // حماية إضافية لو user = null
-                micEnabled: !isAudioMuted,
-                webcamEnabled: !isVideoHidden,
-                mode: "CONFERENCE" // تم التعديل لتفادي تعليق الحسابات غير المدعومة بالكامل
+                name: user?.name || "المعلم / الأدمن",
+                mode: "CONFERENCE" 
             });
 
             alert("3. جاري الانضمام... نرجو الموافقة على الكاميرا إذا طلب المتصفح ذلك.");
             meeting.join();
 
-            // الحدث الأساسي: لا نستدعي الكاميرا إلا بعد التأكد من الدخول
+            meeting.on("participant-joined", (participant) => {
+                console.log("Participant joined", participant);
+            });
+
             meeting.on("meeting-joined", async () => {
                 alert("5. ✅ تم الدخول للبث المباشر بنجاح!");
                 
+                // تشغيل الكاميرا والمايك بشكل مضمون بعد اكتمال الجلسة
+                try {
+                    if (!isVideoHidden) await meeting.enableWebcam();
+                    if (!isAudioMuted) await meeting.unmuteMic();
+                } catch (mediaErr) {
+                    console.warn("تنبيه: فشل التشغيل التلقائي للميديا", mediaErr);
+                }
+
                 streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-green-500 block pulse-live"></span> البث مباشر الآن | معرف الغرفة: ${meetingId}`;
                 streamStatusBadge.className = "bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3 transition-colors duration-300";
                 
@@ -98,7 +105,6 @@ if(startStreamBtn) {
                 startStreamBtn.innerHTML = `بدء البث`; 
                 startStreamBtn.disabled = false;
 
-                // الآن localParticipant أصبح متاحاً ولن يعيد undefined
                 const localParticipant = meeting.localParticipant;
                 
                 if (localParticipant) {
@@ -153,7 +159,6 @@ if(startStreamBtn) {
     });
 }
 
-// التحكم في كتم وصوت المايك عبر الـ SDK
 if(toggleMicBtn) {
     toggleMicBtn.addEventListener('click', () => {
         if (meeting) {
@@ -168,7 +173,6 @@ if(toggleMicBtn) {
     });
 }
 
-// التحكم في إخفاء الكاميرا عبر الـ SDK
 if(toggleCamBtn) {
     toggleCamBtn.addEventListener('click', () => {
         if (meeting) {
@@ -177,13 +181,12 @@ if(toggleCamBtn) {
             
             toggleCamBtn.className = isVideoHidden ? "bg-red-500/80 hover:bg-red-600 text-white p-2.5 rounded-lg border border-red-500 transition-all duration-300 scale-95" : "bg-black/50 hover:bg-black text-white p-2.5 rounded-lg border border-white/10 transition-all duration-300 scale-100";
             toggleCamBtn.innerHTML = isVideoHidden ? 
-                `<svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943-9.543-7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>` : 
+                `<svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943 9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268-2.943 9.543-7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>` : 
                 `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>`;
         }
     });
 }
 
-// دالة إنهاء البث المباشر وتنظيف الذاكرة
 async function stopLiveStream(forced = false) {
     if (meeting) {
         meeting.leave();
