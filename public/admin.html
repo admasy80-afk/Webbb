@@ -126,7 +126,6 @@
 </head>
 <body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
 
-    <!-- حاوية الإشعارات -->
     <div id="toast-container" class="fixed bottom-5 left-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
     <aside class="w-full md:w-72 glass-panel h-auto md:h-full flex flex-col border-b md:border-b-0 md:border-l border-white/10 shrink-0 z-10 md:overflow-y-auto">
@@ -292,7 +291,6 @@
             </div>
         </div>
 
-        <!-- 🌟 قسم الكورسات المطور بالكامل (صورة من الجهاز + مدة مخفية) 🌟 -->
         <div id="tab-videos" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة الكورسات</h1>
             <p class="text-gray-400 mb-6">يرجي ملئ البيانات بالأسفل لرفع الكورس.</p>
@@ -328,7 +326,6 @@
                             </select>
                         </div>
 
-                        <!-- 🖼️ زر رفع صورة الغلاف من الجهاز -->
                         <div>
                             <label class="block text-xs text-gray-400 mb-2">صورة غلاف الكورس (اختياري)</label>
                             <label for="courseImageFile" class="w-full flex items-center justify-center gap-2 bg-black/30 border border-white/10 border-dashed rounded-xl px-4 py-4 text-gray-400 hover:text-white hover:border-yellow-500 cursor-pointer transition-colors text-sm">
@@ -337,7 +334,6 @@
                             </label>
                             <input type="file" id="courseImageFile" accept="image/*" class="hidden">
                             
-                            <!-- معاينة الصورة -->
                             <div class="mt-3 rounded-xl overflow-hidden hidden relative" id="previewContainer">
                                 <img id="imagePreview" src="" alt="معاينة" class="w-full h-32 object-cover opacity-80 hover:opacity-100 transition-opacity border border-white/10 rounded-xl">
                                 <button type="button" id="removeImageBtn" class="absolute top-2 right-2 bg-black/70 hover:bg-red-500 text-white p-1 rounded-md transition-colors">
@@ -354,8 +350,7 @@
                         <div>
                             <label class="block text-xs text-gray-400 mb-2">اختر ملف الفيديو</label>
                             <input type="file" id="videoFile" accept="video/*" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 text-sm transition-colors">
-                            <!-- تم إخفاء رسالة المدة للاحتفاظ بتجربة نظيفة -->
-                        </div>
+                            </div>
 
                         <div id="videoProgressContainer" class="hidden bg-black/40 p-4 rounded-xl border border-white/5 space-y-2">
                             <div class="flex justify-between text-xs font-semibold">
@@ -559,7 +554,6 @@
         </div>
     </div>
 
-    <!-- 🌟 سكربت إدارة الكورسات، ضغط الصور، وحساب المدة 🌟 -->
     <script>
         let calculatedDuration = "غير محدد"; 
         let courseImageBase64 = "";
@@ -792,6 +786,11 @@
         }
     </script>
 
+    <script src="https://sdk.videosdk.live/js-sdk/0.1.21/videosdk.js"></script>
+
+    <script type="module" src="./modes/ui.js"></script>
+    <script type="module" src="./modes/state.js"></script>
+    <script type="module" src="./modes/stream.js"></script>
     <script type="module" src="./modes/main.js"></script>
 </body>
 </html>
