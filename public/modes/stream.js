@@ -5,7 +5,7 @@ import { user, sessionToken } from './state.js';
 // نقوم باستيراد مكتبة VideoSDK من خلال الرابط السحابي مباشرة طالما نعمل بملفات سكريبت عادية
 import 'https://sdk.videosdk.live/js-sdk/0.1.6/videosdk.js';
 
-// البيانات التي جلبناها من ملف الـ .env واللوحة
+// التوكن الصحيح الخاص بك
 const VIDEOSDK_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiI3YWRiNmM1Ny1lMjUyLTRkNDktOTQyYS0zMWYxMjNmMzUxYjQiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTc3OTQ2MzY0OCwiZXhwIjoxOTM3MjUxNjQ4fQ.Xv1g9Hf4yg_fW26n2lO-zcNQ9Y9EesHZZm9nBajPb2A"; 
 
 let meeting = null;
@@ -31,7 +31,7 @@ if(fullscreenBtn) {
     });
 }
 
-// دالة سحرية لإنشاء غرفة بث جديدة برمجياً عبر سيرفرات VideoSDK (تم التعديل لإضافة فحص الأخطاء)
+// دالة إنشاء غرفة بث جديدة برمجياً عبر سيرفرات VideoSDK 
 async function createNewMeetingId() {
     const url = `https://api.videosdk.live/v2/rooms`;
     const options = {
@@ -55,21 +55,26 @@ async function createNewMeetingId() {
         return data.roomId;
     } catch (error) {
         console.error("فشل في دالة createNewMeetingId:", error);
-        throw error; // سيتم التقاط هذا الخطأ في زر البث أدناه
+        throw error; 
     }
 }
 
 if(startStreamBtn) {
     startStreamBtn.addEventListener('click', async () => {
         try {
+            console.log("1. تم الضغط على الزر، نبدأ الآن...");
             startStreamBtn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> جاري تهيئة السيرفرات...`;
             startStreamBtn.disabled = true;
 
             // 1. توليد معرف البث المباشر
+            console.log("2. جاري طلب إنشاء غرفة جديدة من السيرفر...");
             const meetingId = await createNewMeetingId();
+            console.log("3. تم إنشاء الغرفة بنجاح! المعرف هو:", meetingId);
+
             if (!meetingId) throw new Error("فشل تكوين اتصال مع سيرفرات البث.");
 
             // 2. إعداد وتكوين مكتبة VideoSDK
+            console.log("4. جاري تهيئة مكتبة VideoSDK بالتوكن...");
             window.VideoSDK.config(VIDEOSDK_TOKEN);
 
             meeting = window.VideoSDK.initMeeting({
@@ -80,11 +85,14 @@ if(startStreamBtn) {
                 mode: "SEND_AND_RECV" // وضع المضيف الذي يبث للجميع
             });
 
+            console.log("5. تم تجهيز الغرفة، جاري طلب الانضمام (Join)...");
             // 3. بدء الانضمام الفعلي للبث
             meeting.join();
+            console.log("6. تم استدعاء دالة الانضمام بنجاح! (ننتظر الآن رد السيرفر أو صلاحيات الكاميرا)");
 
             // 4. استماع لحظة تمكين الكاميرا لعرضها في الـ UI
             meeting.localParticipant.on("stream-enabled", (stream) => {
+                console.log("🎥 تم تفعيل بث الكاميرا/المايك:", stream.kind);
                 if (stream.kind === "video") {
                     const mediaStream = new MediaStream();
                     mediaStream.addTrack(stream.track);
@@ -100,6 +108,7 @@ if(startStreamBtn) {
 
             // 5. حدث نجاح تشغيل البث المباشر بالكامل
             meeting.on("meeting-joined", async () => {
+                console.log("✅ تم دخول الغرفة وبدء البث بنجاح!");
                 streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-green-500 block pulse-live"></span> البث مباشر الآن | معرف الغرفة: ${meetingId}`;
                 streamStatusBadge.className = "bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3 transition-colors duration-300";
                 
@@ -108,26 +117,36 @@ if(startStreamBtn) {
                 startStreamBtn.innerHTML = `بدء البث`; 
                 startStreamBtn.disabled = false;
 
-                // إعلام باك-إند المنصة الخاصة بك بأن البث قد بدأ ونمرر له الـ meetingId ليتمكن الطلاب من الدخول
+                // إعلام باك-إند المنصة الخاصة بك بأن البث قد بدأ
                 try {
                     await fetch('/api/admin/toggle-stream', { 
                         method: 'POST', 
                         headers: {'Content-Type': 'application/json'}, 
                         body: JSON.stringify({ role: user.role, sessionToken: sessionToken, isLive: true, meetingId: meetingId }) 
                     });
-                } catch (e) { console.warn("Stream toggle API silent fail", e); }
+                } catch (e) { console.warn("تنبيه: فشل إعلام الباك-إند ببدء البث", e); }
             });
 
             // أحداث الخطأ أو الإغلاق المفاجئ من السيرفر
-            meeting.on("meeting-left", () => { stopLiveStream(true); });
+            meeting.on("meeting-left", () => { 
+                console.log("تم مغادرة الغرفة.");
+                stopLiveStream(true); 
+            });
             meeting.on("error", (err) => { 
+                console.error("❌ خطأ من أحداث الغرفة:", err);
                 SysUI.toast('error', `خطأ في سيرفر البث: ${err.message}`); 
                 stopLiveStream(true); 
             });
 
         } catch (err) { 
-            // سيظهر الخطأ هنا للمستخدم وسيتم إرجاع الزر لحالته الأصلية
-            SysUI.toast('error', `خطأ: ${err.message}`); 
+            console.error("❌ حدث خطأ غير متوقع أوقف العملية:", err);
+            
+            try {
+                SysUI.toast('error', `خطأ: ${err.message}`); 
+            } catch (uiErr) {
+                console.error("فشل في عرض رسالة الخطأ للمستخدم:", uiErr);
+            }
+            
             startStreamBtn.innerHTML = `بدء البث`; 
             startStreamBtn.disabled = false;
             stopLiveStream(true); 
