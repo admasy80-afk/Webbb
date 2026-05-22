@@ -6,7 +6,7 @@ import { user, sessionToken } from './state.js';
 import 'https://sdk.videosdk.live/js-sdk/0.1.6/videosdk.js';
 
 // البيانات التي جلبناها من ملف الـ .env واللوحة
-const VIDEOSDK_TOKEN = "4bc289fe416d09f0ea5b3f9929d3e800b5cb4d111c6f37e02f32ca26e5ac69db"; 
+const VIDEOSDK_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiI3YWRiNmM1Ny1lMjUyLTRkNDktOTQyYS0zMWYxMjNmMzUxYjQiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTc3OTQ2MzY0OCwiZXhwIjoxOTM3MjUxNjQ4fQ.Xv1g9Hf4yg_fW26n2lO-zcNQ9Y9EesHZZm9nBajPb2A"; 
 
 let meeting = null;
 let isAudioMuted = false;
