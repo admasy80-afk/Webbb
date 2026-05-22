@@ -404,7 +404,8 @@ export async function submitPublicQuiz(questionsSourceArray, isForced = false) {
         
         if (res.ok) {
             const data = await res.json();
-            const fullLink = `https://webbb-production-b681.up.railway.app/public-quiz.html?id=${data.quizId}`; 
+          const baseUrl = window.location.origin;
+const fullLink = `${baseUrl}/public-quiz.html?id=${data.quizId}`;
             
             document.getElementById('publicQuizForm').reset();
             document.getElementById('dynamicPublicQuestionsContainer').innerHTML = '';
