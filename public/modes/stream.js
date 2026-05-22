@@ -1,9 +1,9 @@
 // ==================== 4. سكريبت البث المباشر (المطور بواسطة VideoSDK) ====================
+// تأكد أنك استدعيت مكتبة VideoSDK في ملف admin.html هكذا:
+// <script src="https://sdk.videosdk.live/js-sdk/0.1.21/videosdk.js"></script>
+
 import { SysUI } from './ui.js';
 import { user, sessionToken } from './state.js';
-
-// تحديث الإصدار إلى 0.1.21 (أحدث وأكثر استقراراً)
-import 'https://sdk.videosdk.live/js-sdk/0.1.21/videosdk.js';
 
 // التوكن الصحيح الخاص بك
 const VIDEOSDK_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiI3YWRiNmM1Ny1lMjUyLTRkNDktOTQyYS0zMWYxMjNmMzUxYjQiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTc3OTQ2MzY0OCwiZXhwIjoxOTM3MjUxNjQ4fQ.Xv1g9Hf4yg_fW26n2lO-zcNQ9Y9EesHZZm9nBajPb2A"; 
@@ -68,11 +68,16 @@ if(startStreamBtn) {
             
             if (!meetingId) throw new Error("فشل تكوين اتصال مع سيرفرات البث.");
 
+            // الاعتماد على المكتبة المستدعاة من الـ HTML
+            if (typeof window.VideoSDK === 'undefined') {
+                 throw new Error("لم يتم العثور على مكتبة VideoSDK. تأكد من إضافتها في ملف الـ HTML.");
+            }
+
             window.VideoSDK.config(VIDEOSDK_TOKEN);
 
             meeting = window.VideoSDK.initMeeting({
                 meetingId: meetingId,
-                name: user.name || "المعلم / الأدمن",
+                name: user?.name || "المعلم / الأدمن", // حماية إضافية لو user = null
                 micEnabled: !isAudioMuted,
                 webcamEnabled: !isVideoHidden,
                 mode: "CONFERENCE" // تم التعديل لتفادي تعليق الحسابات غير المدعومة بالكامل
@@ -122,7 +127,7 @@ if(startStreamBtn) {
                     await fetch('/api/admin/toggle-stream', { 
                         method: 'POST', 
                         headers: {'Content-Type': 'application/json'}, 
-                        body: JSON.stringify({ role: user.role, sessionToken: sessionToken, isLive: true, meetingId: meetingId }) 
+                        body: JSON.stringify({ role: user?.role || 'admin', sessionToken: sessionToken, isLive: true, meetingId: meetingId }) 
                     });
                 } catch (e) { console.warn("تنبيه: فشل إعلام الباك-إند ببدء البث", e); }
             });
@@ -219,7 +224,7 @@ async function stopLiveStream(forced = false) {
     try {
         await fetch('/api/admin/toggle-stream', { 
             method: 'POST', headers: {'Content-Type': 'application/json'}, 
-            body: JSON.stringify({ role: user.role, sessionToken: sessionToken, isLive: false }) 
+            body: JSON.stringify({ role: user?.role || 'admin', sessionToken: sessionToken, isLive: false }) 
         });
     } catch (e) {}
 }
