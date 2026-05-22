@@ -19,7 +19,7 @@ if (!userDataStr || userDataStr === "undefined") {
             document.addEventListener('DOMContentLoaded', () => {
                 const adminNameEl = document.getElementById('adminWelcomeName');
                 if (adminNameEl) {
-                    adminNameEl.innerText = user.name || user.first_name || "إدارة";
+                    adminNameEl.innerText = user.name || user.first_name || "مستر";
                     adminNameEl.classList.add('animate-pulse');
                     setTimeout(() => adminNameEl.classList.remove('animate-pulse'), 2000);
                 }
