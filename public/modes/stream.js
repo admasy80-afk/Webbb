@@ -31,16 +31,32 @@ if(fullscreenBtn) {
     });
 }
 
-// دالة سحرية لإنشاء غرفة بث جديدة برمجياً عبر سيرفرات VideoSDK
+// دالة سحرية لإنشاء غرفة بث جديدة برمجياً عبر سيرفرات VideoSDK (تم التعديل لإضافة فحص الأخطاء)
 async function createNewMeetingId() {
     const url = `https://api.videosdk.live/v2/rooms`;
     const options = {
         method: "POST",
-        headers: { Authorization: VIDEOSDK_TOKEN, "Content-Type": "application/json" },
+        headers: { 
+            "Authorization": VIDEOSDK_TOKEN, 
+            "Content-Type": "application/json" 
+        },
     };
-    const response = await fetch(url, options);
-    const { roomId } = await response.json();
-    return roomId;
+    
+    try {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        
+        // فحص حالة الاستجابة لمعرفة الخطأ الحقيقي
+        if (!response.ok) {
+            console.error("تفاصيل الخطأ من سيرفر الفيديو:", data);
+            throw new Error(data.error || `فشل الاتصال: رمز الخطأ ${response.status}`);
+        }
+        
+        return data.roomId;
+    } catch (error) {
+        console.error("فشل في دالة createNewMeetingId:", error);
+        throw error; // سيتم التقاط هذا الخطأ في زر البث أدناه
+    }
 }
 
 if(startStreamBtn) {
@@ -110,6 +126,7 @@ if(startStreamBtn) {
             });
 
         } catch (err) { 
+            // سيظهر الخطأ هنا للمستخدم وسيتم إرجاع الزر لحالته الأصلية
             SysUI.toast('error', `خطأ: ${err.message}`); 
             startStreamBtn.innerHTML = `بدء البث`; 
             startStreamBtn.disabled = false;
@@ -195,4 +212,3 @@ async function stopLiveStream(forced = false) {
 }
 
 window.stopLiveStream = stopLiveStream;
-
