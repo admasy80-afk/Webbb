@@ -2,8 +2,8 @@
 import { SysUI } from './ui.js';
 import { user, sessionToken } from './state.js';
 
-// نقوم باستيراد مكتبة VideoSDK من خلال الرابط السحابي مباشرة طالما نعمل بملفات سكريبت عادية
-import 'https://sdk.videosdk.live/js-sdk/0.1.6/videosdk.js';
+// تحديث الإصدار إلى 0.1.21 (أحدث وأكثر استقراراً)
+import 'https://sdk.videosdk.live/js-sdk/0.1.21/videosdk.js';
 
 // التوكن الصحيح الخاص بك
 const VIDEOSDK_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhcGlrZXkiOiI3YWRiNmM1Ny1lMjUyLTRkNDktOTQyYS0zMWYxMjNmMzUxYjQiLCJwZXJtaXNzaW9ucyI6WyJhbGxvd19qb2luIl0sImlhdCI6MTc3OTQ2MzY0OCwiZXhwIjoxOTM3MjUxNjQ4fQ.Xv1g9Hf4yg_fW26n2lO-zcNQ9Y9EesHZZm9nBajPb2A"; 
@@ -46,7 +46,6 @@ async function createNewMeetingId() {
         const response = await fetch(url, options);
         const data = await response.json();
         
-        // فحص حالة الاستجابة لمعرفة الخطأ الحقيقي
         if (!response.ok) {
             throw new Error(data.error || `فشل الاتصال: رمز الخطأ ${response.status}`);
         }
@@ -57,7 +56,6 @@ async function createNewMeetingId() {
     }
 }
 
-// تعديل زر بدء البث ليعمل مع تنبيهات الجوال (Alerts)
 if(startStreamBtn) {
     startStreamBtn.addEventListener('click', async () => {
         try {
@@ -65,13 +63,11 @@ if(startStreamBtn) {
             startStreamBtn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></span> جاري تهيئة السيرفرات...`;
             startStreamBtn.disabled = true;
 
-            // 1. توليد معرف البث المباشر
             const meetingId = await createNewMeetingId();
             alert("2. نجاح: تم إنشاء الغرفة! المعرف: " + meetingId);
             
             if (!meetingId) throw new Error("فشل تكوين اتصال مع سيرفرات البث.");
 
-            // 2. إعداد وتكوين مكتبة VideoSDK
             window.VideoSDK.config(VIDEOSDK_TOKEN);
 
             meeting = window.VideoSDK.initMeeting({
@@ -79,32 +75,16 @@ if(startStreamBtn) {
                 name: user.name || "المعلم / الأدمن",
                 micEnabled: !isAudioMuted,
                 webcamEnabled: !isVideoHidden,
-                mode: "SEND_AND_RECV" // وضع المضيف الذي يبث للجميع
+                mode: "CONFERENCE" // تم التعديل لتفادي تعليق الحسابات غير المدعومة بالكامل
             });
 
             alert("3. جاري الانضمام... نرجو الموافقة على الكاميرا إذا طلب المتصفح ذلك.");
-            // 3. بدء الانضمام الفعلي للبث
             meeting.join();
 
-            // 4. استماع لحظة تمكين الكاميرا لعرضها في الـ UI
-            meeting.localParticipant.on("stream-enabled", (stream) => {
-                alert("4. تم تفعيل الكاميرا/المايك بنجاح!");
-                if (stream.kind === "video") {
-                    const mediaStream = new MediaStream();
-                    mediaStream.addTrack(stream.track);
-                    videoElement.srcObject = mediaStream;
-                    videoElement.play().catch(e => alert("خطأ تشغيل الفيديو: " + e));
-                    
-                    camOverlay.classList.add('hidden');
-                    videoElement.style.opacity = '0';
-                    videoElement.style.transition = 'opacity 0.5s ease';
-                    setTimeout(() => videoElement.style.opacity = '1', 100);
-                }
-            });
-
-            // 5. حدث نجاح تشغيل البث المباشر بالكامل
+            // الحدث الأساسي: لا نستدعي الكاميرا إلا بعد التأكد من الدخول
             meeting.on("meeting-joined", async () => {
                 alert("5. ✅ تم الدخول للبث المباشر بنجاح!");
+                
                 streamStatusBadge.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-green-500 block pulse-live"></span> البث مباشر الآن | معرف الغرفة: ${meetingId}`;
                 streamStatusBadge.className = "bg-green-900/30 border border-green-500/50 text-green-400 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3 transition-colors duration-300";
                 
@@ -113,7 +93,31 @@ if(startStreamBtn) {
                 startStreamBtn.innerHTML = `بدء البث`; 
                 startStreamBtn.disabled = false;
 
-                // إعلام باك-إند المنصة الخاصة بك بأن البث قد بدأ
+                // الآن localParticipant أصبح متاحاً ولن يعيد undefined
+                const localParticipant = meeting.localParticipant;
+                
+                if (localParticipant) {
+                    localParticipant.on("stream-enabled", (stream) => {
+                        alert("4. تم تفعيل الكاميرا/المايك بنجاح!");
+                        
+                        if (stream.kind === "video") {
+                            const mediaStream = new MediaStream();
+                            mediaStream.addTrack(stream.track);
+                            
+                            videoElement.srcObject = mediaStream;
+                            videoElement.play().catch(e => alert("خطأ تشغيل الفيديو: " + e));
+                            
+                            camOverlay.classList.add('hidden');
+                            videoElement.style.opacity = '0';
+                            videoElement.style.transition = 'opacity 0.5s ease';
+                            
+                            setTimeout(() => {
+                                videoElement.style.opacity = '1';
+                            }, 100);
+                        }
+                    });
+                }
+
                 try {
                     await fetch('/api/admin/toggle-stream', { 
                         method: 'POST', 
@@ -123,10 +127,10 @@ if(startStreamBtn) {
                 } catch (e) { console.warn("تنبيه: فشل إعلام الباك-إند ببدء البث", e); }
             });
 
-            // أحداث الخطأ أو الإغلاق المفاجئ من السيرفر
             meeting.on("meeting-left", () => { 
                 stopLiveStream(true); 
             });
+            
             meeting.on("error", (err) => { 
                 alert("❌ خطأ من أحداث الغرفة: " + err.message);
                 SysUI.toast('error', `خطأ في سيرفر البث: ${err.message}`); 
@@ -135,9 +139,7 @@ if(startStreamBtn) {
 
         } catch (err) { 
             alert("❌ توقف الكود بسبب خطأ: " + err.message);
-            try {
-                SysUI.toast('error', `خطأ: ${err.message}`); 
-            } catch (uiErr) {}
+            try { SysUI.toast('error', `خطأ: ${err.message}`); } catch (uiErr) {}
             
             startStreamBtn.innerHTML = `بدء البث`; 
             startStreamBtn.disabled = false;
