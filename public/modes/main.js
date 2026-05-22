@@ -2,12 +2,10 @@
 import { SysUI } from './ui.js';
 import './state.js'; 
 import { fetchStats, fetchPendingRequests, fetchGradeContent, fetchStudentsByGrade, logout } from './admin.js';
-// 🔥 شيلنا closeResultsModal من الـ import عشان متعملش كراش
 import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink } from './quiz.js';
 import './stream.js'; 
 import { VideoSystem } from './video.js'; 
 
-// 🚀 السحر كله هنا: فك حظر الدوال وإجبار المتصفح إنه يشوفها
 window.addMCQBlock = addMCQBlock;
 window.addPublicMCQBlock = addPublicMCQBlock;
 window.fetchGradeContent = fetchGradeContent;
@@ -15,14 +13,12 @@ window.fetchStudentsByGrade = fetchStudentsByGrade;
 window.copyPublicLink = copyPublicLink;
 window.logout = logout;
 
-// ✅ دالة قفل النافذة المنبثقة للنتائج (مكتوبة مباشرة هنا عشان متضربش أي إيرور)
 window.closeResultsModal = function() {
     const modal = document.getElementById('resultsModal');
     if (modal) {
         modal.classList.add('hidden');
     }
 };
-// =================================================================
 
 export function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => {
@@ -34,9 +30,10 @@ export function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     
     const activeTab = document.getElementById(`tab-${tabId}`);
+    const btn = document.getElementById(`btn-${tabId}`);
     if(activeTab) {
         activeTab.classList.add('active');
-        document.getElementById(`btn-${tabId}`).classList.add('active');
+        if(btn) btn.classList.add('active');
         
         setTimeout(() => {
             activeTab.style.opacity = '1';
@@ -45,7 +42,7 @@ export function switchTab(tabId) {
 
         if(tabId === 'requests') fetchPendingRequests();
         if(tabId === 'dashboard') fetchStats();
-        if(tabId === 'videos' && VideoSystem) VideoSystem.loadCourses(); // 🔥 تحديث أرشيف الفيديوهات تلقائياً عند فتح القسم
+        if(tabId === 'videos' && VideoSystem && typeof VideoSystem.loadCourses === 'function') VideoSystem.loadCourses(); 
     }
 }
 window.switchTab = switchTab;
@@ -75,7 +72,7 @@ export function toggleContentFields() {
 }
 window.toggleContentFields = toggleContentFields;
 
-// ==================== المساعد الصوتي ====================
+// ==================== المساعد الصوتي (تم تصحيح الـ IDs المطابقة للـ HTML) ====================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
@@ -113,14 +110,15 @@ if (SpeechRecognition) {
     recognition.onresult = (event) => {
         const command = event.results[0][0].transcript.toLowerCase();
 
+        // 🌟 تم تصحيح أسماء التابات هنا لتطابق الـ HTML (quiz و public-quiz)
         if(command.includes('سؤال جديد') || command.includes('اضف سؤال') || command.includes('إضافة سؤال')) {
-            if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) addMCQBlock();
-            else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) addPublicMCQBlock();
+            if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) addMCQBlock();
+            else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) addPublicMCQBlock();
             SysUI.toast('success', 'حاضر، تم إضافة سؤال جديد.');
         } else if (command.includes('احفظ الامتحان') || command.includes('ارفع الامتحان') || command.includes('نشر')) {
-            if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) {
+            if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) {
                 document.getElementById('saveQuizBtn').click();
-            } else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) {
+            } else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) {
                 document.getElementById('savePublicQuizBtn').click();
             }
             SysUI.toast('success', 'جاري تنفيذ أمر الحفظ!');
@@ -150,10 +148,10 @@ document.addEventListener('keydown', (e) => {
 
     if (e.altKey && e.key.toLowerCase() === 'n') {
         e.preventDefault();
-        if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) {
+        if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) {
             addMCQBlock();
             SysUI.toast('success', 'تم إضافة سؤال منصة جديد');
-        } else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) {
+        } else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) {
             addPublicMCQBlock();
             SysUI.toast('success', 'تم إضافة سؤال عام جديد');
         }
@@ -161,9 +159,9 @@ document.addEventListener('keydown', (e) => {
 
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        if(document.getElementById('tab-create-quiz') && document.getElementById('tab-create-quiz').classList.contains('active')) {
+        if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) {
             document.getElementById('quizForm').dispatchEvent(new Event('submit', { cancelable: true }));
-        } else if (document.getElementById('tab-create-public') && document.getElementById('tab-create-public').classList.contains('active')) {
+        } else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) {
             document.getElementById('publicQuizForm').dispatchEvent(new Event('submit', { cancelable: true }));
         }
     }
@@ -176,7 +174,6 @@ if(quizForm) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 🔥 تهيئة نظام تشغيل الفيديوهات وربط أحداث الفورم بمجرد تحميل الصفحة
     if (VideoSystem && typeof VideoSystem.init === 'function') {
         VideoSystem.init();
     }
