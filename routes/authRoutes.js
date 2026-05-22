@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 
 // تم مسح الحرف المخفي هنا لتجنب خطأ MODULE_NOT_FOUND
-const authController = require('../controllers/authController'); 
+const authController = require('../controllers/​authController.js'); 
 const { loginLimiter } = require('../middleware/rateLimiters');
 const { authenticateToken } = require('../middleware/auth');
 
