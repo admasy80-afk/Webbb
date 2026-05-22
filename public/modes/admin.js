@@ -4,30 +4,26 @@ import { user, sessionToken } from './state.js';
 
 let currentGradeData = null;
 
-// 🔥 دالة مساعدة لمرة واحدة: تقوم بالتحقق من حالة الرد وطرد المستخدم إن لزم الأمر
+// التحقق من حالة الرد وطرد المستخدم إن لزم الأمر (تم التحديث ليتوافق مع login.html)
 function checkAuthError(res) {
     if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('userToken');
+        localStorage.removeItem('dahih_user');
         localStorage.removeItem('dahih_token');
-        window.location.href = '/index.html'; // توجيه لصفحة الدخول
-        return true; // تعني أن هناك خطأ توثيق
+        window.location.replace('/login.html'); 
+        return true; 
     }
-    return false; // تعني أن التوثيق سليم
+    return false; 
 }
 
 export async function fetchStats() {
     try {
-        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token'); 
         const res = await fetch('/api/admin/stats', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` 
-            },
-            body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: user?.role, sessionToken: sessionToken })
         });
         
-        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        if(checkAuthError(res)) return; 
         
         if (!res.ok) throw new Error("Network response was not ok");
         const data = await res.json();
@@ -54,31 +50,28 @@ export function animateValue(id, start, end, duration) {
 
 export async function fetchPendingRequests() {
     const container = document.getElementById('pendingRequestsContainer');
+    if (!container) return;
     container.innerHTML = '<p class="text-gray-500 text-center py-10 animate-pulse">جاري جلب الطلبات الأساسية...</p>';
     try {
-        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/pending', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ role: user.role, sessionToken: sessionToken })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: user?.role, sessionToken: sessionToken })
         });
         
-        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        if(checkAuthError(res)) return; 
         
         if (!res.ok) throw new Error("Network response was not ok");
         const students = await res.json();
         if (students.length === 0) { 
             container.innerHTML = '<p class="text-gray-500 text-center mt-10 transition-opacity duration-500 opacity-0" id="emptyReqMsg">لا توجد طلبات جديدة حالياً.</p>'; 
-            setTimeout(() => document.getElementById('emptyReqMsg').style.opacity = '1', 50);
+            setTimeout(() => { const msg = document.getElementById('emptyReqMsg'); if(msg) msg.style.opacity = '1'; }, 50);
             return; 
         }
         
         let html = '';
         students.forEach((st, index) => {
-            const fullName = `${st.first_name} ${st.second_name} ${st.third_name} ${st.last_name}`;
+            const fullName = `${st.first_name || ''} ${st.second_name || ''} ${st.third_name || ''} ${st.last_name || ''}`;
             html += `<div id="req-${st.email}" class="glass-panel border border-white/5 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 animate-fade-in-up" style="animation-fill-mode: both; animation-delay: ${index * 0.08}s;">
                 <div class="text-center md:text-right">
                     <h4 class="font-bold text-white">${fullName}</h4>
@@ -100,23 +93,21 @@ export async function fetchPendingRequests() {
 export async function updateStudentStatus(email, newStatus, reason = '', btnElement = null) {
     if(btnElement) {
         const row = btnElement.closest('.glass-panel');
-        row.style.transition = "all 0.4s ease";
-        row.style.opacity = "0";
-        row.style.transform = "translateX(20px)";
+        if(row) {
+            row.style.transition = "all 0.4s ease";
+            row.style.opacity = "0";
+            row.style.transform = "translateX(20px)";
+        }
     }
     
     try {
-        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/update-status', { 
             method: 'POST', 
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }, 
-            body: JSON.stringify({ role: user.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify({ role: user?.role, sessionToken: sessionToken, studentEmail: email, newStatus, reason }) 
         });
         
-        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        if(checkAuthError(res)) return; 
         
         if(res.ok) {
             SysUI.toast('success', newStatus === 'accepted' ? 'تم قبول الطالب بنجاح' : 'تم رفض الطالب');
@@ -134,34 +125,32 @@ export async function updateStudentStatus(email, newStatus, reason = '', btnElem
 
 export function rejectStudent(email, btnElement) { 
     SysUI.prompt("سبب الرفض الأساسي (يظهر للطالب):", (reason) => {
-        if (reason !== null) {
+        if (reason !== null && reason.trim() !== '') {
             updateStudentStatus(email, 'rejected', reason, btnElement); 
         }
     });
 }
 
 export async function fetchStudentsByGrade() {
-    const grade = document.getElementById('listGradeSelect').value;
+    const selectEl = document.getElementById('listGradeSelect');
+    if (!selectEl) return;
+    const grade = selectEl.value;
     const container = document.getElementById('studentsListContainer');
     container.innerHTML = '<p class="text-gray-500 text-center py-10 col-span-full animate-pulse">جاري تحميل قائمة الطلاب...</p>';
     try {
-        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/students-by-grade', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: user?.role, sessionToken: sessionToken, grade: grade })
         });
         
-        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        if(checkAuthError(res)) return; 
         
         if (!res.ok) throw new Error("Network response was not ok");
         const students = await res.json();
         if (students.length === 0) { 
             container.innerHTML = `<p class="text-gray-500 text-center py-10 col-span-full opacity-0 transition-opacity duration-500" id="emptyStMsg">لا يوجد طلاب مقبولين في هذه الدفعة.</p>`; 
-            setTimeout(() => document.getElementById('emptyStMsg').style.opacity = '1', 50);
+            setTimeout(() => { const msg = document.getElementById('emptyStMsg'); if(msg) msg.style.opacity = '1'; }, 50);
             return; 
         }
         let html = '';
@@ -186,40 +175,40 @@ export async function fetchStudentsByGrade() {
 }
 
 export async function fetchGradeContent() {
-    const grade = document.getElementById('manageGradeSelect').value;
+    const selectEl = document.getElementById('manageGradeSelect');
+    if (!selectEl) return;
+    const grade = selectEl.value;
     const container = document.getElementById('manageContainer');
     const loading = document.getElementById('manageLoading');
     
-    container.style.opacity = '0';
-    setTimeout(() => container.classList.add('hidden'), 300);
-    loading.classList.remove('hidden');
+    if(container) container.style.opacity = '0';
+    setTimeout(() => { if(container) container.classList.add('hidden'); }, 300);
+    if(loading) loading.classList.remove('hidden');
     
     try {
-        const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
         const res = await fetch('/api/admin/get-grade-content', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: grade })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: user?.role, sessionToken: sessionToken, grade: grade })
         });
         
-        if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+        if(checkAuthError(res)) return; 
         
         if (res.ok) {
             currentGradeData = await res.json();
             renderManageContent(grade);
-            loading.classList.add('hidden');
-            container.classList.remove('hidden');
-            setTimeout(() => container.style.opacity = '1', 50);
+            if(loading) loading.classList.add('hidden');
+            if(container) {
+                container.classList.remove('hidden');
+                setTimeout(() => container.style.opacity = '1', 50);
+            }
         } else {
             SysUI.toast('error', "حدث خطأ في جلب المحتوى.");
-            loading.classList.add('hidden');
+            if(loading) loading.classList.add('hidden');
         }
     } catch (err) { 
         SysUI.toast('error', "مشكلة في الاتصال."); 
-        loading.classList.add('hidden');
+        if(loading) loading.classList.add('hidden');
     }
 }
 
@@ -284,7 +273,7 @@ export function deleteContent(grade, itemType, identifier, trashIconElement = nu
         if(!confirmed) return;
         
         if(trashIconElement) {
-            const row = trashIconElement.closest('div.flex.justify-between.items-center');
+            const row = trashIconElement.closest('div');
             if(row) {
                 row.style.transition = "all 0.4s ease";
                 row.style.opacity = "0";
@@ -293,17 +282,13 @@ export function deleteContent(grade, itemType, identifier, trashIconElement = nu
         }
 
         try {
-            const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
             const res = await fetch('/api/admin/delete-item', {
                 method: 'POST', 
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade, itemType, identifier })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: user?.role, sessionToken: sessionToken, grade, itemType, identifier })
             });
             
-            if(checkAuthError(res)) return; // 👈 التحقق من الطرد
+            if(checkAuthError(res)) return; 
 
             if (res.ok) {
                 SysUI.toast('success', "تم الحذف بنجاح");
@@ -334,9 +319,11 @@ export function showDetailedResults(quizId, isPublic) {
     } else {
         let html = '';
         
-        quiz.results.sort((a,b) => b.percentage - a.percentage).forEach((res, index) => {
-            let color = res.percentage >= 85 ? 'text-green-400' : (res.percentage >= 50 ? 'text-blue-400' : 'text-red-400');
-            let borderColor = res.percentage >= 50 ? 'border-gray-700' : 'border-red-900/30';
+        // تعديل بسيط لإصلاح الترتيب والنسبة المئوية التنازلية
+        [...quiz.results].sort((a,b) => (b.percentage || 0) - (a.percentage || 0)).forEach((res, index) => {
+            let pct = res.percentage || 0;
+            let color = pct >= 85 ? 'text-green-400' : (pct >= 50 ? 'text-blue-400' : 'text-red-400');
+            let borderColor = pct >= 50 ? 'border-gray-700' : 'border-red-900/30';
             
             html += `
             <div class="bg-black/40 rounded-xl border ${borderColor} mb-3 overflow-hidden animate-fade-in-up transition-all hover:bg-black/60" style="animation-fill-mode: both; animation-delay: ${index * 0.05}s;">
@@ -350,7 +337,7 @@ export function showDetailedResults(quizId, isPublic) {
                     </div>
                     <div class="text-left flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto shrink-0 border-t border-white/5 sm:border-none pt-2 sm:pt-0">
                         <div class="text-center">
-                            <p class="font-black text-xl md:text-2xl ${color}">${res.percentage || 0}%</p>
+                            <p class="font-black text-xl md:text-2xl ${color}">${pct}%</p>
                             <p class="text-[10px] text-gray-400">${res.score} / ${quiz.questions.length}</p>
                         </div>
                         <svg class="w-5 h-5 text-gray-500 transition-transform duration-300" id="icon-detail-${index}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -403,12 +390,14 @@ export function showDetailedResults(quizId, isPublic) {
     }
     
     const modal = document.getElementById('resultsModal');
-    modal.classList.remove('hidden');
-    modal.style.opacity = '0';
-    setTimeout(() => {
-        modal.style.transition = 'opacity 0.3s ease';
-        modal.style.opacity = '1';
-    }, 10);
+    if(modal) {
+        modal.classList.remove('hidden');
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.style.transition = 'opacity 0.3s ease';
+            modal.style.opacity = '1';
+        }, 10);
+    }
 }
 
 export function toggleStudentDetails(id) {
@@ -418,28 +407,29 @@ export function toggleStudentDetails(id) {
         if (el.style.maxHeight && el.style.maxHeight !== "0px") {
             el.style.maxHeight = "0px";
             el.style.opacity = "0";
-            icon.style.transform = "rotate(0deg)";
+            if(icon) icon.style.transform = "rotate(0deg)";
         } else {
             el.style.maxHeight = el.scrollHeight + 100 + "px"; 
             el.style.opacity = "1";
-            icon.style.transform = "rotate(180deg)";
+            if(icon) icon.style.transform = "rotate(180deg)";
         }
     }
 }
 
 export function closeResultsModal() { 
     const modal = document.getElementById('resultsModal');
-    modal.style.opacity = '0';
-    setTimeout(() => modal.classList.add('hidden'), 300);
+    if(modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => modal.classList.add('hidden'), 300);
+    }
 }
 
 export function logout() {
-    localStorage.removeItem('userToken');
+    localStorage.removeItem('dahih_user');
     localStorage.removeItem('dahih_token');
-    window.location.href = '/index.html'; 
+    window.location.replace('/login.html'); 
 }
 
-// تأكيد ربط الدوال بالنطاق العام (Global Scope)
 if (typeof window !== 'undefined') {
     window.fetchStats = fetchStats;
     window.fetchPendingRequests = fetchPendingRequests;
