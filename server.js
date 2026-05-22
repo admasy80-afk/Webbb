@@ -17,7 +17,6 @@ const { z } = require('zod');
 const pino = require('pino');
 const os = require('os');
 const ffmpeg = require('fluent-ffmpeg');
-const fetch = require('node-fetch'); // تأكد من تثبيته إذا كنت تستخدم إصدار Node قديم، أو سيعتمد على fetch المدمج في Node 18+
 
 const logger = pino({
     level: process.env.LOG_LEVEL || 'info',
@@ -162,41 +161,6 @@ async function connectMongo() {
     } catch (error) { logger.fatal({ err: error }, "فشل الاتصال بمونجو"); process.exit(1); }
 }
 
-// 🌐 دالة خارقة للتعامل المباشر مع Cloudflare D1 عبر الـ HTTP API
-async function queryCloudflareD1(sql, params = []) {
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-    const databaseId = process.env.CLOUDFLARE_DATABASE_ID; // الـ ID الخاص بـ dahih_db
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-
-    if (!accountId || !databaseId || !apiToken) {
-        logger.error("⚠️ بيانات ربط Cloudflare D1 ناقصة في ملف الـ .env (ACCOUNT_ID, DATABASE_ID, API_TOKEN)");
-        return null;
-    }
-
-    const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/d1/database/${databaseId}/query`;
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${apiToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ sql, params })
-        });
-
-        const resData = await response.json();
-        if (!resData.success) {
-            logger.error({ errors: resData.errors }, "❌ خطأ أثناء الكتابة في Cloudflare D1");
-            return null;
-        }
-        return resData.result;
-    } catch (err) {
-        logger.error({ err: err.message }, "❌ فشل الاتصال بـ Cloudflare D1 API");
-        return null;
-    }
-}
-
 // ⚡ HTTPS Agent خارق مع Keep-Alive لتسريع الاتصالات وتقليل Handshake
 const buildHttpHandler = () => new NodeHttpHandler({
     httpsAgent: new https.Agent({
@@ -241,6 +205,7 @@ const markProviderSuccess = (name, bytes) => {
 const isProviderHealthy = (name) => {
     const h = providerHealth[name];
     if (!h) return true;
+    // إذا تجاوزت الفشلات 3 خلال آخر 5 دقائق => اعتبره غير صحي مؤقتاً
     if (h.failures >= 3 && (Date.now() - h.lastFailure) < 5 * 60 * 1000) return false;
     return true;
 };
@@ -359,14 +324,7 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
             const hashedPassword = await bcrypt.hash(data.password, 10);
             const newUser = { ...data, password: hashedPassword, status: "pending", role: "student", points: 0, phoneVerified: false };
 
-            // 1. الإدخال في MongoDB
             try { await usersCollection.insertOne(newUser); } catch (err) { throw err; }
-
-            // 2. ⚡ إرسال متزامن إلى Cloudflare D1 (جدول users)
-            await queryCloudflareD1(
-                "INSERT INTO users (email, phone, first_name, password, status, role, points, phoneVerified, grade) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                [data.email, data.phone, data.first_name, hashedPassword, "pending", "student", 0, 0, data.grade || ""]
-            );
 
             const token = jwt.sign({ email: data.email, role: "student", fingerprint }, JWT_SECRET, { algorithm: JWT_ALGORITHM, expiresIn: '30d', issuer: 'eld7e7-platform', audience: 'eld7e7-users' });
             return res.status(200).json({ message: "تم إنشاء حساب بنجاح", token: token, userData: { name: data.first_name, grade: data.grade, status: "pending", email: data.email, phone: data.phone, role: "student", phoneVerified: false } });
@@ -376,6 +334,9 @@ app.post('/api/saveUser', loginLimiter, async (req, res) => {
     } catch (error) { res.status(500).json({ message: "حدث خطأ داخلي" }); }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════
+// 🚀🚀🚀 دالة الرفع الخارقة الجبارة المُراقبة من الذرة للمجرة 🚀🚀🚀
+// ═══════════════════════════════════════════════════════════════════════════
 app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimiter, async (req, res) => {
     const uploadId = crypto.randomBytes(6).toString('hex');
     const startTime = Date.now();
@@ -394,6 +355,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
     let chosenProvider = null;
     let fileKeyGlobal = null;
 
+    // 🛡️ Safety net مضمون: يضمن أن العميل يأخذ رد مهما حصل
     const sendResponse = (status, payload) => {
         if (responded) return;
         responded = true;
@@ -405,6 +367,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
         }
     };
 
+    // 🧹 منظف الموارد عند أي خطأ أو انقطاع
     const cleanup = async (reason) => {
         if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null; }
         if (parallelUpload && !uploadFinalized) {
@@ -419,16 +382,17 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
             try {
                 await chosenProvider.client.send(new DeleteObjectCommand({ Bucket: chosenProvider.bucket, Key: fileKeyGlobal }));
                 log.warn(`🗑️ [${uploadId}] تم حذف الملف الجزئي من ${chosenProvider.name}`);
-            } catch (e) { }
+            } catch (e) { /* تجاهل */ }
         }
     };
 
+    // 🐕 Watchdog: يراقب الـ Stream ويكتشف الجمود
     const startWatchdog = () => {
         watchdogInterval = setInterval(() => {
             const now = Date.now();
             const sinceLastProgress = now - lastProgressLog;
             const bytesSinceLast = bytesReceived - lastBytesSnapshot;
-            const speedMBps = (bytesSinceLast / (1024 * 1024)) / (5);
+            const speedMBps = (bytesSinceLast / (1024 * 1024)) / (5); // كل 5 ثوان
             speedSamples.push(speedMBps);
             if (speedSamples.length > 12) speedSamples.shift();
             const avgSpeed = speedSamples.reduce((a, b) => a + b, 0) / speedSamples.length;
@@ -445,6 +409,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
 
             lastBytesSnapshot = bytesReceived;
 
+            // 🚨 إذا لم يصل أي byte لمدة 60 ثانية والرفع لم يكتمل => اعتبره معلق
             if (!uploadFinalized && bytesSinceLast === 0 && sinceLastProgress > 60000) {
                 log.error({ idleMs: sinceLastProgress }, `🚨 [${uploadId}] تم اكتشاف جمود! الرفع معلق - سيتم إجهاضه`);
                 clearInterval(watchdogInterval);
@@ -462,7 +427,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
         bbInstance = busboy({
             headers: req.headers,
             limits: { fileSize: 2 * 1024 * 1024 * 1024, files: 1, fields: 10 },
-            highWaterMark: 2 * 1024 * 1024
+            highWaterMark: 2 * 1024 * 1024 // 2MB buffer للأداء العالي
         });
 
         let courseData = {};
@@ -499,10 +464,18 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
             const fileKey = `videos/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${crypto.randomUUID()}.${ext}`;
             fileKeyGlobal = fileKey;
 
+            // 🎯 تم تعيين المزود بشكل ثابت ليكون R2 فقط
             chosenProvider = { name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME };
 
-            log.info({ provider: chosenProvider.name, bucket: chosenProvider.bucket, fileKey, ext, mimeType }, `🎯 [${uploadId}] تم اختيار المزود السحابي`);
+            log.info({
+                provider: chosenProvider.name,
+                bucket: chosenProvider.bucket,
+                fileKey,
+                ext,
+                mimeType
+            }, `🎯 [${uploadId}] تم اختيار المزود السحابي`);
 
+            // 📊 تتبع حجم البيانات
             file.on('data', (chunk) => {
                 bytesReceived += chunk.length;
                 lastProgressLog = Date.now();
@@ -538,11 +511,12 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                             'uploaded-at': new Date().toISOString()
                         }
                     },
-                    queueSize: 6,
-                    partSize: 10 * 1024 * 1024,
+                    queueSize: 6,               // 6 أجزاء بالتوازي = سرعة قصوى
+                    partSize: 10 * 1024 * 1024, // 10MB لكل جزء = أقل عدد طلبات
                     leavePartsOnError: false
                 });
 
+                // 📈 تتبع تقدم الرفع للسحابة
                 let lastPartLogged = 0;
                 parallelUpload.on('httpUploadProgress', (progress) => {
                     if (progress.part && progress.part !== lastPartLogged) {
@@ -564,11 +538,22 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                 const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
                 const avgSpeedMBs = (bytesReceived / (1024 * 1024) / parseFloat(durationSec)).toFixed(2);
 
-                log.info({ location: uploadResult.Location, etag: uploadResult.ETag, bytesReceived, humanSize: formatBytes(bytesReceived), durationSec, avgSpeedMBs, provider: chosenProvider.name }, `✅ [${uploadId}] اكتمل الرفع السحابي بنجاح!`);
+                log.info({
+                    location: uploadResult.Location,
+                    etag: uploadResult.ETag,
+                    bytesReceived,
+                    humanSize: formatBytes(bytesReceived),
+                    durationSec,
+                    avgSpeedMBs,
+                    provider: chosenProvider.name
+                }, `✅ [${uploadId}] اكتمل الرفع السحابي بنجاح!`);
 
                 markProviderSuccess(chosenProvider.name, bytesReceived);
                 if (watchdogInterval) { clearInterval(watchdogInterval); watchdogInterval = null; }
 
+                // =========================================================================
+                // 🪄 عملية استخراج الميتاداتا (الغلاف والمدة) آلياً عبر رابط مؤقت و ffmpeg
+                // =========================================================================
                 let finalDuration = courseData.duration || 'غير محدد';
                 let finalImageUrl = courseData.imageUrl || '';
 
@@ -577,6 +562,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                     const getCmd = new GetObjectCommand({ Bucket: chosenProvider.bucket, Key: fileKey });
                     const signedUrl = await getSignedUrl(chosenProvider.client, getCmd, { expiresIn: 3600 });
 
+                    // استخراج المدة
                     finalDuration = await new Promise((resolve) => {
                         ffmpeg.ffprobe(signedUrl, (err, metadata) => {
                             if (err || !metadata || !metadata.format) return resolve('غير محدد');
@@ -587,6 +573,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                         });
                     });
 
+                    // استخراج صورة الغلاف
                     const thumbFilename = `thumb_${crypto.randomUUID()}.jpg`;
                     const thumbPath = path.join(os.tmpdir(), thumbFilename);
 
@@ -605,6 +592,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                             });
                     });
 
+                    // رفع الغلاف لنفس المزود السحابي الذي تم رفع الفيديو عليه
                     if (fs.existsSync(thumbPath)) {
                         const thumbKey = `thumbnails/${new Date().getFullYear()}/${new Date().getMonth() + 1}/${thumbFilename}`;
                         await chosenProvider.client.send(new PutObjectCommand({
@@ -613,8 +601,8 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                             Body: fs.createReadStream(thumbPath),
                             ContentType: 'image/jpeg'
                         }));
-                        finalImageUrl = thumbKey;
-                        fs.unlinkSync(thumbPath);
+                        finalImageUrl = thumbKey; // تحديث المسار
+                        fs.unlinkSync(thumbPath); // مسح الصورة المؤقتة من السيرفر
                         log.info(`✅ [${uploadId}] تم استخراج ورفع الغلاف بنجاح`);
                     }
 
@@ -622,16 +610,15 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                     log.warn({ err: metaErr.message }, `⚠️ [${uploadId}] فشل سحب الميتاداتا، جاري إكمال حفظ الدورة`);
                 }
 
-                // 💾 1. حفظ الكورس في قاعدة بيانات MongoDB
+                // 💾 حفظ في قاعدة البيانات
                 try {
-                    const telegramMsgId = crypto.randomUUID();
                     const insertResult = await db.collection('courses').insertOne({
                         courseName: courseData.courseName,
                         grade: courseData.grade,
                         description: courseData.description || "",
                         duration: finalDuration,
                         image: finalImageUrl,
-                        telegramMsgId: telegramMsgId,
+                        telegramMsgId: crypto.randomUUID(),
                         fileKey: fileKey,
                         provider: chosenProvider.name,
                         bucket: chosenProvider.bucket,
@@ -643,30 +630,10 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
                         createdAt: new Date()
                     });
 
-                    log.info({ courseId: insertResult.insertedId.toString() }, `💾 [${uploadId}] تم حفظ الكورس في قاعدة بيانات MongoDB`);
-
-                    // ⚡ 2. حفظ متزامن في قاعدة بيانات Cloudflare D1 (جدول courses)
-                    await queryCloudflareD1(
-                        "INSERT INTO courses (courseName, grade, description, duration, image, telegramMsgId, fileKey, provider, bucket, fileSize, mimeType, uploadedBy, etag) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        [
-                            courseData.courseName,
-                            courseData.grade,
-                            courseData.description || "",
-                            finalDuration,
-                            finalImageUrl,
-                            telegramMsgId,
-                            fileKey,
-                            chosenProvider.name,
-                            chosenProvider.bucket,
-                            bytesReceived,
-                            mimeType,
-                            req.user?.email || 'unknown',
-                            uploadResult.ETag
-                        ]
-                    );
+                    log.info({ courseId: insertResult.insertedId.toString() }, `💾 [${uploadId}] تم حفظ الكورس في قاعدة البيانات`);
 
                     return sendResponse(200, {
-                        message: "تم الرفع السحابي والمزامنة بنجاح. 🎉",
+                        message: "تم الرفع السحابي بنجاح. 🎉",
                         courseId: insertResult.insertedId.toString(),
                         uploadId,
                         provider: chosenProvider.name,
@@ -723,6 +690,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
             });
         });
 
+        // 🔌 معالجة انقطاع الاتصال من العميل
         req.on('close', () => {
             if (!req.complete) {
                 log.warn({ bytesReceived, humanSize: formatBytes(bytesReceived) }, `🔌 [${uploadId}] العميل قطع الاتصال قبل الاكتمال`);
@@ -746,6 +714,7 @@ app.post('/api/admin/upload-course', authenticateToken, requireAdmin, uploadLimi
             });
         });
 
+        // ⏰ Hard Timeout: 30 دقيقة كحد أقصى لأي رفع
         const hardTimeout = setTimeout(() => {
             if (!responded) {
                 log.error(`⏰ [${uploadId}] انتهت المهلة الزمنية القصوى (30 دقيقة)`);
@@ -779,6 +748,7 @@ app.get('/api/video/stream/:msgId', authenticateToken, async (req, res) => {
         const course = await db.collection('courses').findOne({ telegramMsgId: queryId });
         if (!course || !course.fileKey) return res.status(404).send("الفيديو مفقود.");
 
+        // تم تعيين المزود بشكل ثابت ليكون R2 فقط
         let targetClient = r2Client;
         let targetBucket = R2_BUCKET_NAME;
 
@@ -834,22 +804,18 @@ app.delete('/api/admin/delete-course/:id', authenticateToken, requireAdmin, asyn
         const courseId = req.params.id;
         const course = await db.collection('courses').findOne({ _id: new ObjectId(courseId) });
         if (course && course.fileKey) {
+            // تم تعيين المزود بشكل ثابت ليكون R2 فقط
             let targetClient = r2Client;
             let targetBucket = R2_BUCKET_NAME;
 
             try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.fileKey })); } catch (e) { }
             
+            // تنظيف الغلاف لو موجود
             if (course.image && course.image.startsWith('thumbnails/')) {
                  try { await targetClient.send(new DeleteObjectCommand({ Bucket: targetBucket, Key: course.image })); } catch (e) { }
             }
         }
         await db.collection('courses').deleteOne({ _id: new ObjectId(courseId) });
-
-        // ⚡ حذف الكورس أيضاً من Cloudflare D1 عند مسحه من الإدارة
-        if (course) {
-            await queryCloudflareD1("DELETE FROM courses WHERE telegramMsgId = ?", [course.telegramMsgId]);
-        }
-
         res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
     } catch (error) { res.status(500).json({ message: "فشل الحذف" }); }
 });
@@ -862,6 +828,7 @@ app.post('/api/admin/stats', authenticateToken, requireAdmin, async (req, res) =
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
 
+// 🩺 Endpoint جديد لمراقبة صحة المزودين
 app.get('/api/admin/providers-health', authenticateToken, requireAdmin, (req, res) => {
     const summary = {};
     for (const [name, h] of Object.entries(providerHealth)) {
@@ -889,10 +856,6 @@ app.post('/api/admin/update-status', authenticateToken, requireAdmin, async (req
     try {
         const { studentEmail, newStatus, reason } = req.body;
         await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { status: newStatus, rejection_reason: reason || "" } });
-        
-        // ⚡ تحديث الحالة في Cloudflare D1 بالتزامن
-        await queryCloudflareD1("UPDATE users SET status = ? WHERE email = ?", [newStatus, studentEmail.trim()]);
-
         res.status(200).json({ message: "تم التحديث" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
@@ -919,10 +882,6 @@ app.post('/api/admin/update-points', authenticateToken, requireAdmin, async (req
     try {
         const { studentEmail, points } = req.body;
         await usersCollection.updateOne({ email: studentEmail.trim() }, { $set: { points: parseInt(points) } });
-        
-        // ⚡ تحديث النقاط في Cloudflare D1 بالتزامن
-        await queryCloudflareD1("UPDATE users SET points = ? WHERE email = ?", [parseInt(points), studentEmail.trim()]);
-
         res.status(200).json({ message: "تم التحديث" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 });
@@ -1031,4 +990,75 @@ app.post('/api/student/submit-quiz', authenticateToken, async (req, res) => {
 
         if (quizId && quizId.startsWith('pub_')) {
             const existingDoc = await contentCollection.findOne({ grade: grade, publicQuizzes: { $elemMatch: { id: quizId, results: { $elemMatch: { $or: [{ visitorId: visitorId }, { email: email }] } } } } });
-            if (existingDoc) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبق
+            if (existingDoc) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
+            await contentCollection.updateOne({ grade: grade, "publicQuizzes.id": quizId }, { $push: { "publicQuizzes.$.results": resultObj } });
+        } else {
+            await contentCollection.updateOne({ grade: grade, "quizzes.id": quizId }, { $push: { "quizzes.$.results": resultObj } });
+        }
+        res.status(200).json({ message: "تم حفظ النتيجة واعتمادها بنجاح" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.post('/api/check-status', authenticateToken, async (req, res) => {
+    try {
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
+        const user = await usersCollection.findOne({ email: email });
+        if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
+        res.status(200).json({ status: user.status, reason: user.rejection_reason, phoneVerified: user.phoneVerified || false });
+    } catch (error) { res.status(500).json({ message: "خطأ في السيرفر" }); }
+});
+
+app.post('/api/student/verify-phone', authenticateToken, async (req, res) => {
+    try {
+        const email = (req.user && req.user.email) ? req.user.email : req.body.email;
+        await usersCollection.updateOne({ email: email }, { $set: { phoneVerified: true } });
+        res.status(200).json({ message: "تم توثيق الهاتف بنجاح" });
+    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+});
+
+app.get('/loaderio-b00f7b4f538e02991e1faafc9686e4f4/', (req, res) => res.send('loaderio-b00f7b4f538e02991e1faafc9686e4f4'));
+app.use('/api/*', (req, res) => res.status(404).json({ message: "المسار غير موجود (API 404)." }));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+// ==================== Cron Jobs ====================
+setInterval(async () => {
+    // تم تعيين المزود بشكل ثابت ليكون R2 فقط في وظيفة الكرون
+    const providers = [{ name: 'R2', client: r2Client, bucket: R2_BUCKET_NAME }];
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    for (const provider of providers) {
+        try {
+            const data = await provider.client.send(new ListMultipartUploadsCommand({ Bucket: provider.bucket }));
+            if (data.Uploads) {
+                for (const upload of data.Uploads) {
+                    if (upload.Initiated < oneDayAgo) {
+                        await provider.client.send(new AbortMultipartUploadCommand({ Bucket: provider.bucket, Key: upload.Key, UploadId: upload.UploadId }));
+                        logger.info({ provider: provider.name, key: upload.Key }, `🧹 تم تنظيف رفع متعدد الأجزاء قديم`);
+                    }
+                }
+            }
+        } catch (err) { }
+    }
+}, 24 * 60 * 60 * 1000);
+
+setInterval(async () => {
+    if (!db) return;
+    try {
+        const contentCollection = db.collection('curriculum_content');
+        const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+        await contentCollection.updateMany({ "liveStream.isLive": true, "liveStream.startedAt": { $lt: fourHoursAgo } }, { $unset: { "liveStream": "" } });
+    } catch (e) { }
+}, 60 * 60 * 1000);
+
+async function startServer() {
+    await connectMongo();
+    server = app.listen(PORT, () => logger.info(`🚀 السيرفر شغال ومستعد لخدمة الطلبة على بورت ${PORT}`));
+    // ⚙️ Timeouts مُحسّنة لدعم الرفع الكبير (2GB)
+    server.headersTimeout = 65000;
+    server.requestTimeout = 0;           // بدون حد لطلبات الرفع الطويلة
+    server.keepAliveTimeout = 60000;
+    server.timeout = 30 * 60 * 1000;     // 30 دقيقة كحد أقصى للسوكت
+}
+startServer();
+process.on('unhandledRejection', (err) => { logger.error({ err: err?.message }, 'unhandledRejection'); });
+process.on('uncaughtException', (err) => { logger.error({ err: err?.message }, 'uncaughtException'); });
+process.on('SIGINT', async () => { if (server) { server.close(async () => { try { if (mongoClient) await mongoClient.close(); } catch (e) { } process.exit(0); }); } else { process.exit(0); } });
