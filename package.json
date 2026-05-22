@@ -2,7 +2,7 @@
   "name": "eld7e7-platform",
   "version": "1.0.0",
   "description": "ElD7e7 Educational Platform - Secure Backend API",
-  "main": "src/server.js",
+  "main": "server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js"
