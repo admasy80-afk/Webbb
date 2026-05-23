@@ -16,215 +16,9 @@
     
     <script src="https://sdk.videosdk.live/js-sdk/0.1.6/videosdk.js"></script>
 
-    <style>
-        /* 1. توحيد الخط إجبارياً على كافة عناصر الصفحة */
-        :root { --accent: #eab308; }
-        * { 
-            font-family: 'Readex Pro', sans-serif !important; 
-            -webkit-tap-highlight-color: transparent; 
-            box-sizing: border-box;
-        }
-        body, html { 
-            background-color: #070b19; 
-            color: white; 
-            overscroll-behavior-y: none; 
-        }
-        *:focus { outline: none !important; }
-
-        /* 2. تأثيرات الزجاج والتبويبات المطورة */
-        .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-        
-        .tab-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
-        .tab-btn::before { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity 0.3s; z-index: -1; border-radius: inherit; }
-        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); }
-        .tab-btn.active { color: #000; font-weight: 700; background: var(--accent); box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2); }
-        
-        .tab-content { display: none; opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease; transform: translateY(15px); }
-        .tab-content.active { display: block; opacity: 1; transform: translateY(0); }
-        
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        
-        /* إخفاء شريط التمرير مع الإبقاء على الوظيفة */
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* 3. مشغل الفيديو الاحترافي */
-        #videoContainer:fullscreen { background-color: #000; width: 100vw; height: 100vh; }
-        #videoContainer:fullscreen video { width: 100%; height: 100%; object-fit: contain; }
-        
-        .tap-zone { position: absolute; top: 0; bottom: 20%; width: 35%; z-index: 10; cursor: pointer; }
-        .tap-zone.left { left: 0; }
-        .tap-zone.right { right: 0; }
-        
-        .center-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5; }
-        .center-play > div { background: rgba(234, 179, 8, 0.9); border-radius: 50%; width: 4.5rem; height: 4.5rem; display: flex; align-items: center; justify-content: center; color: black; opacity: 0; transform: scale(0.5); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
-        
-        .skip-indicator { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.8); padding: 0.6rem 1.2rem; border-radius: 2rem; color: white; font-weight: 800; font-size: 1.1rem; opacity: 0; pointer-events: none; z-index: 20; backdrop-filter: blur(4px); }
-        .skip-indicator.show { animation: popFlash 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        @keyframes popFlash { 0% { opacity: 0; transform: translateY(-50%) scale(0.8); } 20% { opacity: 1; transform: translateY(-50%) scale(1.1); } 80% { opacity: 1; transform: translateY(-50%) scale(1); } 100% { opacity: 0; transform: translateY(-50%) scale(0.9); } }
-
-        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 4px; cursor: pointer; position: relative; transition: height 0.2s; }
-        .progress-container:hover { height: 8px; }
-        .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 4px; position: relative; }
-        .progress-thumb { position: absolute; right: -6px; top: 50%; transform: translateY(-50%) scale(0); width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.2s; }
-        .progress-container:hover .progress-thumb { transform: translateY(-50%) scale(1); }
-
-        input[type=range].volume-slider { -webkit-appearance: none; background: transparent; height: 4px; border-radius: 2px; }
-        input[type=range].volume-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-        input[type=range].volume-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: var(--accent); margin-top: -4px; cursor: pointer; }
-        
-        .pulse-live { animation: pulseLive 2s infinite; }
-        @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-    </style>
-
-    <script>
-        // نظام التبويبات
-        window.switchTab = function(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => {
-                el.classList.remove('active');
-                setTimeout(() => el.style.display = 'none', 300);
-            });
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('active');
-                if (el.id === 'btn-live') el.classList.remove('text-red-500'); // تعديل لون البث عند التنشيط
-            });
-            
-            const activeTab = document.getElementById(`tab-${tabId}`);
-            if(activeTab) {
-                setTimeout(() => {
-                    activeTab.style.display = 'block';
-                    void activeTab.offsetWidth;
-                    activeTab.classList.add('active');
-                }, 310);
-                
-                const btn = document.getElementById(`btn-${tabId}`);
-                if(btn) {
-                    btn.classList.add('active');
-                    if (tabId === 'live') btn.classList.remove('text-red-500'); // إزالة اللون الأحمر عند التحديد لأن الخلفية صفراء
-                }
-            }
-        };
-
-        // --- نظام الـ VideoSDK للبث المباشر (للطالب / RECV_ONLY) ---
-        const VIDEOSDK_TOKEN = "4bc289fe416d09f0ea5b3f9929d3e800b5cb4d111c6f37e02f32ca26e5ac69db";
-        let studentMeeting = null;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const joinStreamBtn = document.getElementById('joinStreamBtn');
-            const streamIdInput = document.getElementById('streamIdInput');
-            const joinStreamControls = document.getElementById('joinStreamControls');
-            const liveStreamWrapper = document.getElementById('liveStreamWrapper');
-            const liveVideoContainer = document.getElementById('liveVideoContainer');
-            const leaveStreamBtn = document.getElementById('leaveStreamBtn');
-            const waitingText = document.getElementById('waitingText');
-            const studentName = document.getElementById('studentName')?.innerText || "طالب الدحيح";
-
-            if(joinStreamBtn) {
-                joinStreamBtn.addEventListener('click', () => {
-                    const meetingId = streamIdInput.value.trim();
-                    if(!meetingId) {
-                        alert("يرجى إدخال كود البث أولاً!");
-                        return;
-                    }
-
-                    joinStreamBtn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2"></span> جاري الاتصال...`;
-                    joinStreamBtn.disabled = true;
-
-                    // 1. إعداد الـ Token
-                    window.VideoSDK.config(VIDEOSDK_TOKEN);
-
-                    // 2. تهيئة الاتصال بوضع المشاهد (RECV_ONLY)
-                    studentMeeting = window.VideoSDK.initMeeting({
-                        meetingId: meetingId,
-                        name: studentName,
-                        micEnabled: false, // مغلق إجبارياً
-                        webcamEnabled: false, // مغلق إجبارياً
-                        mode: "RECV_ONLY" // الأهم: وضع المشاهد فقط
-                    });
-
-                    // 3. بدء الانضمام
-                    studentMeeting.join();
-
-                    // 4. الأحداث عند النجاح
-                    studentMeeting.on("meeting-joined", () => {
-                        joinStreamControls.classList.add('hidden');
-                        liveStreamWrapper.classList.remove('hidden');
-                        joinStreamBtn.innerHTML = "دخول للبث";
-                        joinStreamBtn.disabled = false;
-                        streamIdInput.value = '';
-                    });
-
-                    // 5. استلام بث المعلم (فيديو / صوت / مشاركة شاشة)
-                    studentMeeting.on("participant-joined", (participant) => {
-                        participant.on("stream-enabled", (stream) => {
-                            if (stream.kind === "video" || stream.kind === "share") {
-                                waitingText.style.display = "none";
-                                
-                                const mediaStream = new MediaStream();
-                                mediaStream.addTrack(stream.track);
-                                
-                                let videoElm = document.createElement("video");
-                                videoElm.id = `v-${participant.id}`;
-                                videoElm.srcObject = mediaStream;
-                                videoElm.autoplay = true;
-                                videoElm.playsinline = true;
-                                videoElm.className = "w-full h-full object-contain bg-black";
-                                
-                                liveVideoContainer.appendChild(videoElm);
-                            }
-                            if (stream.kind === "audio") {
-                                const mediaStream = new MediaStream();
-                                mediaStream.addTrack(stream.track);
-                                
-                                let audioElm = document.createElement("audio");
-                                audioElm.id = `a-${participant.id}`;
-                                audioElm.srcObject = mediaStream;
-                                audioElm.autoplay = true;
-                                
-                                liveVideoContainer.appendChild(audioElm);
-                            }
-                        });
-
-                        participant.on("stream-disabled", (stream) => {
-                            if (stream.kind === "video" || stream.kind === "share") {
-                                let videoElm = document.getElementById(`v-${participant.id}`);
-                                if(videoElm) videoElm.remove();
-                                waitingText.style.display = "block";
-                            }
-                            if (stream.kind === "audio") {
-                                let audioElm = document.getElementById(`a-${participant.id}`);
-                                if(audioElm) audioElm.remove();
-                            }
-                        });
-                    });
-
-                    // عند إغلاق البث من قبل المعلم أو خروج الطالب
-                    studentMeeting.on("meeting-left", () => {
-                        liveVideoContainer.querySelectorAll('video, audio').forEach(el => el.remove());
-                        waitingText.style.display = "block";
-                        joinStreamControls.classList.remove('hidden');
-                        liveStreamWrapper.classList.add('hidden');
-                        studentMeeting = null;
-                    });
-
-                    // التعامل مع الأخطاء
-                    studentMeeting.on("error", (err) => {
-                        alert("خطأ في الاتصال بالبث: تأكد من صحة الكود.");
-                        joinStreamBtn.innerHTML = "دخول للبث";
-                        joinStreamBtn.disabled = false;
-                        studentMeeting = null;
-                    });
-                });
-            }
-
-            if(leaveStreamBtn) {
-                leaveStreamBtn.addEventListener('click', () => {
-                    if(studentMeeting) studentMeeting.leave();
-                });
-            }
-        });
-    </script>
+    <!-- ربط ملفات التصميم -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/player.css">
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
 
@@ -358,6 +152,7 @@
                 </div>
             </div>
         </div>
+        
         <div id="tab-courses" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
             <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
@@ -392,7 +187,13 @@
         </div>
     </div>
 
+    <!-- مكتبات خارجية -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
-    <script src="script.js" defer></script>
+    
+    <!-- ربط ملفات الجافاسكريبت بالترتيب الصحيح -->
+    <script src="js/utils.js" defer></script>
+    <script src="js/player.js" defer></script>
+    <script src="js/live.js" defer></script>
+    <script src="js/main.js" defer></script>
 </body>
 </html>
