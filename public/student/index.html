@@ -1,398 +1,908 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="dark selection:bg-amber-500 selection:text-black">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#070b19">
-    <meta name="description" content="لوحة الطالب - منصة الدحيح التعليمية">
+    <meta name="theme-color" content="#030509">
+    <meta name="description" content="منصة الدحيح التعليمية - التجربة الخارقة">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-
+    
     <title>لوحة الطالب | منصة الدحيح</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://sdk.videosdk.live/js-sdk/0.1.6/videosdk.js"></script>
 
-    <style>
-        /* 1. توحيد الخط إجبارياً على كافة عناصر الصفحة */
-        :root { --accent: #eab308; }
-        * { 
-            font-family: 'Readex Pro', sans-serif !important; 
-            -webkit-tap-highlight-color: transparent; 
-            box-sizing: border-box;
-        }
-        body, html { 
-            background-color: #070b19; 
-            color: white; 
-            overscroll-behavior-y: none; 
-        }
-        *:focus { outline: none !important; }
-
-        /* 2. تأثيرات الزجاج والتبويبات المطورة */
-        .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-        
-        .tab-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
-        .tab-btn::before { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity 0.3s; z-index: -1; border-radius: inherit; }
-        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); }
-        .tab-btn.active { color: #000; font-weight: 700; background: var(--accent); box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2); }
-        
-        .tab-content { display: none; opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease; transform: translateY(15px); }
-        .tab-content.active { display: block; opacity: 1; transform: translateY(0); }
-        
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        
-        /* إخفاء شريط التمرير مع الإبقاء على الوظيفة */
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* 3. مشغل الفيديو الاحترافي */
-        #videoContainer:fullscreen { background-color: #000; width: 100vw; height: 100vh; }
-        #videoContainer:fullscreen video { width: 100%; height: 100%; object-fit: contain; }
-        
-        .tap-zone { position: absolute; top: 0; bottom: 20%; width: 35%; z-index: 10; cursor: pointer; }
-        .tap-zone.left { left: 0; }
-        .tap-zone.right { right: 0; }
-        
-        .center-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 5; }
-        .center-play > div { background: rgba(234, 179, 8, 0.9); border-radius: 50%; width: 4.5rem; height: 4.5rem; display: flex; align-items: center; justify-content: center; color: black; opacity: 0; transform: scale(0.5); transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 0 20px rgba(234, 179, 8, 0.4); }
-        
-        .skip-indicator { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.8); padding: 0.6rem 1.2rem; border-radius: 2rem; color: white; font-weight: 800; font-size: 1.1rem; opacity: 0; pointer-events: none; z-index: 20; backdrop-filter: blur(4px); }
-        .skip-indicator.show { animation: popFlash 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
-        @keyframes popFlash { 0% { opacity: 0; transform: translateY(-50%) scale(0.8); } 20% { opacity: 1; transform: translateY(-50%) scale(1.1); } 80% { opacity: 1; transform: translateY(-50%) scale(1); } 100% { opacity: 0; transform: translateY(-50%) scale(0.9); } }
-
-        .progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.15); border-radius: 4px; cursor: pointer; position: relative; transition: height 0.2s; }
-        .progress-container:hover { height: 8px; }
-        .progress-fill { height: 100%; background: var(--accent); width: 0%; border-radius: 4px; position: relative; }
-        .progress-thumb { position: absolute; right: -6px; top: 50%; transform: translateY(-50%) scale(0); width: 12px; height: 12px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: transform 0.2s; }
-        .progress-container:hover .progress-thumb { transform: translateY(-50%) scale(1); }
-
-        input[type=range].volume-slider { -webkit-appearance: none; background: transparent; height: 4px; border-radius: 2px; }
-        input[type=range].volume-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
-        input[type=range].volume-slider::-webkit-slider-thumb { -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: var(--accent); margin-top: -4px; cursor: pointer; }
-        
-        .pulse-live { animation: pulseLive 2s infinite; }
-        @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
-    </style>
-
     <script>
-        // نظام التبويبات
-        window.switchTab = function(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => {
-                el.classList.remove('active');
-                setTimeout(() => el.style.display = 'none', 300);
-            });
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('active');
-                if (el.id === 'btn-live') el.classList.remove('text-red-500'); // تعديل لون البث عند التنشيط
-            });
-            
-            const activeTab = document.getElementById(`tab-${tabId}`);
-            if(activeTab) {
-                setTimeout(() => {
-                    activeTab.style.display = 'block';
-                    void activeTab.offsetWidth;
-                    activeTab.classList.add('active');
-                }, 310);
-                
-                const btn = document.getElementById(`btn-${tabId}`);
-                if(btn) {
-                    btn.classList.add('active');
-                    if (tabId === 'live') btn.classList.remove('text-red-500'); // إزالة اللون الأحمر عند التحديد لأن الخلفية صفراء
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Readex Pro"', 'sans-serif'] },
+                    colors: {
+                        base: '#030509',
+                        surface: '#0A0E17',
+                        surfaceUltra: '#121927',
+                        accent: '#F59E0B',
+                        accentGlow: 'rgba(245, 158, 11, 0.25)',
+                        danger: '#F43F5E',
+                        dangerGlow: 'rgba(244, 63, 94, 0.25)',
+                        success: '#10B981',
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                        'mesh': 'radial-gradient(at 40% 20%, rgba(245, 158, 11, 0.08) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(244, 63, 94, 0.08) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(59, 130, 246, 0.08) 0px, transparent 50%)',
+                    },
+                    animation: {
+                        'reveal': 'reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'shimmer': 'shimmer 2s linear infinite',
+                        'spin-slow': 'spin 12s linear infinite',
+                        'border-flow': 'borderFlow 4s linear infinite',
+                    },
+                    keyframes: {
+                        reveal: {
+                            '0%': { opacity: '0', transform: 'translateY(30px) scale(0.96)', filter: 'blur(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0) scale(1)', filter: 'blur(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-15px)' },
+                        },
+                        shimmer: {
+                            from: { backgroundPosition: '200% 0' },
+                            to: { backgroundPosition: '-200% 0' },
+                        },
+                        borderFlow: {
+                            '100%': { transform: 'rotate(1turn)' },
+                        }
+                    }
                 }
             }
-        };
-
-        // --- نظام الـ VideoSDK للبث المباشر (للطالب / RECV_ONLY) ---
-        const VIDEOSDK_TOKEN = "4bc289fe416d09f0ea5b3f9929d3e800b5cb4d111c6f37e02f32ca26e5ac69db";
-        let studentMeeting = null;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const joinStreamBtn = document.getElementById('joinStreamBtn');
-            const streamIdInput = document.getElementById('streamIdInput');
-            const joinStreamControls = document.getElementById('joinStreamControls');
-            const liveStreamWrapper = document.getElementById('liveStreamWrapper');
-            const liveVideoContainer = document.getElementById('liveVideoContainer');
-            const leaveStreamBtn = document.getElementById('leaveStreamBtn');
-            const waitingText = document.getElementById('waitingText');
-            const studentName = document.getElementById('studentName')?.innerText || "طالب الدحيح";
-
-            if(joinStreamBtn) {
-                joinStreamBtn.addEventListener('click', () => {
-                    const meetingId = streamIdInput.value.trim();
-                    if(!meetingId) {
-                        alert("يرجى إدخال كود البث أولاً!");
-                        return;
-                    }
-
-                    joinStreamBtn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2"></span> جاري الاتصال...`;
-                    joinStreamBtn.disabled = true;
-
-                    // 1. إعداد الـ Token
-                    window.VideoSDK.config(VIDEOSDK_TOKEN);
-
-                    // 2. تهيئة الاتصال بوضع المشاهد (RECV_ONLY)
-                    studentMeeting = window.VideoSDK.initMeeting({
-                        meetingId: meetingId,
-                        name: studentName,
-                        micEnabled: false, // مغلق إجبارياً
-                        webcamEnabled: false, // مغلق إجبارياً
-                        mode: "RECV_ONLY" // الأهم: وضع المشاهد فقط
-                    });
-
-                    // 3. بدء الانضمام
-                    studentMeeting.join();
-
-                    // 4. الأحداث عند النجاح
-                    studentMeeting.on("meeting-joined", () => {
-                        joinStreamControls.classList.add('hidden');
-                        liveStreamWrapper.classList.remove('hidden');
-                        joinStreamBtn.innerHTML = "دخول للبث";
-                        joinStreamBtn.disabled = false;
-                        streamIdInput.value = '';
-                    });
-
-                    // 5. استلام بث المعلم (فيديو / صوت / مشاركة شاشة)
-                    studentMeeting.on("participant-joined", (participant) => {
-                        participant.on("stream-enabled", (stream) => {
-                            if (stream.kind === "video" || stream.kind === "share") {
-                                waitingText.style.display = "none";
-                                
-                                const mediaStream = new MediaStream();
-                                mediaStream.addTrack(stream.track);
-                                
-                                let videoElm = document.createElement("video");
-                                videoElm.id = `v-${participant.id}`;
-                                videoElm.srcObject = mediaStream;
-                                videoElm.autoplay = true;
-                                videoElm.playsinline = true;
-                                videoElm.className = "w-full h-full object-contain bg-black";
-                                
-                                liveVideoContainer.appendChild(videoElm);
-                            }
-                            if (stream.kind === "audio") {
-                                const mediaStream = new MediaStream();
-                                mediaStream.addTrack(stream.track);
-                                
-                                let audioElm = document.createElement("audio");
-                                audioElm.id = `a-${participant.id}`;
-                                audioElm.srcObject = mediaStream;
-                                audioElm.autoplay = true;
-                                
-                                liveVideoContainer.appendChild(audioElm);
-                            }
-                        });
-
-                        participant.on("stream-disabled", (stream) => {
-                            if (stream.kind === "video" || stream.kind === "share") {
-                                let videoElm = document.getElementById(`v-${participant.id}`);
-                                if(videoElm) videoElm.remove();
-                                waitingText.style.display = "block";
-                            }
-                            if (stream.kind === "audio") {
-                                let audioElm = document.getElementById(`a-${participant.id}`);
-                                if(audioElm) audioElm.remove();
-                            }
-                        });
-                    });
-
-                    // عند إغلاق البث من قبل المعلم أو خروج الطالب
-                    studentMeeting.on("meeting-left", () => {
-                        liveVideoContainer.querySelectorAll('video, audio').forEach(el => el.remove());
-                        waitingText.style.display = "block";
-                        joinStreamControls.classList.remove('hidden');
-                        liveStreamWrapper.classList.add('hidden');
-                        studentMeeting = null;
-                    });
-
-                    // التعامل مع الأخطاء
-                    studentMeeting.on("error", (err) => {
-                        alert("خطأ في الاتصال بالبث: تأكد من صحة الكود.");
-                        joinStreamBtn.innerHTML = "دخول للبث";
-                        joinStreamBtn.disabled = false;
-                        studentMeeting = null;
-                    });
-                });
-            }
-
-            if(leaveStreamBtn) {
-                leaveStreamBtn.addEventListener('click', () => {
-                    if(studentMeeting) studentMeeting.leave();
-                });
-            }
-        });
+        }
     </script>
-</head>
-<body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
 
-    <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
+    <style>
+        :root {
+            --glass-bg: rgba(10, 14, 23, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --glass-blur: 16px;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        body {
+            background-color: theme('colors.base');
+            color: #E2E8F0;
+            overscroll-behavior-y: none;
+        }
+
+        /* Cinematic Noise Overlay */
+        .noise-bg {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* Ultra Glass Morphism */
+        .glass-ultra {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+
+        /* Animated Magic Border */
+        .magic-border {
+            position: relative; overflow: hidden; border-radius: inherit;
+        }
+        .magic-border::before {
+            content: ''; position: absolute; inset: -2px; z-index: -1;
+            background: conic-gradient(from 0deg, transparent 60%, theme('colors.accent') 80%, transparent 100%);
+            animation: border-flow 4s linear infinite;
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .magic-border:hover::before { opacity: 1; }
+        .magic-border::after {
+            content: ''; position: absolute; inset: 1px; z-index: -1;
+            background: theme('colors.surface'); border-radius: inherit;
+        }
+
+        /* Navigation Architecture */
+        .nav-btn {
+            position: relative; overflow: hidden; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            isolation: isolate;
+        }
+        .nav-btn::before {
+            content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            transform: translateX(-100%); transition: transform 0.5s;
+        }
+        .nav-btn:hover::before { transform: translateX(100%); }
+        .nav-btn::after {
+            content: ''; position: absolute; inset: 0; border-radius: inherit;
+            background: theme('colors.accent'); opacity: 0; z-index: -1;
+            transform: scale(0.9); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .nav-btn:hover:not(.active) { background: rgba(255,255,255,0.02); transform: translateX(-4px); }
+        .nav-btn.active { color: #000; font-weight: 800; transform: translateX(-8px); letter-spacing: -0.5px; }
+        .nav-btn.active::after { opacity: 1; transform: scale(1); box-shadow: 0 0 25px var(--accentGlow); }
+        .nav-btn.active-danger { color: #fff; transform: translateX(-8px); }
+        .nav-btn.active-danger::after { background: theme('colors.danger'); opacity: 1; transform: scale(1); box-shadow: 0 0 30px var(--dangerGlow); }
+
+        /* Tabs System */
+        .tab-content { display: none; opacity: 0; }
+        .tab-content.active { display: block; animation: tabEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes tabEnter {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); filter: blur(4px); }
+            to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+        }
+
+        /* Modern Input */
+        .input-neo {
+            background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.08);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .input-neo:focus {
+            border-color: theme('colors.danger'); background: rgba(0,0,0,0.6);
+            box-shadow: 0 0 0 4px rgba(244, 63, 94, 0.15), inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        /* Progress Ring */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: rotate(-90deg); transform-origin: 50% 50%;
+            filter: drop-shadow(0 0 10px var(--accentGlow));
+        }
+
+        /* Magnetic Button Effect (Handled in JS) */
+        .magnetic-wrap { display: inline-block; position: relative; }
+        .magnetic-elem { transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            transform: translateY(100px) scale(0.9); opacity: 0;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .toast.show { transform: translateY(0) scale(1); opacity: 1; }
+
+        /* Hide Scrollbar helper */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex h-[100dvh] overflow-hidden antialiased bg-mesh relative">
+    
+    <!-- Environment & Particles -->
+    <div class="noise-bg"></div>
+    <canvas id="particleCanvas" class="fixed inset-0 z-0 pointer-events-none opacity-40"></canvas>
+
+    <!-- Global Toast -->
+    <div id="toastContainer" class="toast flex items-center gap-4 glass-ultra px-6 py-4 rounded-2xl border-l-4 border-l-accent shadow-2xl">
+        <span id="toastIcon" class="text-accent bg-accent/10 p-2 rounded-full">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </span>
+        <div class="flex flex-col">
+            <h4 id="toastTitle" class="font-bold text-white text-sm">تنبيه</h4>
+            <p id="toastMessage" class="text-xs text-gray-400 mt-0.5">جاري المعالجة...</p>
+        </div>
+    </div>
+
+    <!-- Sidebar Architecture -->
+    <aside class="w-[85px] hover:w-[280px] md:w-[320px] transition-all duration-500 ease-in-out glass-ultra flex flex-col shrink-0 z-40 border-l border-white/5 bg-surfaceUltra/60 group absolute md:relative h-full left-0 md:left-auto right-0 md:right-auto overflow-hidden">
         
-        <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
+        <header class="p-6 md:p-8 flex flex-col gap-6 relative">
+            <div class="absolute -top-20 -right-20 w-40 h-40 bg-accent/20 rounded-full blur-[60px] pointer-events-none"></div>
+            
             <div class="flex justify-between w-full items-center">
-                <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-                <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-red-500/20">خروج</button>
+                <div class="text-2xl md:text-4xl font-black tracking-tight text-white flex items-center gap-1 cursor-default opacity-0 group-hover:opacity-100 md:opacity-100 transition-opacity whitespace-nowrap">
+                    الدحيح<span class="text-accent animate-pulse-slow">.</span>
+                </div>
+                <div class="md:hidden w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent mx-auto group-hover:hidden">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 22h20L12 2z"/></svg>
+                </div>
             </div>
             
-            <div class="hidden md:block w-full bg-black/40 border border-white/5 rounded-2xl p-4 mt-2">
-                <p class="text-xs text-gray-400 mb-1">المرحلة الدراسية:</p>
-                <p id="studentGrade" class="text-yellow-500 font-bold text-sm mb-3">جاري التحميل...</p>
-                <div class="h-px w-full bg-white/10 my-2"></div>
-                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">...</span></h2>
+            <div class="w-full bg-black/40 border border-white/5 rounded-2xl p-4 flex-col relative overflow-hidden hidden group-hover:flex md:flex animate-reveal" style="animation-delay: 0.1s;">
+                <div class="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500"></div>
+                <div class="flex items-center gap-4 mb-3">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-accent rounded-full animate-ping opacity-20"></div>
+                        <div class="w-12 h-12 rounded-full bg-gradient-to-br from-accent to-accentDark p-[2px] relative z-10">
+                            <div class="w-full h-full bg-surface rounded-full flex items-center justify-center overflow-hidden">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=DahihStudent&backgroundColor=transparent" alt="Avatar" class="w-10 h-10 object-cover">
+                            </div>
+                        </div>
+                        <div class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-success border-2 border-surface rounded-full z-20"></div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h2 class="text-[10px] text-gray-400 font-medium uppercase tracking-wider mb-0.5">الطالب</h2>
+                        <span id="studentName" class="text-white font-bold text-base block truncate">طالب الدحيح</span>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                    <span class="text-xs text-gray-400">المرحلة</span>
+                    <span id="studentGrade" class="text-accent font-bold text-xs bg-accent/10 px-2.5 py-1 rounded-md border border-accent/20">جاري التحميل</span>
+                </div>
             </div>
-        </div>
+        </header>
         
-        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 scrollbar-hide flex-shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
-            <button onclick="switchTab('live')" id="btn-live" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-bold text-red-500 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent flex items-center justify-center md:justify-start gap-2">
-                <span class="w-2 h-2 rounded-full bg-red-500 pulse-live"></span>
-                البث المباشر
+        <nav class="flex flex-col w-full px-4 py-2 gap-2 flex-grow overflow-y-auto hide-scrollbar" id="mainNav">
+            <!-- Navigation Items -->
+            <button data-tab-target="dashboard" id="btn-dashboard" class="nav-btn active w-full text-right px-4 py-3.5 rounded-xl font-medium text-gray-400 flex items-center gap-4 group/btn overflow-hidden whitespace-nowrap">
+                <div class="w-6 h-6 flex items-center justify-center shrink-0 text-current transition-transform group-hover/btn:scale-110">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                </div>
+                <span class="opacity-0 md:opacity-100 group-hover:opacity-100 transition-opacity">لوحة المذاكرة</span>
             </button>
-            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
-            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
-            <button onclick="switchTab('points')" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
-            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
+
+            <button data-tab-target="live" id="btn-live" class="nav-btn w-full text-right px-4 py-3.5 rounded-xl font-medium text-gray-400 flex items-center gap-4 group/btn relative overflow-hidden whitespace-nowrap">
+                <div class="w-6 h-6 flex items-center justify-center shrink-0">
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-danger shadow-[0_0_8px_#f43f5e]"></span>
+                    </span>
+                </div>
+                <span class="text-danger font-bold opacity-0 md:opacity-100 group-hover:opacity-100 transition-opacity">البث المباشر</span>
+            </button>
+
+            <button data-tab-target="courses" id="btn-courses" class="nav-btn w-full text-right px-4 py-3.5 rounded-xl font-medium text-gray-400 flex items-center gap-4 group/btn whitespace-nowrap">
+                <div class="w-6 h-6 flex items-center justify-center shrink-0 transition-transform group-hover/btn:scale-110">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                </div>
+                <span class="opacity-0 md:opacity-100 group-hover:opacity-100 transition-opacity">المحاضرات والحصص</span>
+            </button>
+
+            <button data-tab-target="quizzes" id="btn-quizzes" class="nav-btn w-full text-right px-4 py-3.5 rounded-xl font-medium text-gray-400 flex items-center gap-4 group/btn whitespace-nowrap">
+                <div class="w-6 h-6 flex items-center justify-center shrink-0 transition-transform group-hover/btn:scale-110">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                </div>
+                <span class="opacity-0 md:opacity-100 group-hover:opacity-100 transition-opacity">الاختبارات الإلكترونية</span>
+            </button>
+
+            <button data-tab-target="points" id="btn-points" class="nav-btn w-full text-right px-4 py-3.5 rounded-xl font-medium text-gray-400 flex items-center gap-4 group/btn whitespace-nowrap">
+                <div class="w-6 h-6 flex items-center justify-center shrink-0 transition-transform group-hover/btn:scale-110">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                </div>
+                <span class="opacity-0 md:opacity-100 group-hover:opacity-100 transition-opacity">أهم نقاط المنهج</span>
+            </button>
+            
+            <button data-tab-target="questions" id="btn-questions" class="nav-btn w-full text-right px-4 py-3.5 rounded-xl font-medium text-gray-400 flex items-center gap-4 group/btn whitespace-nowrap">
+                <div class="w-6 h-6 flex items-center justify-center shrink-0 transition-transform group-hover/btn:scale-110">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <span class="opacity-0 md:opacity-100 group-hover:opacity-100 transition-opacity">الأسئلة المقالية</span>
+            </button>
         </nav>
 
-        <div class="hidden md:block p-4 mt-auto">
-            <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3.5 rounded-xl text-sm font-bold transition-all border border-red-500/20 flex items-center justify-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                تسجيل الخروج
+        <div class="p-4 mt-auto border-t border-white/5 bg-black/20 hidden group-hover:block md:block">
+            <button data-action="logout" class="w-full text-gray-400 hover:text-white bg-white/5 hover:bg-danger/20 py-3.5 rounded-xl text-sm font-bold transition-all border border-transparent hover:border-danger/30 flex items-center justify-center gap-2 group/out relative overflow-hidden">
+                <span class="absolute inset-0 w-0 bg-danger/20 transition-all duration-300 ease-out group-hover/out:w-full"></span>
+                <svg class="w-4 h-4 relative z-10 group-hover/out:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                <span class="relative z-10">تسجيل الخروج</span>
             </button>
         </div>
     </aside>
 
-    <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth" id="mainGrid">
-        <div class="fixed top-0 right-0 w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+    <!-- Main Content Architecture -->
+    <main class="flex-grow h-full overflow-y-auto relative scroll-smooth z-10 ml-0 pl-[85px] md:pl-0" id="mainGrid">
+        
+        <!-- Top Navbar for Dashboard feel -->
+        <nav class="sticky top-0 z-30 glass-ultra border-b border-white/5 px-6 md:px-10 py-4 flex items-center justify-between animate-reveal shadow-lg">
+            <div class="flex items-center bg-black/40 border border-white/10 rounded-full px-4 py-2 w-full max-w-md focus-within:border-accent transition-colors">
+                <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                <input type="text" placeholder="ابحث عن محاضرة، كويز..." class="bg-transparent border-none outline-none text-sm text-white w-full pr-3 placeholder-gray-500">
+                <span class="text-[10px] bg-white/10 px-2 py-0.5 rounded text-gray-400 font-mono">⌘K</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="relative p-2 text-gray-400 hover:text-white transition-colors">
+                    <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full border border-surface"></span>
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                </button>
+            </div>
+        </nav>
 
-        <div id="tab-dashboard" class="tab-content active space-y-4 md:space-y-6">
-            <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
-                <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up bg-[#0a0f1c]">
-                    <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                            <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                                <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
-                            <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
-                        </div>
+        <div class="p-6 md:p-10 pb-20">
+            <!-- Dashboard Tab -->
+            <div id="tab-dashboard" class="tab-content active max-w-7xl mx-auto">
+                <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-reveal" style="animation-delay: 0.1s;">
+                    <div>
+                        <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-l from-white to-gray-400 tracking-tight">نظرة عامة</h1>
+                        <p class="text-gray-400 mt-2 font-medium">مرحباً بعودتك، رحلة التفوق مستمرة.</p>
                     </div>
+                </header>
 
-                    <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
-                        <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl border border-white/5 overflow-hidden group shadow-lg">
-                            <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black z-10 p-4 text-center">
-                                <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-bounce">
-                                    <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <!-- Quick Stats Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 animate-reveal" style="animation-delay: 0.2s;">
+                    <div class="glass-ultra p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-bl from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-gray-400 text-sm font-medium">ساعات المشاهدة</span>
+                            <div class="p-2 bg-blue-500/20 rounded-lg text-blue-400"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+                        </div>
+                        <div class="text-3xl font-black text-white">24.5 <span class="text-sm text-gray-500 font-normal">ساعة</span></div>
+                    </div>
+                    <div class="glass-ultra p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-bl from-accent/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-gray-400 text-sm font-medium">النقاط المكتسبة</span>
+                            <div class="p-2 bg-accent/20 rounded-lg text-accent"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+                        </div>
+                        <div class="text-3xl font-black text-white">1,240 <span class="text-sm text-success font-normal tracking-wide">+120 هذا الأسبوع</span></div>
+                    </div>
+                    <div class="glass-ultra p-5 rounded-2xl border border-white/5 relative overflow-hidden group">
+                        <div class="absolute inset-0 bg-gradient-to-bl from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="text-gray-400 text-sm font-medium">الترتيب العام</span>
+                            <div class="p-2 bg-purple-500/20 rounded-lg text-purple-400"><svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg></div>
+                        </div>
+                        <div class="text-3xl font-black text-white">#42 <span class="text-sm text-gray-500 font-normal">من 500+</span></div>
+                    </div>
+                </div>
+
+                <div class="flex flex-col xl:flex-row gap-6 md:gap-8">
+                    <!-- Video Section -->
+                    <div class="flex-[2] magic-border rounded-[2rem] bg-surface/80 flex flex-col shadow-2xl animate-reveal" style="animation-delay: 0.3s;">
+                        <div class="p-5 border-b border-white/5 bg-white/5 flex items-center justify-between z-10 backdrop-blur-md rounded-t-[2rem]">
+                            <div class="flex items-center gap-4 flex-1 min-w-0">
+                                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-accentDark flex items-center justify-center shrink-0 shadow-[0_0_20px_var(--accentGlow)]">
+                                    <svg class="w-6 h-6 text-base translate-x-[2px]" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                 </div>
-                                <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
-                                <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل </p>
+                                <div class="flex flex-col min-w-0">
+                                    <span class="text-[11px] text-accent font-bold uppercase tracking-widest mb-1">المحاضرة الحالية</span>
+                                    <h2 id="playingVideoTitle" class="font-bold text-lg md:text-xl truncate text-white">اختر محاضرة للبدء</h2>
+                                </div>
                             </div>
-                            <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full hidden bg-black"></video>
+                        </div>
+
+                        <div class="p-4 md:p-6 flex-grow flex flex-col justify-center bg-black/50 relative rounded-b-[2rem]" id="fs-wrapper">
+                            <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl overflow-hidden group shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 z-10">
+                                <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-surfaceUltra to-base z-20 transition-all duration-700">
+                                    <!-- Animated Grid inside poster -->
+                                    <div class="absolute inset-0 opacity-10 bg-[linear-gradient(rgba(255,255,255,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.05)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+                                    
+                                    <div class="relative w-28 h-28 mb-8 group-hover:scale-105 transition-transform duration-500">
+                                        <div class="absolute inset-0 bg-accent rounded-full animate-ping opacity-20"></div>
+                                        <div class="absolute inset-2 bg-accent/40 rounded-full blur-xl"></div>
+                                        <div class="relative w-full h-full bg-gradient-to-tr from-accent to-accentDark rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.5)] cursor-pointer overflow-hidden isolate">
+                                            <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-0"></div>
+                                            <svg class="w-12 h-12 text-surfaceUltra translate-x-[3px] relative z-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                        </div>
+                                    </div>
+                                    <h3 class="text-3xl md:text-4xl font-black mb-3 tracking-tight text-white drop-shadow-xl relative z-10">جاهز للتعلم؟</h3>
+                                </div>
+                                <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full hidden object-contain bg-black z-10"></video>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
-                    <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up bg-gradient-to-b from-white/5 to-transparent">
-                        <h2 class="text-lg font-bold mb-6 text-white flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                            مؤشر الأداء العام
-                        </h2>
-                        <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
-                            <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-yellow-500 border-l-yellow-500 opacity-50 animate-spin" style="animation-duration: 3s;"></div>
-                            <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
+                    <!-- Stats Section -->
+                    <div class="flex-1 flex flex-col animate-reveal" style="animation-delay: 0.4s;" id="sideCol">
+                        <div class="glass-ultra p-8 rounded-[2rem] border-t-[4px] border-t-accent text-center flex-1 flex flex-col justify-center items-center relative overflow-hidden group">
+                            <div class="absolute inset-0 bg-gradient-to-b from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-duration-700"></div>
+                            
+                            <div class="bg-surface border border-white/5 p-4 rounded-2xl mb-8 shadow-inner relative isolate overflow-hidden">
+                                <div class="absolute inset-0 bg-accent/10 animate-pulse-slow"></div>
+                                <svg class="w-8 h-8 text-accent relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            </div>
+                            
+                            <h2 class="text-xl font-bold mb-8 text-white relative z-10 tracking-wide">مؤشر الأداء الشامل</h2>
+                            
+                            <div class="relative w-52 h-52 mx-auto flex items-center justify-center mb-4 z-10">
+                                <svg class="w-full h-full transform -rotate-90 filter drop-shadow-lg" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="8"></circle>
+                                    <circle class="progress-ring__circle text-accent" stroke="url(#gradient)" stroke-width="8" stroke-linecap="round" fill="none" cx="50" cy="50" r="44" stroke-dasharray="276" stroke-dashoffset="276"></circle>
+                                    <defs>
+                                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#F59E0B" />
+                                            <stop offset="100%" stop-color="#F43F5E" />
+                                        </linearGradient>
+                                    </defs>
+                                </svg>
+                                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                    <span id="studentPointsDisplay" class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-white to-gray-400" dir="ltr">0%</span>
+                                    <span class="text-xs text-gray-500 mt-2 uppercase tracking-[0.2em] font-semibold">إنجاز</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div id="tab-live" class="tab-content">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="w-3 h-3 rounded-full bg-red-500 pulse-live"></span>
-                <h1 class="text-2xl md:text-3xl font-bold">غرفة البث المباشر</h1>
-            </div>
-            <p class="text-gray-400 text-sm md:text-base mb-6">يمكنك رؤية البث المباشرمن هنا.</p>
-            
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-red-500 mb-6 bg-[#0a0f1c] shadow-2xl">
+            <!-- Live Tab -->
+            <div id="tab-live" class="tab-content max-w-5xl mx-auto">
+                <header class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-4 mb-3">
+                            <div class="relative flex h-5 w-5 items-center justify-center">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-60"></span>
+                                <span class="relative inline-flex rounded-full h-3 w-3 bg-danger shadow-[0_0_15px_#f43f5e]"></span>
+                            </div>
+                            <h1 class="text-4xl md:text-5xl font-black text-white tracking-tight">غرفة البث المباشر</h1>
+                        </div>
+                        <p class="text-gray-400 font-medium">تقنية WebRTC فائقة السرعة، اتصال مشفر E2EE.</p>
+                    </div>
+                </header>
                 
-                <div id="joinStreamControls" class="text-center py-10 md:py-16 animate-fade-in-up">
-                    <div class="w-20 h-20 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
-                        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-3">هل يوجد بث مباشر الآن؟</h3>
-                    <p class="text-gray-400 mb-8 max-w-md mx-auto">يرجي كتابة كود البث المباشر للدخول.</p>
+                <div class="glass-ultra rounded-[2.5rem] p-1.5 border-t-[4px] border-t-danger shadow-[0_30px_100px_rgba(0,0,0,0.4)] relative overflow-hidden group/live">
+                    <div class="absolute -top-[50%] -right-[20%] w-[80%] h-[150%] bg-danger/10 rounded-full blur-[100px] pointer-events-none transition-transform duration-1000 group-hover/live:rotate-12"></div>
                     
-                    <div class="flex flex-col md:flex-row justify-center gap-3 max-w-md mx-auto">
-                        <input type="text" id="streamIdInput" placeholder="أدخل كود البث (مثال: abc-123-xyz)" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white focus:border-red-500 transition-colors text-center text-lg outline-none" dir="ltr">
-                        <button id="joinStreamBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-4 rounded-xl transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)] whitespace-nowrap">
-                            دخول للبث
-                        </button>
-                    </div>
-                </div>
-
-                <div id="liveStreamWrapper" class="hidden animate-fade-in-up">
-                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
-                        <div class="flex items-center gap-3">
-                            <div class="bg-red-500/20 text-red-400 border border-red-500/50 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-red-500 pulse-live"></span>
-                                أنت متصل بالبث الآن
+                    <div class="bg-base/90 rounded-[2.2rem] p-8 md:p-14 relative z-10 min-h-[550px] flex flex-col backdrop-blur-2xl">
+                        
+                        <!-- Join State -->
+                        <div id="joinStreamControls" class="flex-1 flex flex-col items-center justify-center text-center animate-reveal">
+                            <div class="relative w-32 h-32 mb-10">
+                                <div class="absolute inset-0 border-[3px] border-dashed border-danger/20 rounded-full animate-spin-slow"></div>
+                                <div class="absolute inset-[-10px] border border-danger/10 rounded-full animate-ping" style="animation-duration: 3s;"></div>
+                                <div class="absolute inset-4 bg-gradient-to-br from-danger/20 to-danger/5 rounded-full flex items-center justify-center border border-danger/30 backdrop-blur-md shadow-[inset_0_0_20px_rgba(244,63,94,0.2)]">
+                                    <svg class="w-12 h-12 text-danger animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                </div>
+                            </div>
+                            
+                            <h3 class="text-3xl font-black text-white mb-4">الاتصال بالبث المباشر</h3>
+                            <p class="text-gray-400 mb-12 max-w-md mx-auto text-sm leading-relaxed">أدخل كود البث السري المقدم من المعلم. يتم إنشاء نفق مشفر بالكامل لضمان الخصوصية والجودة.</p>
+                            
+                            <div class="w-full max-w-xl mx-auto bg-white/5 p-2.5 rounded-[1.5rem] flex flex-col sm:flex-row gap-3 border border-white/10 shadow-inner relative z-20">
+                                <input type="text" id="streamIdInput" placeholder="أدخل كود البث هنا..." class="input-neo flex-1 rounded-[1.2rem] px-6 py-5 text-white placeholder-gray-500 text-center sm:text-left text-lg outline-none w-full font-mono tracking-widest" dir="ltr" autocomplete="off">
+                                
+                                <div class="magnetic-wrap sm:w-auto w-full">
+                                    <button id="joinStreamBtn" class="magnetic-elem w-full bg-gradient-to-r from-danger to-rose-600 hover:from-rose-500 hover:to-danger text-white font-bold px-8 py-5 rounded-[1.2rem] transition-all shadow-[0_10px_30px_rgba(244,63,94,0.4)] whitespace-nowrap flex items-center justify-center gap-3 relative overflow-hidden group">
+                                        <span class="absolute inset-0 w-full h-full bg-white/20 -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
+                                        <span class="relative z-10 text-lg">بدء الاتصال</span>
+                                        <svg class="w-5 h-5 relative z-10 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <button id="leaveStreamBtn" class="w-full md:w-auto bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-2 rounded-lg text-sm font-bold transition-colors text-gray-300">
-                            مغادرة غرفة البث
-                        </button>
-                    </div>
-                    
-                    <div id="liveVideoContainer" class="w-full aspect-video bg-black rounded-xl border border-white/10 overflow-hidden relative shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center">
-                        <div id="waitingText" class="text-center p-6">
-                            <svg class="animate-spin h-10 w-10 text-red-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="text-gray-300 font-bold text-lg">أنت داخل الغرفة بنجاح</p>
-                            <p class="text-gray-500 text-sm mt-2">يرجي الانتظار لحين بدء البث...</p>
+
+                        <!-- Active Stream State -->
+                        <div id="liveStreamWrapper" class="hidden flex-1 flex flex-col animate-reveal">
+                            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4 bg-surfaceUltra/80 p-5 rounded-2xl border border-white/5 backdrop-blur-xl">
+                                <div class="flex items-center gap-4">
+                                    <div class="bg-danger/10 border border-danger/20 px-4 py-2 rounded-xl flex items-center gap-3 shadow-[inset_0_0_15px_rgba(244,63,94,0.1)]">
+                                        <span class="relative flex h-2.5 w-2.5">
+                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-danger"></span>
+                                        </span>
+                                        <span class="text-danger font-bold text-sm tracking-wide">متصل ومشفر (E2EE)</span>
+                                    </div>
+                                    <span id="streamQualityBadge" class="hidden sm:flex items-center gap-1.5 bg-black/50 text-gray-300 text-[10px] font-mono px-3 py-1.5 rounded-lg border border-white/10">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-success"></span> 1080p
+                                    </span>
+                                </div>
+                                <button id="leaveStreamBtn" class="w-full sm:w-auto bg-white/5 hover:bg-danger/20 border border-white/10 hover:border-danger/40 px-6 py-3 rounded-xl text-sm font-bold transition-all text-gray-300 hover:text-white flex items-center justify-center gap-2 group">
+                                    <svg class="w-4 h-4 text-gray-400 group-hover:text-danger transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    مغادرة البث
+                                </button>
+                            </div>
+                            
+                            <div id="liveVideoContainer" class="flex-1 w-full bg-base rounded-2xl border border-white/10 overflow-hidden relative shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex items-center justify-center min-h-[450px] group isolate">
+                                <div class="absolute inset-0 opacity-20 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0iI2ZmZiIvPjwvc3ZnPg==')] z-0"></div>
+                                
+                                <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-30 flex justify-between items-end pointer-events-none">
+                                    <div class="flex items-center gap-4 pointer-events-auto">
+                                        <div class="flex items-center gap-2 bg-black/60 px-3 py-1.5 rounded-lg backdrop-blur-md border border-white/10 shadow-lg">
+                                            <div class="w-2 h-2 rounded-full bg-danger animate-pulse"></div>
+                                            <span class="text-xs text-white font-mono font-bold tracking-widest">LIVE</span>
+                                        </div>
+                                    </div>
+                                    <div class="pointer-events-auto magnetic-wrap">
+                                        <button id="fullscreenStreamBtn" class="magnetic-elem text-white hover:text-accent bg-black/60 p-3 rounded-xl backdrop-blur-md border border-white/10 transition-colors shadow-lg">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div id="waitingText" class="text-center p-8 z-20 flex flex-col items-center bg-base/60 backdrop-blur-sm rounded-3xl border border-white/5">
+                                    <div class="relative w-20 h-20 mb-6">
+                                        <svg class="animate-spin w-full h-full text-danger/30" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"></circle>
+                                            <path class="opacity-100 text-danger" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <div class="absolute inset-0 flex items-center justify-center">
+                                            <div class="w-2 h-2 bg-danger rounded-full shadow-[0_0_10px_#f43f5e]"></div>
+                                        </div>
+                                    </div>
+                                    <h4 class="text-white font-bold text-2xl mb-2">الغرفة جاهزة</h4>
+                                    <p class="text-gray-400 text-sm max-w-sm mx-auto leading-relaxed">في انتظار المعلم لبدء البث وبث إشارة الفيديو...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div id="tab-courses" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
-            <div id="studentCoursesContainer" class="flex flex-col gap-8"></div>
-        </div>
 
-        <div id="tab-quizzes" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">الاختبارات الإلكترونية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            <!-- Generic Container styling for other tabs -->
+            <style>
+                .grid-container { display: grid; gap: 1.5rem; }
+                @media (min-width: 768px) { .grid-container { grid-template-columns: repeat(2, 1fr); } }
+                @media (min-width: 1280px) { .grid-container { grid-template-columns: repeat(3, 1fr); } }
+                .tab-header { margin-bottom: 2.5rem; animation: reveal 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+                .tab-panel { @apply glass-ultra rounded-[2rem] p-8 border-t-[4px] border-t-accent shadow-2xl; animation: reveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; animation-delay: 0.1s; opacity: 0;}
+            </style>
+
+            <!-- Courses Tab -->
+            <div id="tab-courses" class="tab-content max-w-7xl mx-auto">
+                <header class="tab-header">
+                    <h1 class="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">المحاضرات والحصص</h1>
+                    <p class="text-gray-400 font-medium">مكتبتك الشاملة لجميع الدروس مرتبة أكاديمياً.</p>
+                </header>
+                <div id="studentCoursesContainer" class="flex flex-col gap-6 w-full relative z-10"></div>
             </div>
-        </div>
 
-        <div id="tab-points" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <!-- Quizzes Tab -->
+            <div id="tab-quizzes" class="tab-content max-w-7xl mx-auto">
+                <header class="tab-header">
+                    <h1 class="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">الاختبارات الإلكترونية</h1>
+                    <p class="text-gray-400 font-medium">تحدَ نفسك وقس مستواك الفعلي من خلال تقييمات ذكية.</p>
+                </header>
+                <div class="tab-panel">
+                    <div id="onlineQuizzesContainer" class="grid-container"></div>
+                </div>
             </div>
-        </div>
 
-        <div id="tab-questions" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم الأسئلة المقالية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="questionsContainer" class="flex flex-col gap-4"></div>
+            <!-- Points Tab -->
+            <div id="tab-points" class="tab-content max-w-7xl mx-auto">
+                <header class="tab-header">
+                    <h1 class="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">أهم نقاط المنهج</h1>
+                    <p class="text-gray-400 font-medium">خلاصة الخلاصة، كبسولات سريعة للمراجعة النهائية.</p>
+                </header>
+                <div class="tab-panel">
+                    <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+                </div>
+            </div>
+
+            <!-- Questions Tab -->
+            <div id="tab-questions" class="tab-content max-w-7xl mx-auto">
+                <header class="tab-header">
+                    <h1 class="text-4xl md:text-5xl font-black text-white mb-2 tracking-tight">بنك الأسئلة المقالية</h1>
+                    <p class="text-gray-400 font-medium">الأسئلة المتوقعة وإجاباتها النموذجية للتدريب العميق.</p>
+                </header>
+                <div class="tab-panel">
+                    <div id="questionsContainer" class="flex flex-col gap-6"></div>
+                </div>
             </div>
         </div>
     </main>
 
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-xl" role="dialog" aria-modal="true">
-        <div class="bg-[#0a0f1c] border border-white/10 w-full max-w-3xl rounded-[2rem] p-5 md:p-8 max-h-[95vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)]" id="quizModalBox">
-            <div id="quizModalContent"></div>
+    <!-- Global Quiz Modal (Ultra Version) -->
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-base/80 hidden flex items-center justify-center p-4 md:p-8 backdrop-blur-[20px] transition-opacity duration-400 opacity-0" role="dialog" aria-modal="true">
+        <div class="absolute inset-0 noise-bg opacity-50"></div>
+        <div class="bg-surface/90 border border-white/10 w-full max-w-5xl rounded-[2.5rem] flex flex-col max-h-[90vh] overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.8)] relative transform scale-95 transition-transform duration-400" id="quizModalBox">
+            <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-accent to-danger"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-accent/10 rounded-full blur-[80px] pointer-events-none"></div>
+            
+            <div class="flex justify-between items-center p-6 border-b border-white/5 bg-white/5 z-10">
+                <h3 class="text-xl font-bold text-white flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center text-accent"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path></svg></span>
+                    نافذة الاختبار
+                </h3>
+                <button class="w-10 h-10 bg-white/5 hover:bg-danger/20 rounded-xl flex items-center justify-center text-gray-400 hover:text-danger transition-all border border-transparent hover:border-danger/30" onclick="document.getElementById('quizModal').classList.add('hidden')">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div id="quizModalContent" class="p-6 md:p-10 overflow-y-auto hide-scrollbar flex-1 relative z-10"></div>
         </div>
     </div>
 
+    <!-- External Core Scripts expected by the structure -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <script src="script.js" defer></script>
+
+    <!-- Supercharged App Architecture -->
+    <script>
+        const SuperApp = (() => {
+            const CONFIG = {
+                VS_TOKEN: "4bc289fe416d09f0ea5b3f9929d3e800b5cb4d111c6f37e02f32ca26e5ac69db",
+                UI_ANIM_DUR: 400
+            };
+
+            const DOM = {
+                nav: document.getElementById('mainNav'),
+                tabs: document.querySelectorAll('.tab-content'),
+                navBtns: document.querySelectorAll('.nav-btn'),
+                logoutBtns: document.querySelectorAll('[data-action="logout"]'),
+                progressCircle: document.querySelector('.progress-ring__circle'),
+                pointsDisplay: document.getElementById('studentPointsDisplay'),
+                toast: { container: document.getElementById('toastContainer'), title: document.getElementById('toastTitle'), msg: document.getElementById('toastMessage'), icon: document.getElementById('toastIcon') }
+            };
+
+            let studentMeetingObj = null;
+
+            // --- Visual & Particle Engine ---
+            const CanvasEngine = {
+                init() {
+                    const canvas = document.getElementById('particleCanvas');
+                    if(!canvas) return;
+                    const ctx = canvas.getContext('2d');
+                    let w = canvas.width = window.innerWidth;
+                    let h = canvas.height = window.innerHeight;
+                    const particles = [];
+                    const particleCount = window.innerWidth < 768 ? 30 : 70;
+
+                    window.addEventListener('resize', () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; });
+
+                    class Particle {
+                        constructor() {
+                            this.x = Math.random() * w; this.y = Math.random() * h;
+                            this.vx = (Math.random() - 0.5) * 0.5; this.vy = (Math.random() - 0.5) * 0.5;
+                            this.size = Math.random() * 2; this.alpha = Math.random() * 0.5 + 0.1;
+                        }
+                        update() {
+                            this.x += this.vx; this.y += this.vy;
+                            if(this.x < 0 || this.x > w) this.vx *= -1;
+                            if(this.y < 0 || this.y > h) this.vy *= -1;
+                        }
+                        draw() {
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                            ctx.fillStyle = `rgba(255, 255, 255, ${this.alpha})`;
+                            ctx.fill();
+                        }
+                    }
+
+                    for(let i=0; i<particleCount; i++) particles.push(new Particle());
+
+                    function animate() {
+                        ctx.clearRect(0, 0, w, h);
+                        particles.forEach(p => { p.update(); p.draw(); });
+                        requestAnimationFrame(animate);
+                    }
+                    animate();
+                }
+            };
+
+            // --- Magnetic Button Engine ---
+            const MagneticEngine = {
+                init() {
+                    const magnets = document.querySelectorAll('.magnetic-wrap');
+                    magnets.forEach(wrap => {
+                        const elem = wrap.querySelector('.magnetic-elem');
+                        if(!elem) return;
+                        wrap.addEventListener('mousemove', (e) => {
+                            const rect = wrap.getBoundingClientRect();
+                            const x = e.clientX - rect.left - rect.width/2;
+                            const y = e.clientY - rect.top - rect.height/2;
+                            elem.style.transform = `translate(${x * 0.2}px, ${y * 0.2}px)`;
+                        });
+                        wrap.addEventListener('mouseleave', () => {
+                            elem.style.transform = 'translate(0px, 0px)';
+                        });
+                    });
+                }
+            };
+
+            const UI = {
+                init() {
+                    this.attachTabListeners();
+                    this.attachLogout();
+                    window.switchTab = (tabId) => this.switchTab(tabId);
+                },
+
+                switchTab(tabId) {
+                    DOM.tabs.forEach(tab => {
+                        if (tab.classList.contains('active')) {
+                            tab.style.opacity = '0';
+                            tab.style.filter = 'blur(4px)';
+                            tab.style.transform = 'translateY(15px) scale(0.98)';
+                            setTimeout(() => { tab.classList.remove('active'); tab.style.display = 'none'; }, CONFIG.UI_ANIM_DUR / 2);
+                        }
+                    });
+
+                    DOM.navBtns.forEach(btn => btn.classList.remove('active', 'active-danger'));
+
+                    setTimeout(() => {
+                        const targetTab = document.getElementById(`tab-${tabId}`);
+                        if (targetTab) {
+                            targetTab.style.display = 'block'; void targetTab.offsetWidth;
+                            targetTab.classList.add('active');
+                            targetTab.style.opacity = '1';
+                            targetTab.style.filter = 'blur(0)';
+                            targetTab.style.transform = 'translateY(0) scale(1)';
+                        }
+                        const targetBtn = document.querySelector(`[data-tab-target="${tabId}"]`) || document.getElementById(`btn-${tabId}`);
+                        if (targetBtn) targetBtn.classList.add(tabId === 'live' ? 'active-danger' : 'active');
+                    }, CONFIG.UI_ANIM_DUR / 2);
+                },
+
+                attachTabListeners() {
+                    DOM.navBtns.forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const target = e.currentTarget.getAttribute('data-tab-target');
+                            if (target) this.switchTab(target);
+                        });
+                    });
+                },
+
+                attachLogout() {
+                    DOM.logoutBtns.forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.logout === 'function') window.DahihApp.logout();
+                        });
+                    });
+                },
+
+                updateCircularProgress(percentage) {
+                    if(DOM.progressCircle) {
+                        const radius = DOM.progressCircle.r.baseVal.value;
+                        const circumference = radius * 2 * Math.PI;
+                        DOM.progressCircle.style.strokeDasharray = `${circumference} ${circumference}`;
+                        const offset = circumference - (percentage / 100) * circumference;
+                        setTimeout(() => { DOM.progressCircle.style.strokeDashoffset = offset; }, 500);
+                    }
+                },
+
+                showToast(title, message, type = 'info') {
+                    DOM.toast.title.textContent = title; DOM.toast.msg.textContent = message;
+                    if(type === 'error') {
+                        DOM.toast.container.classList.replace('border-l-accent', 'border-l-danger');
+                        DOM.toast.icon.innerHTML = `<svg class="w-6 h-6 text-danger" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                        DOM.toast.icon.className = "bg-danger/10 p-2 rounded-full text-danger";
+                    } else if (type === 'success') {
+                        DOM.toast.container.classList.replace('border-l-accent', 'border-l-success');
+                        DOM.toast.container.classList.replace('border-l-danger', 'border-l-success');
+                        DOM.toast.icon.innerHTML = `<svg class="w-6 h-6 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                        DOM.toast.icon.className = "bg-success/10 p-2 rounded-full text-success";
+                    }
+                    DOM.toast.container.classList.add('show');
+                    setTimeout(() => DOM.toast.container.classList.remove('show'), 4000);
+                },
+
+                observeMutations() {
+                    if(DOM.pointsDisplay) {
+                        new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.type === 'characterData' || mutation.type === 'childList') {
+                                    const val = DOM.pointsDisplay.innerText.replace('%','').trim();
+                                    if(!isNaN(val)) this.updateCircularProgress(Number(val));
+                                }
+                            });
+                        }).observe(DOM.pointsDisplay, { childList: true, characterData: true, subtree: true });
+                    }
+
+                    const modal = document.getElementById('quizModal');
+                    const modalBox = document.getElementById('quizModalBox');
+                    if (modal && modalBox) {
+                        new MutationObserver((mutations) => {
+                            mutations.forEach((mutation) => {
+                                if (mutation.attributeName === 'class') {
+                                    if (!modal.classList.contains('hidden')) {
+                                        setTimeout(() => { modal.classList.add('opacity-100'); modalBox.classList.remove('scale-95'); modalBox.classList.add('scale-100'); }, 10);
+                                    } else {
+                                        modal.classList.remove('opacity-100'); modalBox.classList.remove('scale-100'); modalBox.classList.add('scale-95');
+                                    }
+                                }
+                            });
+                        }).observe(modal, { attributes: true });
+                    }
+                }
+            };
+
+            const LiveStream = {
+                cache: {
+                    btn: document.getElementById('joinStreamBtn'), input: document.getElementById('streamIdInput'),
+                    controls: document.getElementById('joinStreamControls'), wrapper: document.getElementById('liveStreamWrapper'),
+                    container: document.getElementById('liveVideoContainer'), leaveBtn: document.getElementById('leaveStreamBtn'),
+                    waitText: document.getElementById('waitingText'), fsBtn: document.getElementById('fullscreenStreamBtn')
+                },
+
+                init() {
+                    if (!this.cache.btn) return;
+                    this.cache.btn.addEventListener('click', () => this.handleJoin());
+                    this.cache.leaveBtn.addEventListener('click', () => this.handleLeave());
+                    this.cache.input.addEventListener('keypress', (e) => { if (e.key === 'Enter') this.handleJoin(); });
+                    if(this.cache.fsBtn) {
+                        this.cache.fsBtn.addEventListener('click', () => {
+                            if (!document.fullscreenElement) { this.cache.container.requestFullscreen().catch(err => UI.showToast("خطأ", "لا يمكن تفعيل ملء الشاشة", "error")); }
+                            else { document.exitFullscreen(); }
+                        });
+                    }
+                },
+
+                handleJoin() {
+                    const id = this.cache.input.value.trim();
+                    if (!id) { UI.showToast("خطأ", "يرجى كتابة الكود السري أولاً", "error"); this.cache.input.focus(); return; }
+                    this.setLoading(true);
+                    try {
+                        const nameEl = document.getElementById('studentName');
+                        window.VideoSDK.config(CONFIG.VS_TOKEN);
+                        studentMeetingObj = window.VideoSDK.initMeeting({ meetingId: id, name: nameEl ? nameEl.innerText : "طالب", micEnabled: false, webcamEnabled: false, mode: "RECV_ONLY" });
+                        this.attachMeetingEvents(studentMeetingObj);
+                        studentMeetingObj.join();
+                    } catch (err) { this.setLoading(false); UI.showToast("فشل", "حدث خطأ غير متوقع", "error"); }
+                },
+
+                attachMeetingEvents(meeting) {
+                    meeting.on("meeting-joined", () => {
+                        this.cache.controls.classList.add('hidden'); this.cache.wrapper.classList.remove('hidden'); this.cache.wrapper.classList.add('flex');
+                        this.setLoading(false); this.cache.input.value = ''; UI.showToast("تم الاتصال", "الغرفة مشفرة ومؤمنة بالكامل", "success");
+                    });
+                    meeting.on("participant-joined", (participant) => {
+                        participant.on("stream-enabled", (stream) => this.handleStreamEnabled(participant, stream));
+                        participant.on("stream-disabled", (stream) => this.handleStreamDisabled(participant, stream));
+                    });
+                    meeting.on("meeting-left", () => this.cleanup());
+                    meeting.on("error", (err) => { this.setLoading(false); UI.showToast("فشل الاتصال", "تحقق من الكود المدخل", "error"); this.cleanup(); });
+                },
+
+                handleStreamEnabled(participant, stream) {
+                    if (stream.kind === "video" || stream.kind === "share") {
+                        this.cache.waitText.style.display = "none";
+                        const mediaStream = new MediaStream([stream.track]);
+                        const videoElm = document.createElement("video");
+                        videoElm.id = `vs-v-${participant.id}`; videoElm.srcObject = mediaStream; videoElm.autoplay = true; videoElm.playsinline = true;
+                        videoElm.className = "absolute inset-0 w-full h-full object-contain bg-transparent z-10 opacity-0 transition-opacity duration-1000";
+                        videoElm.onloadeddata = () => { videoElm.classList.remove('opacity-0'); const b = document.getElementById('streamQualityBadge'); if(b) b.classList.remove('hidden'); };
+                        this.cache.container.appendChild(videoElm);
+                    }
+                    if (stream.kind === "audio") {
+                        const mediaStream = new MediaStream([stream.track]);
+                        const audioElm = document.createElement("audio");
+                        audioElm.id = `vs-a-${participant.id}`; audioElm.srcObject = mediaStream; audioElm.autoplay = true;
+                        this.cache.container.appendChild(audioElm);
+                    }
+                },
+
+                handleStreamDisabled(participant, stream) {
+                    const el = document.getElementById(`vs-${stream.kind === 'audio' ? 'a' : 'v'}-${participant.id}`);
+                    if(el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 500); }
+                    if (stream.kind === "video" || stream.kind === "share") {
+                        if(this.cache.container.querySelectorAll('video').length <= 1) this.cache.waitText.style.display = "flex";
+                        const b = document.getElementById('streamQualityBadge'); if(b) b.classList.add('hidden');
+                    }
+                },
+
+                handleLeave() { if (studentMeetingObj) studentMeetingObj.leave(); else this.cleanup(); },
+
+                cleanup() {
+                    this.cache.container.querySelectorAll('video, audio').forEach(m => { if(m.srcObject) m.srcObject.getTracks().forEach(t => t.stop()); m.remove(); });
+                    this.cache.waitText.style.display = "flex"; this.cache.wrapper.classList.add('hidden'); this.cache.wrapper.classList.remove('flex'); this.cache.controls.classList.remove('hidden');
+                    studentMeetingObj = null;
+                },
+
+                setLoading(isLoading) {
+                    const btn = this.cache.btn;
+                    if (isLoading) {
+                        btn.disabled = true; btn.classList.add('opacity-80', 'cursor-not-allowed');
+                        btn.querySelector('span:not(.bg-white\\/20)').innerText = "جاري التشفير...";
+                    } else {
+                        btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-not-allowed');
+                        btn.querySelector('span:not(.bg-white\\/20)').innerText = "بدء الاتصال";
+                    }
+                }
+            };
+
+            return {
+                init() {
+                    CanvasEngine.init();
+                    MagneticEngine.init();
+                    UI.init();
+                    UI.observeMutations();
+                    LiveStream.init();
+                    setTimeout(() => {
+                        const val = DOM.pointsDisplay?.innerText.replace('%','').trim();
+                        if(val && !isNaN(val)) UI.updateCircularProgress(Number(val));
+                    }, 800);
+                }
+            };
+        })();
+
+        document.addEventListener('DOMContentLoaded', SuperApp.init);
+    </script>
 </body>
 </html>
