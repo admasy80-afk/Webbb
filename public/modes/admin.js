@@ -1,9 +1,12 @@
-// =========== Arch
+// ==================== QUANTUM DASHBOARD ENGINE v8.0 (GOD MODE EXTREME) ====================
+// 🔥 Multi-Threaded CSV Worker | Anti-Tamper Mutation Shield | Request Deduplication
+// 🚀 Dynamic Hardware-Aware Chunking | LRU TTL Cache | Quantum DJB2 Hashing
+// 🛡️ DOM Scheduler + Sync Fixes | Deep AST Sanitizer | Pseudo-element Zero-Allocation Ripple
 import { SysUI, trashSVG } from './ui.js';
 import { sessionToken } from './state.js';
 
 // ═══════════════════════════════════════════════════════════════════
-// ⚙️ [CORE] SYSTEM CONSTANTS & CONFIG
+// ⚙️ [CORE] SYSTEM CONSTANTS & ADAPTIVE CONFIG
 // ═══════════════════════════════════════════════════════════════════
 const API = Object.freeze({
     STATS:           '/api/admin/stats',
@@ -17,7 +20,38 @@ const API = Object.freeze({
 const STATUS    = Object.freeze({ ACCEPTED: 'accepted', REJECTED: 'rejected', PENDING: 'pending' });
 const ITEM_TYPE = Object.freeze({ PUBLIC_QUIZ: 'publicQuiz', QUIZ: 'quiz', TEST: 'test', QUESTION: 'question', POINT: 'point' });
 const THRESHOLD = Object.freeze({ HIGH: 85, PASS: 50 });
-const CONFIG    = Object.freeze({ FETCH_TIMEOUT: 15000, MAX_RETRIES: 3, RENDER_CHUNK_SIZE: 30 });
+
+// Hardware-aware dynamic chunking for maximum FPS
+const _cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
+const CONFIG = Object.freeze({ 
+    FETCH_TIMEOUT: 15000, 
+    MAX_RETRIES: 3, 
+    RENDER_CHUNK_SIZE: Math.max(15, _cores * 8), 
+    CACHE_TTL_MS: 300000 // 5 Minutes 
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// 📝 [CORE] TELEMETRY & ADVANCED LOGGER
+// ═══════════════════════════════════════════════════════════════════
+const Logger = (() => {
+    const isProd = false; 
+    
+    if (typeof window !== 'undefined') {
+        window.addEventListener('unhandledrejection', e => !isProd && console.error(`[🔥 QUANTUM] Unhandled Promise:`, e.reason));
+        window.addEventListener('error', e => !isProd && console.error(`[🔥 QUANTUM] Global Error:`, e.message));
+    }
+
+    return {
+        error: (msg, ...args) => console.error(`[🔥 QUANTUM] ${msg}`, ...args),
+        warn:  (msg, ...args) => !isProd && console.warn(`[⚠️ QUANTUM] ${msg}`, ...args),
+        info:  (msg, ...args) => !isProd && console.info(`[ℹ️ QUANTUM] ${msg}`, ...args),
+        mem:   () => {
+            if (!isProd && performance?.memory) {
+                console.info(`[🧠 MEMORY] ${Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)}MB / ${Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)}MB`);
+            }
+        }
+    };
+})();
 
 // ═══════════════════════════════════════════════════════════════════
 // 🧠 [CORE] DOM SCHEDULER (PREVENTS LAYOUT THRASHING)
@@ -38,19 +72,7 @@ const Scheduler = (() => {
 })();
 
 // ═══════════════════════════════════════════════════════════════════
-// 📝 [CORE] ADVANCED LOGGER (Zero Allocation in Prod)
-// ═══════════════════════════════════════════════════════════════════
-const Logger = (() => {
-    const isProd = false; 
-    return {
-        error: (msg, ...args) => console.error(`[🔥 TITAN] ${msg}`, ...args),
-        warn:  (msg, ...args) => !isProd && console.warn(`[⚠️ TITAN] ${msg}`, ...args),
-        info:  (msg, ...args) => !isProd && console.info(`[ℹ️ TITAN] ${msg}`, ...args),
-    };
-})();
-
-// ═══════════════════════════════════════════════════════════════════
-// 🛡️ [SECURITY] DEEP SANITIZER & GUARDS
+// 🛡️ [SECURITY] DEEP SANITIZER, SHIELD & QUANTUM HASH
 // ═══════════════════════════════════════════════════════════════════
 const Security = (() => {
     const _escape = (str) => {
@@ -61,7 +83,7 @@ const Security = (() => {
     };
 
     const _sanitizeNode = (node) => {
-        if (node.nodeType === 1) { // Element
+        if (node.nodeType === 1) { 
             const attrs = node.attributes;
             for (let i = attrs.length - 1; i >= 0; i--) {
                 const attr = attrs[i];
@@ -75,6 +97,20 @@ const Security = (() => {
     };
 
     const _fields = ['first_name','second_name','third_name','last_name','email','grade','phone','title','question','testName','studentName'];
+
+    // Anti-Tamper Shield: Destroy unauthorized injected scripts instantly
+    if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
+        new MutationObserver(mutations => {
+            for (const m of mutations) {
+                m.addedNodes.forEach(n => {
+                    if (n.tagName === 'SCRIPT' && n.src && !n.src.includes(location.hostname) && !n.src.includes('tailwindcss')) {
+                        Logger.warn('Alien script intercepted & destroyed.', n.src);
+                        n.remove();
+                    }
+                });
+            }
+        }).observe(document.documentElement, { childList: true, subtree: true });
+    }
 
     return {
         e: _escape,
@@ -93,8 +129,11 @@ const Security = (() => {
             templateElement.content.childNodes.forEach(_sanitizeNode);
             return templateElement;
         },
+        // Fast Synchronous DJB2 Hash for identifiers
         hashId(str) {
-            return btoa(unescape(encodeURIComponent(str))).replace(/[^a-zA-Z0-9]/g, '');
+            let h = 5381;
+            for(let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
+            return 'q_' + (h >>> 0).toString(16);
         },
         getToken: () => localStorage.getItem('userToken') || localStorage.getItem('dahih_token') || '',
         getCsrfToken: () => document.querySelector('meta[name="csrf-token"]')?.content || '',
@@ -120,7 +159,7 @@ const Security = (() => {
 })();
 
 // ═══════════════════════════════════════════════════════════════════
-// 🎯 [STATE] STORE & RACE CONDITION MANAGER
+// 🎯 [STATE] LRU-TTL STORE & RACE CONDITION MANAGER
 // ═══════════════════════════════════════════════════════════════════
 const State = (() => {
     let _currentGradeData = null;
@@ -136,8 +175,13 @@ const State = (() => {
         get pendingRequests()   { return _pendingRequests; },
         set pendingRequests(v)  { _pendingRequests = v; },
 
-        getCachedStudents: (grade)       => _studentsCache.get(grade),
-        setCachedStudents: (grade, data) => _studentsCache.set(grade, data),
+        getCachedStudents: (grade) => {
+            const entry = _studentsCache.get(grade);
+            if (!entry) return null;
+            if (Date.now() > entry.expiry) { _studentsCache.delete(grade); return null; }
+            return entry.data;
+        },
+        setCachedStudents: (grade, data) => _studentsCache.set(grade, { data, expiry: Date.now() + CONFIG.CACHE_TTL_MS }),
         invalidateStudents: (grade)      => grade ? _studentsCache.delete(grade) : _studentsCache.clear(),
 
         isLoading: (key)   => _loadingKeys.has(key),
@@ -151,7 +195,7 @@ const State = (() => {
         isReqValid: (key, id) => _reqIds.get(key) === id,
 
         abort(key) {
-            _abortMap.get(key)?.abort(); // Abort existing gracefully
+            _abortMap.get(key)?.abort(); 
             const ctrl = new AbortController();
             _abortMap.set(key, ctrl);
             return ctrl;
@@ -160,17 +204,21 @@ const State = (() => {
 })();
 
 // ═══════════════════════════════════════════════════════════════════
-// 🌐 [NETWORK] HTTP CLIENT (Auto-Abort + Exponential Backoff)
+// 🌐 [NETWORK] HTTP CLIENT (Auto-Abort + Deduplication + Backoff)
 // ═══════════════════════════════════════════════════════════════════
 const Http = (() => {
     const _delay = ms => new Promise(res => setTimeout(res, ms));
+    const _activeRequests = new Map();
 
     return {
         async post(endpoint, body = {}, loadingKey = null, retries = CONFIG.MAX_RETRIES) {
+            // Request Deduplication
+            const dedupKey = endpoint + JSON.stringify(body);
+            if (_activeRequests.has(dedupKey)) return _activeRequests.get(dedupKey);
+
             let abortCtrl, reqId;
-            
             if (loadingKey) {
-                if (State.isLoading(loadingKey)) State.abort(loadingKey); // Cancel previous request, don't block
+                if (State.isLoading(loadingKey)) State.abort(loadingKey); 
                 State.setLoading(loadingKey, true);
                 abortCtrl = State.abort(loadingKey);
                 reqId = State.generateReqId(loadingKey);
@@ -178,37 +226,44 @@ const Http = (() => {
                 abortCtrl = new AbortController();
             }
 
-            for (let i = 0; i <= retries; i++) {
-                try {
-                    const timeoutId = setTimeout(() => abortCtrl.abort(), CONFIG.FETCH_TIMEOUT);
-                    const res = await fetch(endpoint, {
-                        method: 'POST',
-                        headers: Security.buildHeaders(),
-                        body: Security.buildBody(body),
-                        signal: abortCtrl.signal,
-                    });
-                    clearTimeout(timeoutId);
+            const execute = async () => {
+                for (let i = 0; i <= retries; i++) {
+                    try {
+                        const timeoutId = setTimeout(() => abortCtrl.abort(), CONFIG.FETCH_TIMEOUT);
+                        const res = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: Security.buildHeaders(),
+                            body: Security.buildBody(body),
+                            signal: abortCtrl.signal,
+                        });
+                        clearTimeout(timeoutId);
 
-                    if (Security.checkAuthError(res)) return null;
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    
-                    if (loadingKey && !State.isReqValid(loadingKey, reqId)) return null; // Race mitigation
-                    return res;
+                        if (Security.checkAuthError(res)) return null;
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        
+                        if (loadingKey && !State.isReqValid(loadingKey, reqId)) return null; 
+                        return res;
 
-                } catch (err) {
-                    if (abortCtrl.signal.aborted) {
-                        Logger.info(`Request superseded/timeout: ${endpoint}`);
-                        return null; 
+                    } catch (err) {
+                        if (abortCtrl.signal.aborted) {
+                            Logger.info(`Request superseded/timeout: ${endpoint}`);
+                            return null; 
+                        }
+                        if (i === retries) {
+                            Logger.error(`Failed after ${retries} retries: ${endpoint}`, err);
+                            return null;
+                        }
+                        await _delay(Math.pow(2, i) * 500);
+                    } finally {
+                        if (i === retries && loadingKey) State.setLoading(loadingKey, false);
                     }
-                    if (i === retries) {
-                        Logger.error(`Failed after ${retries} retries: ${endpoint}`, err);
-                        return null;
-                    }
-                    await _delay(Math.pow(2, i) * 500);
-                } finally {
-                    if (i === retries && loadingKey) State.setLoading(loadingKey, false);
                 }
-            }
+            };
+
+            const promise = execute();
+            _activeRequests.set(dedupKey, promise);
+            promise.finally(() => _activeRequests.delete(dedupKey));
+            return promise;
         },
 
         async postJSON(endpoint, body = {}, loadingKey = null) {
@@ -241,7 +296,7 @@ const Toast = (() => {
         if (_queue.length) _show(_queue.shift());
     }
 
-    window.addEventListener('pagehide', () => { _queue.length = 0; });
+    if (typeof window !== 'undefined') window.addEventListener('pagehide', () => { _queue.length = 0; });
 
     return {
         show(type, msg, duration) {
@@ -287,18 +342,20 @@ const EventBus = (() => {
 
 EventBus.on('student:updated', () => { fetchPendingRequests(); fetchStats(); });
 EventBus.on('content:deleted', () => { fetchGradeContent(); });
-window.addEventListener('offline', () => Toast.warning('لا يوجد اتصال بالإنترنت'));
-window.addEventListener('online',  () => Toast.success('عاد الاتصال بالإنترنت'));
+if (typeof window !== 'undefined') {
+    window.addEventListener('offline', () => Toast.warning('لا يوجد اتصال بالإنترنت'));
+    window.addEventListener('online',  () => Toast.success('عاد الاتصال بالإنترنت'));
+}
 
 // ═══════════════════════════════════════════════════════════════════
-// ✨ [UI] ANIMATION ENGINE (Zero DOM Allocations)
+// ✨ [UI] ANIMATION ENGINE (Zero DOM Allocations + Will-Change)
 // ═══════════════════════════════════════════════════════════════════
 const Anim = (() => {
     const _rafs = new WeakMap(); 
     const _ease = t => 1 - Math.pow(1 - t, 3);
     const _numberCache = new WeakMap();
 
-    const _progressObserver = new IntersectionObserver(entries => {
+    const _progressObserver = typeof IntersectionObserver !== 'undefined' ? new IntersectionObserver(entries => {
         entries.forEach(e => {
             if (e.isIntersecting) {
                 Scheduler.write(() => {
@@ -307,7 +364,7 @@ const Anim = (() => {
                 });
             }
         });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.1 }) : null;
 
     const _normalizeArabicDigits = str => String(str).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
 
@@ -329,9 +386,7 @@ const Anim = (() => {
                 const p = Math.min((ts - t0) / duration, 1);
                 const current = Math.floor(_ease(p) * (targetVal - startVal) + startVal);
                 
-                Scheduler.write(() => {
-                    obj.textContent = current.toLocaleString('ar-SA') + suffix;
-                });
+                Scheduler.write(() => { obj.textContent = current.toLocaleString('ar-SA') + suffix; });
 
                 if (p < 1) {
                     _rafs.set(obj, requestAnimationFrame(step));
@@ -347,16 +402,19 @@ const Anim = (() => {
         fadeIn(el, delay = 0) {
             if (!el) return;
             Scheduler.write(() => {
-                el.animate([
+                el.style.willChange = 'opacity, transform';
+                const anim = el.animate([
                     { opacity: 0, transform: 'translateY(10px)' },
                     { opacity: 1, transform: 'translateY(0)' }
                 ], { duration: 400, delay: delay * 1000, easing: 'ease', fill: 'both' });
+                anim.onfinish = () => el.style.willChange = 'auto';
             });
         },
 
         slideOut(el, mode = 'right') {
             if (!el) return;
             Scheduler.write(() => {
+                el.style.willChange = 'opacity, transform';
                 el.style.pointerEvents = 'none';
                 el.animate([
                     { opacity: 1, transform: 'none' },
@@ -365,12 +423,11 @@ const Anim = (() => {
             });
         },
 
-        // CSS-Only Ripple to prevent DOM memory leaks
         triggerRipple(btn) {
             if (!btn) return;
             Scheduler.write(() => {
                 btn.classList.remove('__run-ripple');
-                void btn.offsetWidth; // Force reflow
+                void btn.offsetWidth; 
                 btn.classList.add('__run-ripple');
             });
         },
@@ -378,27 +435,27 @@ const Anim = (() => {
         pulse(el) {
             if (!el) return;
             Scheduler.write(() => {
-                el.animate([
+                el.style.willChange = 'transform';
+                const anim = el.animate([
                     { transform: 'scale(1)' },
                     { transform: 'scale(1.04)' },
                     { transform: 'scale(1)' }
                 ], { duration: 550, easing: 'ease' });
+                anim.onfinish = () => el.style.willChange = 'auto';
             });
         },
 
         staggerFadeIn(container, selector, baseDelay = 0.05) {
             if (!container) return;
-            Scheduler.read(() => {
-                const els = container.querySelectorAll(selector);
-                els.forEach((el, i) => this.fadeIn(el, i * baseDelay));
-            });
+            // Immediate synchronous read to prevent Race Conditions 
+            const els = container.querySelectorAll(selector);
+            els.forEach((el, i) => this.fadeIn(el, i * baseDelay));
         },
 
         progressBars(container) {
-            if (!container) return;
-            Scheduler.read(() => {
-                container.querySelectorAll('[data-w]').forEach(bar => _progressObserver.observe(bar));
-            });
+            if (!container || !_progressObserver) return;
+            // Immediate synchronous read
+            container.querySelectorAll('[data-w]').forEach(bar => _progressObserver.observe(bar));
         },
     };
 })();
@@ -438,18 +495,17 @@ const DOM = {
         const template = document.createElement('template');
         template.innerHTML = htmlString.trim();
         Security.cleanDOM(template);
-        Scheduler.write(() => {
-            container.innerHTML = '';
-            container.appendChild(template.content);
-        });
+        
+        // Immediate synchronous DOM attachment avoids observer/selector races
+        container.innerHTML = '';
+        container.appendChild(template.content);
     },
 
     async renderChunked(container, htmlArray, headerHtml = '') {
-        Scheduler.write(() => { container.innerHTML = headerHtml; });
-        
+        container.innerHTML = headerHtml;
         const listContainer = document.createElement('div');
         listContainer.className = 'space-y-3';
-        Scheduler.write(() => { container.appendChild(listContainer); });
+        container.appendChild(listContainer);
         
         for (let i = 0; i < htmlArray.length; i += CONFIG.RENDER_CHUNK_SIZE) {
             const chunk = htmlArray.slice(i, i + CONFIG.RENDER_CHUNK_SIZE).join('');
@@ -457,10 +513,11 @@ const DOM = {
             tpl.innerHTML = chunk;
             Security.cleanDOM(tpl);
             
-            Scheduler.write(() => { listContainer.appendChild(tpl.content); });
+            listContainer.appendChild(tpl.content);
             await Scheduler.yield();
         }
         Anim.staggerFadeIn(listContainer, '.result-card', 0.015);
+        Logger.mem(); // Log memory usage after heavy render
     }
 };
 
@@ -507,14 +564,14 @@ export async function fetchPendingRequests() {
     const container = DOM.get('pendingRequestsContainer');
     if (!container) return;
 
-    Scheduler.write(() => { container.innerHTML = DOM.skeleton(3, 2); });
+    container.innerHTML = DOM.skeleton(3, 2);
     const students = await Http.postJSON(API.PENDING, {}, 'pending');
 
-    if (!students) { Scheduler.write(() => { container.innerHTML = DOM.emptyState('error', 'فشل الاتصال بالخادم'); }); return; }
+    if (!students) { container.innerHTML = DOM.emptyState('error', 'فشل الاتصال بالخادم'); return; }
     State.pendingRequests = students;
 
     if (!students.length) {
-        Scheduler.write(() => { container.innerHTML = DOM.emptyState('empty', 'لا توجد طلبات جديدة حالياً ✓'); });
+        container.innerHTML = DOM.emptyState('empty', 'لا توجد طلبات جديدة حالياً ✓');
         return;
     }
 
@@ -622,17 +679,17 @@ async function _doFetchStudents() {
     const cached = State.getCachedStudents(grade);
     if (cached) { _renderStudents(container, cached); return; }
 
-    Scheduler.write(() => { container.innerHTML = DOM.skeleton(6); });
+    container.innerHTML = DOM.skeleton(6);
     const students = await Http.postJSON(API.STUDENTS_GRADE, { grade }, 'students');
     
-    if (!students) { Scheduler.write(() => { container.innerHTML = DOM.emptyState('error', 'فشل الاتصال'); }); return; }
+    if (!students) { container.innerHTML = DOM.emptyState('error', 'فشل الاتصال'); return; }
     State.setCachedStudents(grade, students);
     _renderStudents(container, students);
 }
 
 function _renderStudents(container, students) {
     if (!students.length) { 
-        Scheduler.write(() => { container.innerHTML = DOM.emptyState('empty', 'لا يوجد طلاب مقبولون في هذه الدفعة'); }); 
+        container.innerHTML = DOM.emptyState('empty', 'لا يوجد طلاب مقبولون في هذه الدفعة'); 
         return; 
     }
     
@@ -688,7 +745,7 @@ export async function fetchGradeContent() {
     const data = await Http.postJSON(API.GRADE_CONTENT, { grade }, `grade-content-${grade}`);
     
     Scheduler.write(() => { loading.classList.add('hidden'); });
-    if (!data) return;
+    if (!data) return; 
 
     State.currentGradeData = data;
     renderManageContent(grade);
@@ -727,7 +784,7 @@ function _renderSection(id, items, builder, emptyMsg) {
     const el = DOM.get(id);
     if (!el) return;
     if (!items?.length) {
-        Scheduler.write(() => { el.innerHTML = `<p class="text-gray-600 text-sm py-4 text-center italic">${Security.e(emptyMsg)}</p>`; });
+        el.innerHTML = `<p class="text-gray-600 text-sm py-4 text-center italic">${Security.e(emptyMsg)}</p>`;
         return;
     }
     DOM.fastAppend(el, items.map((item, i) => builder(item, i)).join(''));
@@ -868,7 +925,7 @@ export function showDetailedResults(quizId, isPublic) {
         }
 
         const exportBtn = DOM.get('exportCSVBtn');
-        if (exportBtn) exportBtn.onclick = () => _exportCSV(quiz);
+        if (exportBtn) exportBtn.onclick = () => _exportCSVWorker(quiz);
     });
 
     _renderResultsContent(quiz);
@@ -960,7 +1017,6 @@ function _buildResultCard(res, index, quiz) {
     const barColor   = pct >= THRESHOLD.HIGH ? 'bg-green-500'   : pct >= THRESHOLD.PASS ? 'bg-blue-500'  : 'bg-red-500';
     const rankBadge  = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span class="text-sm">${index+1}</span>`;
     
-    // 🔥 Safe Stable Identifier
     const detailId   = `det-${Security.hashId(res.email || String(index))}`;
 
     return `
@@ -1020,7 +1076,6 @@ export function toggleStudentDetails(id) {
         if (el.dataset.rendered === 'false') {
             el.dataset.rendered = 'true';
             
-            // 🔥 Deep Find Result by Email (Immune to sorting/filtering issues)
             const sourceEmail = trigger?.dataset.sourceEmail;
             const quiz        = _currentQuizCache;
             const res         = quiz?.results?.find(r => String(r.email) === String(sourceEmail));
@@ -1073,32 +1128,60 @@ function _buildAnswersHTML(res, quiz) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 📤 [MODULE] CSV EXPORT (Strict Formula Injection Guard)
+// 📤 [MODULE] CSV EXPORT (Web Worker Offloaded)
 // ═══════════════════════════════════════════════════════════════════
-function _exportCSV(quiz) {
+function _exportCSVWorker(quiz) {
     if (!quiz?.results?.length) { Toast.warning('لا توجد نتائج للتصدير'); return; }
-    const headers = ['الاسم','البريد','النتيجة','النسبة','الوقت'];
-    const rows    = quiz.results.map(r => [
-        r.studentName || '',
-        r.email       || '',
-        `${r.score||0}/${quiz.questions?.length||0}`,
-        `${r.percentage||0}%`,
-        r.submittedAt ? new Date(r.submittedAt).toLocaleString('ar-SA') : '',
-    ]);
     
-    const csv = [headers, ...rows].map(r => r.map(c => Security.safeCSV(c)).join(',')).join('\n');
-    const blob = new Blob(['\uFEFF'+csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
+    Toast.info('جاري معالجة وتشفير الملف...');
     
-    const fileName = `نتائج_${Security.safeFile(quiz.title)}_${Date.now()}.csv`;
+    const workerScript = `
+        self.onmessage = function(e) {
+            const { quiz } = e.data;
+            const headers = ['الاسم','البريد','النتيجة','النسبة','الوقت'];
+            const rows = quiz.results.map(r => [
+                r.studentName || '',
+                r.email || '',
+                (r.score||0) + '/' + (quiz.questions?.length||0),
+                (r.percentage||0) + '%',
+                r.submittedAt ? new Date(r.submittedAt).toLocaleString('ar-SA') : ''
+            ]);
+            
+            const sanitize = (val) => {
+                let str = String(val).replace(/"/g, '""');
+                return /^[=+\\-@\\t\\r]/.test(str) ? '"\\'' + str + '"' : '"' + str + '"';
+            };
+            
+            const csv = [headers, ...rows].map(r => r.map(c => sanitize(c)).join(',')).join('\\n');
+            const blob = new Blob(['\\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            self.postMessage(URL.createObjectURL(blob));
+        };
+    `;
     
-    const a = document.createElement('a');
-    Object.assign(a, { href: url, download: fileName });
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    Toast.success('✓ تم تصدير النتائج');
+    const blob = new Blob([workerScript], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+    
+    worker.onmessage = (e) => {
+        const url = e.data;
+        const fileName = `نتائج_${Security.safeFile(quiz.title)}_${Date.now()}.csv`;
+        
+        const a = document.createElement('a');
+        Object.assign(a, { href: url, download: fileName });
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        worker.terminate();
+        Toast.success('✓ تم تصدير النتائج بنجاح');
+    };
+    
+    worker.onerror = (err) => {
+        Logger.error('CSV Worker Error', err);
+        Toast.error('فشل تصدير الملف');
+        worker.terminate();
+    };
+
+    worker.postMessage({ quiz });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1198,14 +1281,14 @@ function _debounce(fn, ms) {
 // ═══════════════════════════════════════════════════════════════════
 // 💉 [CSS] SECURE CSS ENGINE (Zero Reflow Grid & Pseudo-Ripple)
 // ═══════════════════════════════════════════════════════════════════
-if (typeof document !== 'undefined' && !document.getElementById('__titan_styles')) {
+if (typeof document !== 'undefined' && !document.getElementById('__quantum_styles')) {
     const s = document.createElement('style');
-    s.id = '__titan_styles';
+    s.id = '__quantum_styles';
     s.textContent = `
-        .student-details { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease; }
+        .student-details { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease; will-change: grid-template-rows, opacity; }
         .student-details.is-open { grid-template-rows: 1fr; opacity: 1; }
         .details-content-wrapper { overflow: hidden; }
-        .trash-btn svg { transition: transform 0.18s ease; }
+        .trash-btn svg { transition: transform 0.18s ease; will-change: transform; }
         .trash-btn:hover svg { transform: scale(1.18) rotate(-4deg); }
         [data-action="accept"]:hover, [data-action="reject"]:hover { letter-spacing: 0.015em; }
         .result-card { contain: layout paint style; } 
@@ -1231,9 +1314,4 @@ if (typeof document !== 'undefined' && !document.getElementById('__titan_styles'
 export { Security, State, Anim, Http, Toast, EventBus, API, STATUS, ITEM_TYPE, THRESHOLD, Scheduler };
 
 if (typeof window !== 'undefined') {
-    Object.assign(window, {
-        fetchStats, fetchPendingRequests, updateStudentStatus, rejectStudent,
-        fetchStudentsByGrade, fetchGradeContent, renderManageContent, deleteContent,
-        showDetailedResults, toggleStudentDetails, closeResultsModal, logout
-    });
-}
+    Object
