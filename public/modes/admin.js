@@ -1,4 +1,4 @@
-// ==================== QUANTUM DASHBOARD ENGINE v8.0 (GOD MODE EXTREME) ====================
+// ==================== QUANTUM DASHBOARD ENGINE v8.1 (GOD MODE EXTREME) ====================
 // 🔥 Multi-Threaded CSV Worker | Anti-Tamper Mutation Shield | Request Deduplication
 // 🚀 Dynamic Hardware-Aware Chunking | LRU TTL Cache | Quantum DJB2 Hashing
 // 🛡️ DOM Scheduler + Sync Fixes | Deep AST Sanitizer | Pseudo-element Zero-Allocation Ripple
@@ -98,7 +98,7 @@ const Security = (() => {
 
     const _fields = ['first_name','second_name','third_name','last_name','email','grade','phone','title','question','testName','studentName'];
 
-    // Anti-Tamper Shield: Destroy unauthorized injected scripts instantly
+    // Anti-Tamper Shield
     if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
         new MutationObserver(mutations => {
             for (const m of mutations) {
@@ -129,7 +129,6 @@ const Security = (() => {
             templateElement.content.childNodes.forEach(_sanitizeNode);
             return templateElement;
         },
-        // Fast Synchronous DJB2 Hash for identifiers
         hashId(str) {
             let h = 5381;
             for(let i=0; i<str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i);
@@ -212,7 +211,6 @@ const Http = (() => {
 
     return {
         async post(endpoint, body = {}, loadingKey = null, retries = CONFIG.MAX_RETRIES) {
-            // Request Deduplication
             const dedupKey = endpoint + JSON.stringify(body);
             if (_activeRequests.has(dedupKey)) return _activeRequests.get(dedupKey);
 
@@ -447,14 +445,12 @@ const Anim = (() => {
 
         staggerFadeIn(container, selector, baseDelay = 0.05) {
             if (!container) return;
-            // Immediate synchronous read to prevent Race Conditions 
             const els = container.querySelectorAll(selector);
             els.forEach((el, i) => this.fadeIn(el, i * baseDelay));
         },
 
         progressBars(container) {
             if (!container || !_progressObserver) return;
-            // Immediate synchronous read
             container.querySelectorAll('[data-w]').forEach(bar => _progressObserver.observe(bar));
         },
     };
@@ -496,7 +492,6 @@ const DOM = {
         template.innerHTML = htmlString.trim();
         Security.cleanDOM(template);
         
-        // Immediate synchronous DOM attachment avoids observer/selector races
         container.innerHTML = '';
         container.appendChild(template.content);
     },
@@ -517,7 +512,7 @@ const DOM = {
             await Scheduler.yield();
         }
         Anim.staggerFadeIn(listContainer, '.result-card', 0.015);
-        Logger.mem(); // Log memory usage after heavy render
+        Logger.mem(); 
     }
 };
 
@@ -883,6 +878,63 @@ export function deleteContent(grade, itemType, identifier, trashBtn = null) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// 📤 [MODULE] CSV EXPORT (Web Worker Offloaded)
+// ═══════════════════════════════════════════════════════════════════
+function _exportCSVWorker(quiz) {
+    if (!quiz?.results?.length) { Toast.warning('لا توجد نتائج للتصدير'); return; }
+    
+    Toast.info('جاري معالجة وتشفير الملف...');
+    
+    const workerScript = `
+        self.onmessage = function(e) {
+            const { quiz } = e.data;
+            const headers = ['الاسم','البريد','النتيجة','النسبة','الوقت'];
+            const rows = quiz.results.map(r => [
+                r.studentName || '',
+                r.email || '',
+                (r.score||0) + '/' + (quiz.questions?.length||0),
+                (r.percentage||0) + '%',
+                r.submittedAt ? new Date(r.submittedAt).toLocaleString('ar-SA') : ''
+            ]);
+            
+            const sanitize = (val) => {
+                let str = String(val).replace(/"/g, '""');
+                return /^[=+\\-@\\t\\r]/.test(str) ? '"\\'' + str + '"' : '"' + str + '"';
+            };
+            
+            const csv = [headers, ...rows].map(r => r.map(c => sanitize(c)).join(',')).join('\\n');
+            const blob = new Blob(['\\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            self.postMessage(URL.createObjectURL(blob));
+        };
+    `;
+    
+    const blob = new Blob([workerScript], { type: 'application/javascript' });
+    const worker = new Worker(URL.createObjectURL(blob));
+    
+    worker.onmessage = (e) => {
+        const url = e.data;
+        const fileName = `نتائج_${Security.safeFile(quiz.title)}_${Date.now()}.csv`;
+        
+        const a = document.createElement('a');
+        Object.assign(a, { href: url, download: fileName });
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        worker.terminate();
+        Toast.success('✓ تم تصدير النتائج بنجاح');
+    };
+    
+    worker.onerror = (err) => {
+        Logger.error('CSV Worker Error', err);
+        Toast.error('فشل تصدير الملف');
+        worker.terminate();
+    };
+
+    worker.postMessage({ quiz });
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // 📈 [MODULE] RESULTS MODAL (True Identifier Toggle + Chunked Yield)
 // ═══════════════════════════════════════════════════════════════════
 let _resultsSearchTerm   = '';
@@ -1128,63 +1180,6 @@ function _buildAnswersHTML(res, quiz) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 📤 [MODULE] CSV EXPORT (Web Worker Offloaded)
-// ═══════════════════════════════════════════════════════════════════
-function _exportCSVWorker(quiz) {
-    if (!quiz?.results?.length) { Toast.warning('لا توجد نتائج للتصدير'); return; }
-    
-    Toast.info('جاري معالجة وتشفير الملف...');
-    
-    const workerScript = `
-        self.onmessage = function(e) {
-            const { quiz } = e.data;
-            const headers = ['الاسم','البريد','النتيجة','النسبة','الوقت'];
-            const rows = quiz.results.map(r => [
-                r.studentName || '',
-                r.email || '',
-                (r.score||0) + '/' + (quiz.questions?.length||0),
-                (r.percentage||0) + '%',
-                r.submittedAt ? new Date(r.submittedAt).toLocaleString('ar-SA') : ''
-            ]);
-            
-            const sanitize = (val) => {
-                let str = String(val).replace(/"/g, '""');
-                return /^[=+\\-@\\t\\r]/.test(str) ? '"\\'' + str + '"' : '"' + str + '"';
-            };
-            
-            const csv = [headers, ...rows].map(r => r.map(c => sanitize(c)).join(',')).join('\\n');
-            const blob = new Blob(['\\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            self.postMessage(URL.createObjectURL(blob));
-        };
-    `;
-    
-    const blob = new Blob([workerScript], { type: 'application/javascript' });
-    const worker = new Worker(URL.createObjectURL(blob));
-    
-    worker.onmessage = (e) => {
-        const url = e.data;
-        const fileName = `نتائج_${Security.safeFile(quiz.title)}_${Date.now()}.csv`;
-        
-        const a = document.createElement('a');
-        Object.assign(a, { href: url, download: fileName });
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        worker.terminate();
-        Toast.success('✓ تم تصدير النتائج بنجاح');
-    };
-    
-    worker.onerror = (err) => {
-        Logger.error('CSV Worker Error', err);
-        Toast.error('فشل تصدير الملف');
-        worker.terminate();
-    };
-
-    worker.postMessage({ quiz });
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // 🚪 [MODULE] MODAL SYSTEM (Dynamic Focus Trap)
 // ═══════════════════════════════════════════════════════════════════
 let _activeModalCtrl = null;
@@ -1314,4 +1309,9 @@ if (typeof document !== 'undefined' && !document.getElementById('__quantum_style
 export { Security, State, Anim, Http, Toast, EventBus, API, STATUS, ITEM_TYPE, THRESHOLD, Scheduler };
 
 if (typeof window !== 'undefined') {
-    Object
+    Object.assign(window, {
+        fetchStats, fetchPendingRequests, updateStudentStatus, rejectStudent,
+        fetchStudentsByGrade, fetchGradeContent, renderManageContent, deleteContent,
+        showDetailedResults, toggleStudentDetails, closeResultsModal, logout
+    });
+}
