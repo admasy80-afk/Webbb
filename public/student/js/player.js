@@ -1,11 +1,3 @@
-// ═══════════════════════════════════════════════════════════════════════════════════════
-// منصة الدحيح | المشغل الخارق (Titanium Enterprise Player Engine - v11.0 Ultimate Edition)
-// Architecture: Modular Sub-Engines + Reactive FSM + Hardware-Accelerated Ambient (OffscreenCanvas)
-//               + Spatial Audio Graph (Compressor/10-Band EQ/Boost) + Predictive Preloading
-//               + Inertial Gestures + EME/DRM Hooks + Inline Web Worker Telemetry & IndexedDB Sync
-//               + Native HLS/DASH Abstraction + Custom VTT Parser + Debug HUD + Zero Leak Guarantee
-// ═══════════════════════════════════════════════════════════════════════════════════════
-
 const TitaniumEnterprise = (() => {
     // ─── 1. MEMORY & LIFECYCLE MANAGEMENT (ZERO-LEAK REGISTRY) ────────────────
     const Registry = {
