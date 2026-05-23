@@ -1,9 +1,4 @@
-// ==================== OMNI-QUANTUM GOD CORE v10.0 (ULTIMATE EDITION) ====================
-// 🔥 Multi-Threaded Processing | Anti-Tamper Mutation Shield | Request Deduplication
-// 🚀 Dynamic Hardware-Aware Chunking | LRU TTL Cache | Quantum DJB2 Hashing
-// 🛡️ DOM Scheduler + Sync Fixes | Deep AST Sanitizer | Pseudo-element Zero-Allocation Ripple
-// ⚡ Dynamic Quiz Builders | Race-Condition Safe | Auto-Abort HTTP | Forms Engine Integration
-
+// تحديث مهم رقم ٢٣
 import { SysUI, trashSVG } from './ui.js';
 import { sessionToken } from './state.js';
 
