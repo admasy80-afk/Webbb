@@ -1,62 +1,72 @@
-// ==================== QUANTUM DASHBOARD ENGINE v8.1 (GOD MODE EXTREME) ====================
-// 🔥 Multi-Threaded CSV Worker | Anti-Tamper Mutation Shield | Request Deduplication
+// ==================== OMNI-QUANTUM GOD CORE v10.0 (ULTIMATE EDITION) ====================
+// 🔥 Multi-Threaded Processing | Anti-Tamper Mutation Shield | Request Deduplication
 // 🚀 Dynamic Hardware-Aware Chunking | LRU TTL Cache | Quantum DJB2 Hashing
 // 🛡️ DOM Scheduler + Sync Fixes | Deep AST Sanitizer | Pseudo-element Zero-Allocation Ripple
+// ⚡ Dynamic Quiz Builders | Race-Condition Safe | Auto-Abort HTTP | Forms Engine Integration
+
 import { SysUI, trashSVG } from './ui.js';
 import { sessionToken } from './state.js';
 
 // ═══════════════════════════════════════════════════════════════════
 // ⚙️ [CORE] SYSTEM CONSTANTS & ADAPTIVE CONFIG
 // ═══════════════════════════════════════════════════════════════════
-const API = Object.freeze({
+export const API = Object.freeze({
     STATS:           '/api/admin/stats',
     PENDING:         '/api/admin/pending',
-    UPDATE_STATUS:   '/api/admin/update-status',
     STUDENTS_GRADE:  '/api/admin/students-by-grade',
     GRADE_CONTENT:   '/api/admin/get-grade-content',
+    UPDATE_STATUS:   '/api/admin/update-status',
     DELETE_ITEM:     '/api/admin/delete-item',
+    UPDATE_POINTS:   '/api/admin/update-points',
+    SAVE_TEST:       '/api/admin/save-test',
+    SAVE_CONTENT:    '/api/admin/save-content',
+    SAVE_QUIZ:       '/api/admin/save-quiz',
+    SAVE_PUB_QUIZ:   '/api/admin/save-public-quiz',
+    EXPORT_DATA:     '/api/admin/export-data'
 });
 
-const STATUS    = Object.freeze({ ACCEPTED: 'accepted', REJECTED: 'rejected', PENDING: 'pending' });
-const ITEM_TYPE = Object.freeze({ PUBLIC_QUIZ: 'publicQuiz', QUIZ: 'quiz', TEST: 'test', QUESTION: 'question', POINT: 'point' });
-const THRESHOLD = Object.freeze({ HIGH: 85, PASS: 50 });
+export const STATUS    = Object.freeze({ ACCEPTED: 'accepted', REJECTED: 'rejected', PENDING: 'pending' });
+export const ITEM_TYPE = Object.freeze({ PUBLIC_QUIZ: 'publicQuiz', QUIZ: 'quiz', TEST: 'test', QUESTION: 'question', POINT: 'point' });
+export const THRESHOLD = Object.freeze({ HIGH: 85, PASS: 50 });
 
-// Hardware-aware dynamic chunking for maximum FPS
-const _cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 4 : 4;
+const _cores = typeof navigator !== 'undefined' ? navigator.hardwareConcurrency || 8 : 8;
 const CONFIG = Object.freeze({ 
-    FETCH_TIMEOUT: 15000, 
-    MAX_RETRIES: 3, 
-    RENDER_CHUNK_SIZE: Math.max(15, _cores * 8), 
-    CACHE_TTL_MS: 300000 // 5 Minutes 
+    FETCH_TIMEOUT: 20000, 
+    MAX_RETRIES: 4, 
+    RENDER_CHUNK_SIZE: Math.max(25, _cores * 12), 
+    CACHE_TTL_MS: 300000,
+    BATCH_DELAY: 50 
 });
 
 // ═══════════════════════════════════════════════════════════════════
 // 📝 [CORE] TELEMETRY & ADVANCED LOGGER
 // ═══════════════════════════════════════════════════════════════════
-const Logger = (() => {
+export const Logger = (() => {
     const isProd = false; 
     
     if (typeof window !== 'undefined') {
-        window.addEventListener('unhandledrejection', e => !isProd && console.error(`[🔥 QUANTUM] Unhandled Promise:`, e.reason));
-        window.addEventListener('error', e => !isProd && console.error(`[🔥 QUANTUM] Global Error:`, e.message));
+        window.addEventListener('unhandledrejection', e => !isProd && console.error(`[🔥 OMNI-CORE] Unhandled Promise:`, e.reason));
+        window.addEventListener('error', e => !isProd && console.error(`[🔥 OMNI-CORE] Global Error:`, e.message));
     }
 
     return {
-        error: (msg, ...args) => console.error(`[🔥 QUANTUM] ${msg}`, ...args),
-        warn:  (msg, ...args) => !isProd && console.warn(`[⚠️ QUANTUM] ${msg}`, ...args),
-        info:  (msg, ...args) => !isProd && console.info(`[ℹ️ QUANTUM] ${msg}`, ...args),
+        error: (msg, ...args) => console.error(`[🔥 OMNI-CORE] ${msg}`, ...args),
+        warn:  (msg, ...args) => !isProd && console.warn(`[⚠️ OMNI-CORE] ${msg}`, ...args),
+        info:  (msg, ...args) => !isProd && console.info(`[ℹ️ OMNI-CORE] ${msg}`, ...args),
         mem:   () => {
             if (!isProd && performance?.memory) {
-                console.info(`[🧠 MEMORY] ${Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)}MB / ${Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)}MB`);
+                console.info(`[🧠 MEMORY] ${(performance.memory.usedJSHeapSize / 1048576).toFixed(2)}MB / ${(performance.memory.jsHeapSizeLimit / 1048576).toFixed(2)}MB`);
             }
-        }
+        },
+        time: (label) => !isProd && console.time(`[⏱️ ${label}]`),
+        timeEnd: (label) => !isProd && console.timeEnd(`[⏱️ ${label}]`)
     };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
 // 🧠 [CORE] DOM SCHEDULER (PREVENTS LAYOUT THRASHING)
 // ═══════════════════════════════════════════════════════════════════
-const Scheduler = (() => {
+export const Scheduler = (() => {
     let _reads = [], _writes = [], _scheduled = false;
     const _run = () => {
         const reads = _reads, writes = _writes;
@@ -67,14 +77,15 @@ const Scheduler = (() => {
     return {
         read(fn)  { _reads.push(fn);  if (!_scheduled) { _scheduled = true; requestAnimationFrame(_run); } },
         write(fn) { _writes.push(fn); if (!_scheduled) { _scheduled = true; requestAnimationFrame(_run); } },
-        yield()   { return new Promise(r => window.requestIdleCallback ? requestIdleCallback(r) : setTimeout(r, 16)); }
+        yield()   { return new Promise(r => window.requestIdleCallback ? requestIdleCallback(r) : setTimeout(r, 16)); },
+        defer(fn) { return new Promise(r => setTimeout(() => { try { fn(); r(); } catch(e) { Logger.error('Defer', e); r(); } }, 0)); }
     };
 })();
 
 // ═══════════════════════════════════════════════════════════════════
 // 🛡️ [SECURITY] DEEP SANITIZER, SHIELD & QUANTUM HASH
 // ═══════════════════════════════════════════════════════════════════
-const Security = (() => {
+export const Security = (() => {
     const _escape = (str) => {
         if (str == null) return '';
         return String(str)
@@ -87,8 +98,7 @@ const Security = (() => {
             const attrs = node.attributes;
             for (let i = attrs.length - 1; i >= 0; i--) {
                 const attr = attrs[i];
-                if (attr.name.toLowerCase().startsWith('on') || 
-                    attr.value.trim().toLowerCase().startsWith('javascript:')) {
+                if (attr.name.toLowerCase().startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
                     node.removeAttribute(attr.name);
                 }
             }
@@ -98,7 +108,6 @@ const Security = (() => {
 
     const _fields = ['first_name','second_name','third_name','last_name','email','grade','phone','title','question','testName','studentName'];
 
-    // Anti-Tamper Shield
     if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined') {
         new MutationObserver(mutations => {
             for (const m of mutations) {
@@ -160,7 +169,7 @@ const Security = (() => {
 // ═══════════════════════════════════════════════════════════════════
 // 🎯 [STATE] LRU-TTL STORE & RACE CONDITION MANAGER
 // ═══════════════════════════════════════════════════════════════════
-const State = (() => {
+export const State = (() => {
     let _currentGradeData = null;
     let _pendingRequests  = [];
     const _studentsCache  = new Map();
@@ -203,9 +212,9 @@ const State = (() => {
 })();
 
 // ═══════════════════════════════════════════════════════════════════
-// 🌐 [NETWORK] HTTP CLIENT (Auto-Abort + Deduplication + Backoff)
+// 🌐 [NETWORK] OMNI HTTP CLIENT
 // ═══════════════════════════════════════════════════════════════════
-const Http = (() => {
+export const Http = (() => {
     const _delay = ms => new Promise(res => setTimeout(res, ms));
     const _activeRequests = new Map();
 
@@ -238,7 +247,6 @@ const Http = (() => {
 
                         if (Security.checkAuthError(res)) return null;
                         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                        
                         if (loadingKey && !State.isReqValid(loadingKey, reqId)) return null; 
                         return res;
 
@@ -275,7 +283,7 @@ const Http = (() => {
 // ═══════════════════════════════════════════════════════════════════
 // 🍞 [UI] TOAST QUEUE SYSTEM
 // ═══════════════════════════════════════════════════════════════════
-const Toast = (() => {
+export const Toast = (() => {
     const _queue = [];
     let _active  = false;
 
@@ -312,7 +320,7 @@ const Toast = (() => {
 // ═══════════════════════════════════════════════════════════════════
 // 📡 [EVENTS] DEBOUNCED EVENT BUS
 // ═══════════════════════════════════════════════════════════════════
-const EventBus = (() => {
+export const EventBus = (() => {
     const _listeners = new Map();
     const _batchTimers = new Map();
 
@@ -348,7 +356,7 @@ if (typeof window !== 'undefined') {
 // ═══════════════════════════════════════════════════════════════════
 // ✨ [UI] ANIMATION ENGINE (Zero DOM Allocations + Will-Change)
 // ═══════════════════════════════════════════════════════════════════
-const Anim = (() => {
+export const Anim = (() => {
     const _rafs = new WeakMap(); 
     const _ease = t => 1 - Math.pow(1 - t, 3);
     const _numberCache = new WeakMap();
@@ -402,9 +410,9 @@ const Anim = (() => {
             Scheduler.write(() => {
                 el.style.willChange = 'opacity, transform';
                 const anim = el.animate([
-                    { opacity: 0, transform: 'translateY(10px)' },
-                    { opacity: 1, transform: 'translateY(0)' }
-                ], { duration: 400, delay: delay * 1000, easing: 'ease', fill: 'both' });
+                    { opacity: 0, transform: 'translateY(15px) scale(0.98)' },
+                    { opacity: 1, transform: 'translateY(0) scale(1)' }
+                ], { duration: 450, delay: delay * 1000, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'both' });
                 anim.onfinish = () => el.style.willChange = 'auto';
             });
         },
@@ -416,7 +424,7 @@ const Anim = (() => {
                 el.style.pointerEvents = 'none';
                 el.animate([
                     { opacity: 1, transform: 'none' },
-                    { opacity: 0, transform: mode === 'right' ? 'translateX(28px) scale(0.97)' : 'scale(0.94)' }
+                    { opacity: 0, transform: mode === 'right' ? 'translateX(35px) scale(0.95)' : 'scale(0.92)' }
                 ], { duration: 380, easing: 'cubic-bezier(0.4,0,0.2,1)', fill: 'forwards' });
             });
         },
@@ -436,14 +444,14 @@ const Anim = (() => {
                 el.style.willChange = 'transform';
                 const anim = el.animate([
                     { transform: 'scale(1)' },
-                    { transform: 'scale(1.04)' },
+                    { transform: 'scale(1.05)' },
                     { transform: 'scale(1)' }
-                ], { duration: 550, easing: 'ease' });
+                ], { duration: 550, easing: 'cubic-bezier(0.4, 0, 0.2, 1)' });
                 anim.onfinish = () => el.style.willChange = 'auto';
             });
         },
 
-        staggerFadeIn(container, selector, baseDelay = 0.05) {
+        staggerFadeIn(container, selector, baseDelay = 0.04) {
             if (!container) return;
             const els = container.querySelectorAll(selector);
             els.forEach((el, i) => this.fadeIn(el, i * baseDelay));
@@ -459,12 +467,12 @@ const Anim = (() => {
 // ═══════════════════════════════════════════════════════════════════
 // 🏗️ [UI] DOM ENGINE (Deep Sanitization + Incremental Rendering)
 // ═══════════════════════════════════════════════════════════════════
-const DOM = {
+export const DOM = {
     get: id => document.getElementById(id),
 
     skeleton(rows = 3, cols = 1) {
-        return `<div class="flex flex-col gap-3">${Array(rows).fill(0).map(() => `
-            <div class="glass-panel border border-white/5 p-4 rounded-xl animate-pulse">
+        return `<div class="flex flex-col gap-3 w-full">${Array(rows).fill(0).map((_, i) => `
+            <div class="glass-panel border border-white/5 p-4 rounded-xl animate-pulse" style="animation-delay: ${i * 100}ms">
                 <div class="flex justify-between items-center gap-4">
                     <div class="space-y-2 flex-1">
                         <div class="h-4 bg-white/10 rounded-lg w-3/4"></div>
@@ -479,11 +487,11 @@ const DOM = {
     },
 
     emptyState(type, msg) {
-        const cfg = { empty: ['📭','text-gray-500'], error: ['⚠️','text-red-400'], success: ['✅','text-green-400'] };
+        const cfg = { empty: ['📭','text-gray-400'], error: ['⚠️','text-red-400'], success: ['✅','text-green-400'] };
         const [icon, color] = cfg[type] || cfg.empty;
-        return `<div class="col-span-full flex flex-col items-center justify-center py-16 gap-3 select-none">
-            <span class="text-5xl opacity-25 select-none">${icon}</span>
-            <p class="${color} text-sm text-center font-semibold">${Security.e(msg)}</p>
+        return `<div class="col-span-full flex flex-col items-center justify-center py-20 gap-4 select-none animate-fade-in-up">
+            <div class="text-6xl opacity-30 select-none drop-shadow-2xl filter blur-[1px] hover:blur-none transition-all duration-500">${icon}</div>
+            <p class="${color} text-sm text-center font-bold tracking-wide">${Security.e(msg)}</p>
         </div>`;
     },
 
@@ -491,7 +499,6 @@ const DOM = {
         const template = document.createElement('template');
         template.innerHTML = htmlString.trim();
         Security.cleanDOM(template);
-        
         container.innerHTML = '';
         container.appendChild(template.content);
     },
@@ -507,27 +514,225 @@ const DOM = {
             const tpl = document.createElement('template');
             tpl.innerHTML = chunk;
             Security.cleanDOM(tpl);
-            
             listContainer.appendChild(tpl.content);
             await Scheduler.yield();
         }
-        Anim.staggerFadeIn(listContainer, '.result-card', 0.015);
+        Anim.staggerFadeIn(listContainer, 'div > div', 0.015);
         Logger.mem(); 
     }
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// 📊 [MODULE] STATS
+// 🔥 [NEW] DYNAMIC QUIZ BUILDERS & FORM ENGINE
+// ═══════════════════════════════════════════════════════════════════
+export const QuizBuilder = {
+    addBlock(containerId, isPublic = false) {
+        const container = DOM.get(containerId);
+        if(!container) return;
+        const qCount = container.children.length + 1;
+        const block = document.createElement('div');
+        block.className = 'mcq-block bg-black/40 border border-white/10 p-5 rounded-2xl relative animate-fade-in-up hover:border-yellow-500/50 transition-colors duration-300 shadow-lg';
+        block.innerHTML = `
+            <button type="button" onclick="removeMCQBlock(this)" class="absolute top-4 left-4 text-gray-500 hover:text-red-400 bg-black/50 p-2 rounded-lg transition-colors z-10" title="حذف السؤال">${trashSVG}</button>
+            <div class="mb-5 pr-3 border-r-4 border-yellow-500">
+                <label class="block text-sm font-extrabold text-yellow-500 mb-2 tracking-wide">السؤال رقم ${qCount}</label>
+                <textarea rows="2" required class="q-text w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 text-sm md:text-base transition-all resize-none shadow-inner" placeholder="اكتب نص السؤال بدقة..."></textarea>
+            </div>
+            <div class="space-y-3 pl-2 md:pl-8">
+                ${[1,2,3,4].map(i => `
+                <div class="flex items-center gap-4 bg-white/5 p-2 rounded-xl hover:bg-white/10 transition-colors border border-transparent hover:border-white/10">
+                    <input type="radio" name="correct_${containerId}_${Date.now()}_${qCount}" value="${i-1}" ${i===1?'checked':''} class="w-5 h-5 text-yellow-500 focus:ring-yellow-500 border-gray-600 bg-black cursor-pointer">
+                    <input type="text" required class="q-opt w-full bg-transparent border-none px-2 py-1 text-white outline-none focus:ring-0 text-sm placeholder-gray-500 font-medium" placeholder="الخيار ${i}">
+                </div>`).join('')}
+            </div>
+        `;
+        container.appendChild(block);
+    },
+    removeBlock(btn) {
+        const block = btn.closest('.mcq-block');
+        if(block) { block.style.opacity = '0'; block.style.transform = 'scale(0.95)'; setTimeout(() => block.remove(), 300); }
+    },
+    gatherData(containerId) {
+        const container = DOM.get(containerId);
+        if(!container) return [];
+        const questions = [];
+        container.querySelectorAll('.mcq-block').forEach(block => {
+            const text = block.querySelector('.q-text').value;
+            const options = Array.from(block.querySelectorAll('.q-opt')).map(i => i.value);
+            const radioGroup = block.querySelector('input[type="radio"]:checked');
+            if(text && options.every(o => o.trim() !== '') && radioGroup) {
+                questions.push({ questionText: text, options: options, correctAnswer: parseInt(radioGroup.value) });
+            }
+        });
+        return questions;
+    }
+};
+
+export const FormsEngine = {
+    init() {
+        if(typeof document === 'undefined') return;
+        document.addEventListener('DOMContentLoaded', () => {
+            this.bindPointsForm();
+            this.bindTestsForm();
+            this.bindContentForm();
+            this.bindQuizForm();
+            this.bindPublicQuizForm();
+        });
+    },
+
+    bindPointsForm() {
+        const form = DOM.get('pointsForm');
+        if(!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = DOM.get('savePointsBtn');
+            const email = DOM.get('studentEmail').value;
+            const points = DOM.get('pointsAmount').value;
+            
+            Anim.triggerRipple(btn);
+            btn.disabled = true; btn.innerHTML = '<span class="animate-pulse">جاري التحديث...</span>';
+            
+            const res = await Http.postJSON(API.UPDATE_POINTS, { studentEmail: email, points: parseInt(points) }, 'pts_add');
+            btn.disabled = false; btn.textContent = 'تحديث التقييم';
+            
+            if(res) { Toast.success('تم تحديث تقييم الطالب بنجاح'); form.reset(); EventBus.emit('student:updated'); }
+            else { Toast.error('فشل تحديث التقييم. تأكد من صحة البريد.'); }
+        });
+    },
+
+    bindTestsForm() {
+        const form = DOM.get('testsForm');
+        if(!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = DOM.get('saveTestBtn');
+            const testName = DOM.get('testName').value;
+            const grade = DOM.get('testGrade').value;
+            
+            const scores = [];
+            document.getElementById('scoresContainer')?.querySelectorAll('.flex').forEach(row => {
+                const name = row.querySelector('.test-student-name').value;
+                const score = row.querySelector('.test-student-score').value;
+                if(name && score) scores.push({ studentName: name, score: parseInt(score) });
+            });
+
+            if(scores.length === 0) return Toast.warning('الرجاء إضافة درجة طالب واحد على الأقل');
+
+            Anim.triggerRipple(btn);
+            btn.disabled = true; btn.innerHTML = '<span class="animate-pulse">جاري النشر...</span>';
+            
+            const res = await Http.postJSON(API.SAVE_TEST, { testName, grade, scores }, 'test_add');
+            btn.disabled = false; btn.textContent = 'نشر النتائج للطلاب';
+            
+            if(res) { 
+                Toast.success('تم نشر النتائج للطلاب بنجاح'); 
+                form.reset(); 
+                document.getElementById('scoresContainer').innerHTML = ''; 
+                EventBus.emit('content:deleted');
+            } else { Toast.error('فشل حفظ الاختبار'); }
+        });
+    },
+
+    bindContentForm() {
+        const form = DOM.get('contentForm');
+        if(!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = DOM.get('saveContentBtn');
+            const grade = DOM.get('contentGrade').value;
+            const type = DOM.get('contentType').value;
+            
+            let payload = { grade, type };
+            if(type === 'point') {
+                payload.text = DOM.get('pointText').value;
+                if(!payload.text) return Toast.warning('الرجاء كتابة الملاحظة');
+            } else {
+                payload.question = DOM.get('questionText').value;
+                payload.hint = DOM.get('questionHint').value;
+                if(!payload.question) return Toast.warning('الرجاء كتابة السؤال');
+            }
+
+            Anim.triggerRipple(btn);
+            btn.disabled = true; btn.innerHTML = '<span class="animate-pulse">جاري النشر...</span>';
+            
+            const res = await Http.postJSON(API.SAVE_CONTENT, payload, 'content_add');
+            btn.disabled = false; btn.textContent = 'نشر المحتوى';
+            
+            if(res) { Toast.success('تم نشر المحتوى بنجاح'); form.reset(); EventBus.emit('content:deleted'); }
+            else { Toast.error('فشل نشر المحتوى'); }
+        });
+    },
+
+    bindQuizForm() {
+        const form = DOM.get('quizForm');
+        if(!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = DOM.get('saveQuizBtn');
+            const title = DOM.get('quizTitle').value;
+            const grade = DOM.get('quizGrade').value;
+            const questions = QuizBuilder.gatherData('dynamicQuestionsContainer');
+            
+            if(questions.length === 0) return Toast.warning('الرجاء إضافة سؤال واحد على الأقل وإكمال بياناته');
+
+            Anim.triggerRipple(btn);
+            btn.disabled = true; btn.innerHTML = '<span class="animate-pulse">جاري المعالجة والنشر...</span>';
+            
+            const res = await Http.postJSON(API.SAVE_QUIZ, { title, grade, questions, isPublic: false }, 'quiz_add');
+            btn.disabled = false; btn.textContent = 'نشر الاختبار للطلاب';
+            
+            if(res) { 
+                Toast.success('تم نشر الاختبار للمنصة بنجاح!'); 
+                form.reset(); 
+                DOM.get('dynamicQuestionsContainer').innerHTML = ''; 
+                EventBus.emit('content:deleted');
+            } else { Toast.error('فشل إنشاء الاختبار'); }
+        });
+    },
+
+    bindPublicQuizForm() {
+        const form = DOM.get('publicQuizForm');
+        if(!form) return;
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = DOM.get('savePublicQuizBtn');
+            const title = DOM.get('publicQuizTitle').value;
+            const grade = DOM.get('publicQuizGrade').value;
+            const questions = QuizBuilder.gatherData('dynamicPublicQuestionsContainer');
+            
+            if(questions.length === 0) return Toast.warning('الرجاء إضافة سؤال واحد على الأقل وإكمال بياناته');
+
+            Anim.triggerRipple(btn);
+            btn.disabled = true; btn.innerHTML = '<span class="animate-pulse">جاري إنشاء الرابط...</span>';
+            
+            const res = await Http.postJSON(API.SAVE_PUB_QUIZ, { title, grade, questions, isPublic: true }, 'pub_quiz_add');
+            btn.disabled = false; btn.textContent = 'حفظ وتوليد رابط الاختبار';
+            
+            if(res && res.quizId) { 
+                Toast.success('تم إنشاء الاختبار العام بنجاح!'); 
+                DOM.get('publicQuizLinkArea').classList.remove('hidden');
+                DOM.get('publicQuizLinkInput').value = `${window.location.origin}/quiz.html?id=${res.quizId}`;
+                form.reset(); 
+                DOM.get('dynamicPublicQuestionsContainer').innerHTML = ''; 
+                EventBus.emit('content:deleted');
+            } else { Toast.error('فشل إنشاء الاختبار العام'); }
+        });
+    }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// 📊 [MODULES] MAIN DASHBOARD LOGIC
 // ═══════════════════════════════════════════════════════════════════
 export async function fetchStats() {
+    Logger.time('fetchStats');
     const data = await Http.postJSON(API.STATS, {}, 'stats');
-    if (!data) return;
+    if (!data) return Logger.timeEnd('fetchStats');
 
     const sCount = data.studentsCount || 0;
     const pCount = data.pendingCount  || 0;
 
-    Anim.animateValue('stats-students', sCount, 1300);
-    Anim.animateValue('stats-pending',  pCount, 1100);
+    Anim.animateValue('stats-students', sCount, 1500);
+    Anim.animateValue('stats-pending',  pCount, 1300);
 
     Scheduler.read(() => {
         const sEl = DOM.get('stats-students');
@@ -539,40 +744,41 @@ export async function fetchStats() {
     Scheduler.write(() => {
         const badge = DOM.get('pendingBadge');
         if (badge) {
-            badge.textContent   = pCount;
+            badge.textContent   = pCount > 99 ? '99+' : pCount;
             badge.style.display = pCount > 0 ? 'flex' : 'none';
+            if(pCount > 0) badge.classList.add('animate-bounce');
+            else badge.classList.remove('animate-bounce');
         }
     });
 
     if (sCount) {
         const rate = data.acceptedCount ? Math.round((data.acceptedCount / sCount) * 100) : 0;
-        Anim.animateValue('stats-acceptance-rate', rate, 1000, '%');
+        Anim.animateValue('stats-acceptance-rate', rate, 1200, '%');
     }
+    Logger.timeEnd('fetchStats');
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// 📋 [MODULE] PENDING REQUESTS
-// ═══════════════════════════════════════════════════════════════════
 let _isPendingInitialized = false;
 
 export async function fetchPendingRequests() {
+    Logger.time('fetchPending');
     const container = DOM.get('pendingRequestsContainer');
     if (!container) return;
 
     container.innerHTML = DOM.skeleton(3, 2);
     const students = await Http.postJSON(API.PENDING, {}, 'pending');
 
-    if (!students) { container.innerHTML = DOM.emptyState('error', 'فشل الاتصال بالخادم'); return; }
+    if (!students) { container.innerHTML = DOM.emptyState('error', 'فشل الاتصال بالخادم. يرجى التحقق من الشبكة.'); return; }
     State.pendingRequests = students;
 
     if (!students.length) {
-        container.innerHTML = DOM.emptyState('empty', 'لا توجد طلبات جديدة حالياً ✓');
+        container.innerHTML = DOM.emptyState('empty', 'لا توجد طلبات معلقة حالياً ✓');
         return;
     }
 
     const html = students.map((st, i) => _buildRequestCard(st, i)).join('');
     DOM.fastAppend(container, html);
-    Anim.staggerFadeIn(container, '.req-card', 0.06);
+    Anim.staggerFadeIn(container, '.req-card', 0.05);
 
     if (!_isPendingInitialized) {
         container.addEventListener('click', e => {
@@ -584,35 +790,34 @@ export async function fetchPendingRequests() {
         });
         _isPendingInitialized = true;
     }
+    Logger.timeEnd('fetchPending');
 }
 
 function _buildRequestCard(st, i) {
     const s = Security.sanitizeStudent(st);
     const fullName = [s.first_name, s.second_name, s.third_name, s.last_name].filter(Boolean).join(' ');
     return `
-    <div id="req-${s.email}" class="req-card glass-panel border border-white/5 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 opacity-0 hover:border-white/15 hover:shadow-[0_0_24px_rgba(255,255,255,0.03)] transition-all duration-300 group">
-        <div class="text-center md:text-right flex-1 min-w-0">
-            <h4 class="font-bold text-white truncate text-base group-hover:text-yellow-200 transition-colors">${fullName}</h4>
+    <div id="req-${s.email}" class="req-card glass-panel border border-white/5 p-4 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 opacity-0 hover:border-white/15 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)] transition-all duration-300 group relative overflow-hidden">
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-[100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out pointer-events-none"></div>
+        <div class="text-center md:text-right flex-1 min-w-0 z-10">
+            <h4 class="font-bold text-white truncate text-base group-hover:text-yellow-300 transition-colors">${fullName}</h4>
             <div class="flex flex-wrap gap-1.5 mt-2 justify-center md:justify-start">
-                <span class="text-[11px] text-gray-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">${s.email}</span>
-                <span class="text-[11px] text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20 font-semibold">${s.grade}</span>
-                ${s.phone ? `<span class="text-[11px] text-gray-400 bg-white/5 px-2 py-0.5 rounded-full" dir="ltr">${s.phone}</span>` : ''}
+                <span class="text-[11px] text-gray-300 bg-white/5 px-2.5 py-1 rounded-full border border-white/10 shadow-sm">${s.email}</span>
+                <span class="text-[11px] text-yellow-400 bg-yellow-500/10 px-2.5 py-1 rounded-full border border-yellow-500/20 font-bold shadow-sm">${s.grade}</span>
+                ${s.phone ? `<span class="text-[11px] text-gray-300 bg-white/5 px-2.5 py-1 rounded-full border border-white/10 shadow-sm" dir="ltr">📞 ${s.phone}</span>` : ''}
             </div>
         </div>
-        <div class="flex gap-2 w-full md:w-auto shrink-0">
-            <button data-action="accept" data-email="${s.email}" aria-label="قبول الطالب" class="relative w-full md:w-auto bg-green-500/10 text-green-400 border border-green-500/20 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-green-500 hover:text-black hover:border-green-400 transition-all duration-200 active:scale-95 overflow-hidden focus-visible:ring-2 focus-visible:ring-green-500 ui-ripple">
-                <span class="relative z-10 pointer-events-none">✓ قبول</span>
+        <div class="flex gap-2 w-full md:w-auto shrink-0 z-10">
+            <button data-action="accept" data-email="${s.email}" aria-label="قبول الطالب" class="relative w-full md:w-auto bg-green-500/10 text-green-400 border border-green-500/20 px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-green-500 hover:text-black hover:border-green-400 hover:shadow-[0_0_15px_rgba(34,197,94,0.4)] transition-all duration-200 active:scale-95 overflow-hidden focus-visible:ring-2 focus-visible:ring-green-500 ui-ripple">
+                <span class="relative z-10 pointer-events-none flex items-center justify-center gap-2"><span class="text-lg">✓</span> قبول</span>
             </button>
-            <button data-action="reject" data-email="${s.email}" aria-label="رفض الطالب" class="relative w-full md:w-auto bg-red-500/10 text-red-400 border border-red-500/20 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-400 transition-all duration-200 active:scale-95 overflow-hidden focus-visible:ring-2 focus-visible:ring-red-500 ui-ripple">
-                <span class="relative z-10 pointer-events-none">✕ رفض</span>
+            <button data-action="reject" data-email="${s.email}" aria-label="رفض الطالب" class="relative w-full md:w-auto bg-red-500/10 text-red-400 border border-red-500/20 px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-red-500 hover:text-white hover:border-red-400 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] transition-all duration-200 active:scale-95 overflow-hidden focus-visible:ring-2 focus-visible:ring-red-500 ui-ripple">
+                <span class="relative z-10 pointer-events-none flex items-center justify-center gap-2"><span class="text-lg">✕</span> رفض</span>
             </button>
         </div>
     </div>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// ✅ [MODULE] UPDATE STATUS
-// ═══════════════════════════════════════════════════════════════════
 export async function updateStudentStatus(email, newStatus, reason = '', btnElement = null) {
     if (!email || !newStatus) return;
 
@@ -622,21 +827,22 @@ export async function updateStudentStatus(email, newStatus, reason = '', btnElem
             btnElement.disabled = true;
             btnElement.style.opacity = '0.65';
             const spinner = document.createElement('span');
-            spinner.className = 'inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1';
+            spinner.className = 'inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2';
             btnElement.querySelector('span')?.prepend(spinner);
         });
         const row = btnElement.closest('.req-card');
-        if (row) setTimeout(() => Anim.slideOut(row, 'right'), 180);
+        if (row) setTimeout(() => Anim.slideOut(row, 'right'), 200);
     }
 
     const data = await Http.postJSON(API.UPDATE_STATUS, { studentEmail: email, newStatus, reason }, `status-${email}`);
 
     if (data !== null) {
-        if (newStatus === STATUS.ACCEPTED) { Toast.success('✓ تم قبول الطالب بنجاح'); SysUI.confetti?.(); }
-        else { Toast.warning('تم رفض الطالب'); }
+        if (newStatus === STATUS.ACCEPTED) { Toast.success('تم قبول الطالب وانضمامه للمنصة بنجاح 🎓'); typeof SysUI !== 'undefined' && SysUI.confetti?.(); }
+        else { Toast.warning('تم رفض طلب الطالب وإرسال السبب.'); }
         State.invalidateStudents();
+        EventBus.emit('student:updated', null, 300);
     } else {
-        Toast.error('فشل تحديث الحالة');
+        Toast.error('خطأ أمني: فشل تحديث الحالة. حاول مجدداً.');
         if (btnElement) { 
             Scheduler.write(() => {
                 btnElement.disabled = false; 
@@ -644,26 +850,26 @@ export async function updateStudentStatus(email, newStatus, reason = '', btnElem
                 btnElement.querySelector('.animate-spin')?.remove(); 
             });
         }
-        return;
     }
-
-    EventBus.emit('student:updated', null, 420);
 }
 
 export function rejectStudent(email, btnElement) {
-    SysUI.prompt('سبب الرفض (سيظهر للطالب):', reason => {
-        if (reason !== null) updateStudentStatus(email, STATUS.REJECTED, reason, btnElement);
-    });
+    if(typeof SysUI !== 'undefined' && SysUI.prompt) {
+        SysUI.prompt('سبب الرفض (إلزامي ليظهر للطالب):', reason => {
+            if (reason !== null && reason.trim() !== '') updateStudentStatus(email, STATUS.REJECTED, reason, btnElement);
+            else if (reason !== null) Toast.error('يجب كتابة سبب الرفض');
+        });
+    } else {
+        const reason = prompt('سبب الرفض:');
+        if(reason) updateStudentStatus(email, STATUS.REJECTED, reason, btnElement);
+    }
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// 🎓 [MODULE] STUDENTS BY GRADE
-// ═══════════════════════════════════════════════════════════════════
 let _gradeSelectDebounce = null;
 
 export async function fetchStudentsByGrade() {
     clearTimeout(_gradeSelectDebounce);
-    _gradeSelectDebounce = setTimeout(_doFetchStudents, 280);
+    _gradeSelectDebounce = setTimeout(_doFetchStudents, 300);
 }
 
 async function _doFetchStudents() {
@@ -677,21 +883,21 @@ async function _doFetchStudents() {
     container.innerHTML = DOM.skeleton(6);
     const students = await Http.postJSON(API.STUDENTS_GRADE, { grade }, 'students');
     
-    if (!students) { container.innerHTML = DOM.emptyState('error', 'فشل الاتصال'); return; }
+    if (!students) { container.innerHTML = DOM.emptyState('error', 'جدار الحماية يمنع الاتصال أو الخادم لا يستجيب.'); return; }
     State.setCachedStudents(grade, students);
     _renderStudents(container, students);
 }
 
 function _renderStudents(container, students) {
     if (!students.length) { 
-        container.innerHTML = DOM.emptyState('empty', 'لا يوجد طلاب مقبولون في هذه الدفعة'); 
+        container.innerHTML = DOM.emptyState('empty', 'لا يوجد أي طالب مسجل في هذه الدفعة حالياً.'); 
         return; 
     }
     
     const html = students.map((st, i) => _buildStudentCard(st, i)).join('');
     DOM.fastAppend(container, html);
     
-    Anim.staggerFadeIn(container, '.student-card', 0.04);
+    Anim.staggerFadeIn(container, '.student-card', 0.03);
     Anim.progressBars(container);
 }
 
@@ -699,33 +905,34 @@ function _buildStudentCard(st, i) {
     const s = Security.sanitizeStudent(st);
     const fullName = [s.first_name, s.second_name, s.third_name, s.last_name].filter(Boolean).join(' ');
     const pts = Math.max(0, Math.min(100, parseInt(st.points) || 0)); 
-    const pColor = pts >= THRESHOLD.HIGH ? 'text-green-400' : pts >= THRESHOLD.PASS ? 'text-yellow-400' : 'text-red-400';
-    const bColor = pts >= THRESHOLD.HIGH ? 'bg-green-500'   : pts >= THRESHOLD.PASS ? 'bg-yellow-500'  : 'bg-red-500';
+    const pColor = pts >= THRESHOLD.HIGH ? 'text-green-400 drop-shadow-[0_0_8px_rgba(74,222,128,0.5)]' : pts >= THRESHOLD.PASS ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]';
+    const bColor = pts >= THRESHOLD.HIGH ? 'bg-gradient-to-r from-green-600 to-green-400 shadow-[0_0_10px_rgba(74,222,128,0.6)]' : pts >= THRESHOLD.PASS ? 'bg-gradient-to-r from-yellow-600 to-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]' : 'bg-gradient-to-r from-red-600 to-red-400 shadow-[0_0_10px_rgba(248,113,113,0.6)]';
 
     return `
-    <div class="student-card bg-black/40 border border-white/5 rounded-xl p-4 opacity-0 hover:border-yellow-500/30 hover:-translate-y-1 hover:shadow-[0_8px_25px_rgba(234,179,8,0.07)] transition-all duration-300 cursor-default group">
-        <div class="flex justify-between items-start mb-3">
+    <div class="student-card bg-black/50 border border-white/5 rounded-2xl p-5 opacity-0 hover:border-white/20 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_rgba(255,255,255,0.05)] transition-all duration-400 cursor-default group relative overflow-hidden backdrop-blur-sm">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+        <div class="flex justify-between items-center mb-4">
             <div class="min-w-0 flex-1">
-                <h4 class="font-bold text-white text-sm truncate group-hover:text-yellow-300 transition-colors">${fullName}</h4>
-                <p class="text-[11px] text-gray-500 mt-0.5 truncate">${s.email}</p>
+                <h4 class="font-extrabold text-white text-base truncate group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-yellow-400 group-hover:to-yellow-200 transition-all duration-300 tracking-wide">${fullName}</h4>
+                <p class="text-xs text-gray-400 mt-1 truncate font-medium bg-black/30 inline-block px-2 py-0.5 rounded-md border border-white/5">${s.email}</p>
             </div>
-            <div class="shrink-0 text-right ml-3">
-                <p class="font-black text-xl ${pColor} tabular-nums">${pts}%</p>
+            <div class="shrink-0 text-right ml-4">
+                <p class="font-black text-3xl ${pColor} tabular-nums tracking-tighter">${pts}<span class="text-lg opacity-60">%</span></p>
             </div>
         </div>
-        <div class="w-full bg-white/5 rounded-full h-1.5 overflow-hidden">
-            <div class="${bColor} h-full rounded-full transition-[width] duration-1000 ease-out" style="width:0%" data-w="${pts}%"></div>
+        <div class="w-full bg-black border border-white/10 rounded-full h-2.5 overflow-hidden shadow-inner p-0.5">
+            <div class="${bColor} h-full rounded-full transition-[width] duration-1500 ease-out relative overflow-hidden" style="width:0%" data-w="${pts}%">
+                <div class="absolute inset-0 bg-white/20 w-full h-full transform -skew-x-12 -translate-x-full group-hover:animate-[shimmer_2s_infinite]"></div>
+            </div>
         </div>
-        ${s.phone ? `<p class="text-[10px] text-gray-600 mt-2 truncate" dir="ltr">${s.phone}</p>` : ''}
+        ${s.phone ? `<div class="mt-3 flex items-center gap-2 text-xs text-gray-500 font-medium"><span class="opacity-50">📱</span><span dir="ltr">${s.phone}</span></div>` : ''}
     </div>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// 📚 [MODULE] GRADE CONTENT
-// ═══════════════════════════════════════════════════════════════════
 let _isManageInitialized = false;
 
 export async function fetchGradeContent() {
+    Logger.time('fetchContent');
     const grade     = DOM.get('manageGradeSelect')?.value;
     const container = DOM.get('manageContainer');
     const loading   = DOM.get('manageLoading');
@@ -733,7 +940,8 @@ export async function fetchGradeContent() {
 
     Scheduler.write(() => {
         container.style.opacity = '0';
-        setTimeout(() => container.classList.add('hidden'), 280);
+        container.style.transform = 'translateY(10px)';
+        setTimeout(() => container.classList.add('hidden'), 300);
         loading.classList.remove('hidden');
     });
 
@@ -747,7 +955,7 @@ export async function fetchGradeContent() {
 
     Scheduler.write(() => {
         container.classList.remove('hidden');
-        container.animate([{opacity: 0}, {opacity: 1}], {duration: 300, fill: 'forwards'});
+        container.animate([{opacity: 0, transform: 'translateY(10px)'}, {opacity: 1, transform: 'translateY(0)'}], {duration: 400, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards'});
     });
 
     if (!_isManageInitialized) {
@@ -755,7 +963,7 @@ export async function fetchGradeContent() {
             const btn = e.target.closest('[data-action]');
             if (!btn) return;
             if (btn.dataset.action === 'show-results') {
-                showDetailedResults(btn.dataset.quizId, btn.dataset.isPublic === 'true');
+                if(typeof window.showDetailedResults === 'function') window.showDetailedResults(btn.dataset.quizId, btn.dataset.isPublic === 'true');
             } else if (btn.dataset.action === 'delete') {
                 const { grade, itemtype, identifier } = btn.dataset;
                 deleteContent(grade, itemtype, identifier, btn);
@@ -763,27 +971,28 @@ export async function fetchGradeContent() {
         });
         _isManageInitialized = true;
     }
+    Logger.timeEnd('fetchContent');
 }
 
 export function renderManageContent(grade) {
     const data = State.currentGradeData;
     if (!data) return;
-    _renderSection('managePublicQuizzes', data.publicQuizzes, (q,i) => _buildPublicQuizItem(q,i,grade), 'لا توجد اختبارات عامة');
-    _renderSection('manageQuizzes',       data.quizzes,       (q,i) => _buildQuizItem(q,i,grade),       'لا توجد اختبارات منصة');
-    _renderSection('manageTests',         data.tests,         (t,i) => _buildTestItem(t,i,grade),       'لا توجد سجلات');
-    _renderSection('manageQuestions',     data.questions,     (q,i) => _buildQuestionItem(q,i,grade),   'لا توجد أسئلة مقالية');
-    _renderSection('managePoints',        data.points,        (p,i) => _buildPointItem(p,i,grade),      'لا توجد نقاط');
+    _renderSection('managePublicQuizzes', data.publicQuizzes, (q,i) => _buildPublicQuizItem(q,i,grade), 'لم يتم إنشاء اختبارات عامة بعد.');
+    _renderSection('manageQuizzes',       data.quizzes,       (q,i) => _buildQuizItem(q,i,grade),       'لم يتم إنشاء اختبارات منصة للطلاب.');
+    _renderSection('manageTests',         data.tests,         (t,i) => _buildTestItem(t,i,grade),       'لا توجد سجلات درجات مرفوعة.');
+    _renderSection('manageQuestions',     data.questions,     (q,i) => _buildQuestionItem(q,i,grade),   'لا توجد أسئلة مقالية مضافة.');
+    _renderSection('managePoints',        data.points,        (p,i) => _buildPointItem(p,i,grade),      'لا توجد نقاط أو ملاحظات مسجلة.');
 }
 
 function _renderSection(id, items, builder, emptyMsg) {
     const el = DOM.get(id);
     if (!el) return;
     if (!items?.length) {
-        el.innerHTML = `<p class="text-gray-600 text-sm py-4 text-center italic">${Security.e(emptyMsg)}</p>`;
+        el.innerHTML = `<div class="bg-black/30 border border-white/5 rounded-xl py-8 flex flex-col items-center justify-center"><span class="text-3xl opacity-20 mb-2">📁</span><p class="text-gray-500 text-sm font-semibold tracking-wide">${Security.e(emptyMsg)}</p></div>`;
         return;
     }
     DOM.fastAppend(el, items.map((item, i) => builder(item, i)).join(''));
-    Anim.staggerFadeIn(el, '[data-si]', 0.05);
+    Anim.staggerFadeIn(el, '[data-si]', 0.04);
 }
 
 function _buildPublicQuizItem(q, i, grade) {
@@ -792,17 +1001,18 @@ function _buildPublicQuizItem(q, i, grade) {
     const cnt   = q.results?.length || 0;
     const g     = Security.e(grade);
     return `
-    <div id="pubQz-${id}" data-si class="bg-yellow-900/10 border border-yellow-500/20 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 opacity-0 hover:border-yellow-500/40 hover:bg-yellow-900/20 transition-all duration-300 group">
+    <div id="pubQz-${id}" data-si class="bg-gradient-to-r from-yellow-900/20 to-black border border-yellow-500/20 p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 opacity-0 hover:border-yellow-500/50 hover:shadow-[0_0_20px_rgba(234,179,8,0.1)] transition-all duration-300 group">
         <div class="min-w-0 flex-1">
-            <p class="font-bold text-white text-base truncate">${title}</p>
-            <div class="flex gap-2 mt-1.5">
-                <span class="text-[11px] text-yellow-300 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">${cnt} رد</span>
-                <span class="text-[11px] text-gray-400 bg-white/5 px-2 py-0.5 rounded-full">عام • برابط</span>
+            <p class="font-extrabold text-white text-lg truncate group-hover:text-yellow-400 transition-colors">${title}</p>
+            <div class="flex flex-wrap gap-2 mt-2">
+                <span class="text-[11px] text-yellow-900 bg-yellow-400 px-3 py-1 rounded-full font-bold shadow-[0_0_10px_rgba(234,179,8,0.3)]">${cnt} رد مسجل</span>
+                <span class="text-[11px] text-gray-300 bg-white/10 px-3 py-1 rounded-full border border-white/10 flex items-center gap-1">🌍 اختبار عام</span>
+                <button onclick="navigator.clipboard.writeText('${window.location.origin}/quiz.html?id=${id}'); Toast.success('تم نسخ رابط الاختبار');" class="text-[11px] text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1 rounded-full border border-blue-500/20 transition-colors flex items-center gap-1 cursor-pointer">🔗 نسخ الرابط</button>
             </div>
         </div>
         <div class="flex gap-2 shrink-0 w-full sm:w-auto justify-end">
-            <button data-action="show-results" data-quiz-id="${id}" data-is-public="true" class="bg-yellow-600/20 text-yellow-500 border border-yellow-500/20 px-4 py-2 rounded-lg text-xs font-bold hover:bg-yellow-500 hover:text-black hover:border-yellow-400 transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-yellow-500 ui-ripple">📊 النتائج</button>
-            <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.PUBLIC_QUIZ}" data-identifier="${id}" aria-label="حذف الاختبار العام" class="trash-btn text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2 rounded-lg border border-transparent hover:border-red-500/20 focus-visible:ring-2 focus-visible:ring-red-500">${trashSVG}</button>
+            <button data-action="show-results" data-quiz-id="${id}" data-is-public="true" class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/30 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-yellow-500 hover:text-black hover:shadow-[0_0_15px_rgba(234,179,8,0.4)] transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-yellow-500 ui-ripple flex items-center gap-2">📊 الإحصائيات</button>
+            <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.PUBLIC_QUIZ}" data-identifier="${id}" title="حذف نهائي" class="text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2.5 rounded-xl border border-transparent hover:border-red-500/30 focus-visible:ring-2 focus-visible:ring-red-500 flex items-center justify-center">${trashSVG}</button>
         </div>
     </div>`;
 }
@@ -813,14 +1023,14 @@ function _buildQuizItem(q, i, grade) {
     const cnt   = q.results?.length || 0;
     const g     = Security.e(grade);
     return `
-    <div id="qz-${id}" data-si class="bg-black/30 border border-white/5 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 opacity-0 hover:border-white/15 hover:bg-black/50 transition-all duration-300 group">
+    <div id="qz-${id}" data-si class="bg-black/40 border border-white/10 p-5 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 opacity-0 hover:border-white/30 hover:bg-black/60 transition-all duration-300 group shadow-lg">
         <div class="min-w-0 flex-1">
-            <p class="font-bold text-white text-base truncate">${title}</p>
-            <span class="text-[11px] text-gray-400 bg-white/5 px-2 py-0.5 rounded-full mt-1.5 inline-block border border-white/5">${cnt} مجيب</span>
+            <p class="font-extrabold text-white text-lg truncate group-hover:text-gray-200 transition-colors">${title}</p>
+            <span class="text-[11px] text-gray-300 bg-white/10 px-3 py-1 rounded-full mt-2 inline-flex items-center gap-1 border border-white/10 font-medium">👥 ${cnt} مجيب من المنصة</span>
         </div>
         <div class="flex gap-2 shrink-0 w-full sm:w-auto justify-end">
-            <button data-action="show-results" data-quiz-id="${id}" data-is-public="false" class="bg-white/10 text-white border border-white/10 px-4 py-2 rounded-lg text-xs font-bold hover:bg-white hover:text-black transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-white ui-ripple">عرض النتائج</button>
-            <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.QUIZ}" data-identifier="${id}" aria-label="حذف اختبار المنصة" class="trash-btn text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2 rounded-lg border border-transparent hover:border-red-500/20">${trashSVG}</button>
+            <button data-action="show-results" data-quiz-id="${id}" data-is-public="false" class="bg-white/5 text-white border border-white/20 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-white hover:text-black hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all active:scale-95 focus-visible:ring-2 focus-visible:ring-white ui-ripple">عرض النتائج</button>
+            <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.QUIZ}" data-identifier="${id}" title="إزالة من المنصة" class="text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2.5 rounded-xl border border-transparent hover:border-red-500/30">${trashSVG}</button>
         </div>
     </div>`;
 }
@@ -829,489 +1039,104 @@ function _buildTestItem(t, i, grade) {
     const name = Security.e(t.testName || '');
     const g    = Security.e(grade);
     return `
-    <div data-si class="bg-black/30 border border-white/5 p-4 rounded-xl opacity-0 flex justify-between items-center hover:border-white/10 transition-all duration-300 group">
-        <p class="font-bold text-white truncate flex-1 text-sm">${name}</p>
-        <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.TEST}" data-identifier="${name}" aria-label="حذف السجل" class="trash-btn text-gray-500 group-hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2 rounded-lg border border-transparent hover:border-red-500/20 shrink-0">${trashSVG}</button>
+    <div data-si class="bg-black/40 border border-white/10 p-4 rounded-xl opacity-0 flex justify-between items-center hover:border-blue-500/30 hover:bg-blue-900/10 transition-all duration-300 group">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+            <span class="bg-blue-500/20 text-blue-400 p-2 rounded-lg text-lg">📝</span>
+            <p class="font-bold text-white truncate text-base">${name}</p>
+        </div>
+        <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.TEST}" data-identifier="${name}" title="مسح السجل" class="text-gray-500 group-hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2 rounded-lg border border-transparent hover:border-red-500/30 shrink-0 ml-4">${trashSVG}</button>
     </div>`;
 }
 
 function _buildQuestionItem(q, i, grade) {
     const question = Security.e(q.question || '');
-    const g        = Security.e(grade);
+    const hint = Security.e(q.hint || '');
+    const g = Security.e(grade);
     return `
-    <div data-si class="bg-black/30 border border-white/5 p-4 rounded-xl opacity-0 flex justify-between items-center gap-4 hover:border-white/10 transition-all duration-300 group">
-        <p class="text-white text-sm truncate flex-1 leading-relaxed">${question}</p>
-        <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.QUESTION}" data-identifier="${question}" aria-label="حذف السؤال المقالي" class="trash-btn text-gray-500 group-hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2 rounded-lg border border-transparent hover:border-red-500/20 shrink-0">${trashSVG}</button>
+    <div data-si class="bg-black/40 border border-white/10 p-5 rounded-2xl opacity-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-purple-500/30 hover:bg-purple-900/10 transition-all duration-300 group">
+        <div class="flex-1 min-w-0 w-full">
+            <div class="flex items-start gap-3">
+                <span class="text-purple-400 text-xl mt-0.5">❓</span>
+                <div class="w-full">
+                    <p class="text-white text-base font-bold leading-relaxed w-full whitespace-normal break-words">${question}</p>
+                    ${hint ? `<p class="text-xs text-purple-300/70 mt-2 bg-purple-500/10 p-2 rounded-lg border border-purple-500/20 w-fit">💡 تلميح: ${hint}</p>` : ''}
+                </div>
+            </div>
+        </div>
+        <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.QUESTION}" data-identifier="${question}" title="حذف السؤال" class="text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2.5 rounded-xl border border-transparent hover:border-red-500/30 sm:self-center self-end shrink-0">${trashSVG}</button>
     </div>`;
 }
 
 function _buildPointItem(p, i, grade) {
-    const point = Security.e(String(p ?? ''));
-    const g     = Security.e(grade);
+    const text = Security.e(p.text || '');
+    const g = Security.e(grade);
     return `
-    <div data-si class="bg-black/30 border border-white/5 p-4 rounded-xl opacity-0 flex justify-between items-center gap-4 hover:border-white/10 transition-all duration-300 group">
-        <p class="text-gray-300 text-sm truncate flex-1">${point}</p>
-        <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.POINT}" data-identifier="${point}" aria-label="حذف النقطة" class="trash-btn text-gray-500 group-hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2 rounded-lg border border-transparent hover:border-red-500/20 shrink-0">${trashSVG}</button>
+    <div data-si class="bg-black/40 border border-white/10 p-4 rounded-xl opacity-0 flex justify-between items-center gap-4 hover:border-green-500/30 hover:bg-green-900/10 transition-all duration-300 group border-l-4 border-l-green-500">
+        <p class="text-white text-sm flex-1 leading-relaxed font-medium pl-2">${text}</p>
+        <button data-action="delete" data-grade="${g}" data-itemtype="${ITEM_TYPE.POINT}" data-identifier="${text}" title="حذف الملاحظة" class="text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200 p-2 rounded-lg border border-transparent hover:border-red-500/30 shrink-0">${trashSVG}</button>
     </div>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// 🗑️ [MODULE] DELETE CONTENT
-// ═══════════════════════════════════════════════════════════════════
-export function deleteContent(grade, itemType, identifier, trashBtn = null) {
-    SysUI.confirm('هل أنت متأكد من حذف هذا العنصر نهائياً؟', async confirmed => {
-        if (!confirmed) return;
-
-        const row = trashBtn?.closest('[data-si]');
-        if (row) Anim.slideOut(row, 'scale');
-
-        const data = await Http.postJSON(API.DELETE_ITEM, { grade, itemType, identifier }, `del-${identifier}`);
-        if (data !== null) {
-            Toast.success('✓ تم الحذف بنجاح');
-            State.invalidateStudents(grade);
-            EventBus.emit('content:deleted', null, 420);
-        } else {
-            Toast.error('خطأ في الحذف');
-            fetchGradeContent();
-        }
-    });
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 📤 [MODULE] CSV EXPORT (Web Worker Offloaded)
-// ═══════════════════════════════════════════════════════════════════
-function _exportCSVWorker(quiz) {
-    if (!quiz?.results?.length) { Toast.warning('لا توجد نتائج للتصدير'); return; }
-    
-    Toast.info('جاري معالجة وتشفير الملف...');
-    
-    const workerScript = `
-        self.onmessage = function(e) {
-            const { quiz } = e.data;
-            const headers = ['الاسم','البريد','النتيجة','النسبة','الوقت'];
-            const rows = quiz.results.map(r => [
-                r.studentName || '',
-                r.email || '',
-                (r.score||0) + '/' + (quiz.questions?.length||0),
-                (r.percentage||0) + '%',
-                r.submittedAt ? new Date(r.submittedAt).toLocaleString('ar-SA') : ''
-            ]);
-            
-            const sanitize = (val) => {
-                let str = String(val).replace(/"/g, '""');
-                return /^[=+\\-@\\t\\r]/.test(str) ? '"\\'' + str + '"' : '"' + str + '"';
-            };
-            
-            const csv = [headers, ...rows].map(r => r.map(c => sanitize(c)).join(',')).join('\\n');
-            const blob = new Blob(['\\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            self.postMessage(URL.createObjectURL(blob));
-        };
-    `;
-    
-    const blob = new Blob([workerScript], { type: 'application/javascript' });
-    const worker = new Worker(URL.createObjectURL(blob));
-    
-    worker.onmessage = (e) => {
-        const url = e.data;
-        const fileName = `نتائج_${Security.safeFile(quiz.title)}_${Date.now()}.csv`;
-        
-        const a = document.createElement('a');
-        Object.assign(a, { href: url, download: fileName });
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        worker.terminate();
-        Toast.success('✓ تم تصدير النتائج بنجاح');
-    };
-    
-    worker.onerror = (err) => {
-        Logger.error('CSV Worker Error', err);
-        Toast.error('فشل تصدير الملف');
-        worker.terminate();
-    };
-
-    worker.postMessage({ quiz });
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 📈 [MODULE] RESULTS MODAL (True Identifier Toggle + Chunked Yield)
-// ═══════════════════════════════════════════════════════════════════
-let _resultsSearchTerm   = '';
-let _resultsFilterStatus = 'all';
-let _currentQuizCache    = null;
-let _isResultsEventBinded = false;
-
-export function showDetailedResults(quizId, isPublic) {
-    const data = State.currentGradeData;
-    if (!data) return;
-
-    const arr  = isPublic ? data.publicQuizzes : data.quizzes;
-    const quiz = arr?.find(q => String(q.id) === String(quizId));
-    if (!quiz) return;
-
-    _currentQuizCache    = quiz;
-    _resultsSearchTerm   = '';
-    _resultsFilterStatus = 'all';
-
-    Scheduler.write(() => {
-        const titleEl = DOM.get('resultsModalTitle');
-        if (titleEl) titleEl.textContent = Security.e(quiz.title) + (isPublic ? ' (عام)' : ' (منصة)');
-
-        const searchEl = DOM.get('resultsSearch');
-        if (searchEl) {
-            searchEl.value = '';
-            searchEl.oninput = _debounce(e => {
-                _resultsSearchTerm = e.target.value.toLowerCase().trim();
-                _renderResultsContent(_currentQuizCache);
-            }, 250);
-        }
-
-        const filterEl = DOM.get('resultsFilter');
-        if (filterEl) {
-            filterEl.value = 'all';
-            filterEl.onchange = e => {
-                _resultsFilterStatus = e.target.value;
-                _renderResultsContent(_currentQuizCache);
-            };
-        }
-
-        const exportBtn = DOM.get('exportCSVBtn');
-        if (exportBtn) exportBtn.onclick = () => _exportCSVWorker(quiz);
-    });
-
-    _renderResultsContent(quiz);
-    _openModal('resultsModal');
-}
-
-async function _renderResultsContent(quiz) {
-    const container = DOM.get('resultsModalContent');
-    if (!container) return;
-
-    if (!quiz.results?.length) {
-        Scheduler.write(() => {
-            container.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-20 text-center select-none">
-                <div class="text-6xl mb-4 opacity-20">📭</div>
-                <p class="text-gray-400">لم يحل أحد هذا الاختبار بعد</p>
-            </div>`;
+export function deleteContent(grade, itemType, identifier, btnElement = null) {
+    if(typeof SysUI !== 'undefined' && SysUI.confirm) {
+        SysUI.confirm('⚠️ تحذير أمني: هل أنت متأكد من الحذف النهائي؟ لا يمكن التراجع عن هذا الإجراء.', async confirmed => {
+            if (!confirmed) return;
+            _executeDelete(grade, itemType, identifier, btnElement);
         });
-        return;
-    }
-
-    let results = [...quiz.results].sort((a,b) => (b.percentage||0) - (a.percentage||0));
-
-    if (_resultsSearchTerm) {
-        results = results.filter(r =>
-            (r.studentName || '').toLowerCase().includes(_resultsSearchTerm) ||
-            (r.email       || '').toLowerCase().includes(_resultsSearchTerm)
-        );
-    }
-    if (_resultsFilterStatus !== 'all') {
-        results = results.filter(r =>
-            _resultsFilterStatus === 'pass' ? (r.percentage||0) >= THRESHOLD.PASS : (r.percentage||0) < THRESHOLD.PASS
-        );
-    }
-
-    const total    = quiz.results.length;
-    const passed   = quiz.results.filter(r => (r.percentage||0) >= THRESHOLD.PASS).length;
-    const failed   = total - passed;
-    const avgPct   = total ? Math.round(quiz.results.reduce((a,r) => a+(r.percentage||0),0)/total) : 0;
-    const avgColor = avgPct >= THRESHOLD.HIGH ? 'text-green-400' : avgPct >= THRESHOLD.PASS ? 'text-yellow-400' : 'text-red-400';
-
-    const headerHtml = `
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            ${_statChip(total, 'المجيبين', 'text-white')}
-            ${_statChip(passed, 'ناجح', 'text-green-400')}
-            ${_statChip(failed, 'راسب', 'text-red-400')}
-            ${_statChip(avgPct+'%', 'المتوسط', avgColor)}
-        </div>`;
-
-    if (results.length === 0) {
-        Scheduler.write(() => { container.innerHTML = headerHtml + `<p class="text-gray-500 text-center py-8">لا توجد نتائج تطابق البحث</p>`; });
-        return;
-    }
-
-    const htmlChunks = results.map((res,i) => _buildResultCard(res,i,quiz));
-    await DOM.renderChunked(container, htmlChunks, headerHtml);
-
-    if (!_isResultsEventBinded) {
-        container.addEventListener('click', e => {
-            const row = e.target.closest('[data-toggle-detail]');
-            if (row) toggleStudentDetails(row.dataset.toggleDetail);
-        });
-        container.addEventListener('keydown', e => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                const row = e.target.closest('[data-toggle-detail]');
-                if (row) { e.preventDefault(); toggleStudentDetails(row.dataset.toggleDetail); }
-            }
-        });
-        _isResultsEventBinded = true;
+    } else {
+        if(confirm('تأكيد الحذف النهائي؟')) _executeDelete(grade, itemType, identifier, btnElement);
     }
 }
 
-function _statChip(val, label, color) {
-    return `<div class="bg-white/5 rounded-xl p-3 text-center border border-white/5">
-        <p class="font-black text-xl ${color} tabular-nums">${val}</p>
-        <p class="text-[11px] text-gray-500 mt-0.5">${label}</p>
-    </div>`;
-}
-
-function _buildResultCard(res, index, quiz) {
-    const pct    = res.percentage || 0;
-    const score  = res.score      || 0;
-    const total  = quiz.questions?.length || 0;
-    const name   = Security.e(res.studentName || 'طالب غير معروف');
-    const email  = Security.e(res.email       || '');
-
-    const color      = pct >= THRESHOLD.HIGH ? 'text-green-400' : pct >= THRESHOLD.PASS ? 'text-blue-400' : 'text-red-400';
-    const border     = pct >= THRESHOLD.PASS ? 'border-white/5' : 'border-red-900/20';
-    const barColor   = pct >= THRESHOLD.HIGH ? 'bg-green-500'   : pct >= THRESHOLD.PASS ? 'bg-blue-500'  : 'bg-red-500';
-    const rankBadge  = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<span class="text-sm">${index+1}</span>`;
-    
-    const detailId   = `det-${Security.hashId(res.email || String(index))}`;
-
-    return `
-    <div class="result-card bg-black/40 rounded-xl border ${border} opacity-0 hover:bg-black/55 transition-colors duration-200">
-        <div class="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer hover:bg-white/[0.02] transition-colors gap-3 select-none focus-visible:ring-2 focus-visible:ring-yellow-500"
-            data-toggle-detail="${detailId}" data-source-email="${Security.e(res.email)}" role="button" tabindex="0" aria-expanded="false" aria-controls="${detailId}">
-            <div class="flex items-center gap-3 flex-1 min-w-0">
-                <div class="w-9 h-9 rounded-full bg-gray-800 border border-white/5 flex items-center justify-center font-bold text-white shrink-0 shadow-inner text-sm">${rankBadge}</div>
-                <div class="min-w-0">
-                    <p class="font-bold text-white text-sm truncate">${name}</p>
-                    <p class="text-[11px] text-gray-500 mt-0.5 truncate">${email}${res.visitorId ? ' · <span class="text-yellow-500 text-[10px]">✓ موثق</span>' : ''}</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-4 shrink-0 border-t border-white/5 sm:border-none pt-2 sm:pt-0 w-full sm:w-auto justify-between sm:justify-end">
-                <div class="text-center">
-                    <p class="font-black text-2xl ${color} tabular-nums">${pct}%</p>
-                    <div class="w-16 h-1 bg-white/10 rounded-full mt-1 overflow-hidden">
-                        <div class="${barColor} h-full rounded-full" style="width:${pct}%"></div>
-                    </div>
-                    <p class="text-[10px] text-gray-500 mt-1 tabular-nums">${score} / ${total}</p>
-                </div>
-                <svg class="w-4 h-4 text-gray-500 transition-transform duration-300 shrink-0" id="icon-${detailId}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </div>
-        </div>
-        <div id="${detailId}" class="student-details bg-black/60" data-rendered="false" role="region">
-            <div class="details-content-wrapper">
-                <div class="px-4 pb-5 pt-2">
-                    <h4 class="text-white font-bold text-[11px] mb-3 border-b border-white/10 pb-2 uppercase tracking-widest opacity-50">مراجعة الإجابات</h4>
-                    <div class="answers-body space-y-3"></div>
-                </div>
-            </div>
-        </div>
-    </div>`;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 🔄 [MODULE] TOGGLE DETAILS (Zero Reflow CSS Grid Transition)
-// ═══════════════════════════════════════════════════════════════════
-export function toggleStudentDetails(id) {
-    const el      = document.getElementById(id);
-    const trigger = document.querySelector(`[data-toggle-detail="${id}"]`);
-    if (!el) return;
-    
-    const icon = document.getElementById(`icon-${id}`);
-    const open = el.classList.contains('is-open');
-
-    Scheduler.write(() => {
-        if (open) {
-            el.classList.remove('is-open');
-            if (icon) icon.style.transform = 'rotate(0deg)';
-            if (trigger) trigger.setAttribute('aria-expanded', 'false');
-            return;
+async function _executeDelete(grade, itemType, identifier, btnElement) {
+    if(btnElement) {
+        const card = btnElement.closest('[data-si]');
+        if(card) {
+            card.style.pointerEvents = 'none';
+            card.style.filter = 'grayscale(100%) opacity(0.5)';
         }
-
-        if (el.dataset.rendered === 'false') {
-            el.dataset.rendered = 'true';
-            
-            const sourceEmail = trigger?.dataset.sourceEmail;
-            const quiz        = _currentQuizCache;
-            const res         = quiz?.results?.find(r => String(r.email) === String(sourceEmail));
-            const body        = el.querySelector('.answers-body');
-            
-            if (body && res && quiz) {
-                const htmlStr = _buildAnswersHTML(res, quiz);
-                const tpl = document.createElement('template');
-                tpl.innerHTML = htmlStr;
-                Security.cleanDOM(tpl);
-                body.innerHTML = '';
-                body.appendChild(tpl.content);
-            }
-        }
-
-        el.classList.add('is-open');
-        if (icon) icon.style.transform = 'rotate(180deg)';
-        if (trigger) trigger.setAttribute('aria-expanded', 'true');
-        setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 120);
-    });
-}
-
-function _buildAnswersHTML(res, quiz) {
-    if (!res.userAnswers || !quiz.questions) return '<p class="text-xs text-gray-500">تفاصيل الإجابات غير متوفرة</p>';
-    
-    return quiz.questions.map((q, qIdx) => {
-        const sAns     = res.userAnswers[qIdx];
-        const cAns     = q.correctAnswer;
-        const correct  = sAns === cAns;
-        const qText    = Security.e(q.questionText || '');
-        const optsHTML = (q.options || []).map((opt, oi) => {
-            const t = Security.e(String(opt));
-            let cls = 'flex items-start gap-2 py-0.5 text-gray-500';
-            let icon = '<span class="shrink-0 opacity-40">○</span>';
-            if (oi === sAns && !correct) {
-                cls  = 'flex items-start gap-2 py-1.5 px-2 text-red-400 font-semibold bg-red-500/10 rounded-lg border border-red-500/20';
-                icon = '<span class="shrink-0">❌</span>';
-            } else if (oi === cAns) {
-                cls  = 'flex items-start gap-2 py-1.5 px-2 text-green-400 font-semibold bg-green-500/10 rounded-lg border border-green-500/20';
-                icon = '<span class="shrink-0">✅</span>';
-            }
-            return `<div class="${cls}">${icon}<span class="leading-relaxed break-words text-xs">${t}</span></div>`;
-        }).join('');
-        return `
-        <div class="bg-black/50 p-3 rounded-xl border ${correct ? 'border-green-500/15' : 'border-red-500/15'}">
-            <p class="text-xs font-semibold text-gray-300 mb-2 leading-relaxed">${qIdx+1}. ${qText}</p>
-            <div class="space-y-1">${optsHTML}</div>
-        </div>`;
-    }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 🚪 [MODULE] MODAL SYSTEM (Dynamic Focus Trap)
-// ═══════════════════════════════════════════════════════════════════
-let _activeModalCtrl = null;
-
-function _openModal(id) {
-    const modal = DOM.get(id);
-    if (!modal) return;
-    
-    Scheduler.write(() => {
-        document.body.style.overflow = 'hidden';
-        modal.classList.remove('hidden');
-        modal.animate([
-            { opacity: 0, transform: 'scale(0.96)' },
-            { opacity: 1, transform: 'scale(1)' }
-        ], { duration: 280, easing: 'ease', fill: 'both' });
-    });
-
-    if (_activeModalCtrl) _activeModalCtrl.abort();
-    _activeModalCtrl = new AbortController();
-    const opts = { signal: _activeModalCtrl.signal };
-
-    _trapFocus(modal, opts);
-
-    document.addEventListener('keydown', e => { 
-        if (e.key === 'Escape') closeResultsModal(); 
-    }, opts);
-
-    modal.addEventListener('click', e => { 
-        if (e.target === modal) closeResultsModal(); 
-    }, opts);
-}
-
-export function closeResultsModal() {
-    const modal = DOM.get('resultsModal');
-    if (!modal) return;
-    
-    if (_activeModalCtrl) {
-        _activeModalCtrl.abort();
-        _activeModalCtrl = null;
     }
-
-    Scheduler.write(() => {
-        const anim = modal.animate([
-            { opacity: 1, transform: 'scale(1)' },
-            { opacity: 0, transform: 'scale(0.96)' }
-        ], { duration: 250, easing: 'ease', fill: 'forwards' });
-        
-        anim.onfinish = () => {
-            modal.classList.add('hidden');
-            document.body.style.overflow = '';
-            anim.cancel();
-        };
-    });
-}
-
-function _trapFocus(modal, opts) {
-    modal.addEventListener('keydown', e => {
-        if (e.key !== 'Tab') return;
-        const focusable = Array.from(modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
-            .filter(el => !el.hasAttribute('disabled') && el.getAttribute('aria-hidden') !== 'true');
-            
-        if (!focusable.length) return;
-        
-        const first = focusable[0];
-        const last  = focusable[focusable.length - 1];
-        
-        if (e.shiftKey) { if (document.activeElement === first) { e.preventDefault(); last.focus(); } }
-        else            { if (document.activeElement === last)  { e.preventDefault(); first.focus(); } }
-    }, opts);
-    
-    setTimeout(() => {
-        Scheduler.read(() => {
-            const firstBtn = modal.querySelector('button, input');
-            if (firstBtn) firstBtn.focus();
-        });
-    }, 50);
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 🚪 [MODULE] LOGOUT
-// ═══════════════════════════════════════════════════════════════════
-export function logout() {
-    Security.forceLogout();
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 🛠️ [UTILS]
-// ═══════════════════════════════════════════════════════════════════
-function _debounce(fn, ms) {
-    let t;
-    return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// 💉 [CSS] SECURE CSS ENGINE (Zero Reflow Grid & Pseudo-Ripple)
-// ═══════════════════════════════════════════════════════════════════
-if (typeof document !== 'undefined' && !document.getElementById('__quantum_styles')) {
-    const s = document.createElement('style');
-    s.id = '__quantum_styles';
-    s.textContent = `
-        .student-details { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 0.4s cubic-bezier(0.4,0,0.2,1), opacity 0.3s ease; will-change: grid-template-rows, opacity; }
-        .student-details.is-open { grid-template-rows: 1fr; opacity: 1; }
-        .details-content-wrapper { overflow: hidden; }
-        .trash-btn svg { transition: transform 0.18s ease; will-change: transform; }
-        .trash-btn:hover svg { transform: scale(1.18) rotate(-4deg); }
-        [data-action="accept"]:hover, [data-action="reject"]:hover { letter-spacing: 0.015em; }
-        .result-card { contain: layout paint style; } 
-        :focus-visible { outline: 2px solid rgba(234,179,8,0.7); outline-offset: 2px; border-radius: 6px; }
-        
-        /* 🔥 High-Perf Pseudo-element Ripple (Zero DOM Allocation) */
-        .ui-ripple { position: relative; overflow: hidden; transform: translateZ(0); }
-        .ui-ripple::after {
-            content: ''; display: block; position: absolute; width: 100%; height: 100%;
-            top: 0; left: 0; pointer-events: none;
-            background-image: radial-gradient(circle, rgba(255,255,255,0.4) 10%, transparent 10.01%);
-            background-repeat: no-repeat; background-position: 50%;
-            transform: scale(10, 10); opacity: 0; transition: transform .5s, opacity 1s;
+    const res = await Http.postJSON(API.DELETE_ITEM, { grade, itemType, identifier }, `del-${identifier}`);
+    if (res) { 
+        Toast.success('تم مسح البيانات بنجاح 🗑️'); 
+        fetchGradeContent(); 
+    } else { 
+        Toast.error('خطأ فادح: تعذر الحذف من قاعدة البيانات.'); 
+        if(btnElement) {
+            const card = btnElement.closest('[data-si]');
+            if(card) { card.style.pointerEvents = 'auto'; card.style.filter = 'none'; }
         }
-        .ui-ripple.__run-ripple::after { transform: scale(0, 0); opacity: .3; transition: 0s; }
-    `;
-    document.head.appendChild(s);
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 🌍 [EXPORTS] STRICT GLOBAL BINDINGS
+// 🚪 [MODULE] SYSTEM LOGOUT
 // ═══════════════════════════════════════════════════════════════════
-export { Security, State, Anim, Http, Toast, EventBus, API, STATUS, ITEM_TYPE, THRESHOLD, Scheduler };
+export function logout() { 
+    Logger.warn('Initiating System Logout Sequence...');
+    document.body.style.opacity = '0';
+    document.body.style.transition = 'opacity 0.5s ease';
+    setTimeout(() => Security.forceLogout(), 400);
+}
 
+// ═══════════════════════════════════════════════════════════════════
+// 🌍 [EXPORTS] OMNI GLOBAL BINDINGS
+// ═══════════════════════════════════════════════════════════════════
 if (typeof window !== 'undefined') {
     Object.assign(window, {
         fetchStats, fetchPendingRequests, updateStudentStatus, rejectStudent,
-        fetchStudentsByGrade, fetchGradeContent, renderManageContent, deleteContent,
-        showDetailedResults, toggleStudentDetails, closeResultsModal, logout
+        fetchStudentsByGrade, fetchGradeContent, renderManageContent, deleteContent, logout,
+        QuizBuilder, FormsEngine, addMCQBlock: () => QuizBuilder.addBlock('dynamicQuestionsContainer', false),
+        addPublicMCQBlock: () => QuizBuilder.addBlock('dynamicPublicQuestionsContainer', true),
+        removeMCQBlock: (btn) => QuizBuilder.removeBlock(btn)
+    });
+    
+    // Auto-init on load
+    window.addEventListener('load', () => {
+        FormsEngine.init();
+        setTimeout(() => {
+            fetchStats();
+            fetchPendingRequests();
+        }, 100);
     });
 }
