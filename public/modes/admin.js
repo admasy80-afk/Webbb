@@ -31,8 +31,22 @@ EventBus.on('content:deleted', () => {
 // ═══════════════════════════════════════════════════════════════════
 // 🌍 تصدير وتهيئة النطاق العام (Global Bindings)
 // ═══════════════════════════════════════════════════════════════════
-export { Security, State, Anim, Http, Toast, EventBus, API, STATUS, ITEM_TYPE, THRESHOLD, Scheduler };
 
+// ✅ تم التصليح هنا: إضافة جميع الدوال لقائمة التصدير
+export { 
+    Security, State, Anim, Http, Toast, EventBus, API, STATUS, ITEM_TYPE, THRESHOLD, Scheduler,
+    fetchStats, 
+    fetchPendingRequests, 
+    updateStudentStatus, 
+    rejectStudent,
+    fetchStudentsByGrade, 
+    fetchGradeContent, 
+    renderManageContent, 
+    deleteContent, 
+    logout 
+};
+
+// إتاحة الدوال للعمل مباشرة من عناصر HTML (مثل onclick)
 if (typeof window !== 'undefined') {
     Object.assign(window, {
         fetchStats, 
