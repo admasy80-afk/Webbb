@@ -1,7 +1,4 @@
-// ==================== TITAN DASHBOARD ENGINE v7.0 (GOD MODE) ====================
-// 🔥 DOM Scheduler (Zero Layout Thrashing) | Deep AST Sanitizer (XSS Obliterated)
-// 🚀 Auto-Abort Http Strategies | Pseudo-element Ripple (Zero DOM Allocation)
-// 🛡️ True Stable Selectors | Arabic Numerals Normalizer | Micro-Framework Arch
+// =========== Arch
 import { SysUI, trashSVG } from './ui.js';
 import { sessionToken } from './state.js';
 
