@@ -50,12 +50,13 @@ async function fetchData(initial = false) {
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات...</p>
-                <p class="text-sm mt-2 text-gray-500">جاري الاتصال بقاعدة البيانات</p>
+                <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات والمحتوى...</p>
+                <p class="text-sm mt-2 text-gray-500">جاري المزامنة مع الإدارة</p>
             </div>`;
     }
 
     try {
+        // يتم طلب البيانات الأساسية للـ Dashboard من السيرفر الداخلي المجمع للبيانات المرفوعة من الإدارة
         const res = await fetchWithTimeout('/api/student/dashboard-data', {
             method: 'POST',
             headers: {
@@ -78,12 +79,12 @@ async function fetchData(initial = false) {
         renderAll(data, initial);
         
     } catch (err) {
-        alert(`🚨 فشل جلب بيانات الـ Dashboard:\nالسبب: ${err.message}\n\nتأكد من عمل السيرفر الداخلي على مسار /api/student/dashboard-data بشكل سليم.`);
+        alert(`🚨 فشل جلب بيانات الـ Dashboard:\nالسبب: ${err.message}\n\nتأكد من مطابقة السيرفر للمخرجات المرفوعة من مسارات الإدارة.`);
 
         if (container) {
             container.innerHTML = `
                 <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full">
-                    <p class="font-bold text-xl mb-2">فشل تحميل المحاضرات 😔</p>
+                    <p class="font-bold text-xl mb-2">فشل تحميل المحاضرات والمحتوى 😔</p>
                     <p class="text-sm text-gray-400 mb-6">${err.message}</p>
                     <button onclick="DahihApp.refresh()" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-6 py-2 rounded-xl transition-colors font-bold">🔄 أعد المحاولة</button>
                 </div>`;
@@ -93,13 +94,32 @@ async function fetchData(initial = false) {
 
 function renderAll(data, initial) {
     try {
-        renderCourses(data.courses || data.content?.courses || [], initial);
-        renderQuizzes(data.content?.quizzes || []);
-        renderPoints(data.content?.points || []);
-        renderQuestions(data.content?.questions || []);
-        renderScore(parseInt(data.studentPoints || 0));
+        // 1. ربط المحاضرات (الآتية من مسار الإدارة SAVE_CONTENT)
+        const courses = data.courses || data.content?.courses || [];
+        renderCourses(courses, initial);
+
+        // 2. ربط الاختبارات بكافة أنواعها المرفوعة من الإدارة (SAVE_QUIZ, SAVE_TEST, SAVE_PUB_QUIZ)
+        const allQuizzes = [
+            ...(data.content?.quizzes || data.quizzes || []),
+            ...(data.content?.tests || data.tests || []),
+            ...(data.content?.publicQuizzes || data.publicQuizzes || [])
+        ];
+        renderQuizzes(allQuizzes);
+
+        // 3. ربط الملاحظات والنقاط الإدارية (الآتية من مسار الإدارة UPDATE_POINTS)
+        const points = data.content?.points || data.points || [];
+        renderPoints(points);
+
+        // 4. ربط الأسئلة المقالية العامة أو الخاصة بالمحاضرة
+        const questions = data.content?.questions || data.questions || [];
+        renderQuestions(questions);
+
+        // 5. ربط نقاط الطالب وعرضها بالحركة الأنيقة
+        const currentStudentPoints = data.studentPoints !== undefined ? data.studentPoints : (data.content?.studentPoints || 0);
+        renderScore(parseInt(currentStudentPoints));
+
     } catch(e) {
-        alert("🚨 خطأ أثناء توزيع وتصنيع عناصر الـ DOM المعادة من السيرفر:\n" + e.message);
+        alert("🚨 خطأ أثناء معالجة وتوزيع مخرجات مسارات الإدارة المتزامنة:\n" + e.message);
     }
 }
 
@@ -174,18 +194,25 @@ function renderCourses(list, initial) {
 function renderQuizzes(list) {
     const container = $('onlineQuizzesContainer');
     if (!container) return;
-    const h = hash(list.map(q => [q.id, q.title, q.questions.length, (q.results || []).length]));
+    
+    // فلترة وتأمين القائمة المدمجة والتخلص من أي عناصر مكررة برقم التعريف (id)
+    const uniqueList = list.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+
+    const h = hash(uniqueList.map(q => [q.id, q.title || q.quizTitle || q.testTitle, (q.questions || []).length, (q.results || []).length]));
     if (h === state.quizzesHash) return;
     state.quizzesHash = h;
-    state.availableQuizzes = list;
+    state.availableQuizzes = uniqueList;
 
-    if (!list.length) {
-        container.innerHTML = '<p class="empty">لا توجد اختبارات متاحة حالياً.</p>';
+    if (!uniqueList.length) {
+        container.innerHTML = '<p class="empty">لا توجد اختبارات أو تقييمات متاحة حالياً.</p>';
         return;
     }
 
-    const html = list.slice().reverse().map(quiz => {
+    const html = uniqueList.slice().reverse().map(quiz => {
+        const quizTitle = quiz.title || quiz.quizTitle || quiz.testTitle || 'اختبار تقييمي';
+        const questionsCount = quiz.questions ? quiz.questions.length : 0;
         const result = quiz.results ? quiz.results.find(r => r.email === state.user.email) : null;
+        
         const action = result
             ? `<div class="btn w-full md:w-auto mt-auto md:mt-0" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.25);cursor:default;">مكتمل (${result.percentage}%)</div>`
             : `<button class="btn btn-primary quiz-start w-full md:w-auto mt-auto md:mt-0" data-quizid="${escapeHTML(quiz.id)}" type="button">بدء الاختبار</button>`;
@@ -193,8 +220,8 @@ function renderQuizzes(list) {
         return `
             <article class="course-card flex flex-col md:flex-row justify-between h-full">
                 <div class="mb-4 md:mb-0" style="flex:1;">
-                    <h3 class="text-white font-bold text-lg m-0">${escapeHTML(quiz.title)}</h3>
-                    <p class="text-gray-400 text-sm m-0">${quiz.questions.length} أسئلة</p>
+                    <h3 class="text-white font-bold text-lg m-0">${escapeHTML(quizTitle)}</h3>
+                    <p class="text-gray-400 text-sm m-0">${questionsCount} أسئلة</p>
                 </div>
                 ${action}
             </article>`;
@@ -222,7 +249,7 @@ function renderQuestions(list) {
     if (h === state.questionsHash) return;
     state.questionsHash = h;
     if (!list.length) { container.innerHTML = '<p class="empty">لا توجد أسئلة مقالية حالياً.</p>'; return; }
-    container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;font-weight:700;color:#fff;margin:0 0 0.5rem;line-height:1.5;"><span style="color:var(--text-dim);margin-left:0.4rem;">${i + 1}.</span>${escapeHTML(q.question)}</h3><p style="color:var(--text-muted);font-size:0.85rem;line-height:1.7;border-top:1px solid var(--border);padding-top:0.5rem;margin:0;"><span style="color:var(--accent);font-weight:700;margin-left:0.4rem;">الإجابة:</span>${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
+    container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;font-weight:700;color:#fff;margin:0 0 0.5rem;line-height:1.5;"><span style="color:var(--text-dim);margin-left:0.4rem;">${i + 1}.</span>${escapeHTML(q.question || q.questionText)}</h3><p style="color:var(--text-muted);font-size:0.85rem;line-height:1.7;border-top:1px solid var(--border);padding-top:0.5rem;margin:0;"><span style="color:var(--accent);font-weight:700;margin-left:0.4rem;">الإجابة/التلميح:</span>${escapeHTML(q.hint || q.answer || 'راجع المحاضرة المرفقة لمعرفة الإجابة النموذجية')}</p></article>`).join('')}</div>`;
 }
 
 function renderScore(newPoints) {
@@ -241,17 +268,19 @@ function openQuizModal(quizId) {
     if (!content || !modal) return;
 
     const letters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'];
-    const questionsHTML = quiz.questions.map((q, qi) => `
+    const quizTitle = quiz.title || quiz.quizTitle || quiz.testTitle || 'اختبار دحيح';
+    
+    const questionsHTML = (quiz.questions || []).map((q, qi) => `
         <div style="background:rgba(0,0,0,0.4);padding:1rem;border-radius:0.75rem;border:1px solid var(--border);margin-bottom:1rem;">
-            <h4 style="font-size:0.95rem;font-weight:600;margin:0 0 0.85rem;line-height:1.6;color:white;"><span style="color:var(--accent);margin-left:0.4rem;">${qi + 1}.</span>${escapeHTML(q.questionText)}</h4>
+            <h4 style="font-size:0.95rem;font-weight:600;margin:0 0 0.85rem;line-height:1.6;color:white;"><span style="color:var(--accent);margin-left:0.4rem;">${qi + 1}.</span>${escapeHTML(q.questionText || q.question)}</h4>
             <div style="display:grid;grid-template-columns:1fr;gap:0.5rem;">
-                ${q.options.map((opt, oi) => `<label class="quiz-option"><input type="radio" name="q_${qi}" value="${oi}" required><div class="opt"><span class="opt-letter">${letters[oi] || (oi + 1)}</span><span style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;">${escapeHTML(opt)}</span></div></label>`).join('')}
+                ${(q.options || []).map((opt, oi) => `<label class="quiz-option"><input type="radio" name="q_${qi}" value="${oi}" required><div class="opt"><span class="opt-letter">${letters[oi] || (oi + 1)}</span><span style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;">${escapeHTML(opt)}</span></div></label>`).join('')}
             </div>
         </div>`).join('');
 
     content.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.25rem;">
-            <h2 id="quizModalTitle" style="font-size:1.15rem;font-weight:700;margin:0;color:white;">${escapeHTML(quiz.title)}</h2>
+            <h2 id="quizModalTitle" style="font-size:1.15rem;font-weight:700;margin:0;color:white;">${escapeHTML(quizTitle)}</h2>
         </div>
         <form id="activeQuizForm" style="display:flex;flex-direction:column;">
             ${questionsHTML}
@@ -267,17 +296,23 @@ function openQuizModal(quizId) {
 async function submitQuiz(event, quiz) {
     event.preventDefault();
     const btn = $('btnSubmitQuiz');
-    if (btn) { btn.disabled = true; btn.textContent = 'جاري التصحيح...'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'جاري التصحيح والمزامنة...'; }
 
     const form = event.target;
     let score = 0;
-    quiz.questions.forEach((q, qi) => {
+    const questionsList = quiz.questions || [];
+    
+    questionsList.forEach((q, qi) => {
         const el = form.elements[`q_${qi}`];
-        if (el && parseInt(el.value) === q.correctAnswer) score++;
+        // دعم قراءة المفتاح سواء كان correctAnswer أو correct
+        const correctAnsIndex = q.correctAnswer !== undefined ? q.correctAnswer : q.correct;
+        if (el && parseInt(el.value) === parseInt(correctAnsIndex)) score++;
     });
-    const percentage = Math.round((score / quiz.questions.length) * 100);
+    
+    const percentage = questionsList.length > 0 ? Math.round((score / questionsList.length) * 100) : 0;
 
     try {
+        // إرسال نتيجة الاختبار لنفس مسار معالجة نتائج تقييمات الطلاب المربوط بالإدارة
         await fetchWithTimeout('/api/student/submit-quiz', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
@@ -287,7 +322,7 @@ async function submitQuiz(event, quiz) {
         closeQuiz();
         fetchData(true);
     } catch (err) {
-        alert(`🚨 فشل إرسال نتيجة الاختبار:\n${err.message}`);
+        alert(`🚨 فشل إرسال نتيجة الاختبار ورصد النقاط:\n${err.message}`);
         if (btn) { btn.disabled = false; btn.textContent = 'حاول مجدداً'; }
     }
 }
@@ -314,7 +349,7 @@ function init() {
     }
 }
 
-// تصدير المهام الأساسية لتكون متاحة لأزرار الـ HTML
+// تصدير المهام الأساسية لتكون متاحة لأزرار الـ HTML للتحكم السلس في الواجهة
 window.DahihApp = {
     logout, 
     toggleFullscreen, 
