@@ -3,1455 +3,446 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#070b19">
+    <meta name="theme-color" content="#030712">
     <meta name="description" content="لوحة الطالب - منصة الدحيح التعليمية">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-
     <title>لوحة الطالب | منصة الدحيح</title>
 
-    <script src="[cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link rel="preconnect" href="[fonts.googleapis.com](https://fonts.googleapis.com)">
-    <link rel="preconnect" href="[fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
-    <link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800;900&display=swap)" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="player.css">
-
     <style>
-        :root { 
-            --accent: #eab308; 
-            --accent-light: #facc15;
-            --accent-dark: #a16207;
-            --bg-primary: #070b19;
-            --bg-secondary: #0a0f1c;
+        :root {
+            --accent: #facc15;
+            --accent-glow: rgba(250, 204, 21, 0.4);
+            --bg-base: #030712;
+            --glass-bg: rgba(255, 255, 255, 0.02);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --success: #22c55e;
+            --danger: #ef4444;
         }
-        * { 
-            font-family: 'Readex Pro', sans-serif !important; 
-            -webkit-tap-highlight-color: transparent; 
+
+        * {
+            font-family: 'Readex Pro', sans-serif !important;
+            -webkit-tap-highlight-color: transparent;
             box-sizing: border-box;
         }
-        body, html { 
-            background-color: #070b19; 
-            color: white; 
+
+        body, html {
+            background-color: var(--bg-base);
+            color: white;
             overscroll-behavior-y: none;
+            margin: 0;
+            padding: 0;
+            height: 100%;
         }
-        *:focus { outline: none !important; }
 
-        .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-        
-        .tab-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
-        .tab-btn::before { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity 0.3s; z-index: -1; border-radius: inherit; }
-        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); }
-        .tab-btn.active { color: #000; font-weight: 700; background: var(--accent); box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2); }
-        
-        .tab-content { display: none; opacity: 0; transition: opacity 0.4s ease, transform 0.4s ease; transform: translateY(15px); }
-        .tab-content.active { display: block; opacity: 1; transform: translateY(0); }
-        
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
-        
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* ============================================================
-           ╔══════════════════════════════════════════════════════════╗
-           ║         QUIZZES TAB - ULTRA PREMIUM REDESIGN             ║
-           ║         Inspired by: Linear / Raycast / Vercel           ║
-           ╚══════════════════════════════════════════════════════════╝
-           ============================================================ */
-        
-        /* === Animated Grid Background === */
-        .quiz-bg-grid {
-            position: absolute;
+        /* Animated Grid Background */
+        .quiz-bg {
+            position: fixed;
             inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+            background:
+                linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
             background-size: 50px 50px;
-            -webkit-mask-image: radial-gradient(ellipse at center top, black 0%, transparent 70%);
-            mask-image: radial-gradient(ellipse at center top, black 0%, transparent 70%);
-            opacity: .5;
+            mask-image: radial-gradient(circle at center, black, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+            opacity: 0.4;
             pointer-events: none;
-            z-index: 0;
-            animation: gridDrift 60s linear infinite;
-        }
-        @keyframes gridDrift {
-            0% { background-position: 0 0; }
-            100% { background-position: 50px 50px; }
+            z-index: -2;
+            animation: backgroundPan 30s linear infinite;
         }
 
-        /* === Floating Orbs === */
-        .quiz-orb {
-            position: absolute;
+        @keyframes backgroundPan {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(50px); }
+        }
+
+        /* Floating Glowing Orbs */
+        .glow-orb {
+            position: fixed;
             border-radius: 50%;
             filter: blur(80px);
             opacity: 0.4;
+            z-index: -1;
             pointer-events: none;
-            z-index: 0;
-            animation: orbFloat 20s ease-in-out infinite;
+            will-change: transform;
         }
-        .quiz-orb-1 {
-            width: 400px; height: 400px;
-            background: radial-gradient(circle, rgba(234,179,8,0.3), transparent 70%);
-            top: -100px; right: -100px;
-        }
-        .quiz-orb-2 {
-            width: 350px; height: 350px;
-            background: radial-gradient(circle, rgba(168,85,247,0.2), transparent 70%);
-            bottom: 20%; left: -100px;
-            animation-delay: -7s;
-        }
-        .quiz-orb-3 {
-            width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(34,197,94,0.15), transparent 70%);
-            top: 40%; right: 30%;
-            animation-delay: -14s;
-        }
-        @keyframes orbFloat {
-            0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(30px, -40px) scale(1.1); }
-            66% { transform: translate(-20px, 30px) scale(0.95); }
+        .orb-1 { width: 400px; height: 400px; background: rgba(250, 204, 21, 0.15); top: -100px; right: -100px; animation: float 12s ease-in-out infinite alternate; }
+        .orb-2 { width: 300px; height: 300px; background: rgba(59, 130, 246, 0.1); bottom: 10%; left: -50px; animation: float 15s ease-in-out infinite alternate-reverse; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(-30px, 50px) scale(1.1); }
         }
 
-        /* === Quizzes Tab Container === */
-        #tab-quizzes { position: relative; }
-        #tab-quizzes > * { position: relative; z-index: 1; }
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
 
-        /* === Hero Header === */
-        .quizzes-hero {
+        /* Sidebar Tabs */
+        .tab-btn {
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
             position: relative;
-            background: linear-gradient(135deg, rgba(234,179,8,0.08) 0%, rgba(168,85,247,0.05) 50%, rgba(34,197,94,0.05) 100%);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 32px;
-            padding: 2.5rem 2rem;
-            margin-bottom: 2.5rem;
             overflow: hidden;
-            backdrop-filter: blur(20px);
+            border: 1px solid transparent;
+            will-change: transform, background-color;
         }
-        .quizzes-hero::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(234,179,8,0.15), transparent 50%),
-                radial-gradient(circle at 80% 50%, rgba(168,85,247,0.1), transparent 50%);
-            pointer-events: none;
+        .tab-btn::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            transform: translateX(100%); transition: 0.5s; z-index: 1;
         }
-        .quizzes-hero::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px);
-            background-size: 30px 30px;
-            opacity: 0.5;
-            pointer-events: none;
-        }
-        .quizzes-hero-content { position: relative; z-index: 1; }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: rgba(234,179,8,0.15);
-            border: 1px solid rgba(234,179,8,0.3);
-            color: var(--accent-light);
-            padding: 6px 14px;
-            border-radius: 100px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            backdrop-filter: blur(10px);
-        }
-        .hero-badge .dot {
-            width: 6px; height: 6px;
-            background: var(--accent-light);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--accent-light);
-            animation: pulse 2s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.3); }
+        .tab-btn:hover::before { transform: translateX(-100%); }
+        .tab-btn.active {
+            color: #000; font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), #ca8a04);
+            box-shadow: 0 10px 25px var(--accent-glow);
+            border-color: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
         }
 
-        .hero-title {
-            font-size: clamp(1.8rem, 4vw, 2.75rem);
-            font-weight: 900;
-            line-height: 1.2;
-            margin-bottom: 0.75rem;
-            background: linear-gradient(135deg, #fff 0%, #facc15 50%, #fff 100%);
-            background-size: 200% 200%;
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: gradientShift 5s ease infinite;
-        }
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
+        .tab-content { display: none; opacity: 0; }
+        .tab-content.active { display: block; animation: fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); filter: blur(4px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
         }
 
-        .hero-subtitle {
-            color: rgba(255,255,255,0.65);
-            font-size: 1rem;
-            line-height: 1.7;
-            max-width: 600px;
-        }
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* === Hero Stats === */
-        .hero-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 1rem;
-            margin-top: 2rem;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255,255,255,0.08);
-        }
-        .hero-stat {
-            text-align: right;
-        }
-        .hero-stat-value {
-            font-size: 1.75rem;
-            font-weight: 900;
-            color: white;
-            display: flex;
-            align-items: baseline;
-            gap: 4px;
-            direction: ltr;
-            justify-content: flex-end;
-        }
-        .hero-stat-value .accent { color: var(--accent-light); }
-        .hero-stat-label {
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.5);
-            margin-top: 4px;
-            font-weight: 500;
-        }
-
-        /* === Filter Bar === */
-        .quiz-filter-bar {
-            display: flex;
-            gap: 0.5rem;
-            margin-bottom: 1.5rem;
-            overflow-x: auto;
-            padding-bottom: 4px;
-            scrollbar-width: none;
-        }
-        .quiz-filter-bar::-webkit-scrollbar { display: none; }
-        .quiz-filter-pill {
-            flex-shrink: 0;
-            padding: 0.6rem 1.2rem;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 100px;
-            color: rgba(255,255,255,0.7);
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            white-space: nowrap;
-        }
-        .quiz-filter-pill:hover {
-            background: rgba(255,255,255,0.08);
-            border-color: rgba(255,255,255,0.15);
-            color: white;
-            transform: translateY(-1px);
-        }
-        .quiz-filter-pill.active {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: black;
-            box-shadow: 0 4px 20px rgba(234,179,8,0.3);
-        }
-        .quiz-filter-pill .count {
-            background: rgba(0,0,0,0.2);
-            color: inherit;
-            padding: 1px 8px;
-            border-radius: 100px;
-            font-size: 0.7rem;
-            font-weight: 800;
-        }
-        .quiz-filter-pill.active .count {
-            background: rgba(0,0,0,0.25);
-        }
-        .quiz-filter-pill:not(.active) .count {
-            background: rgba(255,255,255,0.08);
-        }
-
-        /* ============== THE ULTRA QUIZ CARD ============== */
+        /* ================= Mission / Challenge Cards ================= */
         .quiz-card {
             position: relative;
-            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
-            border: 1px solid rgba(255,255,255,0.08);
+            overflow: hidden;
+            background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+            border: 1px solid var(--glass-border);
             border-radius: 28px;
             padding: 1.75rem;
-            transition: 
-                transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
-                border-color 0.4s ease,
-                box-shadow 0.5s ease;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: transform .45s cubic-bezier(.2,.8,.2,1), border-color .4s, box-shadow .4s;
+            isolation: isolate;
             display: flex;
             flex-direction: column;
-            min-height: 380px;
-            isolation: isolate;
-            overflow: hidden;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            cursor: pointer;
+            height: 100%;
+            will-change: transform;
         }
 
-        /* Animated border glow */
+        /* Moving Light Effect */
         .quiz-card::before {
             content: '';
             position: absolute;
-            inset: -1px;
-            border-radius: inherit;
-            padding: 1px;
-            background: conic-gradient(
-                from var(--angle, 0deg),
-                transparent 0deg,
-                rgba(234,179,8,0.6) 60deg,
-                transparent 120deg,
-                transparent 240deg,
-                rgba(234,179,8,0.4) 300deg,
-                transparent 360deg
-            );
-            -webkit-mask: linear-gradient(black, black) content-box, linear-gradient(black, black);
-            mask: linear-gradient(black, black) content-box, linear-gradient(black, black);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
+            inset: -2px;
+            background: linear-gradient(130deg, transparent, var(--accent-glow), transparent);
             opacity: 0;
-            transition: opacity 0.5s ease;
-            pointer-events: none;
-            z-index: 1;
-        }
-        .quiz-card:hover::before {
-            opacity: 1;
-            animation: rotateBorder 4s linear infinite;
-        }
-        @keyframes rotateBorder {
-            0% { --angle: 0deg; }
-            100% { --angle: 360deg; }
-        }
-        @property --angle {
-            syntax: '<angle>';
-            initial-value: 0deg;
-            inherits: false;
+            transition: 0.5s ease;
+            z-index: -1;
+            border-radius: 30px;
         }
 
-        /* Top accent line */
-        .quiz-card-accent-line {
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, transparent, var(--accent), transparent);
-            opacity: 0;
-            transition: opacity 0.4s ease;
-            z-index: 2;
-        }
-        .quiz-card:hover .quiz-card-accent-line { opacity: 1; }
-
-        /* Inner glow on hover */
-        .quiz-card-glow {
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(234,179,8,0.15), transparent 40%);
-            opacity: 0;
-            transition: opacity 0.4s ease;
-            pointer-events: none;
-            z-index: 0;
-            border-radius: inherit;
-        }
-        .quiz-card:hover .quiz-card-glow { opacity: 1; }
-
-        /* Hover transform */
         .quiz-card:not(.completed):hover {
-            transform: translateY(-10px) scale(1.015);
-            border-color: rgba(234,179,8,0.35);
-            box-shadow: 
-                0 25px 70px rgba(0,0,0,0.7),
-                0 0 50px rgba(234,179,8,0.15),
-                inset 0 0 30px rgba(234,179,8,0.03);
+            transform: translateY(-10px) scale(1.02);
+            border-color: rgba(234,179,8,.4);
+            box-shadow: 0 20px 60px rgba(0,0,0,.65), 0 0 40px rgba(234,179,8,.12);
+        }
+        .quiz-card:not(.completed):hover::before { opacity: 1; }
+
+        /* Completed State Overlay */
+        .quiz-card.completed { border-color: rgba(34,197,94,.2); opacity: 0.95; }
+        .quiz-card.completed::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(to bottom, rgba(34,197,94,.04), rgba(0,0,0,.4));
+            z-index: -1;
         }
 
-        .quiz-card > * { position: relative; z-index: 2; }
-
-        /* === Card Header === */
-        .quiz-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-            margin-bottom: 1.25rem;
+        /* Stat Pills */
+        .quiz-stats { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; margin-bottom: 1.5rem; }
+        .pill {
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+            padding: 6px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;
+            display: flex; items-center; gap: 6px; color: #cbd5e1;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
         }
 
-        .quiz-card-icon-wrap {
-            position: relative;
-            width: 56px; height: 56px;
-            flex-shrink: 0;
-        }
-        .quiz-card-icon {
-            position: relative;
-            width: 100%; height: 100%;
-            border-radius: 16px;
-            background: linear-gradient(135deg, rgba(234,179,8,0.2), rgba(234,179,8,0.05));
-            border: 1px solid rgba(234,179,8,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--accent-light);
-            box-shadow: 
-                0 8px 20px rgba(234,179,8,0.15),
-                inset 0 1px 0 rgba(255,255,255,0.1);
-            transition: transform 0.5s cubic-bezier(0.2,0.8,0.2,1);
-            overflow: hidden;
-        }
-        .quiz-card-icon::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 60%);
-            pointer-events: none;
-        }
-        .quiz-card:hover .quiz-card-icon {
-            transform: rotate(-8deg) scale(1.1);
-        }
-        .quiz-card-icon svg { width: 26px; height: 26px; position: relative; z-index: 1; }
+        /* Difficulty Bars */
+        .difficulty { display: flex; gap: 3px; align-items: flex-end; height: 14px; }
+        .difficulty span { width: 4px; background: rgba(255,255,255,0.2); border-radius: 2px; }
+        .difficulty span:nth-child(1) { height: 6px; }
+        .difficulty span:nth-child(2) { height: 10px; }
+        .difficulty span:nth-child(3) { height: 14px; }
+        .difficulty[data-level="1"] span:nth-child(1) { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .difficulty[data-level="2"] span:nth-child(1), .difficulty[data-level="2"] span:nth-child(2) { background: #eab308; box-shadow: 0 0 8px #eab308; }
+        .difficulty[data-level="3"] span { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
-        .quiz-card-icon-pulse {
-            position: absolute;
-            inset: -4px;
-            border-radius: 20px;
-            border: 1.5px solid var(--accent);
-            opacity: 0;
-            animation: iconPulse 2.5s ease-out infinite;
+        /* SVG Progress Ring */
+        .progress-ring-container { position: relative; width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; }
+        .progress-ring svg { transform: rotate(-90deg); width: 70px; height: 70px; }
+        .progress-ring circle {
+            fill: none; stroke-width: 6; stroke-linecap: round;
+            transform: translate(5px, 5px);
         }
-        @keyframes iconPulse {
-            0% { opacity: 0.6; transform: scale(0.95); }
-            100% { opacity: 0; transform: scale(1.3); }
+        .progress-ring .bg { stroke: rgba(255,255,255,0.1); }
+        .progress-ring .progress {
+            stroke: var(--success); stroke-dasharray: 188.4; stroke-dashoffset: 188.4;
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            filter: drop-shadow(0 0 6px rgba(34,197,94,0.6));
+        }
+        .progress-ring-container span {
+            position: absolute; font-weight: 900; font-size: 1.1rem; color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* Status Badge */
-        .quiz-status-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 12px;
-            border-radius: 100px;
-            font-size: 0.7rem;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            backdrop-filter: blur(10px);
-            white-space: nowrap;
-        }
-        .quiz-status-badge.available {
-            background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(59,130,246,0.1));
-            color: #60a5fa;
-            border: 1px solid rgba(59,130,246,0.3);
-            box-shadow: 0 0 20px rgba(59,130,246,0.15);
-        }
-        .quiz-status-badge.completed {
-            background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.1));
-            color: #4ade80;
-            border: 1px solid rgba(34,197,94,0.3);
-            box-shadow: 0 0 20px rgba(34,197,94,0.15);
-        }
-        .quiz-status-badge .badge-dot {
-            width: 6px; height: 6px;
-            border-radius: 50%;
-            background: currentColor;
-            box-shadow: 0 0 8px currentColor;
-        }
-        .quiz-status-badge.available .badge-dot {
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        /* === Subject Tag === */
-        .quiz-subject-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: rgba(255,255,255,0.55);
-            margin-bottom: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        .quiz-subject-tag::before {
-            content: '';
-            width: 4px; height: 4px;
-            background: var(--accent);
-            border-radius: 50%;
-            box-shadow: 0 0 8px var(--accent);
-        }
-
-        /* === Title === */
-        .quiz-card-title {
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: white;
-            line-height: 1.4;
-            margin-bottom: 1rem;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-            min-height: 2.8em;
-        }
-
-        /* === Difficulty Indicator === */
-        .quiz-difficulty {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 1.25rem;
-        }
-        .quiz-difficulty-label {
-            font-size: 0.7rem;
-            color: rgba(255,255,255,0.5);
-            font-weight: 600;
-        }
-        .quiz-difficulty-bars {
-            display: flex;
-            gap: 3px;
-        }
-        .quiz-difficulty-bar {
-            width: 18px; height: 5px;
-            background: rgba(255,255,255,0.08);
-            border-radius: 2px;
-            transition: all 0.3s ease;
-        }
-        .quiz-difficulty-bar.active {
-            background: var(--accent);
-            box-shadow: 0 0 10px rgba(234,179,8,0.5);
-        }
-        .quiz-difficulty-bar.active.hard {
-            background: #ef4444;
-            box-shadow: 0 0 10px rgba(239,68,68,0.5);
-        }
-        .quiz-difficulty-bar.active.medium {
-            background: var(--accent);
-        }
-        .quiz-difficulty-bar.active.easy {
-            background: #22c55e;
-            box-shadow: 0 0 10px rgba(34,197,94,0.5);
-        }
-        .quiz-difficulty-text {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: rgba(255,255,255,0.7);
-            margin-right: auto;
-        }
-
-        /* === Stat Pills === */
-        .quiz-stat-pills {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 1.5rem;
-            margin-top: auto;
-        }
-        .quiz-stat-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid rgba(255,255,255,0.08);
-            padding: 8px 12px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: rgba(255,255,255,0.85);
-            transition: all 0.3s ease;
-        }
-        .quiz-card:hover .quiz-stat-pill {
-            background: rgba(255,255,255,0.06);
-            border-color: rgba(255,255,255,0.12);
-        }
-        .quiz-stat-pill svg {
-            width: 14px; height: 14px;
-            color: var(--accent-light);
-        }
-        .quiz-stat-pill.points svg { color: #facc15; }
-        .quiz-stat-pill.time svg { color: #60a5fa; }
-        .quiz-stat-pill.questions svg { color: #c084fc; }
-
-        /* === Start Button === */
+        /* Start Button */
         .btn-start-quiz {
-            position: relative;
-            width: 100%;
-            height: 56px;
-            background: linear-gradient(135deg, #facc15 0%, #eab308 50%, #ca8a04 100%);
-            color: #0a0a0a;
-            font-weight: 900;
-            font-size: 0.95rem;
-            border: none;
-            border-radius: 16px;
-            cursor: pointer;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            box-shadow: 
-                0 8px 24px rgba(234,179,8,0.25),
-                inset 0 1px 0 rgba(255,255,255,0.4),
-                inset 0 -2px 0 rgba(0,0,0,0.15);
-        }
-        .btn-start-quiz::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.5) 50%, transparent 70%);
-            transform: translateX(-100%);
-            transition: transform 0.6s ease;
+            position: relative; overflow: hidden; width: 100%; height: 56px;
+            background: linear-gradient(135deg, #facc15, #ca8a04);
+            border-radius: 18px; font-weight: 900; color: #000;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            transition: 0.35s cubic-bezier(0.4, 0, 0.2, 1); border: none; cursor: pointer;
         }
         .btn-start-quiz:hover {
             transform: translateY(-3px);
-            box-shadow: 
-                0 14px 32px rgba(234,179,8,0.4),
-                0 0 30px rgba(234,179,8,0.3),
-                inset 0 1px 0 rgba(255,255,255,0.5),
-                inset 0 -2px 0 rgba(0,0,0,0.15);
-        }
-        .btn-start-quiz:hover::before {
-            transform: translateX(100%);
-        }
-        .btn-start-quiz:active {
-            transform: translateY(-1px);
-        }
-        .btn-start-quiz svg {
-            transition: transform 0.4s cubic-bezier(0.2,0.8,0.2,1);
-        }
-        .btn-start-quiz:hover svg {
-            transform: translateX(-4px);
-        }
-        .btn-start-quiz .btn-arrow-bg {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            padding-right: 1.5rem;
-            opacity: 0.08;
-            font-size: 6rem;
-            font-weight: 900;
-            color: black;
-            transition: transform 0.5s ease;
-            pointer-events: none;
+            box-shadow: 0 15px 30px rgba(234,179,8,.35), inset 0 2px 0 rgba(255,255,255,0.4);
         }
 
-        /* === COMPLETED CARD === */
-        .quiz-card.completed {
-            background: linear-gradient(180deg, rgba(34,197,94,0.05) 0%, rgba(255,255,255,0.01) 100%);
-            border-color: rgba(34,197,94,0.18);
-        }
-        .quiz-card.completed:hover {
-            transform: translateY(-6px);
-            border-color: rgba(34,197,94,0.35);
-            box-shadow: 
-                0 20px 50px rgba(0,0,0,0.6),
-                0 0 40px rgba(34,197,94,0.12);
-        }
-        .quiz-card.completed .quiz-card-accent-line {
-            background: linear-gradient(90deg, transparent, #22c55e, transparent);
-            opacity: 1;
-        }
-        .quiz-card.completed::before {
-            background: conic-gradient(
-                from var(--angle, 0deg),
-                transparent 0deg,
-                rgba(34,197,94,0.5) 60deg,
-                transparent 120deg,
-                transparent 240deg,
-                rgba(34,197,94,0.4) 300deg,
-                transparent 360deg
-            );
-        }
-        .quiz-card.completed .quiz-card-icon {
-            background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(34,197,94,0.05));
-            border-color: rgba(34,197,94,0.3);
-            color: #4ade80;
-            box-shadow: 0 8px 20px rgba(34,197,94,0.15), inset 0 1px 0 rgba(255,255,255,0.1);
-        }
-        .quiz-card.completed .quiz-subject-tag::before {
-            background: #22c55e;
-            box-shadow: 0 0 8px #22c55e;
-        }
-        .quiz-card.completed .quiz-card-glow {
-            background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(34,197,94,0.12), transparent 40%);
-        }
-
-        /* === Score Result Block === */
-        .quiz-score-block {
-            position: relative;
-            margin-top: auto;
-            padding: 1.25rem;
-            background: linear-gradient(135deg, rgba(0,0,0,0.4), rgba(0,0,0,0.2));
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            overflow: hidden;
-        }
-        .quiz-score-block::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: 
-                radial-gradient(circle at 0% 100%, rgba(34,197,94,0.08), transparent 50%);
-            pointer-events: none;
-        }
-        .quiz-score-info { position: relative; z-index: 1; }
-        .quiz-score-label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            color: rgba(255,255,255,0.5);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
-        }
-        .quiz-score-status {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .quiz-score-status svg { width: 14px; height: 14px; color: #4ade80; }
-
-        /* === SVG Progress Ring === */
-        .quiz-progress-ring {
-            position: relative;
-            width: 80px; height: 80px;
-            flex-shrink: 0;
-        }
-        .quiz-progress-ring svg {
-            transform: rotate(-90deg);
-            width: 100%; height: 100%;
-            filter: drop-shadow(0 0 8px currentColor);
-        }
-        .quiz-progress-ring .ring-bg {
-            fill: none;
-            stroke: rgba(255,255,255,0.08);
-            stroke-width: 6;
-        }
-        .quiz-progress-ring .ring-progress {
-            fill: none;
-            stroke-width: 6;
-            stroke-linecap: round;
-            transition: stroke-dashoffset 1.5s cubic-bezier(0.2,0.8,0.2,1);
-        }
-        .quiz-progress-ring .ring-progress.high { stroke: #22c55e; }
-        .quiz-progress-ring .ring-progress.med { stroke: #eab308; }
-        .quiz-progress-ring .ring-progress.low { stroke: #ef4444; }
-        .quiz-progress-ring-text {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            font-weight: 900;
-            direction: ltr;
-        }
-        .quiz-progress-ring-text .value {
-            font-size: 1.25rem;
-            color: white;
-            line-height: 1;
-        }
-        .quiz-progress-ring-text .percent {
-            font-size: 0.65rem;
-            color: rgba(255,255,255,0.5);
-            margin-top: 2px;
-        }
-        .quiz-progress-ring-text .value.high { color: #4ade80; }
-        .quiz-progress-ring-text .value.med { color: #facc15; }
-        .quiz-progress-ring-text .value.low { color: #f87171; }
-
-        /* === Lock Overlay for completed === */
-        .quiz-locked-overlay {
-            position: absolute;
-            top: 12px;
-            left: 12px;
-            width: 32px; height: 32px;
-            border-radius: 10px;
-            background: rgba(0,0,0,0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.08);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 3;
-        }
-        .quiz-locked-overlay svg {
-            width: 14px; height: 14px;
-            color: rgba(255,255,255,0.6);
-        }
-
-        /* === Empty State === */
-        .quiz-empty-state {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 4rem 2rem;
-            background: rgba(255,255,255,0.02);
-            border: 1px dashed rgba(255,255,255,0.1);
-            border-radius: 24px;
-        }
-        .quiz-empty-icon {
-            width: 80px; height: 80px;
-            margin: 0 auto 1.5rem;
-            border-radius: 24px;
-            background: linear-gradient(135deg, rgba(234,179,8,0.1), rgba(234,179,8,0.02));
-            border: 1px solid rgba(234,179,8,0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--accent-light);
-        }
-
-        /* === Skeleton Shimmer === */
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-        .quiz-skeleton {
-            background: linear-gradient(90deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 100%);
-            background-size: 1000px 100%;
-            animation: shimmer 2s linear infinite;
-            border-radius: 28px;
-            min-height: 380px;
-        }
-
-        /* === Responsive === */
-        @media (max-width: 768px) {
-            .quizzes-hero { padding: 1.75rem 1.25rem; border-radius: 24px; }
-            .hero-stats { grid-template-columns: repeat(2, 1fr); }
-            .quiz-card { padding: 1.5rem; min-height: auto; }
-            .quiz-card-title { font-size: 1.1rem; }
-            .btn-start-quiz { height: 52px; font-size: 0.9rem; }
-        }
-
-        /* === Card entrance animation === */
-        @keyframes cardEnter {
-            from {
-                opacity: 0;
-                transform: translateY(30px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        .quiz-card-enter {
-            animation: cardEnter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-            opacity: 0;
+        .line-clamp-2 {
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
         }
     </style>
-
-    <script>
-        window.switchTab = function(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => {
-                el.classList.remove('active');
-                setTimeout(() => el.style.display = 'none', 300);
-            });
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
-            const activeTab = document.getElementById(`tab-${tabId}`);
-            if(activeTab) {
-                setTimeout(() => {
-                    activeTab.style.display = 'block';
-                    void activeTab.offsetWidth;
-                    activeTab.classList.add('active');
-                }, 310);
-                
-                const btn = document.getElementById(`btn-${tabId}`);
-                if(btn) btn.classList.add('active');
-            }
-        };
-    </script>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
 
-    <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
-        
-        <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
+    <div class="quiz-bg"></div>
+    <div class="glow-orb orb-1"></div>
+    <div class="glow-orb orb-2"></div>
+
+    <aside class="w-full md:w-[20rem] glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 md:shadow-2xl">
+        <div class="p-5 md:p-8 flex flex-row md:flex-col justify-between items-center md:items-start gap-5">
             <div class="flex justify-between w-full items-center">
-                <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-                <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-red-500/20">خروج</button>
+                <div class="text-3xl md:text-4xl font-black text-yellow-500 tracking-tighter drop-shadow-md">الدحيح<span class="text-white">.</span></div>
+                <button aria-label="تسجيل الخروج" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors border border-red-500/20">خروج</button>
             </div>
             
-            <div class="hidden md:block w-full bg-black/40 border border-white/5 rounded-2xl p-4 mt-2">
-                <p class="text-xs text-gray-400 mb-1">المرحلة الدراسية:</p>
-                <p id="studentGrade" class="text-yellow-500 font-bold text-sm mb-3">جاري التحميل...</p>
-                <div class="h-px w-full bg-white/10 my-2"></div>
-                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">...</span></h2>
+            <div class="hidden md:block w-full bg-black/40 border border-white/10 rounded-2xl p-5 shadow-inner">
+                <p class="text-xs text-gray-400 mb-1 uppercase tracking-wider font-semibold">المرحلة الدراسية</p>
+                <p class="text-yellow-400 font-black text-sm mb-4">الثالث الثانوي</p>
+                <div class="h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent my-3"></div>
+                <h2 class="text-sm text-gray-400">مرحباً بك، <span class="text-white font-black block text-lg mt-1 truncate">مـحـمـد</span></h2>
             </div>
         </div>
         
-        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 scrollbar-hide flex-shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
-            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
-            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
-            <button onclick="switchTab('points')" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
-            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
+        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-3 pb-3 md:px-5 md:py-2 gap-3 scrollbar-hide flex-shrink-0">
+            <button data-tab="dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-6 py-4 rounded-2xl font-bold text-gray-300 bg-white/5">لوحة المذاكرة</button>
+            <button data-tab="courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-6 py-4 rounded-2xl font-bold text-gray-300 bg-white/5">المحاضرات</button>
+            <button data-tab="quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-6 py-4 rounded-2xl font-bold text-gray-300 bg-white/5">الاختبارات والتحديات</button>
+            <button data-tab="points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-6 py-4 rounded-2xl font-bold text-gray-300 bg-white/5">نقاط المنهج</button>
         </nav>
 
-        <div class="hidden md:block p-4 mt-auto">
-            <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3.5 rounded-xl text-sm font-bold transition-all border border-red-500/20 flex items-center justify-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <div class="hidden md:block p-5 mt-auto">
+            <button aria-label="تسجيل الخروج" class="w-full text-red-400 bg-red-500/10 hover:bg-red-500/20 py-4 rounded-2xl text-sm font-bold transition-all border border-red-500/20 flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 تسجيل الخروج
             </button>
         </div>
     </aside>
 
-    <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth" id="mainGrid">
-        <div class="fixed top-0 right-0 w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-
-        <div id="tab-dashboard" class="tab-content active space-y-4 md:space-y-6">
-            <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
-                <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up bg-[#0a0f1c]">
-                    
-                    <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                            <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                                <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
-                            <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
-                        </div>
-                    </div>
-
-                    <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
-                        <div id="videoContainer" class="video-container group">
-                            
-                            <div id="videoPoster" class="video-poster">
-                                <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-bounce">
-                                    <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                </div>
-                                <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
-                                <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل</p>
-                            </div>
-
-                            <div class="buffering-spinner"></div>
-                            <video id="dahihPlayer" playsinline preload="metadata"></video>
-                            <div class="tap-zone left" id="tapLeft"></div>
-                            <div class="tap-zone right" id="tapRight"></div>
-                            <div class="skip-indicator left" id="skipIndicatorLeft" aria-hidden="true"><span id="skipTextLeft">-10</span></div>
-                            <div class="skip-indicator right" id="skipIndicatorRight" aria-hidden="true"><span id="skipTextRight">+10</span></div>
-                            <div class="center-play" id="centerPlay">
-                                <div><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                            </div>
-
-                            <div class="controls" dir="ltr">
-                                <div class="progress-wrapper" id="progressContainer" role="slider" tabindex="0">
-                                    <div class="progress">
-                                        <div class="progress-loaded" id="bufferedBar"></div>
-                                        <div class="progress-fill" id="progressBar"></div>
-                                    </div>
-                                    <div class="progress-hover-tooltip" id="progressTooltip"><span>00:00</span></div>
-                                </div>
-
-                                <div class="controls-bar">
-                                    <div class="group">
-                                        <button class="icon-btn" id="playPauseBtn" aria-label="Play">
-                                            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                                        </button>
-                                        
-                                        <div class="volume-container" id="volumeContainer">
-                                            <button class="icon-btn" id="muteBtn" aria-label="Mute">
-                                                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
-                                            </button>
-                                            <div class="volume-slider-wrapper">
-                                                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
-                                            </div>
-                                        </div>
-
-                                        <div class="time-display">
-                                            <span id="currentTimeDisplay">00:00</span>
-                                            <span class="separator">/</span>
-                                            <span class="duration" id="durationDisplay">00:00</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="group">
-                                        <button class="icon-btn text-xs font-bold w-auto px-2" id="speedBtn">1x</button>
-                                        
-                                        <button class="icon-btn hidden md:flex" id="pipBtn" title="Picture in Picture">
-                                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                                        </button>
-
-                                        <button class="icon-btn fullscreen-btn" onclick="DahihApp.toggleFullscreen()" title="Fullscreen">
-                                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div id="tt-boost"></div>
-                        </div>
-                    </div>
+    <main class="flex-grow h-full overflow-y-auto p-4 md:p-10 relative scroll-smooth z-10" id="mainGrid">
+        
+        <div id="tab-dashboard" class="tab-content active h-full flex flex-col items-center justify-center">
+            <div class="text-center animate-fadeUp">
+                <div class="w-24 h-24 bg-gradient-to-tr from-yellow-600 to-yellow-300 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_50px_rgba(250,204,21,0.4)]">
+                     <svg class="w-12 h-12 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                 </div>
-
-                <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
-                    <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up bg-gradient-to-b from-white/5 to-transparent">
-                        <h2 class="text-lg font-bold mb-6 text-white flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                            مؤشر الأداء العام
-                        </h2>
-                        <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
-                            <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-yellow-500 border-l-yellow-500 opacity-50 animate-spin" style="animation-duration: 3s;"></div>
-                            
-                            <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
-                        </div>
-                        <p class="text-gray-400 text-sm leading-relaxed max-w-[250px] mx-auto">هذه النسبة تعكس تفاعلك وحلك للاختبارات على المنصة. استمر في التقدم!</p>
-                    </div>
-                </div>
+                <h2 class="text-3xl font-black mb-3">اللوحة الرئيسية</h2>
+                <p class="text-gray-400">اختر من القائمة الجانبية للبدء بالتحديات والمحاضرات.</p>
             </div>
         </div>
 
-        <div id="tab-courses" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
-            <div id="studentCoursesContainer" class="flex flex-col gap-8">
-                <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-fade-in-up">
-                    <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات...</p>
-                </div>
+        <div id="tab-courses" class="tab-content h-full">
+            <h1 class="text-3xl md:text-4xl font-black mb-3 drop-shadow-md">المحاضرات والحصص</h1>
+            <p class="text-gray-400 text-sm md:text-base mb-10">استعرض الكورسات المصممة خصيصاً لك.</p>
+            <div class="glass-panel p-10 rounded-[2rem] text-center">
+                <p class="text-gray-500 font-bold">جاري تحميل المعسكرات...</p>
             </div>
         </div>
 
-        <!-- ============================================================
-             ╔══════════════════════════════════════════════════════════╗
-             ║       QUIZZES TAB - ULTRA PREMIUM EDITION                ║
-             ╚══════════════════════════════════════════════════════════╝
-             ============================================================ -->
         <div id="tab-quizzes" class="tab-content">
-            <!-- Background Effects -->
-            <div class="quiz-bg-grid"></div>
-            <div class="quiz-orb quiz-orb-1"></div>
-            <div class="quiz-orb quiz-orb-2"></div>
-            <div class="quiz-orb quiz-orb-3"></div>
-
-            <!-- Hero Header -->
-            <div class="quizzes-hero animate-fade-in-up">
-                <div class="quizzes-hero-content">
-                    <div class="hero-badge">
-                        <span class="dot"></span>
-                        <span>منطقة الاختبارات التفاعلية</span>
-                    </div>
-                    <h1 class="hero-title">اختبر مستواك واصعد للقمة</h1>
-                    <p class="hero-subtitle">تحديات تفاعلية مصممة لقياس فهمك وتطوير مهاراتك. كل اختبار محسوب بدقة، وكل نتيجة هي خطوة نحو التميز.</p>
-                    
-                    <div class="hero-stats">
-                        <div class="hero-stat">
-                            <div class="hero-stat-value"><span id="heroTotalQuizzes" class="accent">0</span></div>
-                            <div class="hero-stat-label">إجمالي الاختبارات</div>
-                        </div>
-                        <div class="hero-stat">
-                            <div class="hero-stat-value"><span id="heroCompletedQuizzes">0</span></div>
-                            <div class="hero-stat-label">تم إكمالها</div>
-                        </div>
-                        <div class="hero-stat">
-                            <div class="hero-stat-value"><span id="heroAvgScore" class="accent">0</span><span style="font-size:1rem;">%</span></div>
-                            <div class="hero-stat-label">متوسط الدرجات</div>
-                        </div>
-                        <div class="hero-stat">
-                            <div class="hero-stat-value"><span id="heroAvailable">0</span></div>
-                            <div class="hero-stat-label">متاحة الآن</div>
-                        </div>
-                    </div>
+            <div class="flex items-center gap-4 mb-3">
+                <div class="bg-gradient-to-br from-yellow-400/20 to-yellow-600/10 p-3 rounded-2xl border border-yellow-500/20 shadow-[0_0_20px_rgba(250,204,21,0.15)]">
+                    <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
                 </div>
-            </div>
-
-            <!-- Filter Bar -->
-            <div class="quiz-filter-bar" id="quizFilterBar">
-                <button class="quiz-filter-pill active" data-filter="all">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                    الكل
-                    <span class="count" id="filterCountAll">0</span>
-                </button>
-                <button class="quiz-filter-pill" data-filter="available">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                    المتاحة
-                    <span class="count" id="filterCountAvailable">0</span>
-                </button>
-                <button class="quiz-filter-pill" data-filter="completed">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                    المكتملة
-                    <span class="count" id="filterCountCompleted">0</span>
-                </button>
-                <button class="quiz-filter-pill" data-filter="high">
-                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 3l14 9-14 9V3z"/></svg>
-                    درجات عالية
-                    <span class="count" id="filterCountHigh">0</span>
-                </button>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-black text-white drop-shadow-md">المهام والتحديات</h1>
+                    <p class="text-gray-400 text-sm md:text-base mt-1">أثبت جدارتك، اكسب النقاط وتصدر الترتيب.</p>
+                </div>
             </div>
             
-            <!-- Quizzes Grid -->
-            <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Filled by JS -->
-            </div>
+            <div class="w-full h-px bg-gradient-to-r from-white/10 via-white/5 to-transparent my-8"></div>
+
+            <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                </div>
         </div>
 
-        <div id="tab-points" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">ملاحظات وتلخيصات سريعة لتثبيت المعلومات.</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        <div id="tab-points" class="tab-content h-full">
+             <h1 class="text-3xl md:text-4xl font-black mb-3 drop-shadow-md">نقاط المنهج</h1>
+             <div class="glass-panel p-10 rounded-[2rem] text-center mt-10">
+                <p class="text-gray-500 font-bold">لا توجد ملاحظات حالياً.</p>
             </div>
         </div>
-
-        <div id="tab-questions" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم الأسئلة المقالية</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">تدرب على نمط الأسئلة المقالية المتوقعة مع معرفة الإجابات النموذجية.</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="questionsContainer" class="flex flex-col gap-4"></div>
-            </div>
-        </div>
-
     </main>
 
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-xl" role="dialog" aria-modal="true">
-        <div class="bg-[#0a0f1c] border border-white/10 w-full max-w-3xl rounded-[2rem] p-5 md:p-8 max-h-[95vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)]" id="quizModalBox">
-            <div id="quizModalContent"></div>
-        </div>
-    </div>
-
-    <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/hls.js@latest)"></script>
-    <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js)"></script>
-    <script src="player.js" defer></script>
-    <script src="quiz.js" defer></script>
-    <script src="[cdn.jsdelivr.net](https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js)" defer></script>
-    <script src="script.js" defer></script>
-
-    <!-- ============================================================
-         QUIZZES RENDERING ENGINE - ULTRA PREMIUM
-         ============================================================ -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const mockQuizzes = [
-                {
-                    id: 1, title: 'اختبار الباب الأول: الكيمياء العضوية',
-                    subject: 'كيمياء', questionsCount: 15, duration: 20, points: 100,
-                    difficulty: 'easy', attempted: false, score: null
-                },
-                {
-                    id: 2, title: 'اختبار الباب الثاني: التحليل الكيميائي',
-                    subject: 'كيمياء', questionsCount: 20, duration: 30, points: 150,
-                    difficulty: 'medium', attempted: true, score: 90
-                },
-                {
-                    id: 3, title: 'اختبار شامل على نصف المنهج',
-                    subject: 'كيمياء شامل', questionsCount: 50, duration: 60, points: 300,
-                    difficulty: 'hard', attempted: true, score: 65
-                },
-                {
-                    id: 4, title: 'اختبار الديناميكا الحرارية',
-                    subject: 'فيزياء', questionsCount: 12, duration: 18, points: 80,
-                    difficulty: 'medium', attempted: false, score: null
-                },
-                {
-                    id: 5, title: 'اختبار التفاضل والتكامل',
-                    subject: 'رياضيات', questionsCount: 25, duration: 40, points: 200,
-                    difficulty: 'hard', attempted: true, score: 88
-                },
-                {
-                    id: 6, title: 'اختبار قواعد اللغة',
-                    subject: 'لغة عربية', questionsCount: 18, duration: 25, points: 120,
-                    difficulty: 'easy', attempted: false, score: null
-                }
-            ];
+            // Tab Switching Logic (Safe & performant)
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
 
-            const container = document.getElementById('onlineQuizzesContainer');
-            const filterBar = document.getElementById('quizFilterBar');
-            let currentFilter = 'all';
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const targetId = btn.getAttribute('data-tab');
+                    
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
 
-            function getDifficultyConfig(diff) {
-                const configs = {
-                    easy:   { label: 'سهل',   bars: 1, class: 'easy' },
-                    medium: { label: 'متوسط', bars: 2, class: 'medium' },
-                    hard:   { label: 'صعب',   bars: 3, class: 'hard' }
-                };
-                return configs[diff] || configs.medium;
-            }
-
-            function getScoreClass(score) {
-                if (score >= 85) return 'high';
-                if (score >= 60) return 'med';
-                return 'low';
-            }
-
-            function getScoreMessage(score) {
-                if (score >= 90) return 'أداء استثنائي';
-                if (score >= 75) return 'أداء ممتاز';
-                if (score >= 60) return 'أداء جيد';
-                return 'يحتاج تحسين';
-            }
-
-            function escapeHtml(str) {
-                const div = document.createElement('div');
-                div.textContent = str;
-                return div.innerHTML;
-            }
-
-            function createQuizCard(quiz, index) {
-                const card = document.createElement('div');
-                card.className = 'quiz-card quiz-card-enter' + (quiz.attempted ? ' completed' : '');
-                card.style.animationDelay = `${index * 0.08}s`;
-                card.dataset.status = quiz.attempted ? 'completed' : 'available';
-                card.dataset.score = quiz.score || 0;
-
-                const diff = getDifficultyConfig(quiz.difficulty);
-                const diffBars = [1, 2, 3].map(i => 
-                    `<span class="quiz-difficulty-bar ${i <= diff.bars ? 'active ' + diff.class : ''}"></span>`
-                ).join('');
-
-                if (!quiz.attempted) {
-                    // ===== AVAILABLE QUIZ =====
-                    card.innerHTML = `
-                        <div class="quiz-card-accent-line"></div>
-                        <div class="quiz-card-glow"></div>
-                        
-                        <div class="quiz-card-header">
-                            <div class="quiz-card-icon-wrap">
-                                <div class="quiz-card-icon-pulse"></div>
-                                <div class="quiz-card-icon">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="quiz-status-badge available">
-                                <span class="badge-dot"></span>
-                                متاح الآن
-                            </div>
-                        </div>
-
-                        <div class="quiz-subject-tag">${escapeHtml(quiz.subject)}</div>
-                        <h3 class="quiz-card-title">${escapeHtml(quiz.title)}</h3>
-
-                        <div class="quiz-difficulty">
-                            <span class="quiz-difficulty-label">المستوى:</span>
-                            <div class="quiz-difficulty-bars">${diffBars}</div>
-                            <span class="quiz-difficulty-text">${diff.label}</span>
-                        </div>
-
-                        <div class="quiz-stat-pills">
-                            <div class="quiz-stat-pill questions">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <span>${quiz.questionsCount} سؤال</span>
-                            </div>
-                            <div class="quiz-stat-pill time">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <span>${quiz.duration} دقيقة</span>
-                            </div>
-                            <div class="quiz-stat-pill points">
-                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-                                </svg>
-                                <span>${quiz.points} نقطة</span>
-                            </div>
-                        </div>
-
-                        <button class="btn-start-quiz" type="button">
-                            <span style="position:relative;z-index:1;">ابدأ الاختبار الآن</span>
-                            <svg style="position:relative;z-index:1;" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.8">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
-                            </svg>
-                        </button>
-                    `;
-                } else {
-                    // ===== COMPLETED QUIZ =====
-                    const scoreClass = getScoreClass(quiz.score);
-                    const radius = 32;
-                    const circumference = 2 * Math.PI * radius;
-                    const offset = circumference - (quiz.score / 100) * circumference;
-
-                    card.innerHTML = `
-                        <div class="quiz-card-accent-line"></div>
-                        <div class="quiz-card-glow"></div>
-                        
-                        <div class="quiz-locked-overlay">
-                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7z"/>
-                            </svg>
-                        </div>
-
-                        <div class="quiz-card-header">
-                            <div class="quiz-card-icon-wrap">
-                                <div class="quiz-card-icon">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                                    </svg>
-                                </div>
-                            </div>
-                            <div class="quiz-status-badge completed">
-                                <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="3.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                </svg>
-                                مكتمل
-                            </div>
-                        </div>
-
-                        <div class="quiz-subject-tag">${escapeHtml(quiz.subject)}</div>
-                        <h3 class="quiz-card-title">${escapeHtml(quiz.title)}</h3>
-
-                        <div class="quiz-difficulty">
-                            <span class="quiz-difficulty-label">المستوى:</span>
-                            <div class="quiz-difficulty-bars">${diffBars}</div>
-                            <span class="quiz-difficulty-text">${diff.label}</span>
-                        </div>
-
-                        <div class="quiz-score-block">
-                            <div class="quiz-score-info">
-                                <div class="quiz-score-label">نتيجتك النهائية</div>
-                                <div class="quiz-score-status">
-                                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-                                    </svg>
-                                    ${getScoreMessage(quiz.score)}
-                                </div>
-                            </div>
-                            <div class="quiz-progress-ring">
-                                <svg viewBox="0 0 80 80">
-                                    <circle class="ring-bg" cx="40" cy="40" r="${radius}"></circle>
-                                    <circle class="ring-progress ${scoreClass}" cx="40" cy="40" r="${radius}"
-                                            stroke-dasharray="${circumference}"
-                                            stroke-dashoffset="${circumference}"
-                                            data-target-offset="${offset}"></circle>
-                                </svg>
-                                <div class="quiz-progress-ring-text">
-                                    <span class="value ${scoreClass}">${quiz.score}</span>
-                                    <span class="percent">PERCENT</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                }
-
-                // Mouse-tracking glow effect
-                card.addEventListener('mousemove', (e) => {
-                    const rect = card.getBoundingClientRect();
-                    const x = ((e.clientX - rect.left) / rect.width) * 100;
-                    const y = ((e.clientY - rect.top) / rect.height) * 100;
-                    card.style.setProperty('--mx', x + '%');
-                    card.style.setProperty('--my', y + '%');
-                });
-
-                // Bind start button (proper event listener, not inline)
-                if (!quiz.attempted) {
-                    const btn = card.querySelector('.btn-start-quiz');
-                    btn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (typeof QuizEngine !== 'undefined' && QuizEngine.open) {
-                            QuizEngine.open(quiz);
-                        } else {
-                            console.log('Opening quiz:', quiz);
-                        }
-                    });
-                }
-
-                return card;
-            }
-
-            function renderQuizzes(filter = 'all') {
-                let filtered = mockQuizzes;
-                if (filter === 'available')      filtered = mockQuizzes.filter(q => !q.attempted);
-                else if (filter === 'completed') filtered = mockQuizzes.filter(q => q.attempted);
-                else if (filter === 'high')      filtered = mockQuizzes.filter(q => q.attempted && q.score >= 85);
-
-                container.innerHTML = '';
-                
-                if (filtered.length === 0) {
-                    const empty = document.createElement('div');
-                    empty.className = 'quiz-empty-state';
-                    empty.innerHTML = `
-                        <div class="quiz-empty-icon">
-                            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <h3 style="font-size:1.25rem;font-weight:800;color:white;margin-bottom:0.5rem;">لا توجد اختبارات هنا</h3>
-                        <p style="color:rgba(255,255,255,0.5);font-size:0.9rem;">جرب فلترًا آخر أو عد لاحقًا للاطلاع على اختبارات جديدة</p>
-                    `;
-                    container.appendChild(empty);
-                    return;
-                }
-
-                const fragment = document.createDocumentFragment();
-                filtered.forEach((quiz, idx) => {
-                    fragment.appendChild(createQuizCard(quiz, idx));
-                });
-                container.appendChild(fragment);
-
-                // Animate progress rings after render
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        container.querySelectorAll('.ring-progress').forEach(ring => {
-                            const target = ring.dataset.targetOffset;
-                            if (target) ring.style.strokeDashoffset = target;
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        // Use requestAnimationFrame for smooth DOM updates
+                        requestAnimationFrame(() => {
+                            if (content.id === `tab-${targetId}`) {
+                                content.classList.add('active');
+                            }
                         });
-                    }, 200);
+                    });
                 });
-            }
-
-            function updateStats() {
-                const total = mockQuizzes.length;
-                const completed = mockQuizzes.filter(q => q.attempted);
-                const available = total - completed.length;
-                const high = completed.filter(q => q.score >= 85).length;
-                const avg = completed.length > 0 
-                    ? Math.round(completed.reduce((s, q) => s + q.score, 0) / completed.length)
-                    : 0;
-
-                animateNumber(document.getElementById('heroTotalQuizzes'), total);
-                animateNumber(document.getElementById('heroCompletedQuizzes'), completed.length);
-                animateNumber(document.getElementById('heroAvgScore'), avg);
-                animateNumber(document.getElementById('heroAvailable'), available);
-
-                document.getElementById('filterCountAll').textContent = total;
-                document.getElementById('filterCountAvailable').textContent = available;
-                document.getElementById('filterCountCompleted').textContent = completed.length;
-                document.getElementById('filterCountHigh').textContent = high;
-            }
-
-            function animateNumber(el, target) {
-                if (!el) return;
-                const duration = 1200;
-                const start = performance.now();
-                const startVal = 0;
-                function step(now) {
-                    const progress = Math.min((now - start) / duration, 1);
-                    const eased = 1 - Math.pow(1 - progress, 3);
-                    el.textContent = Math.round(startVal + (target - startVal) * eased);
-                    if (progress < 1) requestAnimationFrame(step);
-                }
-                requestAnimationFrame(step);
-            }
-
-            // Filter button listeners
-            filterBar.addEventListener('click', (e) => {
-                const pill = e.target.closest('.quiz-filter-pill');
-                if (!pill) return;
-                filterBar.querySelectorAll('.quiz-filter-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                currentFilter = pill.dataset.filter;
-                renderQuizzes(currentFilter);
             });
 
-            // Initial render
-            renderQuizzes('all');
-            updateStats();
+            // Mock Data
+            const mockQuizzes = [
+                { id: 1, title: 'تحدي الكيمياء العضوية الشامل', type: 'كيمياء', color: '#3b82f6', questions: 15, time: 20, difficulty: 2, attempted: false, score: null },
+                { id: 2, title: 'فيزياء: قوانين نيوتن المتقدمة', type: 'فيزياء', color: '#8b5cf6', questions: 25, time: 45, difficulty: 3, attempted: false, score: null },
+                { id: 3, title: 'التحليل الكيميائي والمعايرة', type: 'كيمياء', color: '#3b82f6', questions: 10, time: 15, difficulty: 1, attempted: true, score: 92 },
+                { id: 4, title: 'اختبار تجريبي: رياضيات بحتة', type: 'رياضيات', color: '#ef4444', questions: 30, time: 60, difficulty: 3, attempted: true, score: 68 },
+                { id: 5, title: 'أساسيات الجيولوجيا', type: 'جيولوجيا', color: '#10b981', questions: 20, time: 25, difficulty: 2, attempted: true, score: 45 }
+            ];
+
+            // Secure & Performant Rendering
+            const renderQuizzes = () => {
+                const container = document.getElementById('onlineQuizzesContainer');
+                container.innerHTML = ''; 
+                const fragment = document.createDocumentFragment();
+
+                mockQuizzes.forEach((quiz, index) => {
+                    const card = document.createElement('div');
+                    card.className = `quiz-card ${quiz.attempted ? 'completed' : ''}`;
+                    card.style.animationDelay = `${index * 0.1}s`;
+
+                    let statusBadge, mainAction, progressUI = '';
+
+                    if (!quiz.attempted) {
+                        statusBadge = `<span style="background: ${quiz.color}20; color: ${quiz.color}; border: 1px solid ${quiz.color}30" class="text-xs font-bold px-3 py-1.5 rounded-full">متاح للحل</span>`;
+                        mainAction = `
+                            <button class="btn-start-quiz" aria-label="بدء اختبار ${quiz.title}">
+                                بدء التحدي
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            </button>
+                        `;
+                    } else {
+                        statusBadge = `
+                            <span class="bg-green-500/10 text-green-400 text-xs font-bold px-3 py-1.5 rounded-full border border-green-500/20 flex items-center gap-1.5">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                مكتمل
+                            </span>
+                        `;
+                        
+                        // Calculate dash offset for SVG ring (Circumference = 2 * pi * r = 2 * 3.14 * 30 = 188.4)
+                        const offset = 188.4 - (188.4 * quiz.score) / 100;
+                        let ringColor = quiz.score >= 85 ? 'var(--success)' : (quiz.score >= 50 ? 'var(--accent)' : 'var(--danger)');
+                        
+                        progressUI = `
+                            <div class="mt-auto flex items-center justify-between p-4 bg-black/50 rounded-2xl border border-white/5 shadow-inner">
+                                <div class="flex flex-col">
+                                    <span class="text-gray-400 text-xs font-bold mb-1 uppercase tracking-widest">التقييم النهائي</span>
+                                    <span class="text-white text-sm font-semibold">تم حفظ النتيجة بالخوادم</span>
+                                </div>
+                                <div class="progress-ring-container">
+                                    <svg class="progress-ring">
+                                        <circle class="bg" cx="30" cy="30" r="30"></circle>
+                                        <circle class="progress" cx="30" cy="30" r="30" style="stroke: ${ringColor}; stroke-dashoffset: ${offset};"></circle>
+                                    </svg>
+                                    <span>${quiz.score}%</span>
+                                </div>
+                            </div>
+                        `;
+                        mainAction = progressUI;
+                    }
+
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start mb-5 relative z-10">
+                            <div class="flex gap-3 items-center">
+                                <div class="p-3 rounded-2xl bg-black/40 border border-white/10 shadow-inner">
+                                    <span class="text-lg">⚡</span>
+                                </div>
+                                <div class="difficulty" data-level="${quiz.difficulty}" title="مستوى الصعوبة: ${quiz.difficulty}">
+                                    <span></span><span></span><span></span>
+                                </div>
+                            </div>
+                            ${statusBadge}
+                        </div>
+                        
+                        <div class="relative z-10 flex-grow">
+                            <span style="color: ${quiz.color}" class="text-xs font-black mb-2 block tracking-wider uppercase">${quiz.type}</span>
+                            <h3 class="text-xl md:text-2xl font-bold text-white mb-5 line-clamp-2 leading-snug drop-shadow-sm">${quiz.title}</h3>
+                            
+                            <div class="quiz-stats">
+                                <div class="pill">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    ${quiz.questions} سؤال
+                                </div>
+                                <div class="pill">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    ${quiz.time} دقيقة
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="relative z-10 mt-auto">
+                            ${mainAction}
+                        </div>
+                    `;
+
+                    // Safe Event Listener Binding
+                    if (!quiz.attempted) {
+                        const btn = card.querySelector('.btn-start-quiz');
+                        if (btn) {
+                            btn.addEventListener('click', () => {
+                                // Fallback if QuizEngine is not defined in this pure snippet
+                                if (typeof QuizEngine !== 'undefined') {
+                                    QuizEngine.open(quiz);
+                                } else {
+                                    alert(`جاري تجهيز بيئة الاختبار: ${quiz.title}`);
+                                }
+                            });
+                        }
+                    }
+
+                    fragment.appendChild(card);
+                });
+
+                container.appendChild(fragment);
+            };
+
+            renderQuizzes();
         });
     </script>
 </body>
