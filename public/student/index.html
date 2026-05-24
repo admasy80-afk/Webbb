@@ -58,6 +58,7 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.35);
         }
         
+        /* أزرار التبويبات الرئيسية (القائمة الجانبية) */
         .tab-btn { 
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             position: relative; 
@@ -102,76 +103,96 @@
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* ======== تطوير شكل كروت الاختبارات (Premium UI/UX) ======== */
+        /* ============================================================
+           ستايل قسم الاختبارات الجديد (Premium UI/UX)
+           ============================================================ */
+
+        /* إخفاء السكرول بار للتصنيفات */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* أزرار فلترة الاختبارات (الكل - الجديدة - المكتملة) */
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #9ca3af;
+            background: transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .filter-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .filter-btn.active { background: #1f2937; color: #fff; }
+
+        /* الكارد الأساسي للاختبارات */
         .quiz-card {
-            background: linear-gradient(145deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 1.5rem;
-            padding: 1.5rem;
-            position: relative;
-            overflow: hidden;
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             height: 100%;
-            min-height: 320px;
-            contain: layout paint;
-            transition: transform .35s cubic-bezier(.22,1,.36,1), opacity .35s ease, border-color .35s ease, box-shadow .35s ease, filter .35s ease;
+            min-height: 210px;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            outline: none;
         }
 
-        /* توهج داخلي علوي ناعم */
-        .quiz-card::before {
-            content: '';
+        /* Gradient للكارد الجديد */
+        .card-new::before {
+            content: "";
             position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at top right, rgba(255,255,255,0.08), transparent 35%);
-            opacity: 0;
-            transition: opacity .4s ease;
-            pointer-events: none;
-        }
-        .quiz-card:hover::before { opacity: 1; }
-
-        /* تأثيرات الإضاءة الملونة حسب حالة الكارت */
-        .quiz-card:not(.completed) { 
-            border-top: 3px solid #eab308; 
-            box-shadow: 0 -10px 30px -15px rgba(234, 179, 8, 0.15); 
-        }
-        .quiz-card.completed { 
-            border-top: 3px solid #22c55e; 
-            box-shadow: 0 -10px 30px -15px rgba(34, 197, 94, 0.15); 
-            opacity: 0.85;
-            filter: saturate(0.85);
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
         }
 
-        /* تأثير الحركة ثلاثية الأبعاد عند تمرير الماوس */
-        .quiz-card:hover {
-            transform: perspective(1200px) rotateX(4deg) translateY(-8px) scale(1.015);
-            background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
-            z-index: 10;
-        }
-        .quiz-card:not(.completed):hover { 
-            border-color: rgba(234, 179, 8, 0.5); 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 25px rgba(234, 179, 8, 0.25); 
-        }
-        .quiz-card.completed:hover { 
-            opacity: 1;
-            filter: saturate(1);
-            border-color: rgba(34, 197, 94, 0.5);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 25px rgba(34, 197, 94, 0.2);
+        /* Hover State للديسكتوب فقط */
+        @media (hover: hover) {
+            .quiz-card:hover {
+                transform: translateY(-2px);
+                border-color: rgba(255, 255, 255, 0.1);
+            }
+            .quiz-card:hover .action-icon {
+                background: #3b82f6;
+                color: #fff;
+                transform: translateX(-4px);
+            }
         }
 
-        /* حلقة الـ Progress المتوهجة الفاخرة للدرجات */
-        .circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; }
-        .circle-bg { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 3.8; }
-        .circle { 
-            fill: none; 
-            stroke-width: 3.8; 
-            stroke-linecap: round; 
-            transition: stroke-dasharray 1.5s ease-out; 
-            filter: drop-shadow(0 0 6px currentColor);
+        .quiz-card:focus-visible {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
         }
-        @keyframes progressAnimation { 0% { stroke-dasharray: 0 100; } }
-        .percentage { fill: #fff; font-family: 'Readex Pro', sans-serif; font-weight: 800; font-size: 0.52em; text-anchor: middle; }
 
+        .action-icon {
+            transition: all 0.2s ease;
+        }
+
+        /* Fade Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade {
+            animation: fadeIn 0.4s ease forwards;
+        }
+
+        /* Skeleton Animation */
+        .skeleton {
+            animation: pulse 1.5s infinite;
+            background: #1f2937;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* زر البدء الأساسي (لو استخدم في أماكن أخرى) */
         .btn-start-quiz {
             background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%); 
             color: #000; font-weight: 800;
@@ -188,17 +209,6 @@
         .btn-start-quiz:hover::after { left: 150%; }
         .btn-start-quiz:hover {
             transform: scale(1.02); box-shadow: 0 5px 20px rgba(234,179,8,0.4);
-        }
-        .btn-start-quiz:hover svg { transform: translateX(-4px); transition: transform 0.3s; }
-        .btn-start-quiz:active { transform: scale(0.97); }
-
-        /* تأثير الـ Shimmer لـ كروت التحميل */
-        @keyframes shimmer { 100% { transform: translateX(100%); } }
-        .animate-pulse { position: relative; overflow: hidden; }
-        .animate-pulse::after {
-            content: ''; position: absolute; inset: 0; transform: translateX(-100%);
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
-            animation: shimmer 1.5s infinite;
         }
     </style>
 
@@ -365,7 +375,7 @@
             </div>
         </div>
 
-        <div id="tab-quizzes" class="tab-content">
+        <div id="tab-quizzes" class="tab-content bg-transparent font-sans">
             <div class="flex items-center gap-3 mb-2">
                 <div class="bg-yellow-500/20 p-2.5 rounded-xl">
                     <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -374,18 +384,48 @@
                 </div>
                 <h1 class="text-2xl md:text-3xl font-black text-white">الاختبارات الإلكترونية</h1>
             </div>
-            <p class="text-gray-400 text-sm md:text-base mb-8">اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.</p>
-            
-            <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="quiz-card animate-pulse">    
-                    <div class="h-6 bg-white/10 rounded w-1/3 mb-4"></div>    
-                    <div class="h-16 bg-white/10 rounded w-full mb-6"></div>    
-                    <div class="h-4 bg-white/10 rounded w-1/2 mb-auto"></div>    
-                    <div class="h-12 bg-white/10 rounded w-full mt-6"></div>    
+            <p class="text-gray-400 text-sm md:text-base mb-6">اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.</p>
+
+            <div class="max-w-7xl mx-auto">
+                <div class="sticky top-0 z-20 pt-2 pb-6 bg-[#070b19]/90 backdrop-blur-xl border-b border-white/5 mb-8">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold tracking-wide">الإجمالي</p>
+                            <h4 id="stat-total" class="text-2xl font-bold text-white mt-1">-</h4>
+                        </div>
+                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold tracking-wide">مكتمل</p>
+                            <h4 id="stat-completed" class="text-2xl font-bold text-green-400 mt-1">-</h4>
+                        </div>
+                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold tracking-wide">متبقي</p>
+                            <h4 id="stat-remaining" class="text-2xl font-bold text-blue-400 mt-1">-</h4>
+                        </div>
+                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold tracking-wide">المتوسط</p>
+                            <h4 id="stat-average" class="text-2xl font-bold text-yellow-400 mt-1">-%</h4>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+                        <button class="filter-btn active" data-filter="all">الكل</button>
+                        <button class="filter-btn" data-filter="new">الجديدة</button>
+                        <button class="filter-btn" data-filter="completed">المكتملة</button>
+                    </div>
                 </div>
+
+                <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
+                    <div class="w-16 h-16 bg-[#111827] rounded-2xl flex items-center justify-center mb-4 border border-white/5">
+                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white mb-1">لا توجد اختبارات</h3>
+                    <p class="text-sm text-gray-400">لم يتم العثور على اختبارات تطابق هذا التصنيف.</p>
+                </div>
+
+                <div id="onlineQuizzesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    </div>
             </div>
         </div>
-
         <div id="tab-points" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
             <p class="text-gray-400 text-sm md:text-base mb-6">ملاحظات وتلخيصات سريعة لتثبيت المعلومات.</p>
@@ -417,80 +457,203 @@
     <script src="script.js" defer></script>
 
     <script>
-        // دالة مساعدة مخصصة لإنشاء الرينج المضيء الجديد بدقة عالية للدرجات المكتملة
-        function createProgressRing(score) {
-            let color = score >= 85 ? '#22c55e' : (score >= 50 ? '#eab308' : '#ef4444');
-            let dasharray = `${score}, 100`;
-            return `
-                <div class="relative w-16 h-16 shrink-0">
-                    <svg viewBox="0 0 36 36" class="circular-chart w-full h-full transform -rotate-90">
-                        <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                        <path class="circle" stroke="${color}" stroke-dasharray="${dasharray}" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" style="animation: progressAnimation 1.5s ease-out forwards;" />
-                        <text x="18" y="20.35" class="percentage" fill="${color}">${score}%</text>
-                    </svg>
+        const QuizEngine = {
+            // استدعاء نظام الاختبار المدمج الخاص بك (في ملف quiz.js)
+            open: (quizData) => console.log("Opening Quiz:", quizData)
+        };
+
+        const QuizApp = (function() {
+            const container = document.getElementById('onlineQuizzesContainer');
+            const emptyState = document.getElementById('empty-state');
+            let quizzesData = [];
+            let currentFilter = 'all';
+
+            const renderSkeleton = () => {
+                let html = '';
+                for (let i = 0; i < 6; i++) {
+                    html += `
+                        <div class="quiz-card justify-between border-transparent pointer-events-none">
+                            <div>
+                                <div class="skeleton h-6 w-16 rounded-md mb-4"></div>
+                                <div class="skeleton h-5 w-3/4 rounded mb-2"></div>
+                                <div class="skeleton h-4 w-1/2 rounded"></div>
+                            </div>
+                            <div class="flex justify-between items-center mt-6 pt-4 border-t border-white/5">
+                                <div class="skeleton h-4 w-20 rounded"></div>
+                                <div class="skeleton h-8 w-8 rounded-lg"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                container.innerHTML = html;
+            };
+
+            const updateStats = (quizzes) => {
+                if (!quizzes || quizzes.length === 0) {
+                     document.getElementById('stat-total').textContent = '0';
+                     document.getElementById('stat-completed').textContent = '0';
+                     document.getElementById('stat-remaining').textContent = '0';
+                     document.getElementById('stat-average').textContent = '0%';
+                     return;
+                }
+
+                const total = quizzes.length;
+                const completed = quizzes.filter(q => q.attempted).length;
+                const remaining = total - completed;
+                
+                let avgScore = 0;
+                if (completed > 0) {
+                    const totalScore = quizzes.filter(q => q.attempted).reduce((acc, q) => acc + (q.score || 0), 0);
+                    avgScore = Math.round(totalScore / completed);
+                }
+
+                document.getElementById('stat-total').textContent = total;
+                document.getElementById('stat-completed').textContent = completed;
+                document.getElementById('stat-remaining').textContent = remaining;
+                document.getElementById('stat-average').textContent = completed > 0 ? `${avgScore}%` : '-';
+            };
+
+            const renderAvailableCard = (quiz) => `
+                <div tabindex="0" role="button" aria-label="بدء اختبار ${quiz.title}" class="quiz-card card-new animate-fade" data-id="${quiz.id}">
+                    <div>
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
+                            <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
+                        <p class="text-sm text-gray-400 flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            ${quiz.questionsCount || 0} سؤال
+                        </p>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
+                        <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
+                        <div class="action-icon w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
+                            <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                    </div>
                 </div>
             `;
-        }
 
-        // تم ربط الكارت ببنية الكود والمسميات الاصلية لملف script.js لضمان طباعة بيانات السيرفر
-        window.generateQuizCardHTML = function(quiz) {
-            if (!quiz.attempted) {
-                // متاح ولم يحل بعد (يأخذ الشكل المتوهج باللون الأصفر الممتاز)
-                return `
-                    <div class="quiz-card animate-fade-in-up">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="bg-yellow-500/10 p-3 rounded-xl border border-yellow-500/20">
-                                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                            </div>
-                            <span class="bg-blue-500/20 text-blue-400 text-xs font-bold px-3 py-1 rounded-full border border-blue-500/20">متاح لك</span>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
-                        
-                        <div class="flex items-center gap-4 text-sm text-gray-400 mb-6 mt-auto bg-black/30 p-3 rounded-xl border border-white/5">
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span class="font-bold">${quiz.questionsCount}</span> سؤال
-                            </div>
-                            <div class="w-px h-4 bg-white/20"></div>
-                            <div class="flex items-center gap-1.5">
-                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                                <span class="font-bold">${quiz.duration}</span> دقيقة
-                            </div>
-                        </div>
-
-                        <button onclick="QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, '&quot;')})" class="btn-start-quiz w-full">
-                            ابدأ الاختبار الآن
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                        </button>
+            const renderCompletedCard = (quiz) => `
+                <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار ${quiz.title}" class="quiz-card animate-fade border-r-2 border-r-green-500/50" data-id="${quiz.id}">
+                    <div class="flex justify-between items-start mb-3">
+                        <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider">مكتمل</span>
                     </div>
-                `;
-            } else {
-                // منتهي ومكتمل (يأخذ حلقة التقييم الدائرية المضيئة الملونة)
-                return `
-                    <div class="quiz-card completed animate-fade-in-up">
-                        <div class="flex justify-between items-start mb-4">
-                            <div class="bg-gray-800/80 p-3 rounded-xl border border-gray-700">
-                                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8V7z"></path></svg>
-                            </div>
-                            <span class="bg-green-500/20 text-green-400 text-xs font-bold px-3 py-1 rounded-full border border-green-500/20 flex items-center gap-1">
-                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
-                                تم الانتهاء
-                            </span>
-                        </div>
-                        
-                        <h3 class="text-xl font-bold text-gray-300 mb-6 line-clamp-2 leading-snug">${quiz.title}</h3>
-                        
-                        <div class="mt-auto flex items-center justify-between p-3 bg-black/40 rounded-xl border border-white/5">
-                            <div class="flex flex-col">
-                                <span class="text-gray-400 text-xs font-bold mb-1">الدرجة النهائية</span>
-                                <span class="text-white text-xs">تم حفظ تقييمك بنجاح</span>
-                            </div>
-                            ${createProgressRing(quiz.score)}
+                    
+                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
+                    
+                    <div class="text-xs text-gray-500 space-y-1 mb-4">
+                        ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
+                        ${quiz.lastAttempt ? `<p>آخر محاولة: ${quiz.lastAttempt}</p>` : ''}
+                    </div>
+
+                    <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
+                        <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
+                        <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-green-400' : 'text-red-400'} leading-none">
+                            ${quiz.score || 0}%
                         </div>
                     </div>
-                `;
-            }
-        };
+                </div>
+            `;
+
+            const renderQuizzes = () => {
+                let filteredQuizzes = quizzesData;
+                
+                if (currentFilter === 'new') {
+                    filteredQuizzes = quizzesData.filter(q => !q.attempted);
+                } else if (currentFilter === 'completed') {
+                    filteredQuizzes = quizzesData.filter(q => q.attempted);
+                }
+
+                filteredQuizzes.sort((a, b) => (a.attempted === b.attempted) ? 0 : a.attempted ? 1 : -1);
+
+                if (filteredQuizzes.length === 0) {
+                    container.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    emptyState.classList.add('flex');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+
+                const html = filteredQuizzes.map(quiz => 
+                    quiz.attempted ? renderCompletedCard(quiz) : renderAvailableCard(quiz)
+                ).join('');
+
+                container.innerHTML = html;
+            };
+
+            const setupEventListeners = () => {
+                container.addEventListener('click', (e) => {
+                    const card = e.target.closest('.quiz-card');
+                    if (!card) return;
+                    const quizId = card.getAttribute('data-id');
+                    const quizData = quizzesData.find(q => q.id == quizId);
+                    if (quizData) QuizEngine.open(quizData);
+                });
+
+                container.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        const card = e.target.closest('.quiz-card');
+                        if (card) { e.preventDefault(); card.click(); }
+                    }
+                });
+
+                // الانتباه: تم تغيير الكلاس إلى filter-btn لمنع التضارب
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        e.target.classList.add('active');
+                        currentFilter = e.target.getAttribute('data-filter');
+                        renderQuizzes();
+                    });
+                });
+            };
+
+            const init = async (dataSource) => {
+                renderSkeleton();
+                setupEventListeners();
+
+                try {
+                    // ديناميكية: يقبل API أو مصفوفة بيانات مباشرة
+                    if (typeof dataSource === 'string') {
+                        const response = await fetch(dataSource);
+                        if (!response.ok) throw new Error('فشل جلب البيانات');
+                        const data = await response.json();
+                        quizzesData = Array.isArray(data) ? data : (data.data || []);
+                    } else if (Array.isArray(dataSource)) {
+                        quizzesData = dataSource;
+                    } else {
+                        quizzesData = [];
+                    }
+
+                    updateStats(quizzesData);
+                    renderQuizzes();
+
+                } catch (error) {
+                    console.error('Error fetching quizzes:', error);
+                    container.innerHTML = `
+                        <div class="col-span-full py-10 text-center">
+                            <p class="text-red-400">حدث خطأ أثناء تحميل الاختبارات. يرجى المحاولة لاحقاً.</p>
+                        </div>
+                    `;
+                }
+            };
+
+            return { init };
+        })();
+
+        // تهيئة التطبيق عند اكتمال تحميل الصفحة (انتظار البيانات الحقيقية)
+        document.addEventListener('DOMContentLoaded', () => {
+            // لتشغيل الكود مع بيانات حقيقية، يمكنك تمرير الـ Array مباشرة أو رابط الـ API:
+            // QuizApp.init('/api/quizzes'); // <== مثال لجلبها من الباك إند
+            
+            // في الوقت الحالي سيقوم بتهيئة واجهة فارغة جاهزة للبيانات:
+            QuizApp.init([]); 
+        });
     </script>
 </body>
 </html>
