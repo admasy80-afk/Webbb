@@ -19,68 +19,141 @@
     <!-- ربط ملفات التصميم -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/player.css">
-</head>
-<body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
 
-    <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
+    <style>
+        /* تطويرات الأنميشن والتأثيرات الخارقة */
+        .glass-panel-premium {
+            background: rgba(10, 15, 28, 0.7);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        .animate-float-delayed {
+            animation: float 4s ease-in-out infinite;
+            animation-delay: 2s;
+        }
+        .animate-float-fast {
+            animation: float 3s ease-in-out infinite;
+            animation-delay: 1s;
+        }
+        
+        @keyframes float {
+            0% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(3deg) scale(1.05); }
+            100% { transform: translateY(0px) rotate(0deg); }
+        }
+
+        .glow-text {
+            text-shadow: 0 0 20px rgba(234, 179, 8, 0.5);
+        }
+        
+        .bg-animated-gradient {
+            background-size: 200% 200%;
+            animation: gradientMove 5s ease infinite;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .emoji-3d {
+            filter: drop-shadow(0 20px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 30px rgba(255, 255, 255, 0.2));
+            transform-style: preserve-3d;
+        }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black bg-[#070b19]">
+
+    <!-- تأثيرات الخلفية العميقة -->
+    <div class="fixed top-[-10%] right-[-5%] w-[50rem] h-[50rem] bg-yellow-500/10 rounded-full blur-[150px] pointer-events-none -z-10 mix-blend-screen"></div>
+    <div class="fixed bottom-[-10%] left-[-10%] w-[40rem] h-[40rem] bg-blue-600/10 rounded-full blur-[150px] pointer-events-none -z-10 mix-blend-screen"></div>
+    <div class="fixed top-[40%] left-[20%] w-[30rem] h-[30rem] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none -z-10 mix-blend-screen"></div>
+
+    <aside class="w-full md:w-72 glass-panel-premium flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none">
         
         <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
             <div class="flex justify-between w-full items-center">
-                <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-                <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-red-500/20">خروج</button>
+                <div class="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 tracking-tight drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]">الدحيح<span class="text-white">.</span></div>
+                <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl text-xs font-bold transition-all border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.1)]">خروج</button>
             </div>
             
-            <div class="hidden md:block w-full bg-black/40 border border-white/5 rounded-2xl p-4 mt-2">
-                <p class="text-xs text-gray-400 mb-1">المرحلة الدراسية:</p>
-                <p id="studentGrade" class="text-yellow-500 font-bold text-sm mb-3">جاري التحميل...</p>
-                <div class="h-px w-full bg-white/10 my-2"></div>
-                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">...</span></h2>
+            <div class="hidden md:block w-full bg-gradient-to-br from-white/5 to-transparent border border-white/10 rounded-2xl p-5 mt-4 backdrop-blur-md relative overflow-hidden group">
+                <div class="absolute -right-4 -top-4 w-16 h-16 bg-yellow-500/20 rounded-full blur-xl group-hover:bg-yellow-500/30 transition-all duration-500"></div>
+                <p class="text-xs text-gray-400 mb-1 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    المرحلة الدراسية
+                </p>
+                <p id="studentGrade" class="text-yellow-400 font-bold text-sm mb-3 drop-shadow-md">جاري التحميل...</p>
+                <div class="h-px w-full bg-gradient-to-r from-transparent via-white/20 to-transparent my-3"></div>
+                <h2 class="text-sm text-gray-300 flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-yellow-500 to-orange-500 flex items-center justify-center text-black font-black text-xs shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] text-gray-500">مرحباً بك،</span>
+                        <span id="studentName" class="text-white font-bold block text-base truncate">...</span>
+                    </div>
+                </h2>
             </div>
         </div>
         
-        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 scrollbar-hide flex-shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
-            <button onclick="switchTab('live')" id="btn-live" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-bold text-red-500 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent flex items-center justify-center md:justify-start gap-2">
-                <span class="w-2 h-2 rounded-full bg-red-500 pulse-live"></span>
+        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-3 pb-3 md:px-5 md:py-5 gap-3 scrollbar-hide flex-shrink-0 mt-2 md:mt-0">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-2xl font-semibold text-gray-300 border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-300">لوحة المذاكرة</button>
+            <button onclick="switchTab('live')" id="btn-live" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-2xl font-bold text-red-400 border border-transparent hover:border-red-500/20 hover:bg-red-500/10 transition-all duration-300 flex items-center justify-center md:justify-start gap-3">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"></span>
+                </span>
                 البث المباشر
             </button>
-            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
-            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
-            <button onclick="switchTab('points')" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
-            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
+            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-2xl font-semibold text-gray-300 border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-300">المحاضرات والحصص</button>
+            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-2xl font-semibold text-gray-300 border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-300">الاختبارات الإلكترونية</button>
+            <button onclick="switchTab('points')" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-2xl font-semibold text-gray-300 border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-300">أهم نقاط المنهج</button>
+            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-2xl font-semibold text-gray-300 border border-transparent hover:border-white/10 hover:bg-white/5 transition-all duration-300">الأسئلة المقالية</button>
         </nav>
 
-        <div class="hidden md:block p-4 mt-auto">
-            <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3.5 rounded-xl text-sm font-bold transition-all border border-red-500/20 flex items-center justify-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <div class="hidden md:block p-5 mt-auto">
+            <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-500/5 hover:bg-red-500/15 py-4 rounded-2xl text-sm font-bold transition-all duration-300 border border-red-500/20 hover:border-red-500/40 hover:shadow-[0_0_20px_rgba(239,68,68,0.15)] flex items-center justify-center gap-2 group">
+                <svg class="w-5 h-5 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 تسجيل الخروج
             </button>
         </div>
     </aside>
 
     <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth" id="mainGrid">
-        <div class="fixed top-0 right-0 w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-
+        
         <div id="tab-dashboard" class="tab-content active space-y-4 md:space-y-6">
-            <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
-                <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up bg-[#0a0f1c]">
-                    <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                            <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                                <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <div class="flex flex-col lg:flex-row gap-4 md:gap-8">
+                <div class="flex-1 glass-panel-premium rounded-3xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up">
+                    <div class="p-4 md:p-5 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-4 flex-1 min-w-0">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(234,179,8,0.4)]">
+                                <svg class="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                             </div>
-                            <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
+                            <h2 id="playingVideoTitle" class="font-bold text-base md:text-xl truncate text-white drop-shadow-md">اختر محاضرة للبدء بالدراسة</h2>
                         </div>
                     </div>
 
-                    <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
-                        <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl border border-white/5 overflow-hidden group shadow-lg">
-                            <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black z-10 p-4 text-center">
-                                <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-bounce">
-                                    <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <div class="p-3 md:p-6 bg-black/40" id="fs-wrapper">
+                        <div id="videoContainer" class="relative w-full aspect-video bg-[#03050a] rounded-2xl border border-white/10 overflow-hidden group shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+                            <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjMDMwNTAxIj48L3JlY3Q+CjxwYXRoIGQ9Ik0wIDBMOCA4Wk04IDBMMCA4WiIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utb3BhY2l0eT0iMC4wMyIgc3Ryb2tlLXdpZHRoPSIxIj48L3BhdGg+Cjwvc3ZnPg==')] z-10 p-4 text-center">
+                                <div class="absolute inset-0 bg-gradient-to-br from-[#0a0f1c]/90 via-black/80 to-[#070b19]/95"></div>
+                                <div class="relative z-20 flex flex-col items-center">
+                                    <div class="w-24 h-24 bg-gradient-to-br from-yellow-400 to-yellow-600 p-1 rounded-full mb-6 shadow-[0_0_40px_rgba(234,179,8,0.5)] animate-float">
+                                        <div class="w-full h-full bg-black rounded-full flex items-center justify-center">
+                                            <svg class="w-10 h-10 text-yellow-500 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                        </div>
+                                    </div>
+                                    <h3 class="text-3xl md:text-5xl font-black mb-3 tracking-tight glow-text text-white">منصة الدحيح <span class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">التعليمية</span></h3>
+                                    <p class="text-gray-400 text-sm md:text-base max-w-md leading-relaxed bg-black/40 px-6 py-2 rounded-full border border-white/10 backdrop-blur-md">اختر محاضرتك من القائمة بالأسفل لتبدأ رحلتك</p>
                                 </div>
-                                <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
-                                <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل </p>
                             </div>
                             <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full hidden bg-black"></video>
                         </div>
@@ -88,65 +161,87 @@
                 </div>
 
                 <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
-                    <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up bg-gradient-to-b from-white/5 to-transparent">
-                        <h2 class="text-lg font-bold mb-6 text-white flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                            مؤشر الأداء العام
+                    <div class="glass-panel-premium p-6 md:p-8 rounded-3xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up relative overflow-hidden">
+                        <div class="absolute top-0 right-0 w-full h-32 bg-gradient-to-b from-yellow-500/10 to-transparent"></div>
+                        <h2 class="text-xl md:text-2xl font-bold mb-8 text-white flex items-center justify-center gap-3 relative z-10">
+                            <span class="p-2 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+                                <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                            </span>
+                            مؤشر الأداء والتقدم
                         </h2>
-                        <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
-                            <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-yellow-500 border-l-yellow-500 opacity-50 animate-spin" style="animation-duration: 3s;"></div>
-                            <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
+                        
+                        <div class="relative w-48 h-48 mx-auto bg-[#03050a] rounded-full flex items-center justify-center shadow-[inset_0_10px_30px_rgba(0,0,0,0.8),0_0_30px_rgba(234,179,8,0.15)] mb-4 border border-white/5 relative z-10">
+                            <!-- حلقات الأنميشن المضيئة -->
+                            <div class="absolute inset-[-4px] rounded-full border-[2px] border-dashed border-yellow-500/30 animate-spin" style="animation-duration: 8s;"></div>
+                            <div class="absolute inset-2 rounded-full border-[4px] border-transparent border-t-yellow-400 border-r-yellow-500 opacity-80 animate-spin" style="animation-duration: 3s; animation-direction: reverse;"></div>
+                            <div class="absolute inset-4 rounded-full border-[4px] border-transparent border-b-yellow-300 border-l-yellow-600 opacity-60 animate-spin" style="animation-duration: 4s;"></div>
+                            
+                            <div id="studentPointsDisplay" class="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]" dir="ltr">0%</div>
                         </div>
+                        <p class="text-gray-400 text-sm mt-4 relative z-10">استمر في التقدم لزيادة مستواك الدراسي!</p>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- تم توحيد تصميم البث المباشر مع نفس ستايل باقي الأقسام الخارق -->
         <div id="tab-live" class="tab-content">
-            <div class="flex items-center gap-3 mb-2">
-                <span class="w-3 h-3 rounded-full bg-red-500 pulse-live"></span>
-                <h1 class="text-2xl md:text-3xl font-bold">غرفة البث المباشر</h1>
+            <div class="flex items-center gap-4 mb-4">
+                <div class="relative flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 shadow-[0_0_20px_rgba(234,179,8,0.4)]">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-xl bg-yellow-400 opacity-50"></span>
+                    <svg class="w-6 h-6 text-black relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                </div>
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight glow-text">غرفة البث المباشر</h1>
+                    <p class="text-gray-400 text-sm md:text-base mt-1">تفاعل مع المحاضر مباشرة بجودة عالية.</p>
+                </div>
             </div>
-            <p class="text-gray-400 text-sm md:text-base mb-6">يمكنك رؤية البث المباشرمن هنا.</p>
             
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-red-500 mb-6 bg-[#0a0f1c] shadow-2xl">
+            <div class="glass-panel-premium rounded-3xl p-6 md:p-10 border-t-4 border-yellow-500 mt-8 relative overflow-hidden">
+                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSJ0cmFuc3BhcmVudCI+PC9yZWN0Pgo8cGF0aCBkPSJNMCAwTDggOFpNOCAwaC04WiIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utb3BhY2l0eT0iMC4wMiIgc3Ryb2tlLXdpZHRoPSIxIj48L3BhdGg+Cjwvc3ZnPg==')] opacity-50"></div>
                 
-                <div id="joinStreamControls" class="text-center py-10 md:py-16 animate-fade-in-up">
-                    <div class="w-20 h-20 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
-                        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                <div id="joinStreamControls" class="text-center py-12 md:py-20 animate-fade-in-up relative z-10">
+                    <div class="relative w-32 h-32 mx-auto mb-8">
+                        <div class="absolute inset-0 bg-yellow-500/20 blur-[40px] rounded-full"></div>
+                        <div class="text-7xl emoji-3d animate-float" style="line-height: 128px;">📡</div>
                     </div>
-                    <h3 class="text-2xl font-bold text-white mb-3">هل يوجد بث مباشر الآن؟</h3>
-                    <p class="text-gray-400 mb-8 max-w-md mx-auto">يرجي كتابة كود البث المباشر للدخول.</p>
                     
-                    <div class="flex flex-col md:flex-row justify-center gap-3 max-w-md mx-auto">
-                        <input type="text" id="streamIdInput" placeholder="أدخل كود البث (مثال: abc-123-xyz)" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white focus:border-red-500 transition-colors text-center text-lg outline-none" dir="ltr">
-                        <button id="joinStreamBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-4 rounded-xl transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)] whitespace-nowrap">
-                            دخول للبث
+                    <h3 class="text-3xl md:text-4xl font-black text-white mb-4 drop-shadow-md">هل أنت مستعد للبث؟</h3>
+                    <p class="text-gray-300 text-lg mb-10 max-w-lg mx-auto leading-relaxed">أدخل كود الدخول الخاص بالبث المباشر للانضمام إلى الغرفة التفاعلية وبدء الدرس.</p>
+                    
+                    <div class="flex flex-col md:flex-row justify-center gap-4 max-w-xl mx-auto w-full">
+                        <input type="text" id="streamIdInput" placeholder="أدخل كود البث هنا..." class="flex-1 bg-black/60 border-2 border-white/10 rounded-2xl px-6 py-5 text-white focus:border-yellow-500 focus:ring-4 focus:ring-yellow-500/20 transition-all text-center text-xl font-bold outline-none shadow-inner backdrop-blur-sm placeholder-gray-500" dir="ltr">
+                        <button id="joinStreamBtn" class="bg-gradient-to-r from-yellow-600 to-yellow-400 hover:from-yellow-500 hover:to-yellow-300 text-black font-black text-lg px-10 py-5 rounded-2xl transition-all shadow-[0_0_30px_rgba(234,179,8,0.4)] hover:shadow-[0_0_50px_rgba(234,179,8,0.6)] hover:scale-105 transform duration-300 whitespace-nowrap">
+                            دخول الغرفة
                         </button>
                     </div>
                 </div>
 
-                <div id="liveStreamWrapper" class="hidden animate-fade-in-up">
-                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                <div id="liveStreamWrapper" class="hidden animate-fade-in-up relative z-10">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-black/60 backdrop-blur-lg p-5 rounded-2xl border border-white/10 shadow-lg">
                         <div class="flex items-center gap-3">
-                            <div class="bg-red-500/20 text-red-400 border border-red-500/50 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
-                                <span class="w-2 h-2 rounded-full bg-red-500 pulse-live"></span>
+                            <div class="bg-yellow-500/20 text-yellow-400 border border-yellow-500/50 px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-3 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                                <span class="relative flex h-2.5 w-2.5">
+                                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75"></span>
+                                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-yellow-500"></span>
+                                </span>
                                 أنت متصل بالبث الآن
                             </div>
                         </div>
-                        <button id="leaveStreamBtn" class="w-full md:w-auto bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-2 rounded-lg text-sm font-bold transition-colors text-gray-300">
+                        <button id="leaveStreamBtn" class="w-full md:w-auto bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 hover:border-red-500/60 px-6 py-2.5 rounded-xl text-sm font-bold transition-all text-red-400 hover:text-red-300 hover:shadow-[0_0_20px_rgba(239,68,68,0.3)]">
                             مغادرة غرفة البث
                         </button>
                     </div>
                     
-                    <div id="liveVideoContainer" class="w-full aspect-video bg-black rounded-xl border border-white/10 overflow-hidden relative shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center">
-                        <div id="waitingText" class="text-center p-6">
-                            <svg class="animate-spin h-10 w-10 text-red-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <p class="text-gray-300 font-bold text-lg">أنت داخل الغرفة بنجاح</p>
-                            <p class="text-gray-500 text-sm mt-2">يرجي الانتظار لحين بدء البث...</p>
+                    <div id="liveVideoContainer" class="w-full aspect-video bg-[#03050a] rounded-3xl border border-white/10 overflow-hidden relative shadow-[0_30px_60px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                        <div id="waitingText" class="text-center p-10 relative z-10">
+                            <div class="relative w-24 h-24 mx-auto mb-6">
+                                <div class="absolute inset-0 border-4 border-yellow-500/20 rounded-full"></div>
+                                <div class="absolute inset-0 border-4 border-yellow-500 rounded-full border-t-transparent animate-spin"></div>
+                                <svg class="w-10 h-10 text-yellow-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            </div>
+                            <p class="text-white font-black text-2xl mb-2 drop-shadow-md">تم الدخول للغرفة بنجاح</p>
+                            <p class="text-gray-400 text-lg">يرجي الانتظار لحين بدء البث من قبل المحاضر...</p>
                         </div>
                     </div>
                 </div>
@@ -154,35 +249,84 @@
         </div>
         
         <div id="tab-courses" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
-            <div id="studentCoursesContainer" class="flex flex-col gap-8"></div>
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">المحاضرات والحصص</h1>
+                <p class="text-gray-400 text-base md:text-lg">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك بأعلى جودة.</p>
+            </div>
+            <!-- الحاوية الأساسية، وضعنا بداخلها الـ Empty State الخارق الذي سيختفي عند تحميل البيانات عبر الجافاسكريبت -->
+            <div id="studentCoursesContainer" class="flex flex-col gap-8 w-full min-h-[50vh]">
+                <div class="flex-1 glass-panel-premium rounded-3xl border-t-4 border-yellow-500 flex flex-col items-center justify-center py-20 px-4 text-center w-full h-full">
+                    <div class="relative w-48 h-48 flex items-center justify-center mb-8">
+                        <div class="absolute inset-0 bg-yellow-500/20 blur-[60px] rounded-full"></div>
+                        <div class="text-[100px] emoji-3d animate-float">🎬</div>
+                    </div>
+                    <h3 class="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight glow-text">محاضراتك قيد التجهيز</h3>
+                    <p class="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">نقوم الآن بتجهيز ورفع أحدث المحاضرات بأعلى جودة لتناسب تطلعاتك. ابقَ مستعداً للبدء فوراً!</p>
+                </div>
+            </div>
         </div>
 
         <div id="tab-quizzes" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">الاختبارات الإلكترونية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">الاختبارات الإلكترونية</h1>
+                <p class="text-gray-400 text-base md:text-lg">اختبر مستواك وقيم فهمك للمنهج من خلال اختباراتنا التفاعلية.</p>
+            </div>
+            
+            <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 min-h-[50vh]">
+                <!-- Empty State الخارق للاختبارات -->
+                <div class="col-span-full glass-panel-premium rounded-3xl border-t-4 border-yellow-500 flex flex-col items-center justify-center py-20 px-4 text-center">
+                    <div class="relative w-48 h-48 flex items-center justify-center mb-8">
+                        <div class="absolute inset-0 bg-rose-500/20 blur-[60px] rounded-full"></div>
+                        <div class="text-[100px] emoji-3d animate-float-delayed">🎯</div>
+                    </div>
+                    <h3 class="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight glow-text">لا توجد اختبارات حالياً</h3>
+                    <p class="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">أنت في السليم! راجع دروسك جيداً واستعد للتحديات القادمة، ستظهر الاختبارات المتاحة هنا فور إضافتها.</p>
+                </div>
             </div>
         </div>
 
         <div id="tab-points" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">أهم نقاط المنهج</h1>
+                <p class="text-gray-400 text-base md:text-lg">الملخصات، الكبسولات، وكل ما تحتاجه للمراجعة السريعة.</p>
+            </div>
+            
+            <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[50vh]">
+                <!-- Empty State الخارق لنقاط المنهج -->
+                <div class="col-span-full glass-panel-premium rounded-3xl border-t-4 border-yellow-500 flex flex-col items-center justify-center py-20 px-4 text-center">
+                    <div class="relative w-48 h-48 flex items-center justify-center mb-8">
+                        <div class="absolute inset-0 bg-blue-500/20 blur-[60px] rounded-full"></div>
+                        <div class="text-[100px] emoji-3d animate-float-fast">💡</div>
+                    </div>
+                    <h3 class="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight glow-text">لم تُضاف نقاط مهمة بعد</h3>
+                    <p class="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">خلاصة المنهج وأهم التراكمات المعرفية التي يجب التركيز عليها ستكون متاحة هنا قريباً جداً لتسهيل مراجعتك.</p>
+                </div>
             </div>
         </div>
 
         <div id="tab-questions" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم الأسئلة المقالية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
-                <div id="questionsContainer" class="flex flex-col gap-4"></div>
+            <div class="mb-8">
+                <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight mb-2">الأسئلة المقالية</h1>
+                <p class="text-gray-400 text-base md:text-lg">تدرب على الأسئلة المقالية التي تقيس الفهم العميق.</p>
+            </div>
+            
+            <div id="questionsContainer" class="flex flex-col gap-6 min-h-[50vh]">
+                <!-- Empty State الخارق للأسئلة المقالية -->
+                <div class="w-full glass-panel-premium rounded-3xl border-t-4 border-yellow-500 flex flex-col items-center justify-center py-20 px-4 text-center h-full">
+                    <div class="relative w-48 h-48 flex items-center justify-center mb-8">
+                        <div class="absolute inset-0 bg-purple-500/20 blur-[60px] rounded-full"></div>
+                        <div class="text-[100px] emoji-3d animate-float">✍️</div>
+                    </div>
+                    <h3 class="text-3xl md:text-5xl font-black text-white mb-6 tracking-tight glow-text">لا توجد أسئلة مقالية الآن</h3>
+                    <p class="text-gray-300 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed">استعد وجهز ورقتك وقلمك! بنك الأسئلة المقالية الشامل سيتم تحديثه قريباً لتختبر مدى استيعابك للمنهج بدقة.</p>
+                </div>
             </div>
         </div>
     </main>
 
-    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-xl" role="dialog" aria-modal="true">
-        <div class="bg-[#0a0f1c] border border-white/10 w-full max-w-3xl rounded-[2rem] p-5 md:p-8 max-h-[95vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)]" id="quizModalBox">
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-2xl transition-all duration-300" role="dialog" aria-modal="true">
+        <div class="bg-[#0a0f1c]/90 border border-white/10 w-full max-w-3xl rounded-[2.5rem] p-6 md:p-10 max-h-[90vh] overflow-y-auto relative shadow-[0_0_80px_rgba(0,0,0,0.9),inset_0_0_20px_rgba(255,255,255,0.05)]" id="quizModalBox">
+            <div class="absolute top-0 right-0 w-full h-4 bg-gradient-to-r from-yellow-400 via-yellow-500 to-yellow-600"></div>
             <div id="quizModalContent"></div>
         </div>
     </div>
