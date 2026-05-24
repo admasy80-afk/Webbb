@@ -17,7 +17,6 @@
     <link rel="stylesheet" href="player.css">
 
     <style>
-        /* 1. توحيد الخط إجبارياً على كافة عناصر الصفحة (تنسيقات المنصة العامة) */
         :root { --accent: #eab308; }
         * { 
             font-family: 'Readex Pro', sans-serif !important; 
@@ -31,7 +30,6 @@
         }
         *:focus { outline: none !important; }
 
-        /* 2. تأثيرات الزجاج والتبويبات المطورة */
         .glass-panel { background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
         
         .tab-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
@@ -45,13 +43,11 @@
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
         
-        /* إخفاء شريط التمرير مع الإبقاء على الوظيفة */
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 
     <script>
-        // نظام التبويبات المحدث للمنصة
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.remove('active');
@@ -271,7 +267,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
     <script src="player.js" defer></script>
-    
+    <script src="quiz.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     <script src="script.js" defer></script>
 </body>
