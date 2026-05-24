@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#070b19">
     <meta name="description" content="لوحة الطالب - منصة الدحيح التعليمية">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-
+    
     <title>لوحة الطالب | منصة الدحيح</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,11 +21,13 @@
             --accent: #eab308; 
             --accent-hover: #ca8a04;
         }
+        
         * { 
             font-family: 'Readex Pro', sans-serif !important; 
             -webkit-tap-highlight-color: transparent; 
             box-sizing: border-box;
         }
+        
         body, html { 
             background-color: #070b19; 
             color: white; 
@@ -33,6 +35,7 @@
             overflow-x: hidden;
             text-rendering: optimizeLegibility;
         }
+        
         *:focus { outline: none !important; }
 
         /* تأثير الـ Noise الاحترافي للخلفية */
@@ -55,15 +58,45 @@
             box-shadow: 0 10px 40px rgba(0,0,0,0.35);
         }
         
-        .tab-btn { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; }
-        .tab-btn::before { content: ''; position: absolute; inset: 0; background: var(--accent); opacity: 0; transition: opacity 0.3s; z-index: -1; border-radius: inherit; }
+        .tab-btn { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative; 
+            overflow: hidden; 
+        }
+        .tab-btn::before { 
+            content: ''; 
+            position: absolute; 
+            inset: 0; 
+            background: var(--accent); 
+            opacity: 0; 
+            transition: opacity 0.3s; 
+            z-index: -1; 
+            border-radius: inherit; 
+        }
         .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); }
-        .tab-btn.active { color: #000; font-weight: 700; background: var(--accent); box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2); }
+        .tab-btn.active { 
+            color: #000; 
+            font-weight: 700; 
+            background: var(--accent); 
+            box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2); 
+        }
         
-        .tab-content { display: none; opacity: 0; transition: opacity 0.35s ease, transform 0.35s cubic-bezier(.22,1,.36,1); transform: translateY(12px); }
-        .tab-content.active { display: block; opacity: 1; transform: translateY(0); }
+        .tab-content { 
+            display: none; 
+            opacity: 0; 
+            transition: opacity 0.35s ease, transform 0.35s cubic-bezier(.22,1,.36,1); 
+            transform: translateY(12px); 
+        }
+        .tab-content.active { 
+            display: block; 
+            opacity: 1; 
+            transform: translateY(0); 
+        }
         
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInUp { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
         .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
         .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -109,7 +142,7 @@
             filter: saturate(0.85);
         }
 
-        /* تأثير الحركة ثلاثية الأبعاد عند تملير الماوس */
+        /* تأثير الحركة ثلاثية الأبعاد عند تمرير الماوس */
         .quiz-card:hover {
             transform: perspective(1200px) rotateX(4deg) translateY(-8px) scale(1.015);
             background: linear-gradient(145deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%);
@@ -117,7 +150,7 @@
         }
         .quiz-card:not(.completed):hover { 
             border-color: rgba(234, 179, 8, 0.5); 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 25px rgba(234, 179, 8, 0.2.5); 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 25px rgba(234, 179, 8, 0.25); 
         }
         .quiz-card.completed:hover { 
             opacity: 1;
@@ -127,16 +160,16 @@
         }
 
         /* حلقة الـ Progress المتوهجة الفاخرة للدرجات */
-        .circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; }  
-        .circle-bg { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 3.8; }  
+        .circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; }
+        .circle-bg { fill: none; stroke: rgba(255, 255, 255, 0.1); stroke-width: 3.8; }
         .circle { 
             fill: none; 
             stroke-width: 3.8; 
             stroke-linecap: round; 
             transition: stroke-dasharray 1.5s ease-out; 
             filter: drop-shadow(0 0 6px currentColor);
-        }  
-        @keyframes progressAnimation { 0% { stroke-dasharray: 0 100; } }  
+        }
+        @keyframes progressAnimation { 0% { stroke-dasharray: 0 100; } }
         .percentage { fill: #fff; font-family: 'Readex Pro', sans-serif; font-weight: 800; font-size: 0.52em; text-anchor: middle; }
 
         .btn-start-quiz {
@@ -148,8 +181,8 @@
             will-change: transform;
         }
         .btn-start-quiz::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;  
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);  
+            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
             transform: skewX(-20deg); transition: 0.5s;
         }
         .btn-start-quiz:hover::after { left: 150%; }
@@ -192,8 +225,8 @@
     </script>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
-    <div class="fixed top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>  
-    <div class="fixed bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>  
+    <div class="fixed top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
+    <div class="fixed bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>    
 
     <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
         <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
@@ -344,11 +377,11 @@
             <p class="text-gray-400 text-sm md:text-base mb-8">اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.</p>
             
             <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div class="quiz-card animate-pulse">  
-                    <div class="h-6 bg-white/10 rounded w-1/3 mb-4"></div>  
-                    <div class="h-16 bg-white/10 rounded w-full mb-6"></div>  
-                    <div class="h-4 bg-white/10 rounded w-1/2 mb-auto"></div>  
-                    <div class="h-12 bg-white/10 rounded w-full mt-6"></div>  
+                <div class="quiz-card animate-pulse">    
+                    <div class="h-6 bg-white/10 rounded w-1/3 mb-4"></div>    
+                    <div class="h-16 bg-white/10 rounded w-full mb-6"></div>    
+                    <div class="h-4 bg-white/10 rounded w-1/2 mb-auto"></div>    
+                    <div class="h-12 bg-white/10 rounded w-full mt-6"></div>    
                 </div>
             </div>
         </div>
