@@ -1,4 +1,5 @@
 const { HeadObjectCommand, GetObjectCommand } = require('@aws-sdk/client-s3');
+const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { pipeline } = require('stream');
 const { getDb } = require('../config/db');
 const { r2Client, R2_BUCKET_NAME } = require('../config/r2');
@@ -15,11 +16,48 @@ exports.getDashboardData = async (req, res) => {
 
         const user = await db.collection('users').findOne({ email: req.user.email });
         const studentPoints = user?.points || 0;
-        const content = await db.collection('curriculum_content').findOne({ grade }) || { points: [], questions: [], tests: [], quizzes: [] };
-        const courses = await db.collection('courses').find({ grade }).sort({ createdAt: 1 }).toArray();
+
+        const rawContent = await db.collection('curriculum_content').findOne({ grade }) || {};
+        const content = {
+            points:        rawContent.points        || [],
+            questions:     rawContent.questions     || [],
+            tests:         rawContent.tests         || [],
+            quizzes:       rawContent.quizzes       || [],
+            publicQuizzes: rawContent.publicQuizzes || [],
+            liveStream:    rawContent.liveStream    || null
+        };
+
+        const rawCourses = await db.collection('courses').find({ grade }).sort({ createdAt: 1 }).toArray();
+
+        // توليد روابط Thumbnail مُوقعة من R2 لكل محاضرة
+        const courses = await Promise.all(rawCourses.map(async (c) => {
+            let imageUrl = '';
+            if (c.image && typeof c.image === 'string') {
+                if (c.image.startsWith('http')) imageUrl = c.image;
+                else if (c.image.startsWith('thumbnails/')) {
+                    try {
+                        const cmd = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: c.image });
+                        imageUrl = await getSignedUrl(r2Client, cmd, { expiresIn: 3600 });
+                    } catch (e) { imageUrl = ''; }
+                }
+            }
+            return {
+                id: c._id.toString(),
+                courseName: c.courseName,
+                grade: c.grade,
+                description: c.description || '',
+                duration: c.duration || 'غير محدد',
+                image: imageUrl,
+                telegramMsgId: c.telegramMsgId,
+                lastWatched: (user?.watchProgress || {})[c.telegramMsgId] || null
+            };
+        }));
 
         res.status(200).json({ studentPoints, content, courses });
-    } catch (error) { res.status(500).json({ message: "فشل جلب البيانات." }); }
+    } catch (error) {
+        console.error("getDashboardData error:", error);
+        res.status(500).json({ message: "فشل جلب البيانات." });
+    }
 };
 
 exports.streamVideo = async (req, res) => {
@@ -31,8 +69,10 @@ exports.streamVideo = async (req, res) => {
 
         if (range && !/^bytes=\d+-\d*$/.test(range)) return res.status(416).send("نطاق البث غير صالح.");
 
-        const queryId = /^\d+$/.test(msgId) ? parseInt(msgId, 10) : msgId;
-        const course = await db.collection('courses').findOne({ telegramMsgId: queryId });
+        // telegramMsgId يخزن كـ UUID نصي - بحث مرن لكلتا الحالتين
+        const orQuery = [{ telegramMsgId: msgId }];
+        if (/^\d+$/.test(msgId)) orQuery.push({ telegramMsgId: parseInt(msgId, 10) });
+        const course = await db.collection('courses').findOne({ $or: orQuery });
         if (!course || !course.fileKey) return res.status(404).send("الفيديو مفقود.");
 
         const headResponse = await r2Client.send(new HeadObjectCommand({ Bucket: R2_BUCKET_NAME, Key: course.fileKey }));
