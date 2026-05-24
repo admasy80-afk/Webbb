@@ -30,12 +30,34 @@ window.switchTab = function(tabId) {
 
 function animateNumber(el, from, to, duration = 1200) {
     if (!el) return;
-    if (state.reduceMotion) { el.textContent = to + '%'; return; }
+    
+    const circle = document.querySelector('#sideCol circle'); // جلب عنصر الـ SVG الخاص بالدائرة
+    const radius = circle ? circle.r.baseVal.value : 0;
+    const circumference = radius ? radius * 2 * Math.PI : 289; 
+
+    if (state.reduceMotion) { 
+        el.textContent = to + '%'; 
+        if(circle) {
+            const offset = circumference - (to / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+        return; 
+    }
+
     const start = performance.now();
     const step = (now) => {
         const p = Math.min((now - start) / duration, 1);
         const eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = Math.floor(from + (to - from) * eased) + '%';
+        const currentVal = Math.floor(from + (to - from) * eased);
+        
+        el.textContent = currentVal + '%';
+        
+        // تحريك أنيميشن الدائرة بشكل متزامن مع الأرقام
+        if (circle) {
+            const offset = circumference - (currentVal / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+
         if (p < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
@@ -337,9 +359,15 @@ function closeQuiz() {
 function init() {
     if (!authGate()) return;
 
+    // بمجرد الدخول، هيسحب الاسم من السيرفر/state ويحطه
     const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
-    $('studentName').textContent = firstName;
-    $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
+    const fullName = state.user.name || 'طالب غير محدد';
+    
+    const nameEl = $('studentName');
+    if(nameEl) nameEl.textContent = fullName; // أو firstName حسب ما تفضل
+    
+    const gradeEl = $('studentGrade');
+    if(gradeEl) gradeEl.textContent = state.user.grade || 'الصف غير محدد';
 
     player.init();
     fetchData(true);
