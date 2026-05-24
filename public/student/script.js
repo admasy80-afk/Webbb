@@ -45,7 +45,6 @@
         if ('vibrate' in navigator) { try { navigator.vibrate(ms); } catch (e) {} }
     };
 
-    // المصادقة مع فحص وحقن تنبيهات الـ alert لمعرفة النقص
     function authGate() {
         const userStr = localStorage.getItem('dahih_user');
         const token = localStorage.getItem('dahih_token');
@@ -81,7 +80,6 @@
         }
     }
 
-    // كائن المشغل
     const player = {
         video: null, poster: null, container: null, progress: null, progressBar: null,
         currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
@@ -155,15 +153,13 @@
             this.titleEl.textContent = title || 'جاري التحميل...';
             this.lastSentTime = -1;
 
-            // ✅ التعديل: استخدام كلاس "hidden" بدلاً من "is-hidden" + إظهار الفيديو
             this.poster.classList.add('hidden');
-            this.poster.classList.add('is-hidden'); // إبقاء التوافق مع CSS القديم
+            this.poster.classList.add('is-hidden'); 
             this.video.classList.remove('hidden');
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
             this.video.pause();
             
-            // ✅ التعديل: تم تغيير مسار الفيديو ليطابق الباك إند
             const videoUrl = `/api/student/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
             fetch(videoUrl, { headers: { 'Range': 'bytes=0-100' } })
@@ -183,7 +179,6 @@
             const playPromise = this.video.play();
             if (playPromise && playPromise.catch) {
                 playPromise.catch(() => {
-                    // ✅ التعديل: إظهار زر التشغيل المركزي بدون الاعتماد على كلاس is-visible فقط
                     this.centerPlay.classList.add('is-visible');
                     this.centerPlay.style.opacity = "1";
                     this.centerPlay.style.transform = "scale(1)";
@@ -208,7 +203,6 @@
             if (this.video.paused) { this.video.play().catch(() => {}); } else { this.video.pause(); }
         },
 
-        // ✅ التعديل: إخفاء زر التشغيل المركزي عبر الستايل المباشر + الكلاس
         onPlay() {
             this.centerPlay.classList.remove('is-visible');
             this.centerPlay.style.opacity = "0";
@@ -216,7 +210,6 @@
             this.centerPlay.style.pointerEvents = "none";
         },
 
-        // ✅ التعديل: إظهار زر التشغيل المركزي عبر الستايل المباشر + الكلاس
         onPause() {
             this.centerPlay.classList.add('is-visible');
             this.centerPlay.style.opacity = "1";
@@ -289,7 +282,6 @@
         requestAnimationFrame(step);
     }
 
-    // 📡 دالة جلب البيانات من السيرفر مع إظهار الـ Alert الفوري عند الفشل 📡
     async function fetchData(initial = false) {
         const container = $('studentCoursesContainer');
         if (initial && container) {
@@ -327,7 +319,6 @@
             renderAll(data, initial);
             
         } catch (err) {
-            // 🚨 إطلاق تنبيه فوري يحتوي تفاصيل المشكلة لرؤيتها من الجوال
             alert(`🚨 فشل جلب بيانات الـ Dashboard:\nالسبب: ${err.message}\n\nتأكد من عمل السيرفر الداخلي على مسار /api/student/dashboard-data بشكل سليم.`);
 
             if (container) {
@@ -341,7 +332,6 @@
         }
     }
 
-    // توزيع مخرجات التصاميم
     function renderAll(data, initial) {
         try {
             renderCourses(data.courses || data.content?.courses || [], initial);
@@ -451,8 +441,14 @@
                 </article>`;
         }).join('');
         container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${html}</div>`;
+        
         container.querySelectorAll('.quiz-start').forEach(btn => {
-            btn.addEventListener('click', () => openQuizModal(btn.dataset.quizid));
+            btn.addEventListener('click', () => {
+                const quiz = state.availableQuizzes.find(q => q.id === btn.dataset.quizid);
+                if (quiz && window.QuizEngine) {
+                    window.QuizEngine.open(quiz);
+                }
+            });
         });
     }
 
@@ -484,72 +480,6 @@
         state.currentPoints = newPoints;
     }
 
-    function openQuizModal(quizId) {
-        const quiz = state.availableQuizzes.find(q => q.id === quizId);
-        if (!quiz) return;
-        const content = $('quizModalContent');
-        const modal = $('quizModal');
-        if (!content || !modal) return;
-
-        const letters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'];
-        const questionsHTML = quiz.questions.map((q, qi) => `
-            <div style="background:rgba(0,0,0,0.4);padding:1rem;border-radius:0.75rem;border:1px solid var(--border);margin-bottom:1rem;">
-                <h4 style="font-size:0.95rem;font-weight:600;margin:0 0 0.85rem;line-height:1.6;color:white;"><span style="color:var(--accent);margin-left:0.4rem;">${qi + 1}.</span>${escapeHTML(q.questionText)}</h4>
-                <div style="display:grid;grid-template-columns:1fr;gap:0.5rem;">
-                    ${q.options.map((opt, oi) => `<label class="quiz-option"><input type="radio" name="q_${qi}" value="${oi}" required><div class="opt"><span class="opt-letter">${letters[oi] || (oi + 1)}</span><span style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;">${escapeHTML(opt)}</span></div></label>`).join('')}
-                </div>
-            </div>`).join('');
-
-        content.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.25rem;">
-                <h2 id="quizModalTitle" style="font-size:1.15rem;font-weight:700;margin:0;color:white;">${escapeHTML(quiz.title)}</h2>
-            </div>
-            <form id="activeQuizForm" style="display:flex;flex-direction:column;">
-                ${questionsHTML}
-                <button type="submit" id="btnSubmitQuiz" class="btn btn-primary" style="padding:0.85rem;">إنهاء وتسليم الإجابات</button>
-                <button type="button" class="btn mt-2" onclick="DahihApp.closeQuiz()" style="background:transparent;border:1px solid var(--border);color:white;">إلغاء</button>
-            </form>`;
-
-        modal.classList.add('is-open');
-        modal.classList.remove('opacity-0', 'pointer-events-none');
-        $('activeQuizForm').addEventListener('submit', (e) => submitQuiz(e, quiz));
-    }
-
-    async function submitQuiz(event, quiz) {
-        event.preventDefault();
-        const btn = $('btnSubmitQuiz');
-        if (btn) { btn.disabled = true; btn.textContent = 'جاري التصحيح...'; }
-
-        const form = event.target;
-        let score = 0;
-        quiz.questions.forEach((q, qi) => {
-            const el = form.elements[`q_${qi}`];
-            if (el && parseInt(el.value) === q.correctAnswer) score++;
-        });
-        const percentage = Math.round((score / quiz.questions.length) * 100);
-
-        try {
-            await fetchWithTimeout('/api/student/submit-quiz', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
-                body: JSON.stringify({ email: state.user.email, studentName: state.user.name, grade: state.user.grade, quizId: quiz.id, score, percentage })
-            });
-            if (percentage >= 85 && typeof confetti === 'function' && !state.reduceMotion) { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); }
-            closeQuiz();
-            fetchData(true);
-        } catch (err) {
-            alert(`🚨 فشل إرسال نتيجة الاختبار:\n${err.message}`);
-            if (btn) { btn.disabled = false; btn.textContent = 'حاول مجدداً'; }
-        }
-    }
-
-    function closeQuiz() {
-        const modal = $('quizModal');
-        modal.classList.remove('is-open');
-        modal.classList.add('opacity-0', 'pointer-events-none');
-        document.body.style.overflow = '';
-    }
-
     function init() {
         if (!authGate()) return;
 
@@ -566,8 +496,11 @@
     }
 
     window.DahihApp = {
-        logout, toggleFullscreen, closeQuiz,
-        refresh: () => fetchData(true)
+        logout, 
+        toggleFullscreen, 
+        refresh: () => fetchData(true),
+        getState: () => state,
+        fetchWithTimeout: fetchWithTimeout
     };
 
     if (document.readyState === 'loading') {
