@@ -412,44 +412,40 @@
         });
     }
 
+    // --- التعديل هنا لربط الدالة الخاصة بالكروت بالكود الأصلي ---
     function renderQuizzes(list) {
         const container = $('onlineQuizzesContainer');
         if (!container) return;
-        const h = hash(list.map(q => [q.id, q.title, q.questions.length, (q.results || []).length]));
+        
+        const h = hash(list.map(q => [q.id, q.title, q.questions?.length, (q.results || []).length]));
         if (h === state.quizzesHash) return;
         state.quizzesHash = h;
         state.availableQuizzes = list;
 
         if (!list.length) {
-            container.innerHTML = '<p class="empty">لا توجد اختبارات متاحة حالياً.</p>';
+            container.innerHTML = '<div id="empty-state" class="flex justify-center items-center py-10 w-full text-gray-500">لا توجد اختبارات متاحة حالياً.</div>';
             return;
         }
 
         const html = list.slice().reverse().map(quiz => {
             const result = quiz.results ? quiz.results.find(r => r.email === state.user.email) : null;
-            const action = result
-                ? `<div class="btn w-full md:w-auto mt-auto md:mt-0" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.25);cursor:default;">مكتمل (${result.percentage}%)</div>`
-                : `<button class="btn btn-primary quiz-start w-full md:w-auto mt-auto md:mt-0" data-quizid="${escapeHTML(quiz.id)}" type="button">بدء الاختبار</button>`;
+            
+            // تمرير البيانات بصيغة تتوافق مع دالة توليد الكروت الجديدة
+            const formattedQuiz = {
+                ...quiz,
+                attempted: !!result,
+                score: result ? result.percentage : 0,
+                attempts: result ? 1 : 0, 
+                questionsCount: quiz.questions ? quiz.questions.length : 0,
+                duration: quiz.duration || 15 // لو مفيش وقت افتراضي
+            };
 
-            return `
-                <article class="course-card flex flex-col md:flex-row justify-between h-full">
-                    <div class="mb-4 md:mb-0" style="flex:1;">
-                        <h3 class="text-white font-bold text-lg m-0">${escapeHTML(quiz.title)}</h3>
-                        <p class="text-gray-400 text-sm m-0">${quiz.questions.length} أسئلة</p>
-                    </div>
-                    ${action}
-                </article>`;
+            // استخدام الدالة الجديدة السحرية بتاعتك
+            return window.generateQuizCardHTML(formattedQuiz);
         }).join('');
-        container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${html}</div>`;
         
-        container.querySelectorAll('.quiz-start').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const quiz = state.availableQuizzes.find(q => q.id === btn.dataset.quizid);
-                if (quiz && window.QuizEngine) {
-                    window.QuizEngine.open(quiz);
-                }
-            });
-        });
+        // عرض الكروت جوة Grid مناسب بدال الـ flex القديم
+        container.innerHTML = `<div class="fade-in-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${html}</div>`;
     }
 
     function renderPoints(list) {
@@ -492,8 +488,8 @@
         // رسم الكارت بالتصميم الجديد
         if (!quiz.attempted) {
             return `
-            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card card-new animate-fade" data-id="${quiz.id}">
-                <div>
+            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card card-new animate-fade bg-white/5 border border-white/10 p-5 rounded-2xl hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
+                <div class="flex-grow">
                     <div class="flex items-center gap-2 mb-3">
                         <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
                         <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
@@ -515,14 +511,15 @@
             `;
         } else {
             return `
-            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card animate-fade border-r-2 border-r-green-500/50" data-id="${quiz.id}">
-                <div class="flex justify-between items-start mb-3">
-                    <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider">مكتمل</span>
+            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card animate-fade bg-white/5 border border-white/10 border-r-4 border-r-green-500/80 p-5 rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
+                <div class="flex justify-between items-start mb-3 flex-grow">
+                    <div>
+                        <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider mb-3 inline-block">مكتمل</span>
+                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
+                    </div>
                 </div>
                 
-                <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
-                
-                <div class="text-xs text-gray-500 space-y-1 mb-4">
+                <div class="text-xs text-gray-500 space-y-1 mb-4 flex-grow">
                     ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
                 </div>
 
