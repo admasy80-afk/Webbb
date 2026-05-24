@@ -68,7 +68,7 @@ function authGate() {
 function logout() {
     localStorage.removeItem('dahih_user');
     localStorage.removeItem('dahih_token');
-    window.location.replace('/logina.html');
+    window.location.replace('/login.html');
 }
 
 async function fetchWithTimeout(url, options = {}, timeout = 15000) {
