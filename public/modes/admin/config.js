@@ -20,6 +20,7 @@ export const API = Object.freeze({
     // Quiz management
     SAVE_QUIZ: '/api/admin/add-mcq-quiz',
     SAVE_PUB_QUIZ: '/api/admin/add-public-quiz',
+    SAVE_TEST: '/api/admin/add-mcq-quiz', // الاختبارات تُحفظ في نفس مجموعة الـ quizzes
 
     // Courses
     UPLOAD_COURSE: '/api/admin/upload-course',
