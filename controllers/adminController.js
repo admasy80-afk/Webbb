@@ -205,7 +205,32 @@ exports.getAllCourses = async (req, res) => {
         const limit = parseInt(req.query.limit) || 20;
         const skip = (page - 1) * limit;
         const courses = await db.collection('courses').find({}).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray();
-        const formatted = courses.map(c => ({ id: c._id.toString(), courseName: c.courseName, grade: c.grade, description: c.description, telegramMsgId: c.telegramMsgId }));
+
+        // توليد روابط مُوقّعة للـ thumbnails من R2 ليتمكن الأدمن من معاينتها
+        const formatted = await Promise.all(courses.map(async c => {
+            let imageUrl = '';
+            if (c.image && typeof c.image === 'string') {
+                if (c.image.startsWith('http')) {
+                    imageUrl = c.image;
+                } else if (c.image.startsWith('thumbnails/')) {
+                    try {
+                        const cmd = new GetObjectCommand({ Bucket: R2_BUCKET_NAME, Key: c.image });
+                        imageUrl = await getSignedUrl(r2Client, cmd, { expiresIn: 3600 });
+                    } catch (e) { imageUrl = ''; }
+                }
+            }
+            return {
+                id: c._id.toString(),
+                courseName: c.courseName,
+                grade: c.grade,
+                description: c.description,
+                duration: c.duration || 'غير محدد',
+                image: imageUrl,
+                telegramMsgId: c.telegramMsgId,
+                fileSize: c.fileSize || 0,
+                createdAt: c.createdAt
+            };
+        }));
         res.status(200).json({ courses: formatted });
     } catch (error) { 
         console.error("getAllCourses error:", error);
@@ -314,13 +339,28 @@ exports.getStudentsByGrade = async (req, res) => {
 exports.addContent = async (req, res) => {
     try {
         const db = getDb();
-        const { grade, type, pointText, questionText, questionHint } = req.body;
+        // قبول كلا الاسمين (الجديد من الفرونت والقديم) لضمان التوافق
+        const { grade, type } = req.body;
+        const pointText    = req.body.pointText    ?? req.body.text;
+        const questionText = req.body.questionText ?? req.body.question;
+        const questionHint = req.body.questionHint ?? req.body.hint;
+
+        if (!grade || !type) {
+            return res.status(400).json({ message: "البيانات ناقصة (grade/type)" });
+        }
+
         const contentCollection = db.collection('curriculum_content');
         
         if (type === 'point') {
-            await contentCollection.updateOne({ grade: grade }, { $push: { points: pointText } }, { upsert: true });
+            if (!pointText) return res.status(400).json({ message: "نص الملاحظة مطلوب" });
+            await contentCollection.updateOne({ grade }, { $push: { points: String(pointText) } }, { upsert: true });
         } else {
-            await contentCollection.updateOne({ grade: grade }, { $push: { questions: { question: questionText, hint: questionHint } } }, { upsert: true });
+            if (!questionText) return res.status(400).json({ message: "نص السؤال مطلوب" });
+            await contentCollection.updateOne(
+                { grade },
+                { $push: { questions: { question: String(questionText), hint: String(questionHint || "") } } },
+                { upsert: true }
+            );
         }
         
         res.status(200).json({ message: "تمت الإضافة بنجاح" });
@@ -389,12 +429,21 @@ exports.toggleStream = async (req, res) => {
 exports.addMcqQuiz = async (req, res) => {
     try {
         const db = getDb();
-        const { grade, quizTitle, questionsArray } = req.body;
+        const { grade } = req.body;
+        // قبول الاسمين (title/quizTitle و questions/questionsArray) للتوافق
+        const quizTitle      = req.body.quizTitle      ?? req.body.title;
+        const questionsArray = req.body.questionsArray ?? req.body.questions;
+
+        if (!grade)        return res.status(400).json({ message: "المرحلة مطلوبة" });
+        if (!quizTitle)    return res.status(400).json({ message: "عنوان الاختبار مطلوب" });
+        if (!Array.isArray(questionsArray) || questionsArray.length === 0)
+            return res.status(400).json({ message: "يجب إضافة سؤال واحد على الأقل" });
+
         const quizId = 'quiz_' + Date.now();
         
         await db.collection('curriculum_content').updateOne(
-            { grade: grade }, 
-            { $push: { quizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } }, 
+            { grade }, 
+            { $push: { quizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [], createdAt: new Date() } } }, 
             { upsert: true }
         );
         
@@ -408,14 +457,20 @@ exports.addMcqQuiz = async (req, res) => {
 exports.addPublicQuiz = async (req, res) => {
     try {
         const db = getDb();
-        const { grade, quizTitle, questionsArray } = req.body;
+        const { grade } = req.body;
+        const quizTitle      = req.body.quizTitle      ?? req.body.title;
+        const questionsArray = req.body.questionsArray ?? req.body.questions;
+
+        if (!quizTitle)    return res.status(400).json({ message: "عنوان الاختبار مطلوب" });
+        if (!Array.isArray(questionsArray) || questionsArray.length === 0)
+            return res.status(400).json({ message: "يجب إضافة سؤال واحد على الأقل" });
+
         const quizId = 'pub_' + Date.now();
-        
         const targetGrade = (grade && String(grade).trim() !== "") ? String(grade).trim() : "عام";
         
         await db.collection('curriculum_content').updateOne(
             { grade: targetGrade }, 
-            { $push: { publicQuizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [] } } }, 
+            { $push: { publicQuizzes: { id: quizId, title: quizTitle, questions: questionsArray, results: [], createdAt: new Date() } } }, 
             { upsert: true }
         );
         
@@ -430,8 +485,18 @@ exports.getGradeContent = async (req, res) => {
     try {
         const db = getDb();
         const { grade } = req.body;
-        const content = await db.collection('curriculum_content').findOne({ grade: grade }) || { points: [], questions: [], tests: [], quizzes: [], publicQuizzes: [] };
-        res.status(200).json(content);
+        if (!grade) return res.status(400).json({ message: "المرحلة مطلوبة" });
+        const content = await db.collection('curriculum_content').findOne({ grade }) || {};
+        // ضمان وجود كل الحقول المتوقعة في الفرونت
+        res.status(200).json({
+            grade,
+            points:        content.points        || [],
+            questions:     content.questions     || [],
+            tests:         content.tests         || [],
+            quizzes:       content.quizzes       || [],
+            publicQuizzes: content.publicQuizzes || [],
+            liveStream:    content.liveStream    || null
+        });
     } catch (error) { 
         console.error("getGradeContent error:", error);
         res.status(500).json({ message: error.message }); 
