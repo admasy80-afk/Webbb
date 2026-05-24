@@ -3,1665 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#0A0E1C">
+    <meta name="theme-color" content="#070b19">
     <meta name="description" content="لوحة الطالب - منصة الدحيح التعليمية">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 
     <title>لوحة الطالب | منصة الدحيح</title>
 
-    <script src="[cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-    <link rel="preconnect" href="[fonts.googleapis.com](https://fonts.googleapis.com)">
-    <link rel="preconnect" href="[fonts.gstatic.com](https://fonts.gstatic.com)" crossorigin>
-    <link href="[fonts.googleapis.com](https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap)" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <script src="https://sdk.videosdk.live/js-sdk/0.1.6/videosdk.js"></script>
 
-    <script src="[sdk.videosdk.live](https://sdk.videosdk.live/js-sdk/0.1.6/videosdk.js)"></script>
-
+    <!-- ربط ملفات التصميم -->
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/player.css">
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        'dahih-bg': '#0A0E1C',
-                        'dahih-bg-2': '#0D1224',
-                        'dahih-surface': '#11172B',
-                        'dahih-surface-2': '#151C33',
-                        'dahih-surface-3': '#1A2238',
-                        'dahih-border': 'rgba(255,255,255,0.045)',
-                        'dahih-border-strong': 'rgba(255,255,255,0.075)',
-                        'dahih-border-accent': 'rgba(232,188,58,0.20)',
-                        'dahih-accent': '#E8BC3A',
-                        'dahih-accent-hover': '#F0C84E',
-                        'dahih-accent-soft': 'rgba(232,188,58,0.07)',
-                        'dahih-accent-glow': 'rgba(232,188,58,0.14)',
-                        'dahih-text': '#E8EBF2',
-                        'dahih-muted': '#8A93A7',
-                        'dahih-dim': '#5A6276',
-                    },
-                    fontFamily: {
-                        'sans': ['Readex Pro', 'system-ui', 'sans-serif'],
-                        'mono': ['JetBrains Mono', 'monospace'],
-                    },
-                    borderRadius: {
-                        'card': '16px',
-                        'button': '11px',
-                        'modal': '22px',
-                        'pill': '999px',
-                    },
-                    spacing: {
-                        '1': '4px',
-                        '2': '8px',
-                        '3': '12px',
-                        '4': '16px',
-                        '6': '24px',
-                        '8': '32px',
-                        '12': '48px',
-                        '16': '64px',
-                    },
-                    transitionTimingFunction: {
-                        'smooth': 'cubic-bezier(0.32, 0.72, 0, 1)',
-                        'snap': 'cubic-bezier(0.16, 1, 0.3, 1)',
-                        'spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    },
-                }
-            }
-        }
-    </script>
-
-    <style>
-        /* ================================================================
-           Dahih Design System v3.0 — Cinematic Enterprise Grade
-           Inspired by Linear, Vercel, Stripe, Apple
-           ================================================================ */
-
-        :root {
-            /* Surfaces — Refined */
-            --bg: #0A0E1C;
-            --bg-2: #0D1224;
-            --surface: #11172B;
-            --surface-2: #151C33;
-            --surface-3: #1A2238;
-            --surface-hover: rgba(255,255,255,0.028);
-            --surface-active: rgba(232,188,58,0.07);
-            --surface-pressed: rgba(255,255,255,0.018);
-
-            /* Borders — Whisper-thin */
-            --border: rgba(255,255,255,0.045);
-            --border-strong: rgba(255,255,255,0.075);
-            --border-accent: rgba(232,188,58,0.20);
-            --border-accent-strong: rgba(232,188,58,0.32);
-
-            /* Accent — Muted Premium Gold */
-            --accent: #E8BC3A;
-            --accent-hover: #F0C84E;
-            --accent-pressed: #D9AD2E;
-            --accent-dim: rgba(232,188,58,0.55);
-            --accent-glow: rgba(232,188,58,0.14);
-            --accent-soft: rgba(232,188,58,0.07);
-
-            /* Text */
-            --text: #E8EBF2;
-            --text-strong: #F4F6FA;
-            --muted: #8A93A7;
-            --dim: #5A6276;
-            --faint: #3A4156;
-
-            /* Semantic */
-            --danger: #EF4444;
-            --danger-soft: rgba(239,68,68,0.09);
-            --danger-border: rgba(239,68,68,0.18);
-            --success: #10B981;
-            --success-soft: rgba(16,185,129,0.09);
-            --warning: #F59E0B;
-            --warning-soft: rgba(245,158,11,0.09);
-            --info: #3B82F6;
-            --info-soft: rgba(59,130,246,0.09);
-
-            /* Radii */
-            --r-xs: 6px;
-            --r-sm: 8px;
-            --r-md: 11px;
-            --r-lg: 16px;
-            --r-xl: 22px;
-            --r-pill: 999px;
-
-            /* Motion */
-            --d-instant: 80ms;
-            --d-fast: 120ms;
-            --d-base: 160ms;
-            --d-slow: 220ms;
-            --d-slower: 320ms;
-            --e-smooth: cubic-bezier(0.32, 0.72, 0, 1);
-            --e-snap: cubic-bezier(0.16, 1, 0.3, 1);
-            --e-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-            --e-out: cubic-bezier(0.22, 1, 0.36, 1);
-
-            /* Shadows — Layered & Refined */
-            --shadow-xs: 0 1px 2px rgba(0,0,0,0.12);
-            --shadow-sm: 0 2px 6px rgba(0,0,0,0.16), 0 1px 0 rgba(255,255,255,0.025) inset;
-            --shadow-md: 0 4px 12px rgba(0,0,0,0.22), 0 1px 0 rgba(255,255,255,0.035) inset;
-            --shadow-lg: 0 8px 22px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.045) inset;
-            --shadow-xl: 0 16px 40px rgba(0,0,0,0.36), 0 1px 0 rgba(255,255,255,0.055) inset;
-            --shadow-2xl: 0 24px 56px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.065) inset;
-            --shadow-accent: 0 6px 18px rgba(232,188,58,0.16), 0 1px 0 rgba(255,255,255,0.14) inset;
-            --shadow-accent-lg: 0 10px 28px rgba(232,188,58,0.22), 0 1px 0 rgba(255,255,255,0.18) inset;
-            --shadow-glow: 0 0 32px rgba(232,188,58,0.10);
-        }
-
-        * {
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            text-rendering: optimizeLegibility;
-        }
-
-        *::before, *::after { box-sizing: border-box; }
-
-        html, body {
-            font-family: 'Readex Pro', system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            letter-spacing: -0.011em;
-            line-height: 1.45;
-            font-feature-settings: "ss01", "cv11";
-        }
-
-        body {
-            background:
-                radial-gradient(ellipse 70% 45% at 85% -8%, rgba(232,188,58,0.035), transparent 55%),
-                radial-gradient(ellipse 55% 35% at 8% 108%, rgba(70,90,180,0.022), transparent 55%),
-                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(255,255,255,0.005), transparent 70%),
-                var(--bg);
-            position: relative;
-        }
-
-        /* Grain texture overlay for premium feel */
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            opacity: 0.025;
-            z-index: 0;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='[w3.org](http://www.w3.org/2000/svg)'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            mix-blend-mode: overlay;
-        }
-
-        /* ============================================================
-           Typography Scale — Tighter, More Refined
-           ============================================================ */
-        h1 { font-weight: 800; letter-spacing: -0.035em; line-height: 1.1; color: var(--text-strong); }
-        h2 { font-weight: 700; letter-spacing: -0.025em; line-height: 1.18; color: var(--text-strong); }
-        h3 { font-weight: 600; letter-spacing: -0.018em; line-height: 1.28; }
-        h4 { font-weight: 600; letter-spacing: -0.014em; line-height: 1.35; }
-        p, span, div { font-weight: 400; }
-
-        .text-meta {
-            font-weight: 300;
-            color: var(--muted);
-            font-size: 11.5px;
-            letter-spacing: 0;
-            line-height: 1.4;
-        }
-        .text-label {
-            font-weight: 500;
-            color: var(--muted);
-            font-size: 10.5px;
-            text-transform: uppercase;
-            letter-spacing: 0.11em;
-            line-height: 1;
-        }
-        .text-mono {
-            font-family: 'JetBrains Mono', monospace;
-            font-feature-settings: "tnum", "zero";
-        }
-
-        /* ============================================================
-           Glass Surfaces — Tuned Down
-           ============================================================ */
-        .glass-panel {
-            background: rgba(17,23,43,0.78);
-            backdrop-filter: blur(14px) saturate(125%);
-            -webkit-backdrop-filter: blur(14px) saturate(125%);
-            border: 1px solid var(--border);
-        }
-
-        .surface {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.012), transparent 24%);
-        }
-
-        .surface-raised {
-            background: var(--surface-2);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            box-shadow: var(--shadow-md);
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.015), transparent 22%);
-        }
-
-        .surface-interactive {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.012), transparent 24%);
-            transition: transform var(--d-base) var(--e-smooth),
-                        border-color var(--d-base) var(--e-smooth),
-                        box-shadow var(--d-base) var(--e-smooth),
-                        background-color var(--d-base) var(--e-smooth);
-            position: relative;
-            overflow: hidden;
-        }
-        .surface-interactive::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(232,188,58,0.28), transparent);
-            opacity: 0;
-            transition: opacity var(--d-base) var(--e-smooth);
-        }
-        .surface-interactive:hover {
-            border-color: var(--border-strong);
-            transform: translateY(-1px);
-            box-shadow: 0 12px 28px rgba(0,0,0,0.24), 0 1px 0 rgba(255,255,255,0.055) inset;
-        }
-        .surface-interactive:hover::after { opacity: 1; }
-        .surface-interactive:active { transform: translateY(0); }
-
-        /* ============================================================
-           Sidebar — Polished Enterprise
-           ============================================================ */
-        .sidebar {
-            background:
-                linear-gradient(180deg,
-                    rgba(17,23,43,0.88) 0%,
-                    rgba(10,14,28,0.94) 100%);
-            backdrop-filter: blur(16px) saturate(130%);
-            -webkit-backdrop-filter: blur(16px) saturate(130%);
-            border-left: 1px solid var(--border);
-            position: relative;
-        }
-        .sidebar::after {
-            content: '';
-            position: absolute;
-            top: 0; bottom: 0;
-            left: 0;
-            width: 1px;
-            background: linear-gradient(180deg,
-                transparent 0%,
-                rgba(232,188,58,0.08) 30%,
-                rgba(232,188,58,0.05) 70%,
-                transparent 100%);
-            pointer-events: none;
-        }
-
-        .sidebar-header {
-            border-bottom: 1px solid var(--border);
-            position: relative;
-        }
-        .sidebar-header::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            right: 16px;
-            left: 16px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(232,188,58,0.18), transparent);
-        }
-
-        .logo {
-            font-weight: 800;
-            font-size: 23px;
-            letter-spacing: -0.045em;
-            color: var(--text-strong);
-            display: inline-flex;
-            align-items: baseline;
-            line-height: 1;
-        }
-        .logo-dot {
-            color: var(--accent);
-            font-size: 0.85em;
-            opacity: 0.82;
-            display: inline-block;
-            margin-right: 2px;
-            transform: translateY(-1px);
-            filter: drop-shadow(0 0 6px rgba(232,188,58,0.4));
-        }
-
-        /* ============================================================
-           Navigation Buttons — Refined
-           ============================================================ */
-        .tab-btn {
-            position: relative;
-            background: transparent;
-            border: 1px solid transparent;
-            color: var(--muted);
-            font-weight: 500;
-            font-size: 13.5px;
-            letter-spacing: -0.012em;
-            padding: 10px 14px;
-            border-radius: var(--r-md);
-            transition: background-color var(--d-base) var(--e-smooth),
-                        color var(--d-base) var(--e-smooth),
-                        border-color var(--d-base) var(--e-smooth);
-            display: flex;
-            align-items: center;
-            gap: 11px;
-            text-align: right;
-            width: 100%;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .tab-btn .tab-icon {
-            width: 17px;
-            height: 17px;
-            flex-shrink: 0;
-            stroke-width: 1.65;
-            color: currentColor;
-            opacity: 0.82;
-            transition: opacity var(--d-base) var(--e-smooth), transform var(--d-base) var(--e-smooth);
-        }
-        .tab-btn:hover {
-            background: var(--surface-hover);
-            color: var(--text);
-        }
-        .tab-btn:hover .tab-icon {
-            opacity: 1;
-        }
-        .tab-btn:active { background: var(--surface-pressed); }
-        .tab-btn.active {
-            background: var(--surface-active);
-            border-color: var(--border-accent);
-            color: var(--accent);
-            font-weight: 600;
-        }
-        .tab-btn.active .tab-icon {
-            opacity: 1;
-        }
-        .tab-btn .tab-indicator {
-            position: absolute;
-            right: -1px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 2.5px;
-            height: 0;
-            background: var(--accent);
-            border-radius: 2px 0 0 2px;
-            transition: height var(--d-base) var(--e-snap);
-            box-shadow: 0 0 8px rgba(232,188,58,0.5);
-        }
-        .tab-btn.active .tab-indicator {
-            height: 20px;
-        }
-
-        .tab-btn.tab-live-btn .live-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: var(--danger);
-            position: relative;
-            box-shadow: 0 0 6px rgba(239,68,68,0.5);
-        }
-        .tab-btn.tab-live-btn .live-dot::after {
-            content: '';
-            position: absolute;
-            inset: -3px;
-            border-radius: 50%;
-            background: var(--danger);
-            opacity: 0.32;
-            animation: livePulse 2s var(--e-smooth) infinite;
-        }
-        @keyframes livePulse {
-            0%, 100% { transform: scale(0.8); opacity: 0.32; }
-            50% { transform: scale(1.4); opacity: 0; }
-        }
-
-        @media (max-width: 768px) {
-            .tab-btn {
-                width: auto;
-                padding: 8px 13px;
-                font-size: 12.5px;
-                justify-content: center;
-            }
-            .tab-btn .tab-icon { display: none; }
-            .tab-btn .tab-indicator { display: none; }
-        }
-
-        /* ============================================================
-           Profile Card
-           ============================================================ */
-        .profile-card {
-            position: relative;
-            overflow: hidden;
-            background:
-                linear-gradient(135deg, rgba(232,188,58,0.035) 0%, rgba(255,255,255,0.012) 100%);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            padding: 15px;
-        }
-        .profile-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
-            pointer-events: none;
-        }
-        .profile-card::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0;
-            width: 60%; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(232,188,58,0.22));
-        }
-        .profile-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent) 0%, #C99B22 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #0A0E1C;
-            font-weight: 700;
-            font-size: 15px;
-            flex-shrink: 0;
-            box-shadow:
-                0 4px 12px rgba(232,188,58,0.22),
-                inset 0 1px 0 rgba(255,255,255,0.35),
-                inset 0 -1px 0 rgba(0,0,0,0.12);
-            letter-spacing: -0.02em;
-        }
-        .profile-divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
-            margin: 11px 0;
-        }
-
-        /* ============================================================
-           Buttons — Refined Interactions
-           ============================================================ */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 7px;
-            font-weight: 600;
-            font-size: 13.5px;
-            letter-spacing: -0.012em;
-            padding: 10px 16px;
-            border-radius: var(--r-md);
-            border: 1px solid transparent;
-            transition: background-color var(--d-base) var(--e-smooth),
-                        border-color var(--d-base) var(--e-smooth),
-                        color var(--d-base) var(--e-smooth),
-                        transform var(--d-fast) var(--e-smooth),
-                        box-shadow var(--d-base) var(--e-smooth);
-            cursor: pointer;
-            white-space: nowrap;
-            position: relative;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-        .btn:active { transform: scale(0.985); }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #0A0E1C;
-            box-shadow: var(--shadow-accent);
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.10), transparent 50%);
-        }
-        .btn-primary:hover {
-            background: var(--accent-hover);
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-accent-lg);
-        }
-        .btn-primary:active {
-            background: var(--accent-pressed);
-            transform: translateY(0) scale(0.985);
-        }
-
-        .btn-secondary {
-            background: rgba(255,255,255,0.035);
-            color: var(--text);
-            border-color: var(--border);
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.018), transparent 50%);
-        }
-        .btn-secondary:hover {
-            background: rgba(255,255,255,0.06);
-            border-color: var(--border-strong);
-            transform: translateY(-1px);
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-            box-shadow: 0 6px 18px rgba(239,68,68,0.18), 0 1px 0 rgba(255,255,255,0.12) inset;
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.10), transparent 50%);
-        }
-        .btn-danger:hover {
-            background: #DC2626;
-            transform: translateY(-1px);
-        }
-
-        .btn-ghost-danger {
-            background: var(--danger-soft);
-            color: #F87171;
-            border-color: var(--danger-border);
-        }
-        .btn-ghost-danger:hover {
-            background: rgba(239,68,68,0.14);
-            border-color: rgba(239,68,68,0.26);
-        }
-
-        .btn-icon {
-            width: 36px;
-            height: 36px;
-            padding: 0;
-            border-radius: var(--r-sm);
-        }
-
-        /* ============================================================
-           Inputs
-           ============================================================ */
-        .input {
-            background: rgba(10,14,28,0.55);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 11px 14px;
-            border-radius: var(--r-md);
-            font-family: inherit;
-            font-size: 13.5px;
-            outline: none;
-            transition: border-color var(--d-base) var(--e-smooth),
-                        box-shadow var(--d-base) var(--e-smooth),
-                        background-color var(--d-base) var(--e-smooth);
-            width: 100%;
-            letter-spacing: -0.011em;
-        }
-        .input:hover {
-            border-color: var(--border-strong);
-        }
-        .input:focus {
-            border-color: var(--border-accent);
-            background: rgba(10,14,28,0.75);
-            box-shadow: 0 0 0 3px rgba(232,188,58,0.07);
-        }
-        .input::placeholder {
-            color: var(--dim);
-        }
-
-        /* ============================================================
-           Player Frame — Cinematic
-           ============================================================ */
-        .player-frame {
-            border: 1px solid var(--border-strong);
-            border-radius: var(--r-lg);
-            background: #000;
-            overflow: hidden;
-            box-shadow: var(--shadow-xl);
-            position: relative;
-            isolation: isolate;
-        }
-        .player-frame::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            box-shadow: 0 0 0 1px rgba(232,188,58,0.045) inset;
-            pointer-events: none;
-            z-index: 5;
-        }
-        .player-frame::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(to bottom,
-                rgba(255,255,255,0.015),
-                transparent 18%);
-            pointer-events: none;
-            z-index: 4;
-        }
-
-        .player-header {
-            background: linear-gradient(180deg, rgba(232,188,58,0.035) 0%, transparent 100%);
-            border-bottom: 1px solid var(--border);
-            position: relative;
-        }
-        .player-accent-bar {
-            height: 1.5px;
-            background: linear-gradient(90deg, transparent, var(--accent) 50%, transparent);
-            opacity: 0.55;
-        }
-
-        .video-poster {
-            background:
-                radial-gradient(circle at 30% 30%, rgba(232,188,58,0.055), transparent 50%),
-                radial-gradient(circle at 70% 70%, rgba(70,90,180,0.035), transparent 50%),
-                linear-gradient(135deg, #0E1424 0%, #050811 100%);
-            position: relative;
-        }
-        .video-poster::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
-            background-size: 40px 40px;
-            background-position: center;
-            mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 70%);
-            -webkit-mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 30%, transparent 70%);
-            opacity: 0.6;
-        }
-        .play-icon-wrapper {
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: var(--accent);
-            color: #0A0E1C;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow:
-                0 12px 32px rgba(232,188,58,0.22),
-                0 0 0 1px rgba(232,188,58,0.18),
-                inset 0 1px 0 rgba(255,255,255,0.18);
-            animation: gentlePulse 5.5s var(--e-smooth) infinite;
-            position: relative;
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.14), transparent 50%);
-        }
-        .play-icon-wrapper::before {
-            content: '';
-            position: absolute;
-            inset: -12px;
-            border-radius: 50%;
-            border: 1px solid rgba(232,188,58,0.16);
-            animation: ripple 3s var(--e-smooth) infinite;
-        }
-        .play-icon-wrapper::after {
-            content: '';
-            position: absolute;
-            inset: -24px;
-            border-radius: 50%;
-            border: 1px solid rgba(232,188,58,0.08);
-            animation: ripple 3s var(--e-smooth) infinite 0.6s;
-        }
-        @keyframes gentlePulse {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 12px 32px rgba(232,188,58,0.22), 0 0 0 1px rgba(232,188,58,0.18), inset 0 1px 0 rgba(255,255,255,0.18);
-            }
-            50% {
-                transform: scale(1.03);
-                box-shadow: 0 16px 40px rgba(232,188,58,0.30), 0 0 0 1px rgba(232,188,58,0.24), inset 0 1px 0 rgba(255,255,255,0.22);
-            }
-        }
-        @keyframes ripple {
-            0% { transform: scale(1); opacity: 0.7; }
-            100% { transform: scale(1.5); opacity: 0; }
-        }
-
-        /* ============================================================
-           Performance Ring — Minimalist Pro
-           ============================================================ */
-        .perf-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            padding: 22px;
-            position: relative;
-            overflow: hidden;
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.012), transparent 22%);
-        }
-        .perf-card::before {
-            content: '';
-            position: absolute;
-            top: 0; right: 0;
-            width: 60%; height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(232,188,58,0.18));
-        }
-        .perf-ring-wrapper {
-            position: relative;
-            width: 156px;
-            height: 156px;
-            margin: 0 auto;
-        }
-        .perf-ring-svg {
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg);
-            filter: drop-shadow(0 0 12px rgba(232,188,58,0.18));
-        }
-        .perf-ring-track {
-            fill: none;
-            stroke: rgba(255,255,255,0.045);
-            stroke-width: 6;
-        }
-        .perf-ring-progress {
-            fill: none;
-            stroke: url(#ringGradient);
-            stroke-width: 6;
-            stroke-linecap: round;
-            transition: stroke-dashoffset 1100ms var(--e-snap);
-        }
-        .perf-value {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        .perf-value-number {
-            font-size: 30px;
-            font-weight: 800;
-            letter-spacing: -0.045em;
-            color: var(--text-strong);
-            line-height: 1;
-            font-feature-settings: "tnum";
-        }
-        .perf-value-label {
-            font-size: 10.5px;
-            font-weight: 500;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 0.11em;
-            margin-top: 6px;
-        }
-
-        .perf-stats {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 22px;
-            padding-top: 22px;
-            border-top: 1px solid var(--border);
-            position: relative;
-        }
-        .perf-stats::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 30%;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(232,188,58,0.18), transparent);
-        }
-        .perf-stat {
-            text-align: center;
-            padding: 4px 0;
-        }
-        .perf-stat-value {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--text-strong);
-            letter-spacing: -0.025em;
-            font-feature-settings: "tnum";
-        }
-        .perf-stat-label {
-            font-size: 10.5px;
-            color: var(--muted);
-            margin-top: 4px;
-            font-weight: 500;
-            letter-spacing: 0.02em;
-        }
-
-        /* ============================================================
-           Section Headers
-           ============================================================ */
-        .section-header {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            margin-bottom: 22px;
-            gap: 16px;
-        }
-        .section-title {
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: -0.035em;
-            color: var(--text-strong);
-            line-height: 1.15;
-        }
-        .section-subtitle {
-            font-size: 13.5px;
-            color: var(--muted);
-            margin-top: 6px;
-            font-weight: 400;
-            line-height: 1.55;
-            letter-spacing: -0.005em;
-        }
-        .section-eyebrow {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 10.5px;
-            font-weight: 600;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 0.13em;
-            margin-bottom: 8px;
-        }
-        .section-eyebrow::before {
-            content: '';
-            width: 14px;
-            height: 1px;
-            background: var(--accent);
-            box-shadow: 0 0 6px rgba(232,188,58,0.4);
-        }
-
-        /* ============================================================
-           Tab Content
-           ============================================================ */
-        .tab-content {
-            display: none;
-            animation: tabFadeIn 280ms var(--e-snap);
-        }
-        .tab-content.active {
-            display: block;
-        }
-        @keyframes tabFadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ============================================================
-           Status Pills
-           ============================================================ */
-        .live-status-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 7px;
-            padding: 7px 12px;
-            border-radius: var(--r-pill);
-            font-size: 11.5px;
-            font-weight: 600;
-            letter-spacing: -0.005em;
-        }
-        .status-offline {
-            background: rgba(255,255,255,0.035);
-            border: 1px solid var(--border);
-            color: var(--muted);
-        }
-        .status-offline .status-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: var(--muted);
-        }
-        .status-waiting {
-            background: var(--warning-soft);
-            border: 1px solid rgba(245,158,11,0.18);
-            color: #FCD34D;
-        }
-        .status-waiting .status-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: var(--warning);
-            animation: gentlePulse 1.8s infinite;
-            box-shadow: 0 0 6px rgba(245,158,11,0.5);
-        }
-        .status-live {
-            background: var(--danger-soft);
-            border: 1px solid var(--danger-border);
-            color: #FCA5A5;
-        }
-        .status-live .status-dot {
-            width: 6px; height: 6px; border-radius: 50%;
-            background: var(--danger);
-            position: relative;
-            box-shadow: 0 0 6px rgba(239,68,68,0.5);
-        }
-        .status-live .status-dot::after {
-            content: '';
-            position: absolute;
-            inset: -3px;
-            border-radius: 50%;
-            background: var(--danger);
-            opacity: 0.4;
-            animation: livePulse 2s infinite;
-        }
-
-        .live-empty-state {
-            text-align: center;
-            padding: 44px 24px;
-        }
-        .live-empty-icon {
-            width: 68px; height: 68px;
-            border-radius: var(--r-lg);
-            background: var(--accent-soft);
-            border: 1px solid var(--border-accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 22px;
-            color: var(--accent);
-            box-shadow: var(--shadow-glow);
-        }
-        .live-video-frame {
-            border: 1px solid var(--border-strong);
-            border-radius: var(--r-lg);
-            background: #000;
-            box-shadow: var(--shadow-xl);
-        }
-
-        /* ============================================================
-           Data Cards
-           ============================================================ */
-        .data-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            padding: 18px;
-            transition: transform var(--d-base) var(--e-smooth),
-                        border-color var(--d-base) var(--e-smooth),
-                        box-shadow var(--d-base) var(--e-smooth);
-            position: relative;
-            overflow: hidden;
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.012), transparent 22%);
-        }
-        .data-card:hover {
-            border-color: var(--border-strong);
-            transform: translateY(-1px);
-            box-shadow: 0 12px 28px rgba(0,0,0,0.24), 0 1px 0 rgba(255,255,255,0.055) inset;
-        }
-        .data-card::after {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(232,188,58,0.26), transparent);
-            opacity: 0;
-            transition: opacity var(--d-base);
-        }
-        .data-card:hover::after {
-            opacity: 1;
-        }
-
-        /* ============================================================
-           Skeleton Loading
-           ============================================================ */
-        .skeleton {
-            background: linear-gradient(90deg,
-                rgba(255,255,255,0.015) 0%,
-                rgba(255,255,255,0.045) 50%,
-                rgba(255,255,255,0.015) 100%);
-            background-size: 200% 100%;
-            animation: shimmer 1.6s var(--e-smooth) infinite;
-            border-radius: var(--r-sm);
-        }
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        .skeleton-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--r-lg);
-            padding: 18px;
-        }
-
-        /* ============================================================
-           Empty State
-           ============================================================ */
-        .empty-state {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 56px 24px;
-            text-align: center;
-        }
-        .empty-icon {
-            width: 52px; height: 52px;
-            border-radius: var(--r-lg);
-            background: rgba(255,255,255,0.025);
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--muted);
-            margin-bottom: 14px;
-        }
-        .empty-title {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--text);
-            margin-bottom: 5px;
-            letter-spacing: -0.015em;
-        }
-        .empty-subtitle {
-            font-size: 12.5px;
-            color: var(--muted);
-            max-width: 300px;
-            line-height: 1.55;
-        }
-
-        /* ============================================================
-           Modal
-           ============================================================ */
-        .modal-overlay {
-            background: rgba(10,14,28,0.82);
-            backdrop-filter: blur(12px) saturate(125%);
-            -webkit-backdrop-filter: blur(12px) saturate(125%);
-        }
-        .modal-box {
-            background: var(--surface);
-            border: 1px solid var(--border-strong);
-            border-radius: var(--r-xl);
-            box-shadow: var(--shadow-2xl);
-            animation: modalIn 240ms var(--e-snap);
-            background-image: linear-gradient(180deg, rgba(255,255,255,0.014), transparent 20%);
-        }
-        @keyframes modalIn {
-            from { opacity: 0; transform: scale(0.96) translateY(6px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-
-        /* ============================================================
-           Scrollbars
-           ============================================================ */
-        ::-webkit-scrollbar { width: 7px; height: 7px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.05);
-            border-radius: 4px;
-            transition: background var(--d-base);
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.10);
-        }
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { scrollbar-width: none; }
-
-        /* ============================================================
-           Animations
-           ============================================================ */
-        .animate-fade-in-up {
-            animation: fadeInUp 380ms var(--e-snap) both;
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .stagger-1 { animation-delay: 50ms; }
-        .stagger-2 { animation-delay: 110ms; }
-        .stagger-3 { animation-delay: 170ms; }
-        .stagger-4 { animation-delay: 230ms; }
-
-        /* ============================================================
-           Ambient Lighting
-           ============================================================ */
-        .ambient-light {
-            position: fixed;
-            pointer-events: none;
-            border-radius: 50%;
-            filter: blur(80px);
-            z-index: 0;
-        }
-        .ambient-light-1 {
-            top: -8rem;
-            right: -8rem;
-            width: 26rem;
-            height: 26rem;
-            background: rgba(232,188,58,0.025);
-        }
-        .ambient-light-2 {
-            bottom: -10rem;
-            left: -10rem;
-            width: 22rem;
-            height: 22rem;
-            background: rgba(70,90,180,0.018);
-        }
-
-        /* ============================================================
-           Focus States — Accessibility
-           ============================================================ */
-        button:focus-visible,
-        input:focus-visible,
-        a:focus-visible {
-            outline: 2px solid var(--accent);
-            outline-offset: 2px;
-        }
-
-        /* ============================================================
-           Selection
-           ============================================================ */
-        ::selection {
-            background: var(--accent);
-            color: #0A0E1C;
-        }
-
-        /* ============================================================
-           Keyboard Shortcut Pills
-           ============================================================ */
-        .kbd {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 22px;
-            height: 20px;
-            padding: 0 6px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 10.5px;
-            font-weight: 500;
-            color: var(--muted);
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: 5px;
-            box-shadow: 0 1px 0 rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,255,0.03) inset;
-        }
-
-        /* ============================================================
-           Tooltip
-           ============================================================ */
-        [data-tooltip] {
-            position: relative;
-        }
-        [data-tooltip]::before {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: calc(100% + 8px);
-            left: 50%;
-            transform: translateX(-50%) translateY(4px);
-            background: var(--surface-3);
-            border: 1px solid var(--border-strong);
-            color: var(--text);
-            font-size: 11.5px;
-            font-weight: 500;
-            padding: 5px 10px;
-            border-radius: var(--r-sm);
-            white-space: nowrap;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity var(--d-base) var(--e-smooth), transform var(--d-base) var(--e-smooth);
-            z-index: 100;
-            box-shadow: var(--shadow-md);
-        }
-        [data-tooltip]:hover::before {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        /* ============================================================
-           Badge
-           ============================================================ */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            padding: 3px 8px;
-            border-radius: var(--r-pill);
-            font-size: 10.5px;
-            font-weight: 600;
-            letter-spacing: 0.01em;
-        }
-        .badge-accent {
-            background: var(--accent-soft);
-            color: var(--accent);
-            border: 1px solid var(--border-accent);
-        }
-        .badge-success {
-            background: var(--success-soft);
-            color: #34D399;
-            border: 1px solid rgba(16,185,129,0.18);
-        }
-        .badge-muted {
-            background: rgba(255,255,255,0.035);
-            color: var(--muted);
-            border: 1px solid var(--border);
-        }
-
-        /* ============================================================
-           Divider
-           ============================================================ */
-        .divider {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--border-strong), transparent);
-            margin: 16px 0;
-        }
-
-        /* ============================================================
-           Reduce motion accessibility
-           ============================================================ */
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-            }
-        }
-    </style>
 </head>
-<body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden">
+<body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
 
-    <!-- Ambient Lighting -->
-    <div class="ambient-light ambient-light-1"></div>
-    <div class="ambient-light ambient-light-2"></div>
-
-    <!-- ================================================================
-         SIDEBAR
-         ================================================================ -->
-    <aside class="sidebar w-full md:w-[268px] flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-dahih-border">
-
-        <!-- Header -->
-        <div class="sidebar-header p-4 md:p-5 flex flex-row md:flex-col justify-between items-center md:items-stretch gap-4">
+    <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
+        
+        <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
             <div class="flex justify-between w-full items-center">
-                <div class="logo">
-                    الدحيح<span class="logo-dot">●</span>
-                </div>
-                <button onclick="DahihApp.logout()" class="md:hidden btn btn-ghost-danger text-xs py-1.5 px-2.5">
-                    خروج
-                </button>
+                <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
+                <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border border-red-500/20">خروج</button>
             </div>
-
-            <!-- Profile card (desktop) -->
-            <div class="hidden md:block profile-card">
-                <div class="flex items-center gap-3 mb-1 relative z-10">
-                    <div class="profile-avatar" id="studentAvatar">د</div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-meta mb-0.5">المرحلة الدراسية</p>
-                        <p id="studentGrade" class="text-dahih-accent font-semibold text-sm truncate" style="letter-spacing:-0.015em;">جاري التحميل...</p>
-                    </div>
-                </div>
-                <div class="profile-divider"></div>
-                <div class="relative z-10">
-                    <p class="text-meta mb-1">مرحباً بك</p>
-                    <p id="studentName" class="text-dahih-text font-semibold text-sm truncate" style="letter-spacing:-0.012em;">...</p>
-                </div>
+            
+            <div class="hidden md:block w-full bg-black/40 border border-white/5 rounded-2xl p-4 mt-2">
+                <p class="text-xs text-gray-400 mb-1">المرحلة الدراسية:</p>
+                <p id="studentGrade" class="text-yellow-500 font-bold text-sm mb-3">جاري التحميل...</p>
+                <div class="h-px w-full bg-white/10 my-2"></div>
+                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">...</span></h2>
             </div>
         </div>
-
-        <!-- Navigation -->
-        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-3 pb-3 md:px-3.5 md:py-4 gap-1 scrollbar-hide flex-shrink-0">
-
-            <div class="hidden md:block text-label px-3 mb-2 mt-1">القائمة الرئيسية</div>
-
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active">
-                <span class="tab-indicator"></span>
-                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                </svg>
-                <span>لوحة المذاكرة</span>
+        
+        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 scrollbar-hide flex-shrink-0">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
+            <button onclick="switchTab('live')" id="btn-live" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-bold text-red-500 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent flex items-center justify-center md:justify-start gap-2">
+                <span class="w-2 h-2 rounded-full bg-red-500 pulse-live"></span>
+                البث المباشر
             </button>
-
-            <button onclick="switchTab('live')" id="btn-live" class="tab-btn tab-live-btn">
-                <span class="tab-indicator"></span>
-                <span class="live-dot"></span>
-                <span>البث المباشر</span>
-            </button>
-
-            <div class="hidden md:block text-label px-3 mb-2 mt-4">المحتوى التعليمي</div>
-
-            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn">
-                <span class="tab-indicator"></span>
-                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                </svg>
-                <span>المحاضرات والحصص</span>
-            </button>
-
-            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn">
-                <span class="tab-indicator"></span>
-                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                </svg>
-                <span>الاختبارات الإلكترونية</span>
-            </button>
-
-            <button onclick="switchTab('points')" id="btn-points" class="tab-btn">
-                <span class="tab-indicator"></span>
-                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-                </svg>
-                <span>أهم نقاط المنهج</span>
-            </button>
-
-            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn">
-                <span class="tab-indicator"></span>
-                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-                <span>الأسئلة المقالية</span>
-            </button>
+            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
+            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
+            <button onclick="switchTab('points')" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
+            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
         </nav>
 
-        <!-- Footer -->
-        <div class="hidden md:block p-3.5 mt-auto border-t border-dahih-border">
-            <button onclick="DahihApp.logout()" class="btn btn-ghost-danger w-full">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                </svg>
+        <div class="hidden md:block p-4 mt-auto">
+            <button onclick="DahihApp.logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3.5 rounded-xl text-sm font-bold transition-all border border-red-500/20 flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
                 تسجيل الخروج
             </button>
-            <div class="text-meta text-center mt-3 opacity-55" style="font-size:10.5px;">منصة الدحيح © 2026</div>
         </div>
     </aside>
 
-    <!-- ================================================================
-         MAIN CONTENT
-         ================================================================ -->
-    <main class="flex-grow h-full overflow-y-auto p-4 md:p-7 relative" id="mainGrid" style="z-index:1;">
+    <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth" id="mainGrid">
+        <div class="fixed top-0 right-0 w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-        <!-- ===== DASHBOARD TAB ===== -->
-        <div id="tab-dashboard" class="tab-content active">
-            <div class="mb-6 animate-fade-in-up">
-                <div class="section-eyebrow">لوحة التحكم</div>
-                <div class="flex items-end justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">لوحة المذاكرة</h1>
-                        <p class="section-subtitle">تابع تقدمك واستمر في رحلتك التعليمية</p>
-                    </div>
-                    <div class="hidden md:flex items-center gap-2 text-meta">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.65" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                        <span id="currentDateTime" class="text-mono">--</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex flex-col lg:flex-row gap-4 md:gap-5">
-                <!-- Player -->
-                <div class="flex-1 player-frame animate-fade-in-up stagger-1">
-                    <div class="player-accent-bar"></div>
-                    <div class="player-header p-3.5 flex items-center justify-between gap-3">
+        <div id="tab-dashboard" class="tab-content active space-y-4 md:space-y-6">
+            <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
+                <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up bg-[#0a0f1c]">
+                    <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
                         <div class="flex items-center gap-3 flex-1 min-w-0">
-                            <div class="w-8 h-8 rounded-button bg-dahih-accent-soft border border-dahih-border-accent flex items-center justify-center flex-shrink-0" style="box-shadow: 0 0 16px rgba(232,188,58,0.08) inset;">
-                                <svg class="w-3.5 h-3.5 text-dahih-accent" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                                <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                             </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="text-meta mb-0.5">يتم تشغيل الآن</div>
-                                <h2 id="playingVideoTitle" class="font-semibold text-sm md:text-base truncate text-dahih-text" style="letter-spacing:-0.018em;">اختر محاضرة للبدء</h2>
-                            </div>
-                        </div>
-                        <div class="hidden md:flex items-center gap-2">
-                            <span class="live-status-pill status-offline">
-                                <span class="status-dot"></span>
-                                جاهز
-                            </span>
+                            <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
                         </div>
                     </div>
 
-                    <div class="p-3 md:p-3.5 bg-black" id="fs-wrapper">
-                        <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-button overflow-hidden group">
-                            <div id="videoPoster" class="video-poster absolute inset-0 flex flex-col items-center justify-center z-10 p-6 text-center">
-                                <div class="play-icon-wrapper mb-6">
-                                    <svg class="w-7 h-7 relative z-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
+                        <div id="videoContainer" class="relative w-full aspect-video bg-black rounded-xl border border-white/5 overflow-hidden group shadow-lg">
+                            <div id="videoPoster" class="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-900 to-black z-10 p-4 text-center">
+                                <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-bounce">
+                                    <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                 </div>
-                                <h3 class="text-xl md:text-2xl font-bold mb-2 tracking-tight" style="letter-spacing:-0.035em;">منصة الدحيح <span class="text-dahih-accent">التعليمية</span></h3>
-                                <p class="text-dahih-muted text-sm max-w-sm leading-relaxed">اختر محاضرتك من قائمة المحاضرات للبدء في المشاهدة</p>
+                                <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
+                                <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل </p>
                             </div>
                             <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full hidden bg-black"></video>
                         </div>
                     </div>
                 </div>
 
-                <!-- Side: Performance + Quick Stats -->
-                <div class="w-full lg:w-[324px] flex flex-col gap-4" id="sideCol">
-
-                    <!-- Performance Ring -->
-                    <div class="perf-card animate-fade-in-up stagger-2">
-                        <div class="flex items-center justify-between mb-5">
-                            <div>
-                                <div class="text-label">مؤشر الأداء</div>
-                                <h2 class="text-base font-bold text-dahih-text mt-1" style="letter-spacing:-0.02em;">التقدم العام</h2>
-                            </div>
-                            <div class="w-8 h-8 rounded-button bg-dahih-accent-soft border border-dahih-border-accent flex items-center justify-center" style="box-shadow: 0 0 14px rgba(232,188,58,0.08) inset;">
-                                <svg class="w-3.5 h-3.5 text-dahih-accent" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                            </div>
-                        </div>
-
-                        <div class="perf-ring-wrapper">
-                            <svg class="perf-ring-svg" viewBox="0 0 156 156">
-                                <defs>
-                                    <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#E8BC3A"/>
-                                        <stop offset="100%" stop-color="#F0C84E"/>
-                                    </linearGradient>
-                                </defs>
-                                <circle class="perf-ring-track" cx="78" cy="78" r="68"/>
-                                <circle id="perfRingProgress" class="perf-ring-progress" cx="78" cy="78" r="68"
-                                        stroke-dasharray="427.26" stroke-dashoffset="427.26"/>
-                            </svg>
-                            <div class="perf-value">
-                                <div id="studentPointsDisplay" class="perf-value-number" dir="ltr">0%</div>
-                                <div class="perf-value-label">الإنجاز</div>
-                            </div>
-                        </div>
-
-                        <div class="perf-stats">
-                            <div class="perf-stat">
-                                <div id="completedLessons" class="perf-stat-value">0</div>
-                                <div class="perf-stat-label">محاضرة</div>
-                            </div>
-                            <div class="perf-stat">
-                                <div id="completedQuizzes" class="perf-stat-value">0</div>
-                                <div class="perf-stat-label">اختبار</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Quick Action -->
-                    <div class="surface-interactive p-4 animate-fade-in-up stagger-3 cursor-pointer" onclick="switchTab('courses')">
-                        <div class="flex items-center gap-4">
-                            <div class="w-11 h-11 rounded-button bg-dahih-accent-soft border border-dahih-border-accent flex items-center justify-center flex-shrink-0" style="box-shadow: 0 0 16px rgba(232,188,58,0.10) inset;">
-                                <svg class="w-4 h-4 text-dahih-accent" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-sm font-semibold text-dahih-text mb-0.5" style="letter-spacing:-0.015em;">تصفح المحاضرات</h3>
-                                <p class="text-meta">ابدأ محاضرة جديدة الآن</p>
-                            </div>
-                            <svg class="w-4 h-4 text-dahih-muted" fill="none" stroke="currentColor" stroke-width="1.75" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
+                    <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up bg-gradient-to-b from-white/5 to-transparent">
+                        <h2 class="text-lg font-bold mb-6 text-white flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                            مؤشر الأداء العام
+                        </h2>
+                        <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
+                            <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-yellow-500 border-l-yellow-500 opacity-50 animate-spin" style="animation-duration: 3s;"></div>
+                            <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ===== LIVE TAB ===== -->
         <div id="tab-live" class="tab-content">
-            <div class="mb-6 animate-fade-in-up">
-                <div class="section-eyebrow">البث المباشر</div>
-                <div class="flex items-end justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">الحصص المباشرة</h1>
-                        <p class="section-subtitle">انضم إلى الحصص المباشرة وتفاعل مع المعلمين والطلاب</p>
-                    </div>
-                    <span id="liveStatusPill" class="live-status-pill status-offline">
-                        <span class="status-dot"></span>
-                        <span id="liveStatusText">غير متصل</span>
-                    </span>
-                </div>
+            <div class="flex items-center gap-3 mb-2">
+                <span class="w-3 h-3 rounded-full bg-red-500 pulse-live"></span>
+                <h1 class="text-2xl md:text-3xl font-bold">غرفة البث المباشر</h1>
             </div>
-
-            <div id="liveContent" class="surface animate-fade-in-up stagger-1">
-                <div class="live-empty-state">
-                    <div class="live-empty-icon">
-                        <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.65" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                        </svg>
+            <p class="text-gray-400 text-sm md:text-base mb-6">يمكنك رؤية البث المباشرمن هنا.</p>
+            
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-red-500 mb-6 bg-[#0a0f1c] shadow-2xl">
+                
+                <div id="joinStreamControls" class="text-center py-10 md:py-16 animate-fade-in-up">
+                    <div class="w-20 h-20 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
+                        <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                     </div>
-                    <h3 class="text-lg font-bold text-dahih-text mb-2" style="letter-spacing:-0.025em;">لا توجد حصص مباشرة حالياً</h3>
-                    <p class="empty-subtitle">ستظهر الحصص المباشرة هنا عند بدء أي حصة من قبل المعلمين</p>
+                    <h3 class="text-2xl font-bold text-white mb-3">هل يوجد بث مباشر الآن؟</h3>
+                    <p class="text-gray-400 mb-8 max-w-md mx-auto">يرجي كتابة كود البث المباشر للدخول.</p>
+                    
+                    <div class="flex flex-col md:flex-row justify-center gap-3 max-w-md mx-auto">
+                        <input type="text" id="streamIdInput" placeholder="أدخل كود البث (مثال: abc-123-xyz)" class="flex-1 bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white focus:border-red-500 transition-colors text-center text-lg outline-none" dir="ltr">
+                        <button id="joinStreamBtn" class="bg-red-500 hover:bg-red-600 text-white font-bold px-8 py-4 rounded-xl transition-all shadow-[0_0_15px_rgba(239,68,68,0.4)] whitespace-nowrap">
+                            دخول للبث
+                        </button>
+                    </div>
+                </div>
+
+                <div id="liveStreamWrapper" class="hidden animate-fade-in-up">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4 bg-black/40 p-4 rounded-xl border border-white/5">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-red-500/20 text-red-400 border border-red-500/50 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-red-500 pulse-live"></span>
+                                أنت متصل بالبث الآن
+                            </div>
+                        </div>
+                        <button id="leaveStreamBtn" class="w-full md:w-auto bg-white/5 hover:bg-white/10 border border-white/10 px-5 py-2 rounded-lg text-sm font-bold transition-colors text-gray-300">
+                            مغادرة غرفة البث
+                        </button>
+                    </div>
+                    
+                    <div id="liveVideoContainer" class="w-full aspect-video bg-black rounded-xl border border-white/10 overflow-hidden relative shadow-[0_0_30px_rgba(0,0,0,0.8)] flex items-center justify-center">
+                        <div id="waitingText" class="text-center p-6">
+                            <svg class="animate-spin h-10 w-10 text-red-500 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="text-gray-300 font-bold text-lg">أنت داخل الغرفة بنجاح</p>
+                            <p class="text-gray-500 text-sm mt-2">يرجي الانتظار لحين بدء البث...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- ===== COURSES TAB ===== -->
+        
         <div id="tab-courses" class="tab-content">
-            <div class="mb-6 animate-fade-in-up">
-                <div class="section-eyebrow">المكتبة التعليمية</div>
-                <div class="flex items-end justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">المحاضرات والحصص</h1>
-                        <p class="section-subtitle">تصفح جميع المحاضرات المتاحة لمرحلتك الدراسية</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="coursesContent" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in-up stagger-1">
-                <!-- Skeleton loaders -->
-                <div class="skeleton-card">
-                    <div class="skeleton h-32 mb-3"></div>
-                    <div class="skeleton h-4 w-3/4 mb-2"></div>
-                    <div class="skeleton h-3 w-1/2"></div>
-                </div>
-                <div class="skeleton-card">
-                    <div class="skeleton h-32 mb-3"></div>
-                    <div class="skeleton h-4 w-3/4 mb-2"></div>
-                    <div class="skeleton h-3 w-1/2"></div>
-                </div>
-                <div class="skeleton-card">
-                    <div class="skeleton h-32 mb-3"></div>
-                    <div class="skeleton h-4 w-3/4 mb-2"></div>
-                    <div class="skeleton h-3 w-1/2"></div>
-                </div>
-            </div>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
+            <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
+            <div id="studentCoursesContainer" class="flex flex-col gap-8"></div>
         </div>
 
-        <!-- ===== QUIZZES TAB ===== -->
         <div id="tab-quizzes" class="tab-content">
-            <div class="mb-6 animate-fade-in-up">
-                <div class="section-eyebrow">التقييم</div>
-                <div class="flex items-end justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">الاختبارات الإلكترونية</h1>
-                        <p class="section-subtitle">قيّم مستواك من خلال الاختبارات الإلكترونية</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="quizzesContent" class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in-up stagger-1">
-                <div class="empty-state col-span-full">
-                    <div class="empty-icon">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.65" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                        </svg>
-                    </div>
-                    <div class="empty-title">لا توجد اختبارات متاحة</div>
-                    <div class="empty-subtitle">ستظهر الاختبارات الإلكترونية هنا عند إضافتها</div>
-                </div>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">الاختبارات الإلكترونية</h1>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
+                <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
             </div>
         </div>
 
-        <!-- ===== POINTS TAB ===== -->
         <div id="tab-points" class="tab-content">
-            <div class="mb-6 animate-fade-in-up">
-                <div class="section-eyebrow">ملخصات المنهج</div>
-                <div class="flex items-end justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">أهم نقاط المنهج</h1>
-                        <p class="section-subtitle">ملخصات وأهم النقاط من المنهج الدراسي</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="pointsContent" class="space-y-4 animate-fade-in-up stagger-1">
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.65" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
-                        </svg>
-                    </div>
-                    <div class="empty-title">لا توجد نقاط متاحة</div>
-                    <div class="empty-subtitle">ستظهر أهم نقاط المنهج هنا قريباً</div>
-                </div>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
+                <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
         </div>
 
-        <!-- ===== QUESTIONS TAB ===== -->
         <div id="tab-questions" class="tab-content">
-            <div class="mb-6 animate-fade-in-up">
-                <div class="section-eyebrow">التدريب</div>
-                <div class="flex items-end justify-between flex-wrap gap-3">
-                    <div>
-                        <h1 class="section-title">الأسئلة المقالية</h1>
-                        <p class="section-subtitle">أسئلة مقالية للتدريب والمراجعة</p>
-                    </div>
-                </div>
-            </div>
-
-            <div id="questionsContent" class="space-y-4 animate-fade-in-up stagger-1">
-                <div class="empty-state">
-                    <div class="empty-icon">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.65" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                    <div class="empty-title">لا توجد أسئلة متاحة</div>
-                    <div class="empty-subtitle">ستظهر الأسئلة المقالية هنا قريباً</div>
-                </div>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم الأسئلة المقالية</h1>
+            <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
+                <div id="questionsContainer" class="flex flex-col gap-4"></div>
             </div>
         </div>
-
     </main>
 
-    <!-- Application Scripts -->
-    <script src="js/main.js"></script>
-    <script src="js/player.js"></script>
+    <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-xl" role="dialog" aria-modal="true">
+        <div class="bg-[#0a0f1c] border border-white/10 w-full max-w-3xl rounded-[2rem] p-5 md:p-8 max-h-[95vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)]" id="quizModalBox">
+            <div id="quizModalContent"></div>
+        </div>
+    </div>
 
-    <script>
-        // ================================================================
-        // Tab Switching
-        // ================================================================
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-
-            const tabContent = document.getElementById('tab-' + tabName);
-            const tabBtn = document.getElementById('btn-' + tabName);
-
-            if (tabContent) tabContent.classList.add('active');
-            if (tabBtn) tabBtn.classList.add('active');
-
-            // Re-trigger animations for elements inside
-            tabContent?.querySelectorAll('.animate-fade-in-up').forEach(el => {
-                el.style.animation = 'none';
-                el.offsetHeight; // force reflow
-                el.style.animation = '';
-            });
-        }
-
-        // ================================================================
-        // Live Date/Time
-        // ================================================================
-        function updateDateTime() {
-            const el = document.getElementById('currentDateTime');
-            if (!el) return;
-            const now = new Date();
-            const opts = { hour: '2-digit', minute: '2-digit', hour12: false };
-            el.textContent = now.toLocaleTimeString('ar-EG', opts);
-        }
-        updateDateTime();
-        setInterval(updateDateTime, 30000);
-
-        // ================================================================
-        // Performance Ring Animation
-        // ================================================================
-        function setPerformance(percent) {
-            const ring = document.getElementById('perfRingProgress');
-            const display = document.getElementById('studentPointsDisplay');
-            if (!ring || !display) return;
-            const circumference = 2 * Math.PI * 68;
-            const offset = circumference - (percent / 100) * circumference;
-            ring.style.strokeDashoffset = offset;
-            display.textContent = percent + '%';
-        }
-
-        // Demo initial render
-        setTimeout(() => setPerformance(0), 150);
-
-        // ================================================================
-        // Stub DahihApp (replace with real logic)
-        // ================================================================
-        window.DahihApp = window.DahihApp || {
-            logout: function() {
-                if (confirm('هل تريد تسجيل الخروج؟')) {
-                    console.log('Logout');
-                }
-            }
-        };
-    </script>
+    <!-- مكتبات خارجية -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+    
+    <!-- ربط ملفات الجافاسكريبت بالترتيب الصحيح -->
+    <script src="js/utils.js" defer></script>
+    <script src="js/player.js" defer></script>
+    <script src="js/live.js" defer></script>
+    <script src="js/main.js" defer></script>
 </body>
 </html>
