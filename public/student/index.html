@@ -180,7 +180,7 @@
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-brand-accent selection:text-black">
 
-    <!-- 20) Controlled Elegance Background (Removed excessive blur/mix-blend) -->
+    <!-- 20) Controlled Elegance Background -->
     <div class="fixed inset-0 pointer-events-none" style="z-index: var(--z-bg); background: radial-gradient(circle at 50% 0%, rgba(234, 179, 8, 0.03) 0%, transparent 70%);"></div>
 
     <!-- 9) Improved Sidebar Architecture -->
@@ -195,7 +195,7 @@
                 <p class="text-xs text-text-secondary flex items-center gap-2 font-medium">
                     المرحلة الدراسية
                 </p>
-                <p id="studentGrade" class="text-brand-accent font-semibold text-sm">الصف الثالث الثانوي</p>
+                <p id="studentGrade" class="text-brand-accent font-semibold text-sm">جاري التحميل...</p>
                 <div class="h-px w-full bg-white/5 my-1"></div>
                 <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-brand-tertiary flex items-center justify-center text-white border border-white/10">
@@ -203,7 +203,7 @@
                     </div>
                     <div>
                         <span class="block text-[10px] text-text-secondary">مرحباً بك،</span>
-                        <span id="studentName" class="text-white font-medium block text-sm truncate">أحمد محمود</span>
+                        <span id="studentName" class="text-white font-medium block text-sm truncate">جاري التحميل...</span>
                     </div>
                 </div>
             </div>
@@ -269,11 +269,11 @@
                         <div class="relative w-40 h-40 mx-auto rounded-full flex items-center justify-center border-[6px] border-brand-tertiary">
                             <!-- Progress Ring Minimal -->
                             <svg class="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="46" fill="transparent" stroke="var(--accent)" stroke-width="8" stroke-dasharray="289" stroke-dashoffset="72" stroke-linecap="round"></circle>
+                                <circle cx="50" cy="50" r="46" fill="transparent" stroke="var(--accent)" stroke-width="8" stroke-dasharray="289" stroke-dashoffset="289" stroke-linecap="round"></circle>
                             </svg>
-                            <div id="studentPointsDisplay" class="text-4xl font-bold text-white tracking-tighter" dir="ltr">75%</div>
+                            <div id="studentPointsDisplay" class="text-4xl font-bold text-white tracking-tighter" dir="ltr">0%</div>
                         </div>
-                        <p class="text-text-muted text-xs mt-6">معدل إنجازك لهذا الأسبوع ممتاز.</p>
+                        <p class="text-text-muted text-xs mt-6">معدل إنجازك لهذا الأسبوع.</p>
                     </div>
                 </div>
             </div>
