@@ -1,0 +1,551 @@
+/* ═════════════════════════════════════════════════════════════════════════
+   🔥 المنصة | SUPERCHARGED PRODUCTION PLAYER UI (ULTRA-PREMIUM EDITION) 🔥
+   ═════════════════════════════════════════════════════════════════════════ */
+
+:root {
+    /* 🎨 Master Color System */
+    --p-accent: #ff0055;
+    --p-accent-hover: #ff2a70;
+    --p-accent-active: #d40047;
+    --p-accent-glow: rgba(255, 0, 85, 0.45);
+    --p-accent-alpha: rgba(255, 0, 85, 0.15);
+    
+    --p-bg-base: #000000;
+    --p-bg-overlay: rgba(0, 0, 0, 0.65);
+    --p-bg-glass: rgba(15, 15, 20, 0.4);
+    
+    --p-text-main: #ffffff;
+    --p-text-dim: #b3b3b3;
+    --p-text-dark: #121212;
+    
+    --p-border-glass: rgba(255, 255, 255, 0.08);
+    --p-border-highlight: rgba(255, 255, 255, 0.15);
+    
+    /* 📐 Geometry & Scale */
+    --p-radius-xs: 6px;
+    --p-radius-sm: 12px;
+    --p-radius-md: 18px;
+    --p-radius-pill: 9999px;
+    --p-ctrl-height: 48px;
+    
+    /* ⚡ Physics & Easings (Apple/Fluid feel) */
+    --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.15);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out-circ: cubic-bezier(0.85, 0, 0.15, 1);
+    --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
+    
+    --t-fast: 0.15s var(--ease-out-expo);
+    --t-base: 0.3s var(--ease-out-expo);
+    --t-slow: 0.5s var(--ease-fluid);
+    --t-bounce: 0.4s var(--ease-spring);
+    
+    /* 🛡️ Shadows & Depth */
+    --shadow-ambient: 0 20px 50px rgba(0,0,0,0.7);
+    --shadow-glass: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 24px var(--p-accent-glow);
+    --shadow-text: 0 2px 4px rgba(0,0,0,0.5);
+
+    /* 🏗️ Architecture Layers */
+    --z-media: 1;
+    --z-poster: 10;
+    --z-buffering: 15;
+    --z-gestures: 20;
+    --z-particles: 25;
+    --z-osd: 30; /* On Screen Display (Center Play, Skips) */
+    --z-controls: 40;
+    --z-tooltips: 50;
+}
+
+/* ─────────────────────────────────────────────────────────
+   1. CORE CONTAINER (Hardware Accelerated & Contained)
+   ───────────────────────────────────────────────────────── */
+.video-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--p-bg-base);
+    border-radius: var(--p-radius-sm);
+    overflow: hidden;
+    box-shadow: var(--shadow-ambient);
+    border: 1px solid var(--p-border-glass);
+    
+    /* ⚡ Ultimate Performance Optimization */
+    contain: layout style paint;
+    container-type: inline-size;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    
+    /* Touch & Selection */
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Hide cursor when idle */
+.video-container.is-idle {
+    cursor: none;
+}
+
+/* ─────────────────────────────────────────────────────────
+   2. MEDIA ELEMENT
+   ───────────────────────────────────────────────────────── */
+#dahihPlayer {
+    width: 100%;
+    height: 100%;
+    background: var(--p-bg-base);
+    object-fit: contain; /* Default */
+    transition: filter var(--t-slow), object-fit var(--t-base);
+    will-change: filter, transform;
+    display: block !important;
+}
+
+#dahihPlayer.fit-cover { object-fit: cover; }
+#dahihPlayer.is-paused { filter: brightness(0.65) contrast(1.05) saturate(1.1); }
+#dahihPlayer.is-blurred { filter: blur(10px) brightness(0.4); }
+
+video::-webkit-media-controls { display: none !important; }
+
+/* ─────────────────────────────────────────────────────────
+   3. POSTER & BUFFERING ENGINE (Netflix Style)
+   ───────────────────────────────────────────────────────── */
+.video-poster {
+    position: absolute; inset: 0; z-index: var(--z-poster);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background-size: cover; background-position: center;
+    opacity: 1; visibility: visible;
+    transition: opacity var(--t-slow), visibility var(--t-slow), transform var(--t-slow);
+    will-change: opacity, transform, visibility;
+}
+
+.video-poster::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,0,0,0.6) 0%, rgba(2,4,10,0.95) 100%);
+    z-index: 1;
+}
+
+@supports (backdrop-filter: blur(12px)) {
+    .video-poster::before {
+        background: linear-gradient(135deg, rgba(0,0,0,0.2) 0%, rgba(2,4,10,0.8) 100%);
+        backdrop-filter: blur(12px) saturate(1.2);
+        -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    }
+}
+
+.video-poster.is-hidden, .video-poster.hidden {
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transform: scale(1.02);
+}
+
+.video-poster > * { position: relative; z-index: 2; }
+
+/* Cinematic Loader */
+.buffering-spinner {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px; height: 64px;
+    z-index: var(--z-buffering);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity var(--t-base);
+}
+
+.is-buffering .buffering-spinner {
+    opacity: 1; visibility: visible;
+}
+
+.buffering-spinner::after {
+    content: ""; display: block; width: 100%; height: 100%;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--p-accent);
+    border-right-color: rgba(255,0,85,0.3);
+    animation: superSpin 0.8s cubic-bezier(0.6, 0.2, 0.4, 0.8) infinite;
+    filter: drop-shadow(0 0 10px var(--p-accent-glow));
+}
+
+@keyframes superSpin { 
+    0% { transform: rotate(0deg) scale(0.9); } 
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(0.9); } 
+}
+
+/* ─────────────────────────────────────────────────────────
+   4. GESTURE ZONES & SKIP INDICATORS (YouTube Double Tap)
+   ───────────────────────────────────────────────────────── */
+.tap-zone {
+    position: absolute; top: 0; height: calc(100% - 90px); width: 25%;
+    z-index: var(--z-gestures); cursor: pointer;
+}
+.tap-zone.left { left: 0; }
+.tap-zone.right { right: 0; }
+
+/* Invisible visual feedback layer */
+.tap-zone::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 60%);
+    opacity: 0; transform: scale(0.5);
+    transition: opacity var(--t-fast), transform var(--t-fast);
+    border-radius: 50%; pointer-events: none;
+}
+.tap-zone:active::after { opacity: 1; transform: scale(1.5); }
+
+.skip-indicator {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; z-index: var(--z-osd);
+    color: var(--p-text-main); font-weight: 800; font-size: 1.1rem; text-shadow: var(--shadow-text);
+    background: var(--p-bg-glass); padding: 16px 24px; border-radius: var(--p-radius-pill);
+    border: 1px solid var(--p-border-glass);
+    opacity: 0; pointer-events: none;
+    will-change: transform, opacity;
+}
+
+@supports (backdrop-filter: blur(8px)) {
+    .skip-indicator { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+}
+
+.skip-indicator.left { left: 10%; }
+.skip-indicator.right { right: 10%; }
+
+.skip-indicator.is-active, .skip-indicator.show {
+    animation: skipRipple 0.6s var(--ease-out-expo) forwards;
+}
+
+@keyframes skipRipple { 
+    0% { opacity: 0; transform: translateY(-50%) scale(0.8) rotateX(-20deg); } 
+    20% { opacity: 1; transform: translateY(-50%) scale(1.1) rotateX(0deg); } 
+    80% { opacity: 1; transform: translateY(-50%) scale(1); } 
+    100% { opacity: 0; transform: translateY(-50%) scale(0.9) translateX(calc(var(--skip-dir, 0) * 20px)); } 
+}
+.skip-indicator.left { --skip-dir: -1; }
+.skip-indicator.right { --skip-dir: 1; }
+
+/* ─────────────────────────────────────────────────────────
+   5. CENTER PLAY BUTTON (Apple TV / Cinematic)
+   ───────────────────────────────────────────────────────── */
+.center-play {
+    position: absolute; inset: 0; z-index: var(--z-osd);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transform: scale(1.4) translateY(10px);
+    pointer-events: none; 
+    transition: opacity var(--t-base), transform 0.5s var(--ease-spring);
+    will-change: opacity, transform;
+}
+
+.center-play.is-visible { 
+    opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; 
+}
+
+.center-play > div {
+    width: 84px; height: 84px; border-radius: 50%;
+    background: rgba(255, 0, 85, 0.9);
+    color: var(--p-text-main);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 0 rgba(255, 0, 85, 0.5), var(--shadow-ambient);
+    border: 2px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+    transition: transform var(--t-fast), background var(--t-fast), box-shadow 0.4s ease;
+    backdrop-filter: blur(4px);
+}
+
+.center-play > div svg { width: 36px; height: 36px; fill: currentColor; margin-left: 4px; }
+.center-play.pause > div svg { margin-left: 0; } /* Center pause icon perfectly */
+
+.center-play > div:hover {
+    transform: scale(1.15);
+    background: var(--p-accent);
+    box-shadow: 0 0 0 15px rgba(255, 0, 85, 0.2), 0 0 40px var(--p-accent-glow);
+    border-color: rgba(255,255,255,0.4);
+}
+
+.center-play > div:active { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(255,0,85,0); }
+
+/* ─────────────────────────────────────────────────────────
+   6. CONTROLS DOCK (Bottom Bar Overlay)
+   ───────────────────────────────────────────────────────── */
+.controls {
+    position: absolute; bottom: 0; left: 0; right: 0; z-index: var(--z-controls);
+    padding: 60px 24px 20px;
+    background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.6) 40%, transparent 100%);
+    opacity: 0; visibility: hidden;
+    transform: translateY(20px) translateZ(0);
+    transition: opacity var(--t-base), transform var(--t-base), visibility var(--t-base);
+    pointer-events: none;
+    will-change: opacity, transform;
+    display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Intelligent Reveal Mechanics */
+.video-container.is-active .controls,
+.video-container:not(.is-idle):hover .controls,
+.controls:focus-within { 
+    opacity: 1; visibility: visible; transform: translateY(0) translateZ(0); pointer-events: auto; 
+}
+
+/* ─────────────────────────────────────────────────────────
+   7. SCRUBBER & TIMELINE (High Precision)
+   ───────────────────────────────────────────────────────── */
+.progress-wrapper {
+    position: relative; width: 100%; height: 28px;
+    display: flex; align-items: center; cursor: pointer;
+    touch-action: none; z-index: 2;
+}
+
+.progress {
+    width: 100%; height: 6px; 
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--p-radius-pill); 
+    position: relative; overflow: visible;
+    transition: height var(--t-fast), transform var(--t-fast);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.progress-wrapper:hover .progress,
+.progress-wrapper:active .progress { 
+    height: 10px; transform: scaleY(1.1);
+}
+
+/* Buffered Chunks */
+.progress-loaded {
+    position: absolute; top: 0; left: 0; height: 100%;
+    background: rgba(255, 255, 255, 0.25); 
+    border-radius: inherit; width: 0;
+    transition: width 0.2s linear;
+    pointer-events: none;
+}
+
+/* Active Fill */
+.progress-fill {
+    position: absolute; top: 0; left: 0; height: 100%;
+    background: linear-gradient(90deg, var(--p-accent), #ff4d88);
+    border-radius: inherit; width: 0; 
+    transition: width 0.1s linear;
+    box-shadow: 0 0 16px var(--p-accent-glow);
+    pointer-events: none;
+    will-change: width;
+}
+
+/* The Draggable Handle (Scrubber Knob) */
+.progress-fill::after {
+    content: ""; position: absolute; right: -10px; top: 50%;
+    transform: translateY(-50%) scale(0);
+    width: 20px; height: 20px; border-radius: 50%; 
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 12px var(--p-accent-glow);
+    transition: transform var(--t-bounce), background var(--t-fast);
+    pointer-events: none;
+}
+
+.progress-wrapper:hover .progress-fill::after,
+.progress-wrapper:active .progress-fill::after,
+.progress-fill:focus-within::after { 
+    transform: translateY(-50%) scale(1); 
+}
+.progress-wrapper:active .progress-fill::after {
+    transform: translateY(-50%) scale(1.3);
+    background: var(--p-accent);
+}
+
+/* 🎯 Thumbnail Preview Ghost/Tooltip (CSS Architecture ready for JS insertion) */
+.progress-hover-tooltip {
+    position: absolute; bottom: 100%; left: 0;
+    transform: translateX(-50%) translateY(-15px) scale(0.8);
+    background: var(--p-bg-base); border: 2px solid var(--p-border-glass);
+    border-radius: var(--p-radius-xs); padding: 4px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity var(--t-fast), transform var(--t-bounce), visibility var(--t-fast);
+    z-index: var(--z-tooltips);
+    box-shadow: var(--shadow-ambient);
+}
+.progress-wrapper:hover .progress-hover-tooltip {
+    opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-10px) scale(1);
+}
+.progress-hover-tooltip span {
+    font-size: 0.85rem; font-weight: 700; color: var(--p-text-main);
+    font-variant-numeric: tabular-nums; text-shadow: var(--shadow-text);
+}
+
+/* ─────────────────────────────────────────────────────────
+   8. BOTTOM ACTION BAR (Buttons, Time, Volume)
+   ───────────────────────────────────────────────────────── */
+.controls-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; z-index: 2;
+}
+
+.controls-bar .group { 
+    display: flex; align-items: center; gap: 16px; 
+}
+
+/* Time Display */
+.time-display {
+    color: var(--p-text-main); font-size: 0.95rem; font-weight: 600;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
+    text-shadow: var(--shadow-text);
+    display: flex; align-items: center; gap: 4px;
+    user-select: none;
+}
+.time-display .separator { color: var(--p-text-dim); }
+.time-display .duration { color: var(--p-text-dim); }
+
+/* Premium Action Buttons */
+.icon-btn {
+    width: var(--p-ctrl-height); height: var(--p-ctrl-height);
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: none;
+    color: var(--p-text-main); cursor: pointer; 
+    border-radius: var(--p-radius-sm);
+    transition: all var(--t-fast);
+    outline: none; position: relative;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.icon-btn svg {
+    width: 24px; height: 24px; fill: currentColor;
+    transition: transform var(--t-bounce), fill var(--t-fast);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+
+/* Hover & Focus States */
+.icon-btn::before {
+    content: ""; position: absolute; inset: 0;
+    background: var(--p-border-highlight); border-radius: inherit;
+    opacity: 0; transform: scale(0.8);
+    transition: all var(--t-fast); z-index: -1;
+}
+
+.icon-btn:hover::before { opacity: 1; transform: scale(1); }
+.icon-btn:hover svg { transform: scale(1.15); color: var(--p-accent); }
+.icon-btn:active svg { transform: scale(0.9); }
+
+.icon-btn:focus-visible::before {
+    opacity: 1; transform: scale(1);
+    box-shadow: 0 0 0 2px var(--p-bg-base), 0 0 0 4px var(--p-accent);
+}
+
+/* ─────────────────────────────────────────────────────────
+   9. VOLUME HUD & DYNAMIC SLIDER
+   ───────────────────────────────────────────────────────── */
+.volume-container { 
+    display: flex; align-items: center; 
+    background: transparent; border-radius: var(--p-radius-pill);
+    transition: background var(--t-fast), padding var(--t-fast);
+}
+
+.volume-container:hover {
+    background: var(--p-bg-glass);
+    padding-right: 12px;
+    box-shadow: inset 0 0 0 1px var(--p-border-glass);
+}
+
+.volume-slider-wrapper {
+    width: 0; opacity: 0; overflow: hidden;
+    transition: width var(--t-bounce), opacity var(--t-fast);
+    transform-origin: left center;
+    display: flex; align-items: center; height: var(--p-ctrl-height);
+}
+
+.volume-container:hover .volume-slider-wrapper,
+.volume-slider-wrapper:focus-within {
+    width: 90px; opacity: 1;
+}
+
+/* Custom Input Range for Volume */
+.volume-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; background: rgba(255,255,255,0.2);
+    border-radius: var(--p-radius-pill); cursor: pointer;
+    outline: none; position: relative;
+}
+
+.volume-slider::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; }
+.volume-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    height: 14px; width: 14px; border-radius: 50%;
+    background: var(--p-text-main); margin-top: -5px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    transition: transform var(--t-fast), background var(--t-fast);
+}
+.volume-slider:hover::-webkit-slider-thumb { transform: scale(1.3); background: var(--p-accent); }
+.volume-slider:active::-webkit-slider-thumb { transform: scale(1.1); }
+
+/* ─────────────────────────────────────────────────────────
+   10. ULTIMATE FULLSCREEN ENGINE (Immersive 100dvh)
+   ───────────────────────────────────────────────────────── */
+#fs-wrapper { transition: background var(--t-slow); width: 100%; height: 100%; }
+
+/* Target modern Fullscreen API */
+#fs-wrapper:fullscreen,
+#fs-wrapper:-webkit-full-screen {
+    background: var(--p-bg-base); width: 100vw; height: 100dvh;
+    padding: 0 !important; margin: 0 !important;
+    display: flex; align-items: center; justify-content: center;
+}
+
+#fs-wrapper:fullscreen .video-container,
+#fs-wrapper:-webkit-full-screen .video-container {
+    width: 100vw; height: 100dvh; border-radius: 0; border: none; 
+    box-shadow: none; max-width: none; max-height: none;
+}
+
+/* Deep immersive mode logic */
+#fs-wrapper:fullscreen .controls {
+    padding-bottom: env(safe-area-inset-bottom, 30px); /* iPhone notch safety */
+    padding-left: env(safe-area-inset-left, 30px);
+    padding-right: env(safe-area-inset-right, 30px);
+}
+
+#fs-wrapper:fullscreen .icon-btn.fullscreen-btn svg {
+    /* Auto swap to exit-fullscreen icon visually via transform trick if needed, or JS handles it */
+    transform: scale(0.9) rotate(180deg);
+}
+
+/* ─────────────────────────────────────────────────────────
+   11. RESPONSIVE MUTATIONS (Container Queries & Media)
+   ───────────────────────────────────────────────────────── */
+
+/* Use Container Queries for element-aware resizing */
+@container (max-width: 600px) {
+    .controls { padding: 40px 16px 16px; }
+    .icon-btn { width: 40px; height: 40px; }
+    .controls-bar .group { gap: 8px; }
+    .time-display { font-size: 0.85rem; }
+    .volume-container { display: none; } /* Hardware volume preferred on mobile */
+    .center-play > div { width: 64px; height: 64px; }
+    .center-play > div svg { width: 28px; height: 28px; }
+}
+
+@container (max-width: 400px) {
+    .time-display .duration { display: none; } /* Hide total time on tiny screens */
+    .time-display .separator { display: none; }
+}
+
+/* Fallback Media Queries */
+@media (max-width: 768px) {
+    .skip-indicator { padding: 12px 20px; font-size: 1rem; }
+    .progress-wrapper { height: 32px; } /* Bigger touch target */
+    .progress { height: 8px; }
+    .progress-fill::after { width: 16px; height: 16px; transform: translateY(-50%) scale(1); } /* Always show knob on mobile */
+}
+
+/* ─────────────────────────────────────────────────────────
+   12. ACCESSIBILITY & REDUCED MOTION
+   ───────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after { 
+        animation-duration: 0.01ms !important; 
+        animation-iteration-count: 1 !important; 
+        transition-duration: 0.01ms !important; 
+        scroll-behavior: auto !important;
+    }
+    .progress-fill::after, .icon-btn svg, .center-play > div { transition: none !important; }
+}
+
+.visually-hidden {
+    position: absolute; width: 1px; height: 1px; padding: 0;
+    margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0);
+    white-space: nowrap; border: 0;
+}
