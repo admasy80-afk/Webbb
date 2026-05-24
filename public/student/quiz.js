@@ -98,9 +98,9 @@
     const escapeHTML = (str) => String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
 
     const injectStyles = () => {
-        if (document.getElementById('qe-v8-styles')) return;
+        if (document.getElementById('qe-v9-styles')) return;
         const style = document.createElement('style');
-        style.id = 'qe-v8-styles';
+        style.id = 'qe-v9-styles';
         style.innerHTML = `
             :root {
                 --qe-primary: #facc15; 
@@ -132,7 +132,6 @@
             }
             #quizModal:not(.hidden) { opacity: 1; transform: scale(1); }
 
-            /* --- Desktop Base Styles --- */
             .qe-top-bar {
                 background: rgba(5, 5, 5, 0.92); 
                 backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); 
@@ -153,7 +152,6 @@
                 display: flex; align-items: center; gap: 0.5rem;
             }
 
-            /* Pagination (Desktop) */
             .qe-pagination-scroll {
                 width: 100%; overflow-x: auto; scroll-behavior: smooth;
                 padding: 0 1.5rem 1rem 1.5rem; box-sizing: border-box; scrollbar-width: none;
@@ -179,7 +177,6 @@
             
             .qe-mobile-progress { display: none; }
 
-            /* Content & Virtual DOM (Desktop) */
             #quizModalContent {
                 flex: 1; overflow-y: auto; overflow-x: hidden; scroll-behavior: smooth;
                 padding: 2.5rem 1.5rem calc(140px + env(safe-area-inset-bottom)); 
@@ -225,7 +222,6 @@
             .qe-option.selected .qe-option-letter { background: var(--qe-primary); color: #000; border-color: var(--qe-primary); }
             .qe-opt-text { font-size: 1.2rem; font-weight: 600; color: var(--qe-text); line-height: 1.6; flex: 1; text-align: right; } 
 
-            /* Bottom Bar (Desktop) */
             .qe-bottom-bar {
                 position: fixed; bottom: 0; left: 0; width: 100%;
                 background: rgba(5,5,5,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -250,40 +246,81 @@
             #btnSubmitQuiz { min-width: 160px; background: var(--qe-success); color: white; }
             #btnSubmitQuiz:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(34,197,94,0.3); }
 
+            /* --- Super Animated Submit Overlay & Result Card --- */
             .qe-submitting-overlay { 
-                position: fixed; inset: 0; background: rgba(5,5,5,0.95); z-index: 99999999; 
+                position: fixed; inset: 0; background: rgba(5,5,5,0.96); z-index: 99999999; 
                 display: none; flex-direction: column; align-items: center; justify-content: center; 
-                opacity: 0; transition: opacity 0.3s ease; backdrop-filter: blur(10px);
+                opacity: 0; transition: opacity 0.4s ease; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             }
             .qe-submitting-overlay.show { display: flex; opacity: 1; }
+            
+            .qe-spinner-container { display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s ease, transform 0.3s ease; }
+            .qe-spinner-container.hide { opacity: 0; transform: scale(0.9); pointer-events: none; position: absolute; }
+            
             .qe-spinner-core { 
-                width: 50px; height: 50px; border: 4px solid rgba(250,204,21,0.1); 
+                width: 60px; height: 60px; border: 4px solid rgba(250,204,21,0.1); 
                 border-top-color: var(--qe-primary); border-radius: 50%; 
-                animation: qeSpin 0.8s linear infinite; margin-bottom: 2rem; 
+                animation: qeSpin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite; margin-bottom: 2rem; 
+                box-shadow: 0 0 30px rgba(250,204,21,0.2);
             }
             @keyframes qeSpin { 100% { transform: rotate(360deg); } }
 
-            /* --- EXTREME MOBILE OPTIMIZATION --- */
+            .qe-result-card {
+                background: rgba(20, 20, 20, 0.85);
+                border: 1px solid rgba(255,255,255,0.08);
+                padding: 3rem 2rem;
+                border-radius: 28px;
+                text-align: center;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 2px 0 rgba(255,255,255,0.05);
+                opacity: 0;
+                transform: scale(0.8) translateY(40px);
+                animation: qeSpringUp 0.65s cubic-bezier(0.2, 0.8, 0.2, 1.15) forwards;
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .qe-result-card::before {
+                content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+                background: linear-gradient(to right, transparent, rgba(255,255,255,0.05), transparent);
+                transform: skewX(-25deg); animation: qeShine 2s infinite;
+            }
+            
+            @keyframes qeSpringUp { 100% { transform: scale(1) translateY(0); opacity: 1; } }
+            @keyframes qeShine { 0% { left: -100%; } 100% { left: 200%; } }
+            
+            .qe-result-icon { font-size: 4.5rem; margin-bottom: 1rem; animation: qeFloat 3s ease-in-out infinite; }
+            @keyframes qeFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+            
+            .qe-result-title { color: var(--qe-primary); font-size: 1.8rem; margin-bottom: 1rem; font-weight: 900; letter-spacing: 0.5px; }
+            .qe-result-score { font-size: 4.5rem; font-weight: 900; color: white; margin-bottom: 0.5rem; line-height: 1; text-shadow: 0 0 40px rgba(255,255,255,0.15); }
+            .qe-result-details { color: var(--qe-text-muted); font-size: 1.2rem; margin-bottom: 2.5rem; font-weight: 600; }
+            .qe-result-details span { color: white; font-weight: 800; }
+            
+            #qe-finish-btn {
+                background: var(--qe-success); color: white; border: none;
+                height: 60px; border-radius: 18px; font-size: 1.2rem; font-weight: 800; cursor: pointer; width: 100%;
+                box-shadow: 0 4px 20px rgba(34,197,94,0.3); transition: all 0.25s ease;
+                display: flex; align-items: center; justify-content: center; gap: 10px;
+            }
+            #qe-finish-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(34,197,94,0.4); }
+            #qe-finish-btn:active { transform: translateY(1px) scale(0.97); }
+
             @media (max-width: 768px) {
                 .qe-pagination-scroll { display: none !important; }
-                
                 .qe-header-info { padding: 0.8rem 1rem; }
                 .qe-quiz-title { font-size: 1rem; max-width: 55%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                 .qe-timer { font-size: 0.9rem; padding: 0.3rem 0.7rem; border: none; background: transparent; }
                 
                 .qe-mobile-progress {
-                    display: block; width: 100%; text-align: center;
-                    font-size: 0.95rem; color: var(--qe-text-muted); font-weight: 700;
-                    padding-bottom: 0.8rem; border-bottom: 1px solid var(--qe-border);
+                    display: block; width: 100%; text-align: center; font-size: 0.95rem; color: var(--qe-text-muted); 
+                    font-weight: 700; padding-bottom: 0.8rem; border-bottom: 1px solid var(--qe-border);
                 }
 
                 #quizModalContent { padding: 1.5rem 1rem calc(130px + env(safe-area-inset-bottom)); }
                 
-                /* Fullscreen Native Feel - No Cards */
-                .qe-card-layer {
-                    padding: 0; background: none; border: none; box-shadow: none;
-                    transition: opacity 0.15s ease !important; transform: none !important;
-                }
+                .qe-card-layer { padding: 0; background: none; border: none; box-shadow: none; transition: opacity 0.15s ease !important; transform: none !important; }
                 .qe-card-layer.active { opacity: 1; }
                 .qe-card-layer.exit-prev, .qe-card-layer.exit-next { opacity: 0; pointer-events: none; }
                 
@@ -294,13 +331,14 @@
                 .qe-option-letter { width: 38px; height: 38px; font-size: 1rem; margin-left: 0.8rem; }
                 .qe-opt-text { font-size: 1.05rem; line-height: 1.7; }
 
-                /* Native Mobile Bottom Bar */
                 .qe-bottom-bar { padding: 0.8rem 1rem; background: #080808; border-top: 1px solid rgba(255,255,255,0.05); }
                 .qe-nav-container { flex-direction: row; gap: 0.6rem; }
                 .qe-nav-group { flex: 0 0 auto; gap: 0.6rem; }
-                
                 .qe-btn { height: 50px; border-radius: 12px; font-size: 1rem; padding: 0 1.2rem; }
                 #btnSubmitQuiz { flex: 1; min-width: auto; }
+
+                .qe-result-card { padding: 2.5rem 1.5rem; }
+                .qe-result-score { font-size: 4rem; }
             }
 
             .qe-low-perf * { transition-duration: 0ms !important; transform: none !important; backdrop-filter: none !important; animation: none !important; }
@@ -332,8 +370,10 @@
 
             modal.innerHTML = `
                 <div class="qe-submitting-overlay" id="qe-submit-layer">
-                    <div class="qe-spinner-core"></div>
-                    <div style="color:white;font-weight:900;font-size:1.3rem;margin-top:1rem;">جاري الإرسال...</div>
+                    <div class="qe-spinner-container" id="qe-spinner-container">
+                        <div class="qe-spinner-core"></div>
+                        <div style="color:white;font-weight:900;font-size:1.4rem;margin-top:1rem;letter-spacing:1px;">جاري المعالجة...</div>
+                    </div>
                 </div>
                 <div class="qe-top-bar">
                     <div class="qe-header-info">
@@ -617,6 +657,7 @@
             }
             
             const overlay = document.getElementById('qe-submit-layer');
+            const spinnerContainer = document.getElementById('qe-spinner-container');
             if(overlay) overlay.classList.add('show');
             
             let score = 0;
@@ -638,15 +679,50 @@
                 Sensory.success();
                 
                 if (percentage >= 85 && !EngineCore.isLowEnd && typeof confetti === 'function') {
-                    confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 }, colors: ['#facc15', '#22c55e', '#ffffff'], zIndex: 99999999 });
+                    confetti({ particleCount: 250, spread: 110, origin: { y: 0.4 }, colors: ['#facc15', '#22c55e', '#ffffff'], zIndex: 99999999 });
                 }
 
-                if(overlay) overlay.classList.remove('show');
-                this.close();
-                
-                setTimeout(() => { 
-                    if(typeof window.DahihApp !== 'undefined' && window.DahihApp.refresh) window.DahihApp.refresh(); 
-                }, 250);
+                if (overlay) {
+                    setTimeout(() => {
+                        if (spinnerContainer) spinnerContainer.classList.add('hide');
+                        
+                        const resultCard = document.createElement('div');
+                        resultCard.className = 'qe-result-card';
+                        resultCard.innerHTML = `
+                            <div class="qe-result-icon">${percentage >= 85 ? '🏆' : (percentage >= 50 ? '🎉' : '💪')}</div>
+                            <h2 class="qe-result-title">انتهى الاختبار</h2>
+                            <div class="qe-result-score">${percentage}%</div>
+                            <div class="qe-result-details">
+                                درجتك: <span>${score}</span> من <span>${this.quiz.questions.length}</span>
+                            </div>
+                            <button id="qe-finish-btn">
+                                إنهاء ومتابعة
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+                            </button>
+                        `;
+                        
+                        overlay.appendChild(resultCard);
+
+                        document.getElementById('qe-finish-btn').onclick = () => {
+                            EngineCore.trackInteraction(); Sensory.select();
+                            overlay.style.opacity = '0';
+                            
+                            setTimeout(() => {
+                                overlay.classList.remove('show');
+                                overlay.style.opacity = '';
+                                this.close();
+                                
+                                setTimeout(() => {
+                                    if (typeof window.DahihApp !== 'undefined' && window.DahihApp.refresh) {
+                                        window.DahihApp.refresh();
+                                    }
+                                }, 250);
+                            }, 350);
+                        };
+                    }, 500); 
+                } else {
+                    this.close();
+                }
 
             } catch (err) { 
                 alert(`حدث خطأ أثناء المعالجة: ${err.message}`); 
@@ -663,7 +739,7 @@
             if (modal) {
                 modal.style.opacity = '0';
                 modal.style.transform = 'scale(0.95)';
-                setTimeout(() => { modal.classList.add('hidden'); modal.innerHTML = ''; this.vDOM = null; this.pageNodes = []; }, 300);
+                setTimeout(() => { modal.classList.add('hidden'); modal.innerHTML = ''; this.vDOM = null; this.pageNodes = []; }, 350);
             }
         }
     };
