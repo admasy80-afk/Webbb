@@ -480,6 +480,63 @@
         state.currentPoints = newPoints;
     }
 
+    // --- الحل السحري: إضافة دالة إنشاء الكروت هنا ---
+    window.generateQuizCardHTML = function(quiz) {
+        // إخفاء رسالة "لا توجد اختبارات" تلقائياً
+        const emptyState = document.getElementById('empty-state');
+        if(emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+        }
+
+        // رسم الكارت بالتصميم الجديد
+        if (!quiz.attempted) {
+            return `
+            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card card-new animate-fade" data-id="${quiz.id}">
+                <div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
+                        <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
+                    </div>
+                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
+                    <p class="text-sm text-gray-400 flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        ${quiz.questionsCount || 0} سؤال
+                    </p>
+                </div>
+                
+                <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
+                    <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
+                    <div class="action-icon w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
+                        <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+            </div>
+            `;
+        } else {
+            return `
+            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card animate-fade border-r-2 border-r-green-500/50" data-id="${quiz.id}">
+                <div class="flex justify-between items-start mb-3">
+                    <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider">مكتمل</span>
+                </div>
+                
+                <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
+                
+                <div class="text-xs text-gray-500 space-y-1 mb-4">
+                    ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
+                </div>
+
+                <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
+                    <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
+                    <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-green-400' : 'text-red-400'} leading-none">
+                        ${quiz.score || 0}%
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+    };
+
     function init() {
         if (!authGate()) return;
 
@@ -493,6 +550,31 @@
         if (!state.pollTimer) {
             state.pollTimer = setInterval(() => fetchData(false), 10000);
         }
+
+        // --- إضافة أحداث أزرار الفلترة هنا لتشتغل عند تهيئة النظام ---
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // تفعيل شكل الزرار
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // فلترة الكروت المعروضة
+                const filter = e.target.getAttribute('data-filter');
+                const cards = document.querySelectorAll('.quiz-card');
+                
+                cards.forEach(card => {
+                    if (filter === 'all') {
+                        card.style.display = 'flex';
+                    } else if (filter === 'new' && card.classList.contains('card-new')) {
+                        card.style.display = 'flex';
+                    } else if (filter === 'completed' && !card.classList.contains('card-new')) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
     }
 
     window.DahihApp = {
