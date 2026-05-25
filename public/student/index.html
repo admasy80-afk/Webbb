@@ -179,7 +179,6 @@
         }
         .quiz-card:not(.completed-card):active { transform: translate3d(0, -1px, 0); }
 
-        /* ستايل الكارت المقفل لمنع التفاعل الشكلي */
         .completed-card {
             border-color: rgba(255,255,255,.02);
             background: rgba(255,255,255,.01);
@@ -339,5 +338,50 @@
         <div id="tab-questions" class="tab-content"><h1 class="text-2xl font-bold mb-4">أهم الأسئلة المقالية</h1><div class="glass-panel p-6 rounded-2xl border-t-2 border-yellow-500"></div></div>
     </main>
 
+    <script>
+        // جعل دالة التنقل مرئية للـ Global Scope ليتمكن script.js من استدعائها
+        window.switchTab = function(tabId) {
+            const activeTab = localStorage.getItem('activeTab');
+            if (activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
+            
+            localStorage.setItem('activeTab', tabId);
+
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.toggle('active', el.id === `tab-${tabId}`);
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                if (b.dataset.tabTarget === tabId) {
+                    b.classList.add('active', 'bg-white/5');
+                    b.classList.remove('text-gray-300');
+                } else {
+                    b.classList.remove('active', 'bg-white/5');
+                    b.classList.add('text-gray-300');
+                }
+            });
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // تفعيل أزرار القائمة الجانبية
+            document.querySelectorAll('[data-tab-target]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    window.switchTab(e.currentTarget.dataset.tabTarget);
+                });
+            });
+
+            // استرجاع آخر صفحة عند تحديث الموقع
+            const savedTab = localStorage.getItem('activeTab') || 'dashboard';
+            window.switchTab(savedTab);
+
+            // تفعيل زر تسجيل الخروج لو موجود
+            document.querySelectorAll('[data-action="logout"]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (window.DahihApp && typeof DahihApp.logout === 'function') {
+                        DahihApp.logout();
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
