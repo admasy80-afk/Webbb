@@ -650,7 +650,10 @@
 
         async submit() {
             UIState.set(UIState.SUBMITTING);
+            
+            // 1. إيقاف العداد فوراً لمنع الكراش
             clearInterval(this.timerId);
+            
             if(this.vDOM) {
                 this.vDOM.removeEventListener('touchstart', this.touchStartHandler);
                 this.vDOM.removeEventListener('touchend', this.touchEndHandler);
@@ -660,11 +663,13 @@
             const spinnerContainer = document.getElementById('qe-spinner-container');
             if(overlay) overlay.classList.add('show');
             
+            // 2. حساب النتيجة
             let score = 0;
             this.quiz.questions.forEach((q, qi) => { if (parseInt(this.answers[`q_${qi}`]) === q.correctAnswer) score++; });
             const percentage = Math.round((score / this.quiz.questions.length) * 100);
 
             try {
+                // 3. إرسال البيانات للسيرفر بأمان
                 const appState = typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.getState === 'function' ? window.DahihApp.getState() : {};
                 
                 if (typeof window.DahihApp !== 'undefined' && window.DahihApp.fetchWithTimeout) {
@@ -675,11 +680,18 @@
                     });
                 }
                 
+                // 4. تحديث البيانات محلياً في الكائن الممرر لحل مشكلة قراءة الـ LocalStorage المفقودة
+                this.quiz.attempted = true;
+                this.quiz.score = percentage;
+                
                 Scheduler.idle(() => localStorage.removeItem(`dq_${this.quiz.id}`));
                 Sensory.success();
                 
+                // 5. استدعاء تأثير الاحتفال 
                 if (percentage >= 85 && !EngineCore.isLowEnd && typeof confetti === 'function') {
                     confetti({ particleCount: 250, spread: 110, origin: { y: 0.4 }, colors: ['#facc15', '#22c55e', '#ffffff'], zIndex: 99999999 });
+                } else if (typeof confetti === 'function') {
+                    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
                 }
 
                 if (overlay) {
@@ -710,11 +722,17 @@
                             setTimeout(() => {
                                 overlay.classList.remove('show');
                                 overlay.style.opacity = '';
+                                
+                                // 6. إخفاء المودال وتطهيره بشكل كامل
                                 this.close();
                                 
+                                // 7. استدعاء دوال تحديث الإحصائيات بأمان
                                 setTimeout(() => {
                                     if (typeof window.DahihApp !== 'undefined' && window.DahihApp.refresh) {
                                         window.DahihApp.refresh();
+                                    }
+                                    if (typeof QuizApp !== 'undefined' && QuizApp.reload) {
+                                        QuizApp.reload();
                                     }
                                 }, 250);
                             }, 350);
@@ -725,21 +743,30 @@
                 }
 
             } catch (err) { 
-                alert(`حدث خطأ أثناء المعالجة: ${err.message}`); 
+                // معالجة الخطأ برمجياً لمنع كراش الصفحة
+                console.error("خطأ حرج أثناء تسليم الاختبار:", err);
+                alert("عذراً، حدث خطأ أثناء حفظ إجاباتك. يرجى مراجعة الاتصال بالإنترنت.");
                 if(overlay) overlay.classList.remove('show');
                 UIState.set(UIState.IDLE);
             }
         },
 
         close() {
+            // تنظيف العدادات والمستمعات لحماية الذاكرة (Memory Management)
             clearInterval(this.timerId);
             window.removeEventListener('resize', this.resizeHandler);
             document.documentElement.classList.remove('qe-active');
+            
             const modal = document.getElementById('quizModal');
             if (modal) {
                 modal.style.opacity = '0';
                 modal.style.transform = 'scale(0.95)';
-                setTimeout(() => { modal.classList.add('hidden'); modal.innerHTML = ''; this.vDOM = null; this.pageNodes = []; }, 350);
+                setTimeout(() => { 
+                    modal.classList.add('hidden'); 
+                    modal.innerHTML = ''; 
+                    this.vDOM = null; 
+                    this.pageNodes = []; 
+                }, 350);
             }
         }
     };
