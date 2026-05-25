@@ -127,7 +127,7 @@
         let t; return function (...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
     };
 
-    // 🛠️ التعديل الأول: تطوير TokenManager ليتحكم بالتوكن والبيانات كاملة
+    // 🛠️ التعديل: TokenManager نظيف وموحد
     const TokenManager = {
         getUser: () => {
             try {
@@ -144,16 +144,15 @@
         clear: () => {
             localStorage.removeItem('dahih_user');
             localStorage.removeItem('dahih_token');
-            localStorage.removeItem('userData');
-            localStorage.removeItem('userToken');
         }
     };
 
-    // 🛠️ التعديل الثاني: التحقق الفعلي من السيرفر قبل فتح التطبيق
+    // 🛠️ التعديل: التحقق الفعلي من السيرفر مع حماية ضد مشاكل النت
     async function authGate() {
         const user = TokenManager.getUser();
         const token = TokenManager.getToken();
 
+        // لو مافي بيانات دخول
         if (!user || !token) {
             logout();
             return false;
@@ -161,14 +160,26 @@
 
         try {
             const res = await fetch('/api/verify-session', {
+                method: 'GET',
+                // 🔥 مهم جدًا
+                credentials: 'include',
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
             });
 
-            if (!res.ok) {
+            // فقط لو السيرفر أكد إن الجلسة منتهية
+            if (res.status === 401 || res.status === 403) {
                 logout();
                 return false;
+            }
+
+            // لو صار أي خطأ ثاني بالسيرفر
+            if (!res.ok) {
+                console.warn('verify-session failed:', res.status);
+                // استخدم البيانات المحلية بدل الطرد
+                state.user = user;
+                return true;
             }
 
             const data = await res.json();
@@ -176,8 +187,11 @@
             return true;
 
         } catch (e) {
-            Toast.show("📡 فشل التحقق من الجلسة", 'warn');
-            return false;
+            // 🔥 لا تطرد المستخدم بسبب النت
+            console.warn('verify-session network error:', e);
+            state.user = user;
+            Toast.show("📡 تعذر التحقق من الجلسة مؤقتًا", 'warn');
+            return true;
         }
     }
 
@@ -347,7 +361,7 @@
             safeOn(window, 'pagehide', () => this.flushProgress());
         },
 
-        // 🚀 [Fix: 4] High-Performance RAF Loop for Video Progress (Zero Main-Thread Blocking)
+        // 🚀 [Fix: 4] High-Performance RAF Loop for Video Progress
         startProgressLoop() {
             const loop = () => {
                 if (!this.video || this.video.paused || this.video.ended || state.isDestroyed) return;
@@ -465,7 +479,7 @@
         }
     };
 
-    // 🚀 [Fix: 2] Rock-Solid Fetch Data with forcedEpoch for Retries
+    // 🚀 [Fix: 2] Rock-Solid Fetch Data
     async function fetchData(initial = false, retries = 2, forcedEpoch = null) {
         if (state.uiFrozen || state.isDestroyed) return;
         
@@ -494,14 +508,15 @@
             });
 
             cancelSafeTimeout(timeoutId);
+            
             if (!res.ok) {
-                // 🛠️ التعديل الرابع: تنظيف محلي وتوجيه هادئ بدون طرد قاسي للسيرفر
+                // 🛠️ التعديل: الطرد فقط في حالة 401 أو 403 (وباستخدام logout() المباشر)
                 if (res.status === 401 || res.status === 403) {
-                    TokenManager.clear();
+                    console.warn("Session expired");
                     Toast.show("🚨 انتهت صلاحية الجلسة", 'error');
                     safeTimeout(() => {
-                        window.location.replace('/logina.html');
-                    }, 1500);
+                        logout();
+                    }, 1200);
                     return;
                 }
                 throw new Error(`HTTP ${res.status}`);
@@ -554,7 +569,7 @@
         } catch (e) { console.error("Render error:", e); }
     }
 
-    // ─── COURSES RENDER (VIA RECONCILER) ───────────────────────────────────────
+    // ─── COURSES RENDER ───────────────────────────────────────
     function renderCourses(list) {
         const container = $('studentCoursesContainer'); if (!container) return;
         const v = cyrb53(list.map(c => `${c.telegramMsgId}|${c.lastWatched}`).join(';'));
@@ -608,7 +623,7 @@
         reconcileDOM(container, list, 'courseId', c => cyrb53(`${c.telegramMsgId}|${c.courseName}|${c.lastWatched}|${c.duration}|${String(state.currentMsgId) === String(c.telegramMsgId)}`), buildCard, patchCard);
     }
 
-    // ─── QUIZZES RENDER (VIA RECONCILER) ───────────────────────────────────────
+    // ─── QUIZZES RENDER ───────────────────────────────────────
     function renderQuizzes(list) {
         const container = $('onlineQuizzesContainer'), emptyState = $('empty-state');
         if (!container || !list) return;
@@ -679,7 +694,6 @@
         });
     }
 
-    // 🚀 [Fix: 6] 100% XSS-Safe DOM Creation (No innerHTML for user content)
     function renderQuestions(list) {
         const container = $('questionsContainer'); if (!container) return;
         const v = cyrb53(JSON.stringify(list)); if (v === state.questionsVersion) return; state.questionsVersion = v;
@@ -747,7 +761,7 @@
         }
     }
 
-    // 🛠️ التعديل الثالث: استخدام await مع authGate() في الإقلاع
+    // 🛠️ التعديل: استخدام await مع authGate() في الإقلاع
     async function init() {
         if (!(await authGate())) return;
         await IDBCache.init();
