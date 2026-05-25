@@ -9,20 +9,25 @@
     
     <title>لوحة الطالب | منصة الدحيح</title>
 
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=line-clamp"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="player.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
+    
+    <script src="player.js" defer></script>
+    <script src="quiz.js" defer></script>
+    <script src="script.js" defer></script>
 
     <style>
         /* ============================================================
-           Design Tokens — لوحة الطالب | منصة الدحيح
-           نظام موحد للألوان، الزوايا، الإيقاعات والإيزينج
+           Design Tokens & Theming (تأثيرات وحركات الملف الأول الفخمة)
            ============================================================ */
         :root {
-            /* Colors */
             --bg: #070b19;
             --bg-elev-1: #0a0f1c;
             --bg-elev-2: #0f172a;
@@ -34,28 +39,24 @@
             --text-faint: #64748b;
             --accent: #eab308;
             --accent-hover: #ca8a04;
-            --accent-soft: rgba(234, 179, 8, 0.10);
             --success: #22c55e;
             --danger: #ef4444;
 
-            /* Radii */
-            --r-sm: 10px;
-            --r-md: 12px;
-            --r-lg: 16px;
-            --r-xl: 20px;
-            --r-2xl: 24px;
+            /* Z-Index Scale */
+            --z-bg: -10;
+            --z-base: 1;
+            --z-sidebar: 40;
+            --z-modal: 100;
+            --z-toast: 200;
 
-            /* Motion */
-            --d-fast: 180ms;
-            --d-base: 260ms;
-            --d-slow: 420ms;
-            --ease-out: cubic-bezier(.22, 1, .36, 1);
-            --ease-spring: cubic-bezier(.2, .8, .2, 1);
-
-            /* Shadows */
-            --shadow-sm: 0 4px 14px rgba(0,0,0,.18);
+            /* Motion - أنيميشن الملف الأول الفخم والثقيل */
+            --d-fast: 300ms;
+            --d-base: 500ms;
+            --d-slow: 800ms;
+            --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+            
+            /* Shadows من الملف الثاني لدعم التصميم */
             --shadow-md: 0 10px 30px rgba(0,0,0,.25);
-            --shadow-lg: 0 18px 48px rgba(0,0,0,.4);
             --shadow-accent: 0 6px 20px rgba(234,179,8,.25);
         }
 
@@ -73,292 +74,200 @@
             text-rendering: optimizeLegibility;
         }
 
-        *:focus { outline: none !important; }
+        *:focus-visible {
+            outline: 2px solid rgba(234, 179, 8, 0.6);
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        button { cursor: pointer; }
 
-        /* خلفية Noise خفيفة */
+        /* تأثير الـ Noise المعتمد بالملف الأول */
         body::before {
             content: '';
             position: fixed;
             inset: 0;
-            background-image: radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px);
-            background-size: 3px 3px;
-            opacity: .15;
+            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+            opacity: 0.03;
             pointer-events: none;
-            z-index: -5;
+            z-index: var(--z-bg);
         }
 
-        /* ============================================================
-           Glass Panel — موحد
-           ============================================================ */
+        @media (max-width: 768px) {
+            body::before { display: none; }
+            .glass-panel {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                background: #0f172aee;
+            }
+        }
+
+        .soft-border { border: 1px solid rgba(255, 255, 255, 0.03); }
+
         .glass-panel {
-            background: linear-gradient(145deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+            background: linear-gradient(145deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
             border: 1px solid var(--border);
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
-            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,.2);
         }
 
-        /* ============================================================
-           Sidebar Tabs — أنيميشن GPU فقط
-           ============================================================ */
+        #mainGrid { contain: content; }
+
+        /* أزرار التنقل الجانبية */
         .tab-btn {
-            transition: background-color var(--d-fast) var(--ease-out),
-                        color var(--d-fast) var(--ease-out),
-                        transform var(--d-fast) var(--ease-out),
-                        box-shadow var(--d-base) var(--ease-out);
+            transition: background-color var(--d-base) var(--ease-out),
+                        color var(--d-base) var(--ease-out),
+                        transform var(--d-fast) var(--ease-out);
             position: relative;
             will-change: transform;
+            scroll-snap-align: start;
         }
-        .tab-btn:hover { background-color: rgba(255,255,255,.05); }
+        @media (hover: hover) {
+            .tab-btn:hover { background-color: rgba(255,255,255,.05); }
+        }
         .tab-btn:active { transform: scale(.98); }
         .tab-btn.active {
-            color: #000;
+            color: var(--text);
             font-weight: 700;
-            background: var(--accent);
-            box-shadow: var(--shadow-accent);
+            background: rgba(255,255,255,.04);
+            border-inline-start: 3px solid var(--accent);
         }
 
-        /* ============================================================
-           Tab Content Switching — Fade + Slide موحد
-           ============================================================ */
+        /* حركات التبديل الثقيلة والفخمة للملف الأول */
+        @keyframes fadeInTab {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
         .tab-content {
             display: none;
             opacity: 0;
-            transform: translateY(8px);
-            transition: opacity var(--d-base) var(--ease-out),
-                        transform var(--d-base) var(--ease-out);
+            visibility: hidden;
+            pointer-events: none;
+            height: 0;
+            overflow: hidden;
         }
         .tab-content.active {
             display: block;
             opacity: 1;
-            transform: translateY(0);
+            visibility: visible;
+            pointer-events: auto;
+            height: auto;
+            overflow: visible;
+            animation: fadeInTab var(--d-slow) var(--ease-out) forwards;
         }
 
-        /* ============================================================
-           Entrance Animations — موحدة
-           ============================================================ */
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(12px); }
-            to   { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; transform: translate3d(0, 20px, 0); }
+            to   { opacity: 1; transform: translate3d(0, 0, 0); }
         }
-        @keyframes cardIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50%      { opacity: .5; }
-        }
+        .animate-fade-in-up { animation: fadeInUp var(--d-slow) var(--ease-out) both; }
+        .animate-fade { animation: fadeInUp var(--d-slow) var(--ease-out) both; }
+
+        /* Stagger لتتابع ظهور البطاقات خفيفاً */
+        .animate-fade:nth-child(1)  { animation-delay: 40ms; }
+        .animate-fade:nth-child(2)  { animation-delay: 80ms; }
+        .animate-fade:nth-child(3)  { animation-delay: 120ms; }
+        .animate-fade:nth-child(n+4){ animation-delay: 160ms; }
+
         @keyframes softBounce {
             0%, 100% { transform: translateY(0); }
             50%      { transform: translateY(-6px); }
         }
-
-        .animate-fade-in-up { animation: fadeInUp var(--d-slow) var(--ease-spring) both; }
-        .animate-fade       { animation: cardIn   var(--d-slow) var(--ease-spring) both; }
         .animate-soft-bounce {
             animation: softBounce 2.4s var(--ease-out) infinite;
             will-change: transform;
         }
 
-        /* Stagger خفيف للبطاقات */
-        .animate-fade:nth-child(1)  { animation-delay: 40ms; }
-        .animate-fade:nth-child(2)  { animation-delay: 80ms; }
-        .animate-fade:nth-child(3)  { animation-delay: 120ms; }
-        .animate-fade:nth-child(4)  { animation-delay: 160ms; }
-        .animate-fade:nth-child(5)  { animation-delay: 200ms; }
-        .animate-fade:nth-child(6)  { animation-delay: 240ms; }
-        .animate-fade:nth-child(n+7){ animation-delay: 280ms; }
-
-        /* ============================================================
-           Scrollbar Hider
-           ============================================================ */
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* ============================================================
-           Filter Buttons
-           ============================================================ */
-        .filter-btn {
-            padding: 8px 16px;
-            border-radius: var(--r-md);
-            font-size: .875rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            background: transparent;
-            white-space: nowrap;
-            transition: background-color var(--d-fast) var(--ease-out),
-                        color var(--d-fast) var(--ease-out),
-                        transform var(--d-fast) var(--ease-out);
-        }
-        .filter-btn:hover {
-            color: var(--text);
-            background: rgba(255,255,255,.04);
-        }
-        .filter-btn:active { transform: scale(.96); }
-        .filter-btn.active {
-            background: rgba(255,255,255,.08);
-            color: var(--text);
-        }
-
-        /* ============================================================
-           Quiz Cards — تحريك transform/opacity فقط لأداء سلس
-           ============================================================ */
+        /* كروت الاختبارات وتأثيراتها البصرية الحركية */
         .quiz-card {
             background: var(--bg-elev-2);
-            border: 1px solid rgba(255,255,255,.05);
-            border-radius: var(--r-lg);
+            border: 1px solid rgba(255,255,255,.04);
+            border-radius: 16px;
             padding: 20px;
             display: flex;
             flex-direction: column;
             height: 100%;
             min-height: 170px;
-            cursor: pointer;
             position: relative;
-            overflow: hidden;
-            outline: none;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+            transform: translate3d(0, 0, 0);
             transition: transform var(--d-base) var(--ease-out),
-                        background-color var(--d-base) var(--ease-out),
-                        border-color var(--d-base) var(--ease-out),
-                        box-shadow var(--d-base) var(--ease-out);
+                        background-color var(--d-base),
+                        border-color var(--d-base);
         }
-        .quiz-card::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,.03), transparent);
-            pointer-events: none;
-            border-radius: inherit;
+        
+        @media (hover: hover) {
+            .quiz-card:not(.completed-card):hover {
+                transform: translate3d(0, -5px, 0);
+                background-color: var(--bg-elev-3);
+                border-color: rgba(234,179,8,.18);
+            }
+            html[dir="rtl"] .quiz-card:not(.completed-card):hover .action-icon {
+                transform: translateX(-3px); 
+            }
         }
-        .quiz-card:hover {
-            transform: translateY(-3px);
-            background-color: var(--bg-elev-3);
-            border-color: rgba(234,179,8,.18);
-            box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.04);
-        }
-        .quiz-card:active { transform: translateY(-1px); }
-        .quiz-card:focus-visible {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 2px rgba(234,179,8,.5);
-        }
+        .quiz-card:not(.completed-card):active { transform: translate3d(0, -1px, 0); }
 
         .completed-card {
             border-color: rgba(34,197,94,.12);
             background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-2);
+            cursor: default;
         }
         .completed-card:hover {
             background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-3);
             border-color: rgba(34,197,94,.25);
         }
 
-        .action-icon {
-            transition: transform var(--d-base) var(--ease-out),
+        .action-icon { 
+            transition: transform var(--d-fast) var(--ease-out),
                         background-color var(--d-fast) var(--ease-out),
-                        color var(--d-fast) var(--ease-out);
-        }
-        .quiz-card:hover .action-icon {
-            background: var(--accent);
-            color: #000;
-            transform: translateX(-2px);
+                        color var(--d-fast) var(--ease-out); 
         }
 
-        /* Skeleton */
+        /* الـ Skeleton Loader من الملف الأول والثاني المدمج */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .4; }
+        }
         .skeleton {
             animation: pulse 1.5s var(--ease-out) infinite;
-            background: rgba(255,255,255,.03);
+            background: rgba(255,255,255,.04);
         }
 
-        /* ============================================================
-           Primary Button (زر البدء)
-           ============================================================ */
-        .btn-start-quiz {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
-            color: #000;
-            font-weight: 800;
-            padding: .8rem 1.5rem;
-            border-radius: var(--r-md);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            position: relative;
-            overflow: hidden;
-            will-change: transform;
-            transition: transform var(--d-fast) var(--ease-out),
-                        box-shadow var(--d-base) var(--ease-out);
-        }
-        .btn-start-quiz::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 50%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
-            transform: skewX(-20deg);
-            transition: left .6s var(--ease-out);
-        }
-        .btn-start-quiz:hover::after { left: 150%; }
-        .btn-start-quiz:hover {
-            transform: translateY(-1px);
-            box-shadow: var(--shadow-accent);
-        }
-        .btn-start-quiz:active { transform: translateY(0); }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* ============================================================
-           Accessibility & Performance
-           يلغي كل الأنيميشن للأجهزة الضعيفة أو من فعّل reduce-motion
-           ============================================================ */
+        /* زر الفلاتر المطور */
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: .875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            background: transparent;
+            white-space: nowrap;
+            transition: background-color var(--d-fast) var(--ease-out), color var(--d-fast) var(--ease-out);
+        }
+        .filter-btn:hover { color: var(--text); background: rgba(255,255,255,.04); }
+        .filter-btn.active { background: rgba(255,255,255,.08); color: var(--text); }
+
+        /* كود منسق إضافي لدعم أزرار المشغل المخصص داخل الفريم */
+        .video-container { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
+        .video-poster { position: absolute; inset: 0; background: #070b19; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
+        
         @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after {
-                animation-duration: .01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: .01ms !important;
-                scroll-behavior: auto !important;
-            }
-            .animate-soft-bounce { animation: none !important; }
-        }
-
-        /* تحسين blur على الشاشات الصغيرة (الأجهزة الأضعف عادةً) */
-        @media (max-width: 640px) {
-            .glass-panel {
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-            }
+            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
     </style>
-
-    <script>
-        // تبديل التبويبات — مبسّط ويعتمد على CSS transitions فقط (بدون setTimeout متشابك)
-        window.switchTab = function(tabId) {
-            const tabs = document.querySelectorAll('.tab-content');
-            const buttons = document.querySelectorAll('.tab-btn');
-
-            tabs.forEach(el => {
-                if (el.id === `tab-${tabId}`) {
-                    el.style.display = 'block';
-                    // إجبار إعادة الرسم لتفعيل الانتقال
-                    void el.offsetWidth;
-                    el.classList.add('active');
-                } else {
-                    el.classList.remove('active');
-                    // إخفاء بعد انتهاء transition
-                    setTimeout(() => {
-                        if (!el.classList.contains('active')) el.style.display = 'none';
-                    }, 280);
-                }
-            });
-
-            buttons.forEach(b => b.classList.toggle('active', b.id === `btn-${tabId}`));
-        };
-    </script>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
-    <div class="fixed top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
-    <div class="fixed bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-purple-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>    
+    
+    <div class="fixed inset-0 pointer-events-none" style="z-index: var(--z-bg);">
+        <div class="fixed top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] -z-10"></div>
+        <div class="fixed bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-purple-500/5 rounded-full blur-[120px] -z-10"></div>    
+    </div>
 
-    <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 z-40 border-b md:border-b-0 md:border-l border-white/10 shadow-2xl md:shadow-none bg-[#070b19]/95 md:bg-transparent">
+    <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 border-b md:border-b-0 md:border-l border-white/5 bg-[#070b19]/95 md:bg-transparent md:sticky md:top-0" style="z-index: var(--z-sidebar);">
         <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
             <div class="flex justify-between w-full items-center">
                 <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
@@ -369,16 +278,16 @@
                 <p class="text-xs text-gray-400 mb-1">المرحلة الدراسية:</p>
                 <p id="studentGrade" class="text-yellow-500 font-bold text-sm mb-3">جاري التحميل...</p>
                 <div class="h-px w-full bg-white/10 my-2"></div>
-                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">...</span></h2>
+                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">جاري التحميل...</span></h2>
             </div>
         </div>
         
-        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 scrollbar-hide flex-shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
-            <button onclick="switchTab('courses')" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
-            <button onclick="switchTab('quizzes')" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
-            <button onclick="switchTab('points')" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
-            <button onclick="switchTab('questions')" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
+        <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 hide-scrollbar flex-shrink-0" style="scroll-snap-type: x mandatory;">
+            <button onclick="switchTab('dashboard')" data-tab-target="dashboard" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
+            <button onclick="switchTab('courses')" data-tab-target="courses" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
+            <button onclick="switchTab('quizzes')" data-tab-target="quizzes" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
+            <button onclick="switchTab('points')" data-tab-target="points" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
+            <button onclick="switchTab('questions')" data-tab-target="questions" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
         </nav>
 
         <div class="hidden md:block p-4 mt-auto">
@@ -390,32 +299,29 @@
     </aside>
 
     <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth" id="mainGrid">
-        <div class="fixed top-0 right-0 w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
         <div id="tab-dashboard" class="tab-content active space-y-4 md:space-y-6">
             <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
                 <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up bg-[#0a0f1c]">
-                    <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 flex-1 min-w-0">
-                            <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
-                                <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
-                            <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
+                   <div class="p-3 md:p-4 border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                         </div>
+                        <h2 id="playingVideoTitle" class="font-bold text-sm md:text-lg truncate text-white">اختر محاضرة للبدء</h2>
                     </div>
-
-                    <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
-                        <div id="videoContainer" class="video-container group">
+                    
+                    <div class="p-2 md:p-5 bg-black/50 aspect-video flex items-center justify-center relative group" id="fs-wrapper">
+                        <div id="videoContainer" class="video-container group w-full h-full">
                             <div id="videoPoster" class="video-poster">
                                 <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-soft-bounce">
                                     <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                 </div>
                                 <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
-                                <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل</p>
+                                <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل للبدء في المذاكرة</p>
                             </div>
 
                             <div class="buffering-spinner"></div>
-                            <video id="dahihPlayer" playsinline preload="metadata"></video>
+                            <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full"></video>
                             <div class="tap-zone left" id="tapLeft"></div>
                             <div class="tap-zone right" id="tapRight"></div>
                             <div class="skip-indicator left" id="skipIndicatorLeft" aria-hidden="true"><span id="skipTextLeft">-10</span></div>
@@ -434,32 +340,32 @@
                                 </div>
 
                                 <div class="controls-bar">
-                                    <div class="group">
+                                    <div class="group flex items-center gap-2">
                                         <button class="icon-btn" id="playPauseBtn" aria-label="Play">
-                                            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                            <svg viewBox="0 0 24 24" class="w-5 h-5"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
                                         </button>
-                                        <div class="volume-container" id="volumeContainer">
+                                        <div class="volume-container flex items-center" id="volumeContainer">
                                             <button class="icon-btn" id="muteBtn" aria-label="Mute">
-                                                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
+                                                <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
                                             </button>
                                             <div class="volume-slider-wrapper">
                                                 <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
                                             </div>
                                         </div>
-                                        <div class="time-display">
+                                        <div class="time-display text-xs text-white">
                                             <span id="currentTimeDisplay">00:00</span>
                                             <span class="separator">/</span>
                                             <span class="duration" id="durationDisplay">00:00</span>
                                         </div>
                                     </div>
 
-                                    <div class="group">
+                                    <div class="group flex items-center gap-2">
                                         <button class="icon-btn text-xs font-bold w-auto px-2" id="speedBtn">1x</button>
                                         <button class="icon-btn hidden md:flex" id="pipBtn" title="Picture in Picture">
-                                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                            <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                                         </button>
                                         <button class="icon-btn fullscreen-btn" onclick="DahihApp.toggleFullscreen()" title="Fullscreen">
-                                            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                                            <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
                                         </button>
                                     </div>
                                 </div>
@@ -471,12 +377,12 @@
 
                 <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
                     <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up bg-gradient-to-b from-white/5 to-transparent">
-                        <h2 class="text-lg font-bold mb-6 text-white flex items-center justify-center gap-2">
+                        <h2 class="text-base font-bold mb-6 text-white flex items-center justify-center gap-2">
                             <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
                             مؤشر الأداء العام
                         </h2>
                         <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
-                            <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
+                            <div id="studentPointsDisplay" class="text-3xl md:text-4xl font-bold text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
                         </div>
                         <p class="text-gray-400 text-sm leading-relaxed max-w-[250px] mx-auto">هذه النسبة تعكس تفاعلك وحلك للاختبارات على المنصة. استمر في التقدم!</p>
                     </div>
@@ -485,8 +391,8 @@
         </div>
 
         <div id="tab-courses" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحاضرات والحصص</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
+            <h1 class="text-2xl font-bold mb-2">المحاضرات والحصص</h1>
+            <p class="text-gray-400 text-sm mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
             <div id="studentCoursesContainer" class="flex flex-col gap-8">
                 <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 animate-fade-in-up">
                     <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات...</p>
@@ -494,49 +400,32 @@
             </div>
         </div>
 
-        <div id="tab-quizzes" class="tab-content font-sans" 
-             style="background: radial-gradient(circle at top right, rgba(234,179,8,.08), transparent 35%); min-height: 100vh;">
-
+        <div id="tab-quizzes" class="tab-content font-sans" style="background: radial-gradient(circle at top right, rgba(234,179,8,.05), transparent 35%);">
             <div class="flex items-center gap-3 mb-2 pt-4">
                 <div class="bg-yellow-500/20 p-2.5 rounded-[12px]">
-                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
-                        </path>
-                    </svg>
+                    <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </div>
-
-                <h1 class="text-2xl md:text-3xl font-black text-white">
-                    الاختبارات الإلكترونية
-                </h1>
+                <h1 class="text-2xl font-bold text-white">الاختبارات الإلكترونية</h1>
             </div>
-
-            <p class="text-gray-400 text-sm md:text-base mb-6">
-                اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.
-            </p>
+            <p class="text-gray-400 text-sm mb-6">اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.</p>
 
             <div class="max-w-7xl mx-auto">
-
-                <div class="pb-4 border-b border-white/[0.03] mb-5">
-
+                <div class="pb-4 border-b border-white/5 mb-5">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
-                            <p class="text-gray-400 text-xs font-semibold tracking-wide">الإجمالي</p>
+                        <div class="soft-border bg-white/[0.02] p-3 rounded-xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold">الإجمالي</p>
                             <h4 id="stat-total" class="text-lg font-bold text-white mt-1">-</h4>
                         </div>
-
-                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
-                            <p class="text-gray-400 text-xs font-semibold tracking-wide">مكتمل</p>
+                        <div class="soft-border bg-white/[0.02] p-3 rounded-xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold">مكتمل</p>
                             <h4 id="stat-completed" class="text-lg font-bold text-white mt-1">-</h4>
                         </div>
-
-                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
-                            <p class="text-gray-400 text-xs font-semibold tracking-wide">متبقي</p>
+                        <div class="soft-border bg-white/[0.02] p-3 rounded-xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold">متبقي</p>
                             <h4 id="stat-remaining" class="text-lg font-bold text-yellow-400 mt-1">-</h4>
                         </div>
-
-                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
-                            <p class="text-gray-400 text-xs font-semibold tracking-wide">المتوسط</p>
+                        <div class="soft-border bg-white/[0.02] p-3 rounded-xl flex flex-col justify-center">
+                            <p class="text-gray-400 text-xs font-semibold">المتوسط</p>
                             <h4 id="stat-average" class="text-lg font-bold text-yellow-400 mt-1">-%</h4>
                         </div>
                     </div>
@@ -546,38 +435,31 @@
                         <button class="filter-btn" data-filter="new">الجديدة</button>
                         <button class="filter-btn" data-filter="completed">المكتملة</button>
                     </div>
-
                 </div>
 
                 <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
-                    <div class="w-16 h-16 bg-[rgba(255,255,255,0.03)] rounded-[16px] flex items-center justify-center mb-4 border border-white/[0.03]">
-                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
-                            </path>
-                        </svg>
+                    <div class="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center mb-4 border border-white/5">
+                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     </div>
                     <h3 class="text-lg font-semibold text-white mb-1">لا توجد اختبارات</h3>
                     <p class="text-sm text-gray-400">لم يتم العثور على اختبارات تطابق هذا التصنيف.</p>
                 </div>
 
-                <div id="onlineQuizzesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                </div>
-
+                <div id="onlineQuizzesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
             </div>
-
         </div>
+
         <div id="tab-points" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">ملاحظات وتلخيصات سريعة لتثبيت المعلومات.</p>
+            <h1 class="text-2xl font-bold mb-2">أهم نقاط المنهج</h1>
+            <p class="text-gray-400 text-sm mb-6">ملاحظات وتلخيصات سريعة لتثبيت المعلومات.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
                 <div id="pointsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
         </div>
 
         <div id="tab-questions" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم الأسئلة المقالية</h1>
-            <p class="text-gray-400 text-sm md:text-base mb-6">تدرب على نمط الأسئلة المقالية المتوقعة مع معرفة الإجابات النموذجية.</p>
+            <h1 class="text-2xl font-bold mb-2">أهم الأسئلة المقالية</h1>
+            <p class="text-gray-400 text-sm mb-6">تدرب على نمط الأسئلة المقالية المتوقعة مع معرفة الإجابات النموذجية.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 border-t-4 border-yellow-500">
                 <div id="questionsContainer" class="flex flex-col gap-4"></div>
             </div>
@@ -590,32 +472,56 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
-    <script src="player.js" defer></script>
-    <script src="quiz.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
-    <script src="script.js" defer></script>
-
     <script>
+        // دالة التنقل الفخمة والسلسة الخاصة بالملف الأول متوافقة مع الأداء الميكانيكي للملف الثاني
+        window.switchTab = function(tabId) {
+            const activeTab = localStorage.getItem('activeTab');
+            if (activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
+            
+            localStorage.setItem('activeTab', tabId);
+
+            document.querySelectorAll('.tab-content').forEach(el => {
+                if (el.id === `tab-${tabId}`) {
+                    el.style.display = 'block';
+                    void el.offsetWidth; // Force Reflow لإبقاء الأنيميشن ناعماً
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    setTimeout(() => {
+                        if (!el.classList.contains('active')) el.style.display = 'none';
+                    }, 500); // متوافق مع وقت الـ transition للملف الأول
+                }
+            });
+
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                if (b.dataset.tabTarget === tabId || b.id === `btn-${tabId}`) {
+                    b.classList.add('active', 'bg-white/5');
+                    b.classList.remove('text-gray-300');
+                } else {
+                    b.classList.remove('active', 'bg-white/5');
+                    b.classList.add('text-gray-300');
+                }
+            });
+        };
+
+        // المحرك المطور لإدارة الاختبارات المأخوذ بالكامل من الملف الثاني
         const QuizEngine = {
             open: (quizData) => {
-                console.log("Opening Quiz:", quizData);
-                alert(`بدء اختبار: ${quizData.title}`);
+                console.log("Opening Quiz via Engine:", quizData);
+                if (typeof window.openQuizModal === 'function') {
+                    window.openQuizModal(quizData);
+                } else {
+                    alert(`بدء اختبار: ${quizData.title}`);
+                }
             }
         };
 
         const QuizApp = (() => {
-
             const container = document.getElementById('onlineQuizzesContainer');
             const emptyState = document.getElementById('empty-state');
-
             let quizzesData = [];
             let currentFilter = 'all';
 
-            /* =========================================
-               Skeleton
-            ========================================= */
             const renderSkeleton = () => {
                 let html = '';
                 for(let i = 0; i < 6; i++) {
@@ -636,9 +542,6 @@
                 container.innerHTML = html;
             };
 
-            /* =========================================
-               Stats
-            ========================================= */
             const updateStats = (quizzes) => {
                 if(!quizzes.length) {
                     document.getElementById('stat-total').textContent = '0';
@@ -647,170 +550,93 @@
                     document.getElementById('stat-average').textContent = '0%';
                     return;
                 }
-
                 const total = quizzes.length;
                 const completed = quizzes.filter(q => q.attempted).length;
                 const remaining = total - completed;
                 let avgScore = 0;
-
                 if(completed > 0) {
-                    const totalScore = quizzes
-                        .filter(q => q.attempted)
-                        .reduce((acc, q) => acc + (q.score || 0), 0);
+                    const totalScore = quizzes.filter(q => q.attempted).reduce((acc, q) => acc + (q.score || 0), 0);
                     avgScore = Math.round(totalScore / completed);
                 }
-
                 document.getElementById('stat-total').textContent = total;
                 document.getElementById('stat-completed').textContent = completed;
                 document.getElementById('stat-remaining').textContent = remaining;
                 document.getElementById('stat-average').textContent = completed > 0 ? `${avgScore}%` : '-';
             };
 
-            /* =========================================
-               Cards
-            ========================================= */
             const renderAvailableCard = (quiz) => `
-                <div tabindex="0"
-                    role="button"
-                    aria-label="بدء اختبار ${quiz.title}"
-                    class="quiz-card animate-fade"
-                    style="animation-delay: ${quiz.id * 0.05}s;"
-                    data-id="${quiz.id}">
-
+                <div tabindex="0" role="button" aria-label="بدء اختبار ${quiz.title}" class="quiz-card animate-fade" data-id="${quiz.id}">
                     <div class="relative z-10">
                         <div class="flex items-center gap-2 mb-3">
-                            <span class="text-[11px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-[10px] tracking-wider">
-                                جديد
-                            </span>
-                            <span class="text-xs text-gray-500">
-                                ${quiz.duration || 0} دقيقة
-                            </span>
+                            <span class="text-[11px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-[10px] tracking-wider">جديد</span>
+                            <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
                         </div>
-
-                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">
-                            ${quiz.title}
-                        </h3>
-
+                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
                         <p class="text-sm text-gray-400 flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                                </path>
-                            </svg>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             ${quiz.questionsCount || 0} سؤال
                         </p>
                     </div>
-
                     <div class="relative z-10 flex items-center justify-between mt-auto pt-5 border-t border-white/[0.03]">
-                        <span class="text-sm font-medium text-gray-400">
-                            اضغط للبدء
-                        </span>
-
+                        <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
                         <div class="action-icon w-8 h-8 rounded-[10px] bg-white/5 flex items-center justify-center text-gray-400">
-                            <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                            </svg>
+                            <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                         </div>
                     </div>
                 </div>
             `;
 
             const renderCompletedCard = (quiz) => `
-                <div tabindex="0"
-                    role="button"
-                    aria-label="عرض نتيجة اختبار ${quiz.title}"
-                    class="quiz-card completed-card animate-fade"
-                    style="animation-delay: ${quiz.id * 0.05}s;"
-                    data-id="${quiz.id}">
-
+                <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار ${quiz.title}" class="quiz-card completed-card animate-fade" data-id="${quiz.id}">
                     <div class="relative z-10 flex justify-between items-start mb-3">
-                        <span class="text-[11px] font-bold text-white bg-white/10 px-2 py-1 rounded-[10px] tracking-wider">
-                            مكتمل
-                        </span>
+                        <span class="text-[11px] font-bold text-white bg-white/10 px-2 py-1 rounded-[10px] tracking-wider">مكتمل</span>
                     </div>
-
-                    <h3 class="relative z-10 text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">
-                        ${quiz.title}
-                    </h3>
-
+                    <h3 class="relative z-10 text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
                     <div class="relative z-10 text-xs text-gray-500 space-y-1 mb-4">
                         ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
                         ${quiz.lastAttempt ? `<p>آخر محاولة: ${quiz.lastAttempt}</p>` : ''}
                     </div>
-
                     <div class="relative z-10 mt-auto pt-4 border-t border-white/[0.03] flex items-end justify-between">
-                        <span class="text-xs text-gray-400 mb-1">
-                            النتيجة النهائية
-                        </span>
-                        <div class="text-3xl font-black text-yellow-400 leading-none">
-                            ${quiz.score || 0}%
-                        </div>
+                        <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
+                        <div class="text-3xl font-black text-yellow-400 leading-none">${quiz.score || 0}%</div>
                     </div>
                 </div>
             `;
 
-            /* =========================================
-               Render
-            ========================================= */
             const renderQuizzes = () => {
                 let filteredQuizzes = quizzesData;
-
-                if(currentFilter === 'new') {
-                    filteredQuizzes = quizzesData.filter(q => !q.attempted);
-                } else if(currentFilter === 'completed') {
-                    filteredQuizzes = quizzesData.filter(q => q.attempted);
-                }
-
-                filteredQuizzes.sort((a, b) =>
-                    (a.attempted === b.attempted) ? 0 : a.attempted ? 1 : -1
-                );
-
+                if(currentFilter === 'new') { filteredQuizzes = quizzesData.filter(q => !q.attempted); }
+                else if(currentFilter === 'completed') { filteredQuizzes = quizzesData.filter(q => q.attempted); }
+                filteredQuizzes.sort((a, b) => (a.attempted === b.attempted) ? 0 : a.attempted ? 1 : -1);
+                
                 if(filteredQuizzes.length === 0) {
                     container.innerHTML = '';
-                    emptyState.classList.remove('hidden');
-                    emptyState.classList.add('flex');
+                    emptyState.classList.remove('hidden'); emptyState.classList.add('flex');
                     return;
                 }
-
-                emptyState.classList.add('hidden');
-                emptyState.classList.remove('flex');
-
-                const html = filteredQuizzes.map(quiz =>
-                    quiz.attempted ? renderCompletedCard(quiz) : renderAvailableCard(quiz)
-                ).join('');
-
-                container.innerHTML = html;
+                emptyState.classList.add('hidden'); emptyState.classList.remove('flex');
+                container.innerHTML = filteredQuizzes.map(quiz => quiz.attempted ? renderCompletedCard(quiz) : renderAvailableCard(quiz)).join('');
             };
 
-            /* =========================================
-               Events
-            ========================================= */
             const setupEventListeners = () => {
-
                 container.addEventListener('click', (e) => {
                     const card = e.target.closest('.quiz-card');
                     if(!card) return;
                     const quizId = card.getAttribute('data-id');
                     const quizData = quizzesData.find(q => q.id == quizId);
-                    if(quizData) {
-                        QuizEngine.open(quizData);
-                    }
+                    if(quizData) { QuizEngine.open(quizData); }
                 });
 
                 container.addEventListener('keydown', (e) => {
                     if(e.key === 'Enter' || e.key === ' ') {
                         const card = e.target.closest('.quiz-card');
-                        if(card) {
-                            e.preventDefault();
-                            card.click();
-                        }
+                        if(card) { e.preventDefault(); card.click(); }
                     }
                 });
 
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.filter-btn')
-                            .forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                         e.target.classList.add('active');
                         currentFilter = e.target.getAttribute('data-filter');
                         renderQuizzes();
@@ -818,49 +644,43 @@
                 });
             };
 
-            /* =========================================
-               Init
-            ========================================= */
             const init = async (dataSource) => {
                 renderSkeleton();
                 setupEventListeners();
-
                 try {
                     if(typeof dataSource === 'string') {
                         const response = await fetch(dataSource);
                         if(!response.ok) throw new Error('فشل جلب البيانات');
                         const data = await response.json();
                         quizzesData = Array.isArray(data) ? data : (data.data || []);
-                    }
-                    else if(Array.isArray(dataSource)) {
+                    } else if(Array.isArray(dataSource)) {
                         quizzesData = dataSource;
-                    }
-                    else {
-                        quizzesData = [];
-                    }
+                    } else { quizzesData = []; }
                     updateStats(quizzesData);
                     renderQuizzes();
-                }
-                catch(error) {
+                } catch(error) {
                     console.error(error);
-                    container.innerHTML = `
-                        <div class="col-span-full py-10 text-center">
-                            <p class="text-red-400">حدث خطأ أثناء تحميل الاختبارات.</p>
-                        </div>
-                    `;
+                    container.innerHTML = `<div class="col-span-full py-10 text-center"><p class="text-red-400">حدث خطأ أثناء تحميل الاختبارات.</p></div>`;
                 }
             };
 
             return { init };
-
         })();
 
-        // تهيئة التطبيق عند اكتمال تحميل الصفحة (انتظار البيانات الحقيقية)
+        // تهيئة التبويبات والمستمعات عند استقرار العناصر بالصفحة
         document.addEventListener('DOMContentLoaded', () => {
-            // لتشغيل الكود مع بيانات حقيقية، يمكنك تمرير الـ Array مباشرة أو رابط الـ API:
-            // QuizApp.init('/api/quizzes'); // <== مثال لجلبها من الباك إند
-            
-            // في الوقت الحالي سيقوم بتهيئة واجهة فارغة جاهزة للبيانات:
+            // تفعيل أزرار القائمة الجانبية للتنقل الفخم
+            document.querySelectorAll('[data-tab-target]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    window.switchTab(e.currentTarget.dataset.tabTarget);
+                });
+            });
+
+            // استرجاع أخر صفحة مسجلة بالـ LocalStorage
+            const savedTab = localStorage.getItem('activeTab') || 'dashboard';
+            window.switchTab(savedTab);
+
+            // تهيئة واجهة الاختبارات الافتراضية الجاهزة لاستقبال مصفوفة البيانات الدقيقة
             QuizApp.init([]); 
         });
     </script>
