@@ -17,129 +17,197 @@
     <link rel="stylesheet" href="player.css">
 
     <style>
-        :root { 
-            --accent: #eab308; 
+        /* ============================================================
+           Design Tokens — لوحة الطالب | منصة الدحيح
+           نظام موحد للألوان، الزوايا، الإيقاعات والإيزينج
+           ============================================================ */
+        :root {
+            /* Colors */
+            --bg: #070b19;
+            --bg-elev-1: #0a0f1c;
+            --bg-elev-2: #0f172a;
+            --bg-elev-3: #131d33;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-strong: rgba(255, 255, 255, 0.10);
+            --text: #ffffff;
+            --text-muted: #9ca3af;
+            --text-faint: #64748b;
+            --accent: #eab308;
             --accent-hover: #ca8a04;
+            --accent-soft: rgba(234, 179, 8, 0.10);
+            --success: #22c55e;
+            --danger: #ef4444;
+
+            /* Radii */
+            --r-sm: 10px;
+            --r-md: 12px;
+            --r-lg: 16px;
+            --r-xl: 20px;
+            --r-2xl: 24px;
+
+            /* Motion */
+            --d-fast: 180ms;
+            --d-base: 260ms;
+            --d-slow: 420ms;
+            --ease-out: cubic-bezier(.22, 1, .36, 1);
+            --ease-spring: cubic-bezier(.2, .8, .2, 1);
+
+            /* Shadows */
+            --shadow-sm: 0 4px 14px rgba(0,0,0,.18);
+            --shadow-md: 0 10px 30px rgba(0,0,0,.25);
+            --shadow-lg: 0 18px 48px rgba(0,0,0,.4);
+            --shadow-accent: 0 6px 20px rgba(234,179,8,.25);
         }
-        
-        * { 
-            font-family: 'Readex Pro', sans-serif !important; 
-            -webkit-tap-highlight-color: transparent; 
+
+        * {
+            font-family: 'Readex Pro', sans-serif !important;
+            -webkit-tap-highlight-color: transparent;
             box-sizing: border-box;
         }
-        
-        body, html { 
-            background-color: #070b19; 
-            color: white; 
+
+        body, html {
+            background-color: var(--bg);
+            color: var(--text);
             overscroll-behavior-y: none;
             overflow-x: hidden;
             text-rendering: optimizeLegibility;
         }
-        
+
         *:focus { outline: none !important; }
 
-        /* تأثير الـ Noise الاحترافي للخلفية */
+        /* خلفية Noise خفيفة */
         body::before {
             content: '';
             position: fixed;
             inset: 0;
-            background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-image: radial-gradient(rgba(255,255,255,.03) 1px, transparent 1px);
             background-size: 3px 3px;
-            opacity: 0.15;
+            opacity: .15;
             pointer-events: none;
             z-index: -5;
         }
 
-        .glass-panel { 
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)); 
-            border: 1px solid rgba(255, 255, 255, 0.06); 
-            backdrop-filter: blur(18px); 
-            -webkit-backdrop-filter: blur(18px); 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.35);
-        }
-        
-        /* أزرار التبويبات الرئيسية (القائمة الجانبية) */
-        .tab-btn { 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            position: relative; 
-            overflow: hidden; 
-        }
-        .tab-btn::before { 
-            content: ''; 
-            position: absolute; 
-            inset: 0; 
-            background: var(--accent); 
-            opacity: 0; 
-            transition: opacity 0.3s; 
-            z-index: -1; 
-            border-radius: inherit; 
-        }
-        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); }
-        .tab-btn.active { 
-            color: #000; 
-            font-weight: 700; 
-            background: var(--accent); 
-            box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2); 
-        }
-        
-        .tab-content { 
-            display: none; 
-            opacity: 0; 
-            transition: opacity 0.35s ease, transform 0.35s cubic-bezier(.22,1,.36,1); 
-            transform: translateY(12px); 
-        }
-        .tab-content.active { 
-            display: block; 
-            opacity: 1; 
-            transform: translateY(0); 
-        }
-        
-        @keyframes fadeInUp { 
-            from { opacity: 0; transform: translateY(20px); } 
-            to { opacity: 1; transform: translateY(0); } 
-        }
-        .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        
         /* ============================================================
-           ستايل قسم الاختبارات الجديد 
+           Glass Panel — موحد
            ============================================================ */
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+            border: 1px solid var(--border);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            box-shadow: var(--shadow-md);
+        }
 
-        .hide-scrollbar::-webkit-scrollbar {
+        /* ============================================================
+           Sidebar Tabs — أنيميشن GPU فقط
+           ============================================================ */
+        .tab-btn {
+            transition: background-color var(--d-fast) var(--ease-out),
+                        color var(--d-fast) var(--ease-out),
+                        transform var(--d-fast) var(--ease-out),
+                        box-shadow var(--d-base) var(--ease-out);
+            position: relative;
+            will-change: transform;
+        }
+        .tab-btn:hover { background-color: rgba(255,255,255,.05); }
+        .tab-btn:active { transform: scale(.98); }
+        .tab-btn.active {
+            color: #000;
+            font-weight: 700;
+            background: var(--accent);
+            box-shadow: var(--shadow-accent);
+        }
+
+        /* ============================================================
+           Tab Content Switching — Fade + Slide موحد
+           ============================================================ */
+        .tab-content {
             display: none;
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity var(--d-base) var(--ease-out),
+                        transform var(--d-base) var(--ease-out);
+        }
+        .tab-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
         }
 
-        .hide-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        /* ============================================================
+           Entrance Animations — موحدة
+           ============================================================ */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%      { opacity: .5; }
+        }
+        @keyframes softBounce {
+            0%, 100% { transform: translateY(0); }
+            50%      { transform: translateY(-6px); }
         }
 
-        /* Filter Buttons (زوايا 12px) */
+        .animate-fade-in-up { animation: fadeInUp var(--d-slow) var(--ease-spring) both; }
+        .animate-fade       { animation: cardIn   var(--d-slow) var(--ease-spring) both; }
+        .animate-soft-bounce {
+            animation: softBounce 2.4s var(--ease-out) infinite;
+            will-change: transform;
+        }
+
+        /* Stagger خفيف للبطاقات */
+        .animate-fade:nth-child(1)  { animation-delay: 40ms; }
+        .animate-fade:nth-child(2)  { animation-delay: 80ms; }
+        .animate-fade:nth-child(3)  { animation-delay: 120ms; }
+        .animate-fade:nth-child(4)  { animation-delay: 160ms; }
+        .animate-fade:nth-child(5)  { animation-delay: 200ms; }
+        .animate-fade:nth-child(6)  { animation-delay: 240ms; }
+        .animate-fade:nth-child(n+7){ animation-delay: 280ms; }
+
+        /* ============================================================
+           Scrollbar Hider
+           ============================================================ */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ============================================================
+           Filter Buttons
+           ============================================================ */
         .filter-btn {
             padding: 8px 16px;
-            border-radius: 12px;
-            font-size: 0.875rem;
+            border-radius: var(--r-md);
+            font-size: .875rem;
             font-weight: 500;
-            color: #9ca3af;
+            color: var(--text-muted);
             background: transparent;
-            transition: all 0.2s;
             white-space: nowrap;
+            transition: background-color var(--d-fast) var(--ease-out),
+                        color var(--d-fast) var(--ease-out),
+                        transform var(--d-fast) var(--ease-out);
         }
-
         .filter-btn:hover {
-            color: #fff;
-            background: rgba(255,255,255,0.03);
+            color: var(--text);
+            background: rgba(255,255,255,.04);
         }
-
+        .filter-btn:active { transform: scale(.96); }
         .filter-btn.active {
-            background: rgba(255,255,255,0.08);
-            color: #fff;
+            background: rgba(255,255,255,.08);
+            color: var(--text);
         }
 
-        /* Quiz Card Premium Base (زوايا 16px للبطاقات) */
+        /* ============================================================
+           Quiz Cards — تحريك transform/opacity فقط لأداء سلس
+           ============================================================ */
         .quiz-card {
-            background: #0f172a;
+            background: var(--bg-elev-2);
             border: 1px solid rgba(255,255,255,.05);
-            border-radius: 16px;
+            border-radius: var(--r-lg);
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -149,18 +217,12 @@
             position: relative;
             overflow: hidden;
             outline: none;
-            
-            /* Inner glow خفيف جدًا */
             box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
-            
-            /* أنيميشن ناعم للعناصر المحددة فقط */
-            transition: background .25s ease, 
-                        border-color .25s ease, 
-                        transform .25s ease, 
-                        box-shadow .25s ease;
+            transition: transform var(--d-base) var(--ease-out),
+                        background-color var(--d-base) var(--ease-out),
+                        border-color var(--d-base) var(--ease-out),
+                        box-shadow var(--d-base) var(--ease-out);
         }
-
-        /* Texture Layer فوق البطاقة */
         .quiz-card::before {
             content: "";
             position: absolute;
@@ -169,108 +231,126 @@
             pointer-events: none;
             border-radius: inherit;
         }
-
-        /* Premium Hover */
         .quiz-card:hover {
             transform: translateY(-3px);
-            background: #131d33;
+            background-color: var(--bg-elev-3);
             border-color: rgba(234,179,8,.18);
-            box-shadow: 0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
+            box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.04);
         }
-
+        .quiz-card:active { transform: translateY(-1px); }
         .quiz-card:focus-visible {
-            border-color: #eab308;
+            border-color: var(--accent);
             box-shadow: 0 0 0 2px rgba(234,179,8,.5);
         }
 
-        /* Completed Card Variant */
         .completed-card {
             border-color: rgba(34,197,94,.12);
-            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), #0f172a;
+            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-2);
         }
-
         .completed-card:hover {
-            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), #131d33;
+            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-3);
             border-color: rgba(34,197,94,.25);
         }
 
-        /* Action Icon Motion */
         .action-icon {
-            transition: transform .25s ease, background .2s ease, color .2s ease;
+            transition: transform var(--d-base) var(--ease-out),
+                        background-color var(--d-fast) var(--ease-out),
+                        color var(--d-fast) var(--ease-out);
         }
-
         .quiz-card:hover .action-icon {
-            background: #eab308;
+            background: var(--accent);
             color: #000;
-            transform: translateX(-2px); /* حركة خفيفة وفخمة */
-        }
-
-        /* Smooth Entrance Animation */
-        .animate-fade {
-            animation: cardIn .45s cubic-bezier(.2,.8,.2,1) both;
-        }
-
-        @keyframes cardIn {
-            from {
-                opacity: 0;
-                transform: translateY(8px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            transform: translateX(-2px);
         }
 
         /* Skeleton */
         .skeleton {
-            animation: pulse 1.5s infinite;
-            background: rgba(255,255,255,0.03);
+            animation: pulse 1.5s var(--ease-out) infinite;
+            background: rgba(255,255,255,.03);
         }
 
-        @keyframes pulse {
-            0%,100% { opacity: 1; }
-            50% { opacity: .5; }
-        }
-
-        /* زر البدء الأساسي */
+        /* ============================================================
+           Primary Button (زر البدء)
+           ============================================================ */
         .btn-start-quiz {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%); 
-            color: #000; font-weight: 800;
-            padding: 0.8rem 1.5rem; border-radius: 12px;
-            transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 8px;
-            position: relative; overflow: hidden;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            color: #000;
+            font-weight: 800;
+            padding: .8rem 1.5rem;
+            border-radius: var(--r-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
             will-change: transform;
+            transition: transform var(--d-fast) var(--ease-out),
+                        box-shadow var(--d-base) var(--ease-out);
         }
         .btn-start-quiz::after {
-            content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-            transform: skewX(-20deg); transition: 0.5s;
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+            transform: skewX(-20deg);
+            transition: left .6s var(--ease-out);
         }
         .btn-start-quiz:hover::after { left: 150%; }
         .btn-start-quiz:hover {
-            transform: scale(1.02); box-shadow: 0 5px 20px rgba(234,179,8,0.4);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-accent);
+        }
+        .btn-start-quiz:active { transform: translateY(0); }
+
+        /* ============================================================
+           Accessibility & Performance
+           يلغي كل الأنيميشن للأجهزة الضعيفة أو من فعّل reduce-motion
+           ============================================================ */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .01ms !important;
+                scroll-behavior: auto !important;
+            }
+            .animate-soft-bounce { animation: none !important; }
+        }
+
+        /* تحسين blur على الشاشات الصغيرة (الأجهزة الأضعف عادةً) */
+        @media (max-width: 640px) {
+            .glass-panel {
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+            }
         }
     </style>
 
     <script>
+        // تبديل التبويبات — مبسّط ويعتمد على CSS transitions فقط (بدون setTimeout متشابك)
         window.switchTab = function(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => {
-                el.classList.remove('active');
-                setTimeout(() => el.style.display = 'none', 300);
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-btn');
+
+            tabs.forEach(el => {
+                if (el.id === `tab-${tabId}`) {
+                    el.style.display = 'block';
+                    // إجبار إعادة الرسم لتفعيل الانتقال
+                    void el.offsetWidth;
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                    // إخفاء بعد انتهاء transition
+                    setTimeout(() => {
+                        if (!el.classList.contains('active')) el.style.display = 'none';
+                    }, 280);
+                }
             });
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            
-            const activeTab = document.getElementById(`tab-${tabId}`);
-            if(activeTab) {
-                setTimeout(() => {
-                    activeTab.style.display = 'block';
-                    void activeTab.offsetWidth;
-                    activeTab.classList.add('active');
-                }, 310);
-                
-                const btn = document.getElementById(`btn-${tabId}`);
-                if(btn) btn.classList.add('active');
-            }
+
+            buttons.forEach(b => b.classList.toggle('active', b.id === `btn-${tabId}`));
         };
     </script>
 </head>
@@ -327,7 +407,7 @@
                     <div class="p-2 md:p-5 bg-black/50" id="fs-wrapper">
                         <div id="videoContainer" class="video-container group">
                             <div id="videoPoster" class="video-poster">
-                                <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-bounce">
+                                <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-soft-bounce">
                                     <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                 </div>
                                 <h3 class="text-xl md:text-3xl font-black mb-2 tracking-tight">منصة الدحيح <span class="text-yellow-500">التعليمية</span></h3>
@@ -396,7 +476,6 @@
                             مؤشر الأداء العام
                         </h2>
                         <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
-                            <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-yellow-500 border-l-yellow-500 opacity-50 animate-spin" style="animation-duration: 3s;"></div>
                             <div id="studentPointsDisplay" class="text-4xl md:text-5xl font-black text-white drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]" dir="ltr">0%</div>
                         </div>
                         <p class="text-gray-400 text-sm leading-relaxed max-w-[250px] mx-auto">هذه النسبة تعكس تفاعلك وحلك للاختبارات على المنصة. استمر في التقدم!</p>
@@ -787,3 +866,4 @@
     </script>
 </body>
 </html>
+
