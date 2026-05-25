@@ -44,7 +44,7 @@
             --z-modal: 100;
             --z-toast: 200;
 
-            /* Motion - تم إبطاء السرعة لتعطي إحساس بالثقل والفخامة */
+            /* Motion - أنيميشن أثقل وأفخم */
             --d-fast: 250ms;
             --d-base: 400ms;
             --d-slow: 600ms;
@@ -122,7 +122,6 @@
             border-inline-start: 3px solid var(--accent);
         }
 
-        /* أنيميشن أثقل وأبطأ للتبويبات */
         @keyframes fadeInTab {
             from { opacity: 0; transform: translateY(15px); }
             to   { opacity: 1; transform: translateY(0); }
@@ -167,7 +166,6 @@
                         border-color var(--d-fast);
         }
         
-        /* تطبيق الـ Hover فقط على الكروت غير المكتملة */
         @media (hover: hover) {
             .quiz-card:not(.completed-card):hover {
                 transform: translate3d(0, -4px, 0);
@@ -180,7 +178,7 @@
         }
         .quiz-card:not(.completed-card):active { transform: translate3d(0, -1px, 0); }
 
-        /* ستايل الكارت المقفل */
+        /* ستايل الكارت المقفل لمنع التفاعل الشكلي */
         .completed-card {
             border-color: rgba(255,255,255,.02);
             background: rgba(255,255,255,.01);
@@ -229,7 +227,7 @@
                 <p class="text-xs text-gray-400 mb-1">المرحلة الدراسية:</p>
                 <p id="studentGrade" class="text-yellow-500 font-semibold text-sm mb-3">جاري التحميل...</p>
                 <div class="h-px w-full bg-white/5 my-2"></div>
-                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">...</span></h2>
+                <h2 class="text-sm text-gray-300">مرحباً، <span id="studentName" class="text-white font-bold block text-base mt-1 truncate">جاري التحميل...</span></h2>
             </div>
         </div>
         
@@ -275,7 +273,7 @@
                         <div class="relative w-32 h-32 mx-auto bg-[#070b19] rounded-full border-[6px] border-yellow-500/20 flex items-center justify-center mb-6">
                             <div id="studentPointsDisplay" class="text-3xl font-bold text-white" dir="ltr">0%</div>
                         </div>
-                        <p class="text-gray-400 text-sm leading-relaxed max-w-[250px] mx-auto">هذه النسبة تعكس تفاعلك. استمر في التقدم!</p>
+                        <p class="text-gray-400 text-sm leading-relaxed max-w-[250px] mx-auto">هذه النسبة تعكس تفاعلك وحلك للاختبارات على المنصة. استمر في التقدم!</p>
                     </div>
                 </div>
             </div>
@@ -394,7 +392,31 @@
             return { switchTab };
         })();
 
-        // إعداد QuizApp للتعامل مع البيانات الحقيقية والمنطق الجديد
+        // دالة سحب بيانات الطالب من الـ Backend
+        async function fetchStudentData() {
+            try {
+                // استبدل هذا الرابط برابط الـ API الفعلي الخاص بجلب بيانات الطالب
+                const response = await fetch('/api/student/profile'); 
+                if (!response.ok) throw new Error('فشل جلب بيانات الطالب');
+                
+                const data = await response.json();
+                
+                // تحديث الـ DOM ببيانات الطالب
+                document.getElementById('studentName').textContent = data.name || 'طالب المنصة';
+                document.getElementById('studentGrade').textContent = data.grade || 'المرحلة الدراسية';
+                
+                // تحديث مؤشر الأداء لو الـ API بيرجعه
+                if(data.overallPerformance) {
+                    document.getElementById('studentPointsDisplay').textContent = `${data.overallPerformance}%`;
+                }
+
+            } catch (error) {
+                console.error("خطأ في جلب بيانات الطالب:", error);
+                document.getElementById('studentName').textContent = 'طالب المنصة';
+                document.getElementById('studentGrade').textContent = 'غير محدد';
+            }
+        }
+
         const QuizApp = (() => {
             const container = document.getElementById('onlineQuizzesContainer');
             const emptyState = document.getElementById('empty-state');
@@ -428,7 +450,6 @@
 
             const renderCard = (quiz, index) => {
                 const isCompleted = quiz.attempted;
-                // إذا كان الاختبار مكتمل يتم تغيير واجهة الكارت لمنع التفاعل معه وإظهار "مقفل"
                 return `
                 <button type="button" aria-label="اختبار ${quiz.title}"
                     class="quiz-card text-start w-full animate-fade ${isCompleted ? 'completed-card opacity-80' : ''}"
@@ -495,21 +516,18 @@
                 container.appendChild(fragment);
             };
 
-            const init = async (dataSourceUrlOrArray) => {
+            const init = async (apiUrl) => {
                 if (!initialized) {
                     initialized = true;
 
-                    // معالجة الضغط على الكارت
                     container.addEventListener('click', (e) => {
                         const card = e.target.closest('.quiz-card');
                         if(card) {
                             const q = AppState.quizzes.find(x => x.id == card.dataset.id);
                             if(q) {
-                                // لو الطالب امتحن قبل كده، امنع الدخول وأظهر توست
                                 if (q.attempted) {
-                                    Toast.show('لقد قمت باجتياز هذا الاختبار مسبقاً (مقفل)', 'warning');
+                                    Toast.show('عذراً، لا يمكنك دخول الاختبار أكثر من مرة (مقفل)', 'warning');
                                 } else {
-                                    // إذا لم يمتحن، قم باستدعاء الدالة الخاصة بفتح الاختبار (الموجودة بملف quiz.js)
                                     if (typeof QuizEngine !== 'undefined' && QuizEngine.open) {
                                         QuizEngine.open(q);
                                     } else {
@@ -538,22 +556,16 @@
                 renderSkeleton();
 
                 try {
-                    // سحب البيانات الحقيقية من الـ API إذا تم إرسال رابط
-                    if (typeof dataSourceUrlOrArray === 'string') {
-                        const response = await fetch(dataSourceUrlOrArray);
-                        if (!response.ok) throw new Error('فشل في جلب بيانات الاختبارات');
-                        const data = await response.json();
-                        AppState.quizzes = Array.isArray(data) ? data : (data.data || []);
-                    } else if (Array.isArray(dataSourceUrlOrArray) && dataSourceUrlOrArray.length > 0) {
-                        AppState.quizzes = dataSourceUrlOrArray;
-                    } else {
-                        // Dummy Data في حالة عدم ربط الباك اند لتجربة الواجهة فقط
-                        AppState.quizzes = [
-                            { id: 1, title: 'اختبار التاريخ الشامل - الفصل الأول', attempted: false, duration: 15, questionsCount: 20 },
-                            { id: 2, title: 'كويز سريع على المحاضرة الثانية', attempted: true, score: 85, attempts: 1 },
-                            { id: 3, title: 'اختبار الجغرافيا - التضاريس', attempted: false, duration: 10, questionsCount: 15 },
-                        ];
-                    }
+                    // سحب البيانات الفعلية من الداتا بيس عبر الـ API
+                    if (!apiUrl) throw new Error("لم يتم تمرير رابط الـ API");
+
+                    const response = await fetch(apiUrl);
+                    if (!response.ok) throw new Error('فشل في جلب بيانات الاختبارات من الخادم');
+                    
+                    const data = await response.json();
+                    
+                    // تأكد أن الخادم يرسل البيانات على هيئة Array أو بداخل كائن يحتوي على Array
+                    AppState.quizzes = Array.isArray(data) ? data : (data.data || []);
 
                     requestAnimationFrame(() => {
                         updateStats(AppState.quizzes);
@@ -562,20 +574,13 @@
 
                 } catch (error) {
                     console.error("فشل جلب البيانات:", error);
-                    Toast.show('حدث خطأ أثناء تحميل البيانات', 'error');
+                    container.innerHTML = ''; // إفراغ الـ Skeleton في حالة الخطأ
+                    Toast.show('حدث خطأ أثناء تحميل الاختبارات، يرجى المحاولة لاحقاً', 'error');
                 }
             };
 
             return { init };
         })();
-
-        // في حال لم يكن quiz.js يحتوي على الكائن، نقوم بإنشاء Fallback لمنع الأخطاء
-        window.QuizEngine = window.QuizEngine || {
-            open: (quizData) => {
-                Toast.show(`جاري فتح الاختبار...`, 'success');
-                // هنا منطق ملف quiz.js سيقوم بعمله
-            }
-        };
 
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('[data-tab-target]').forEach(btn => {
@@ -596,9 +601,11 @@
 
             Tabs.switchTab(AppState.activeTab);
             
-            // سحب البيانات من الـ API الخاص بك هنا (ضع رابط الـ API مكان الـ Array الفارغ)
-            // QuizApp.init('/api/quizzes/get-student-quizzes');
-            QuizApp.init([]); 
+            // 1. جلب وعرض بيانات الطالب (الاسم والمرحلة)
+            fetchStudentData();
+
+            // 2. جلب الاختبارات من الـ API (استبدل الرابط برابط الداتا بيس الفعلي الخاص بك)
+            QuizApp.init('/api/quizzes'); 
         });
     </script>
 </body>
