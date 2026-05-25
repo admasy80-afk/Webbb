@@ -355,6 +355,11 @@
             await EngineCore.detectEnvironment();
             injectStyles();
             
+            // 🚀 [Integration]: إيقاف جلب البيانات في لوحة التحكم أثناء إجراء الاختبار
+            if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.setQuizState === 'function') {
+                window.DahihApp.setQuizState(true);
+            }
+            
             document.documentElement.classList.add('qe-active');
             this.quiz = quiz; UIState.set(UIState.IDLE);
             
@@ -651,7 +656,6 @@
         async submit() {
             UIState.set(UIState.SUBMITTING);
             
-            // 1. إيقاف العداد فوراً لمنع الكراش
             clearInterval(this.timerId);
             
             if(this.vDOM) {
@@ -663,13 +667,11 @@
             const spinnerContainer = document.getElementById('qe-spinner-container');
             if(overlay) overlay.classList.add('show');
             
-            // 2. حساب النتيجة
             let score = 0;
             this.quiz.questions.forEach((q, qi) => { if (parseInt(this.answers[`q_${qi}`]) === q.correctAnswer) score++; });
             const percentage = Math.round((score / this.quiz.questions.length) * 100);
 
             try {
-                // 3. إرسال البيانات للسيرفر بأمان
                 const appState = typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.getState === 'function' ? window.DahihApp.getState() : {};
                 
                 if (typeof window.DahihApp !== 'undefined' && window.DahihApp.fetchWithTimeout) {
@@ -680,14 +682,12 @@
                     });
                 }
                 
-                // 4. تحديث البيانات محلياً في الكائن الممرر لحل مشكلة قراءة الـ LocalStorage المفقودة
                 this.quiz.attempted = true;
                 this.quiz.score = percentage;
                 
                 Scheduler.idle(() => localStorage.removeItem(`dq_${this.quiz.id}`));
                 Sensory.success();
                 
-                // 5. استدعاء تأثير الاحتفال 
                 if (percentage >= 85 && !EngineCore.isLowEnd && typeof confetti === 'function') {
                     confetti({ particleCount: 250, spread: 110, origin: { y: 0.4 }, colors: ['#facc15', '#22c55e', '#ffffff'], zIndex: 99999999 });
                 } else if (typeof confetti === 'function') {
@@ -701,7 +701,7 @@
                         const resultCard = document.createElement('div');
                         resultCard.className = 'qe-result-card';
                         resultCard.innerHTML = `
-                            <div class="qe-result-icon">${percentage >= 85 ? '🏆' : (percentage >= 50 ? '🎉' : '💪')}</div>
+                            <div class="qe-result-icon">${percentage >= 85 ? 'ممتاز' : (percentage >= 50 ? 'جيد جدا' : 'مقبول')}</div>
                             <h2 class="qe-result-title">انتهى الاختبار</h2>
                             <div class="qe-result-score">${percentage}%</div>
                             <div class="qe-result-details">
@@ -723,10 +723,8 @@
                                 overlay.classList.remove('show');
                                 overlay.style.opacity = '';
                                 
-                                // 6. إخفاء المودال وتطهيره بشكل كامل
                                 this.close();
                                 
-                                // 7. استدعاء دوال تحديث الإحصائيات بأمان
                                 setTimeout(() => {
                                     if (typeof window.DahihApp !== 'undefined' && window.DahihApp.refresh) {
                                         window.DahihApp.refresh();
@@ -743,7 +741,6 @@
                 }
 
             } catch (err) { 
-                // معالجة الخطأ برمجياً لمنع كراش الصفحة
                 console.error("خطأ حرج أثناء تسليم الاختبار:", err);
                 alert("عذراً، حدث خطأ أثناء حفظ إجاباتك. يرجى مراجعة الاتصال بالإنترنت.");
                 if(overlay) overlay.classList.remove('show');
@@ -752,11 +749,15 @@
         },
 
         close() {
-            // تنظيف العدادات والمستمعات لحماية الذاكرة (Memory Management)
             clearInterval(this.timerId);
             window.removeEventListener('resize', this.resizeHandler);
             document.documentElement.classList.remove('qe-active');
             
+            // 🚀 [Integration]: السماح للوحة التحكم بالعودة لجلب البيانات (إلغاء التجميد)
+            if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.setQuizState === 'function') {
+                window.DahihApp.setQuizState(false);
+            }
+
             const modal = document.getElementById('quizModal');
             if (modal) {
                 modal.style.opacity = '0';
