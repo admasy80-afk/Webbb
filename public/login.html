@@ -173,34 +173,40 @@
     </div>
 
 <script>
-// --- التحقق من الجلسة أولاً وتدمير الجثث القديمة ---
+// --- التحقق من الجلسة أولاً وتنظيف الجلسات الفاسدة ---
 async function verifySession() {
     const token = localStorage.getItem('userToken');
-    if (!token) return;
+    if (!token) return; // ضيف عادي — لا داعي لأي تنبيه
 
     try {
         const res = await fetch('/api/verify-session', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
+        // نقرأ الـ body مرة واحدة فقط
+        let data = {};
+        try { data = await res.json(); } catch (_) { data = {}; }
+
         if (res.ok) {
-            const data = await res.json();
-            if (data.redirectTo) {
-                window.location.replace(data.redirectTo);
-            }
-        } else {
-            localStorage.removeItem('userToken');
-            localStorage.removeItem('dahih_token');
-            localStorage.removeItem('userData');
-            localStorage.removeItem('dahih_user');
+            if (data.redirectTo) window.location.replace(data.redirectTo);
+            return;
         }
+
+        // التوكن منتهي/غير صالح/غير موجود في DB → نظّف وابقَ هنا
+        if (
+            data.code === 'TOKEN_EXPIRED' ||
+            data.code === 'TOKEN_INVALID' ||
+            data.code === 'ACCOUNT_NOT_FOUND'
+        ) {
+            ['userToken', 'dahih_token', 'userData', 'dahih_user']
+                .forEach(k => localStorage.removeItem(k));
+        }
+        // أي شيء آخر (مثل خطأ شبكة أو 500) لا نتلاعب بالـ storage حتى لا نخرج المستخدم بدون داعي
     } catch (e) {
-        console.log("فشل التحقق من الجلسة:", e);
+        // فشل شبكة — نتجاهله بصمت
     }
 }
-verifySession(); 
+verifySession();
 
 // --- كود برمجة العين ---
 const toggleBtn = document.getElementById('togglePassword');
