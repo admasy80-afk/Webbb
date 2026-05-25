@@ -127,19 +127,58 @@
         let t; return function (...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
     };
 
+    // 🛠️ التعديل الأول: تطوير TokenManager ليتحكم بالتوكن والبيانات كاملة
     const TokenManager = {
-        getUser: () => { try { return JSON.parse(localStorage.getItem('dahih_user')); } catch { return null; } },
-        clear: () => localStorage.removeItem('dahih_user')
+        getUser: () => {
+            try {
+                return JSON.parse(localStorage.getItem('dahih_user'));
+            } catch {
+                return null;
+            }
+        },
+
+        getToken: () => {
+            return localStorage.getItem('dahih_token');
+        },
+
+        clear: () => {
+            localStorage.removeItem('dahih_user');
+            localStorage.removeItem('dahih_token');
+            localStorage.removeItem('userData');
+            localStorage.removeItem('userToken');
+        }
     };
 
-    function authGate() {
+    // 🛠️ التعديل الثاني: التحقق الفعلي من السيرفر قبل فتح التطبيق
+    async function authGate() {
         const user = TokenManager.getUser();
-        if (!user) {
-            Toast.show("⚠️ انتهت صلاحية الجلسة، جاري التحويل...", 'warn', 2000);
-            safeTimeout(() => window.location.replace('/logina.html'), 1500);
+        const token = TokenManager.getToken();
+
+        if (!user || !token) {
+            logout();
             return false;
         }
-        state.user = user; return true;
+
+        try {
+            const res = await fetch('/api/verify-session', {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+
+            if (!res.ok) {
+                logout();
+                return false;
+            }
+
+            const data = await res.json();
+            state.user = data.user || user;
+            return true;
+
+        } catch (e) {
+            Toast.show("📡 فشل التحقق من الجلسة", 'warn');
+            return false;
+        }
     }
 
     function logout() {
@@ -456,7 +495,15 @@
 
             cancelSafeTimeout(timeoutId);
             if (!res.ok) {
-                if (res.status === 401 || res.status === 403) { Toast.show("🚨 انتهت صلاحية الجلسة", 'error'); safeTimeout(() => logout(), 1500); return; }
+                // 🛠️ التعديل الرابع: تنظيف محلي وتوجيه هادئ بدون طرد قاسي للسيرفر
+                if (res.status === 401 || res.status === 403) {
+                    TokenManager.clear();
+                    Toast.show("🚨 انتهت صلاحية الجلسة", 'error');
+                    safeTimeout(() => {
+                        window.location.replace('/logina.html');
+                    }, 1500);
+                    return;
+                }
                 throw new Error(`HTTP ${res.status}`);
             }
 
@@ -700,8 +747,9 @@
         }
     }
 
+    // 🛠️ التعديل الثالث: استخدام await مع authGate() في الإقلاع
     async function init() {
-        if (!authGate()) return;
+        if (!(await authGate())) return;
         await IDBCache.init();
 
         const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
