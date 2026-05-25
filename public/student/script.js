@@ -10,7 +10,8 @@
         quizzesHash: '',
         pointsHash: '',
         questionsHash: '',
-        availableQuizzes: [],
+        rawQuizzes: [], // حفظ البيانات الأصلية للاختبارات
+        currentQuizFilter: 'all', // حفظ حالة الفلتر الحالي
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
         pollTimer: null,
@@ -49,7 +50,7 @@
         const userStr = localStorage.getItem('dahih_user');
         const token = localStorage.getItem('dahih_token');
         if (!userStr || !token) {
-            alert("⚠️ المصادقة فشلت: لم يتم العثور على التوكن أو بيانات المستخدم في الـ LocalStorage. سيتم توجيهك لصفحة تسجيل الدخول.");
+            alert("⚠️ المصادقة فشلت: لم يتم العثور على التوكن أو بيانات المستخدم. سيتم توجيهك لصفحة تسجيل الدخول.");
             window.location.replace('/logina.html');
             return false;
         }
@@ -83,7 +84,7 @@
     const player = {
         video: null, poster: null, container: null, progress: null, progressBar: null,
         currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
-        centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
+        centerPlay: null, skipIndicatorLeft: null, skipIndicatorRight: null, skipTextLeft: null, skipTextRight: null, titleEl: null,
         tapLeft: null, tapRight: null, lastSentTime: -1,
 
         init() {
@@ -97,8 +98,10 @@
             this.speedBtn      = $('speedBtn');
             this.muteBtn       = $('muteBtn');
             this.centerPlay    = $('centerPlay');
-            this.skipIndicator = $('skipIndicator');
-            this.skipText      = $('skipText');
+            this.skipIndicatorLeft = $('skipIndicatorLeft');
+            this.skipIndicatorRight = $('skipIndicatorRight');
+            this.skipTextLeft  = $('skipTextLeft');
+            this.skipTextRight = $('skipTextRight');
             this.titleEl       = $('playingVideoTitle');
             this.tapLeft       = $('tapLeft');
             this.tapRight      = $('tapRight');
@@ -115,8 +118,8 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
-            this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, '+10 ثواني'); });
-            this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, '-10 ثواني'); });
+            this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, '-10', 'left'); });
+            this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, '+10', 'right'); });
 
             this.speedBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -154,7 +157,6 @@
             this.lastSentTime = -1;
 
             this.poster.classList.add('hidden');
-            this.poster.classList.add('is-hidden'); 
             this.video.classList.remove('hidden');
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
@@ -235,15 +237,21 @@
         },
         onError() {
             const err = this.video.error;
-            alert(`🚨 خطأ في مشغل الفيديو المتصفح:\nالكود: ${err ? err.code : 'مجهول'}\nالرسالة: ${err ? err.message : 'لا توجد تفاصيل'}`);
+            alert(`🚨 خطأ في مشغل الفيديو:\nالكود: ${err ? err.code : 'مجهول'}\nالرسالة: ${err ? err.message : 'لا توجد تفاصيل'}`);
         },
-        skip(seconds, label) {
+        skip(seconds, label, side) {
             if (!this.video.src || !isFinite(this.video.duration)) return;
             this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
-            this.skipText.textContent = label;
-            this.skipIndicator.classList.remove('is-active');
-            void this.skipIndicator.offsetWidth;
-            this.skipIndicator.classList.add('is-active');
+            
+            const indicator = side === 'left' ? this.skipIndicatorLeft : this.skipIndicatorRight;
+            const textEl = side === 'left' ? this.skipTextLeft : this.skipTextRight;
+            
+            if(indicator && textEl) {
+                textEl.textContent = label;
+                indicator.classList.remove('is-active');
+                void indicator.offsetWidth;
+                indicator.classList.add('is-active');
+            }
             haptic(35);
         },
         updateMuteIcon() {
@@ -291,8 +299,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات...</p>
-                    <p class="text-sm mt-2 text-gray-500">جاري الاتصال بقاعدة البيانات</p>
+                    <p class="font-bold text-lg text-gray-300">جاري جلب البيانات...</p>
                 </div>`;
         }
 
@@ -308,7 +315,7 @@
 
             if (!res.ok) {
                 if (res.status === 401 || res.status === 403) {
-                    alert("🚨 انتهت صلاحية الجلسة (401/403)، يرجى إعادة تسجيل الدخول.");
+                    alert("🚨 انتهت صلاحية الجلسة، يرجى إعادة تسجيل الدخول.");
                     logout();
                     return;
                 }
@@ -319,12 +326,10 @@
             renderAll(data, initial);
             
         } catch (err) {
-            alert(`🚨 فشل جلب بيانات الـ Dashboard:\nالسبب: ${err.message}\n\nتأكد من عمل السيرفر الداخلي على مسار /api/student/dashboard-data بشكل سليم.`);
-
-            if (container) {
+            if (container && initial) {
                 container.innerHTML = `
                     <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full">
-                        <p class="font-bold text-xl mb-2">فشل تحميل المحاضرات 😔</p>
+                        <p class="font-bold text-xl mb-2">فشل تحميل البيانات 😔</p>
                         <p class="text-sm text-gray-400 mb-6">${err.message}</p>
                         <button onclick="DahihApp.refresh()" class="bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-6 py-2 rounded-xl transition-colors font-bold">🔄 أعد المحاولة</button>
                     </div>`;
@@ -340,7 +345,7 @@
             renderQuestions(data.content?.questions || []);
             renderScore(parseInt(data.studentPoints || 0));
         } catch(e) {
-            alert("🚨 خطأ أثناء توزيع وتصنيع عناصر الـ DOM المعادة من السيرفر:\n" + e.message);
+            console.error("Error rendering DOM:", e);
         }
     }
 
@@ -412,40 +417,138 @@
         });
     }
 
-    // --- التعديل هنا لربط الدالة الخاصة بالكروت بالكود الأصلي ---
-    function renderQuizzes(list) {
-        const container = $('onlineQuizzesContainer');
-        if (!container) return;
-        
-        const h = hash(list.map(q => [q.id, q.title, q.questions?.length, (q.results || []).length]));
-        if (h === state.quizzesHash) return;
-        state.quizzesHash = h;
-        state.availableQuizzes = list;
-
-        if (!list.length) {
-            container.innerHTML = '<div id="empty-state" class="flex justify-center items-center py-10 w-full text-gray-500">لا توجد اختبارات متاحة حالياً.</div>';
-            return;
+    // --- نظام الاختبارات المحدث ---
+    const updateQuizStats = (quizzes) => {
+        if(!quizzes || quizzes.length === 0) {
+             if($('stat-total')) $('stat-total').textContent = '0';
+             if($('stat-completed')) $('stat-completed').textContent = '0';
+             if($('stat-remaining')) $('stat-remaining').textContent = '0';
+             if($('stat-average')) $('stat-average').textContent = '0%';
+             return;
         }
 
-        const html = list.slice().reverse().map(quiz => {
+        const total = quizzes.length;
+        const completed = quizzes.filter(q => q.attempted).length;
+        const remaining = total - completed;
+        
+        let avgScore = 0;
+        if (completed > 0) {
+            const totalScore = quizzes.filter(q => q.attempted).reduce((acc, q) => acc + (q.score || 0), 0);
+            avgScore = Math.round(totalScore / completed);
+        }
+
+        if($('stat-total')) $('stat-total').textContent = total;
+        if($('stat-completed')) $('stat-completed').textContent = completed;
+        if($('stat-remaining')) $('stat-remaining').textContent = remaining;
+        if($('stat-average')) $('stat-average').textContent = completed > 0 ? `${avgScore}%` : '-';
+    };
+
+    function renderQuizzes(list) {
+        const container = $('onlineQuizzesContainer');
+        const emptyState = $('empty-state');
+        if (!container) return;
+
+        // تحديث البيانات الخام في الـ state للاستخدام وقت الفلترة
+        if (list) {
+            state.rawQuizzes = list.slice().reverse();
+        }
+        
+        const workingList = state.rawQuizzes;
+
+        // تجهيز البيانات بإضافة حالة (مكتمل / النتيجة)
+        const processedQuizzes = workingList.map(quiz => {
             const result = quiz.results ? quiz.results.find(r => r.email === state.user.email) : null;
-            
-            // تمرير البيانات بصيغة تتوافق مع دالة توليد الكروت الجديدة
-            const formattedQuiz = {
+            return {
                 ...quiz,
                 attempted: !!result,
                 score: result ? result.percentage : 0,
                 attempts: result ? 1 : 0, 
                 questionsCount: quiz.questions ? quiz.questions.length : 0,
-                duration: quiz.duration || 15 // لو مفيش وقت افتراضي
+                duration: quiz.duration || 15
             };
+        });
 
-            // استخدام الدالة الجديدة السحرية بتاعتك
-            return window.generateQuizCardHTML(formattedQuiz);
+        // الـ Hash بيحمي من الـ Re-render لو مفيش تغيير في البيانات أو الفلتر
+        const h = hash(processedQuizzes.map(q => [q.id, q.attempted, q.score, state.currentQuizFilter]));
+        if (h === state.quizzesHash) return;
+        state.quizzesHash = h;
+
+        // تحديث الإحصائيات بالبيانات الكلية (قبل الفلترة)
+        updateQuizStats(processedQuizzes);
+
+        // تطبيق الفلتر
+        let filteredQuizzes = processedQuizzes;
+        if (state.currentQuizFilter === 'new') {
+            filteredQuizzes = processedQuizzes.filter(q => !q.attempted);
+        } else if (state.currentQuizFilter === 'completed') {
+            filteredQuizzes = processedQuizzes.filter(q => q.attempted);
+        }
+
+        // ترتيب: الجديدة أولاً ثم المكتملة
+        filteredQuizzes.sort((a, b) => (a.attempted === b.attempted) ? 0 : a.attempted ? 1 : -1);
+
+        // عرض الـ Empty State لو مفيش نتايج للفلتر
+        if (filteredQuizzes.length === 0) {
+            container.innerHTML = '';
+            if (emptyState) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            }
+            return;
+        }
+
+        // إخفاء الـ Empty State لو في بيانات
+        if (emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+        }
+
+        // بناء الـ HTML للكروت بناءً على الحالة
+        const html = filteredQuizzes.map(quiz => {
+            if (!quiz.attempted) {
+                return `
+                <div tabindex="0" role="button" aria-label="بدء اختبار ${escapeHTML(quiz.title)}" class="quiz-card animate-fade" style="animation-delay: ${Math.random() * 0.1}s;" data-id="${quiz.id}">
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="text-[11px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-[10px] tracking-wider">جديد</span>
+                            <span class="text-xs text-gray-500">${quiz.duration} دقيقة</span>
+                        </div>
+                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${escapeHTML(quiz.title || 'بدون عنوان')}</h3>
+                        <p class="text-sm text-gray-400 flex items-center gap-1.5">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            ${quiz.questionsCount} سؤال
+                        </p>
+                    </div>
+                    <div class="relative z-10 flex items-center justify-between mt-auto pt-5 border-t border-white/[0.03]">
+                        <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
+                        <div class="action-icon w-8 h-8 rounded-[10px] bg-white/5 flex items-center justify-center text-gray-400">
+                            <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                        </div>
+                    </div>
+                </div>`;
+            } else {
+                return `
+                <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار ${escapeHTML(quiz.title)}" class="quiz-card completed-card animate-fade" style="animation-delay: ${Math.random() * 0.1}s;" data-id="${quiz.id}">
+                    <div class="relative z-10 flex justify-between items-start mb-3">
+                        <span class="text-[11px] font-bold text-white bg-white/10 px-2 py-1 rounded-[10px] tracking-wider">مكتمل</span>
+                    </div>
+                    <h3 class="relative z-10 text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${escapeHTML(quiz.title || 'بدون عنوان')}</h3>
+                    <div class="relative z-10 text-xs text-gray-500 space-y-1 mb-4">
+                        ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
+                    </div>
+                    <div class="relative z-10 mt-auto pt-4 border-t border-white/[0.03] flex items-end justify-between">
+                        <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
+                        <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-yellow-400' : 'text-red-400'} leading-none">
+                            ${quiz.score}%
+                        </div>
+                    </div>
+                </div>`;
+            }
         }).join('');
-        
-        // عرض الكروت جوة Grid مناسب بدال الـ flex القديم
-        container.innerHTML = `<div class="fade-in-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${html}</div>`;
+
+        container.innerHTML = html;
     }
 
     function renderPoints(list) {
@@ -454,8 +557,8 @@
         const h = hash(list);
         if (h === state.pointsHash) return;
         state.pointsHash = h;
-        if (!list.length) { container.innerHTML = '<p class="empty">لا توجد ملاحظات حالياً.</p>'; return; }
-        container.innerHTML = `<ul class="fade-in-stagger" style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.65rem;">${list.map(p => `<li style="display:flex;gap:0.65rem;color:#cbd5e1;font-size:0.9rem;line-height:1.7;"><span style="color:var(--accent);flex-shrink:0;line-height:1.7;">▸</span><span>${escapeHTML(p)}</span></li>`).join('')}</ul>`;
+        if (!list.length) { container.innerHTML = '<p class="empty text-gray-500 py-10 text-center">لا توجد ملاحظات حالياً.</p>'; return; }
+        container.innerHTML = `<ul class="fade-in-stagger flex flex-col gap-3">${list.map(p => `<li class="flex gap-3 text-slate-300 text-sm leading-relaxed"><span class="text-yellow-500 shrink-0">▸</span><span>${escapeHTML(p)}</span></li>`).join('')}</ul>`;
     }
 
     function renderQuestions(list) {
@@ -464,8 +567,8 @@
         const h = hash(list);
         if (h === state.questionsHash) return;
         state.questionsHash = h;
-        if (!list.length) { container.innerHTML = '<p class="empty">لا توجد أسئلة مقالية حالياً.</p>'; return; }
-        container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;font-weight:700;color:#fff;margin:0 0 0.5rem;line-height:1.5;"><span style="color:var(--text-dim);margin-left:0.4rem;">${i + 1}.</span>${escapeHTML(q.question)}</h3><p style="color:var(--text-muted);font-size:0.85rem;line-height:1.7;border-top:1px solid var(--border);padding-top:0.5rem;margin:0;"><span style="color:var(--accent);font-weight:700;margin-left:0.4rem;">الإجابة:</span>${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
+        if (!list.length) { container.innerHTML = '<p class="empty text-gray-500 py-10 text-center">لا توجد أسئلة مقالية حالياً.</p>'; return; }
+        container.innerHTML = `<div class="fade-in-stagger flex flex-col gap-4">${list.map((q, i) => `<article class="bg-black/30 border border-white/5 rounded-xl p-4"><h3 class="text-sm font-bold text-white mb-2 leading-relaxed"><span class="text-gray-500 ml-2">${i + 1}.</span>${escapeHTML(q.question)}</h3><p class="text-gray-400 text-xs leading-relaxed border-t border-white/5 pt-2 mt-0"><span class="text-yellow-500 font-bold ml-2">الإجابة:</span>${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
     }
 
     function renderScore(newPoints) {
@@ -476,70 +579,12 @@
         state.currentPoints = newPoints;
     }
 
-    // --- الحل السحري: إضافة دالة إنشاء الكروت هنا ---
-    window.generateQuizCardHTML = function(quiz) {
-        // إخفاء رسالة "لا توجد اختبارات" تلقائياً
-        const emptyState = document.getElementById('empty-state');
-        if(emptyState) {
-            emptyState.classList.add('hidden');
-            emptyState.classList.remove('flex');
-        }
-
-        // رسم الكارت بالتصميم الجديد
-        if (!quiz.attempted) {
-            return `
-            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card card-new animate-fade bg-white/5 border border-white/10 p-5 rounded-2xl hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
-                <div class="flex-grow">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
-                        <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
-                    </div>
-                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
-                    <p class="text-sm text-gray-400 flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        ${quiz.questionsCount || 0} سؤال
-                    </p>
-                </div>
-                
-                <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
-                    <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
-                    <div class="action-icon w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
-                        <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </div>
-            `;
-        } else {
-            return `
-            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card animate-fade bg-white/5 border border-white/10 border-r-4 border-r-green-500/80 p-5 rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
-                <div class="flex justify-between items-start mb-3 flex-grow">
-                    <div>
-                        <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider mb-3 inline-block">مكتمل</span>
-                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
-                    </div>
-                </div>
-                
-                <div class="text-xs text-gray-500 space-y-1 mb-4 flex-grow">
-                    ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
-                </div>
-
-                <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
-                    <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
-                    <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-green-400' : 'text-red-400'} leading-none">
-                        ${quiz.score || 0}%
-                    </div>
-                </div>
-            </div>
-            `;
-        }
-    };
-
     function init() {
         if (!authGate()) return;
 
         const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
-        $('studentName').textContent = firstName;
-        $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
+        if($('studentName')) $('studentName').textContent = firstName;
+        if($('studentGrade')) $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
 
         player.init();
         fetchData(true);
@@ -548,28 +593,39 @@
             state.pollTimer = setInterval(() => fetchData(false), 10000);
         }
 
-        // --- إضافة أحداث أزرار الفلترة هنا لتشتغل عند تهيئة النظام ---
+        // --- Event Listeners الخاصة بصفحة الاختبارات ---
+        const quizContainer = $('onlineQuizzesContainer');
+        if (quizContainer) {
+            // Event Delegation لفتح الاختبار عند الضغط على الكارت
+            quizContainer.addEventListener('click', (e) => {
+                const card = e.target.closest('.quiz-card');
+                if (!card) return;
+                const quizId = card.getAttribute('data-id');
+                const quizData = state.rawQuizzes.find(q => String(q.id) === String(quizId));
+                
+                if (quizData && typeof QuizEngine !== 'undefined') {
+                    QuizEngine.open(quizData);
+                }
+            });
+
+            // دعم لوحة المفاتيح
+            quizContainer.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    const card = e.target.closest('.quiz-card');
+                    if (card) { e.preventDefault(); card.click(); }
+                }
+            });
+        }
+
+        // أزرار الفلترة
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // تفعيل شكل الزرار
                 document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
                 
-                // فلترة الكروت المعروضة
-                const filter = e.target.getAttribute('data-filter');
-                const cards = document.querySelectorAll('.quiz-card');
-                
-                cards.forEach(card => {
-                    if (filter === 'all') {
-                        card.style.display = 'flex';
-                    } else if (filter === 'new' && card.classList.contains('card-new')) {
-                        card.style.display = 'flex';
-                    } else if (filter === 'completed' && !card.classList.contains('card-new')) {
-                        card.style.display = 'flex';
-                    } else {
-                        card.style.display = 'none';
-                    }
-                });
+                state.currentQuizFilter = e.target.getAttribute('data-filter');
+                state.quizzesHash = ''; // مسح الـ Hash لإجبار الكود على إعادة الرسم
+                renderQuizzes(); // إعادة الرسم فورا بدون انتظار الـ Polling
             });
         });
     }
