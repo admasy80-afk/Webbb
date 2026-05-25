@@ -9,23 +9,26 @@
     
     <title>لوحة الطالب | منصة الدحيح</title>
 
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=line-clamp"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- الملفات الخارجية والمشغلات -->
     <link rel="stylesheet" href="player.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     
+    <!-- سكربتات المنصة الأساسية -->
     <script src="player.js" defer></script>
     <script src="quiz.js" defer></script>
     <script src="script.js" defer></script>
 
     <style>
         /* ============================================================
-           Design Tokens & Theming (تأثيرات وحركات الملف الأول الفخمة)
+           Design Tokens & Theming
            ============================================================ */
         :root {
             --bg: #070b19;
@@ -49,13 +52,12 @@
             --z-modal: 100;
             --z-toast: 200;
 
-            /* Motion - أنيميشن الملف الأول الفخم والثقيل */
+            /* Motion */
             --d-fast: 300ms;
             --d-base: 500ms;
             --d-slow: 800ms;
             --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
             
-            /* Shadows من الملف الثاني لدعم التصميم */
             --shadow-md: 0 10px 30px rgba(0,0,0,.25);
             --shadow-accent: 0 6px 20px rgba(234,179,8,.25);
         }
@@ -81,7 +83,6 @@
         }
         button { cursor: pointer; }
 
-        /* تأثير الـ Noise المعتمد بالملف الأول */
         body::before {
             content: '';
             position: fixed;
@@ -113,7 +114,6 @@
 
         #mainGrid { contain: content; }
 
-        /* أزرار التنقل الجانبية */
         .tab-btn {
             transition: background-color var(--d-base) var(--ease-out),
                         color var(--d-base) var(--ease-out),
@@ -133,7 +133,6 @@
             border-inline-start: 3px solid var(--accent);
         }
 
-        /* حركات التبديل الثقيلة والفخمة للملف الأول */
         @keyframes fadeInTab {
             from { opacity: 0; transform: translateY(20px); }
             to   { opacity: 1; transform: translateY(0); }
@@ -164,7 +163,6 @@
         .animate-fade-in-up { animation: fadeInUp var(--d-slow) var(--ease-out) both; }
         .animate-fade { animation: fadeInUp var(--d-slow) var(--ease-out) both; }
 
-        /* Stagger لتتابع ظهور البطاقات خفيفاً */
         .animate-fade:nth-child(1)  { animation-delay: 40ms; }
         .animate-fade:nth-child(2)  { animation-delay: 80ms; }
         .animate-fade:nth-child(3)  { animation-delay: 120ms; }
@@ -179,7 +177,6 @@
             will-change: transform;
         }
 
-        /* كروت الاختبارات وتأثيراتها البصرية الحركية */
         .quiz-card {
             background: var(--bg-elev-2);
             border: 1px solid rgba(255,255,255,.04);
@@ -188,7 +185,7 @@
             display: flex;
             flex-direction: column;
             height: 100%;
-            min-height: 170px;
+            min-height: 160px;
             position: relative;
             transform: translate3d(0, 0, 0);
             transition: transform var(--d-base) var(--ease-out),
@@ -211,7 +208,8 @@
         .completed-card {
             border-color: rgba(34,197,94,.12);
             background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-2);
-            cursor: default;
+            cursor: not-allowed;
+            opacity: 0.85;
         }
         .completed-card:hover {
             background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-3);
@@ -224,7 +222,6 @@
                         color var(--d-fast) var(--ease-out); 
         }
 
-        /* الـ Skeleton Loader من الملف الأول والثاني المدمج */
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50%      { opacity: .4; }
@@ -237,7 +234,6 @@
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* زر الفلاتر المطور */
         .filter-btn {
             padding: 8px 16px;
             border-radius: 12px;
@@ -251,7 +247,6 @@
         .filter-btn:hover { color: var(--text); background: rgba(255,255,255,.04); }
         .filter-btn.active { background: rgba(255,255,255,.08); color: var(--text); }
 
-        /* كود منسق إضافي لدعم أزرار المشغل المخصص داخل الفريم */
         .video-container { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
         .video-poster { position: absolute; inset: 0; background: #070b19; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
         
@@ -262,11 +257,13 @@
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
     
+    <!-- خلفيات الإضاءة -->
     <div class="fixed inset-0 pointer-events-none" style="z-index: var(--z-bg);">
         <div class="fixed top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-yellow-500/5 rounded-full blur-[120px] -z-10"></div>
         <div class="fixed bottom-[-10%] left-[-5%] w-[35rem] h-[35rem] bg-purple-500/5 rounded-full blur-[120px] -z-10"></div>    
     </div>
 
+    <!-- القائمة الجانبية (Sidebar) -->
     <aside class="w-full md:w-72 glass-panel flex flex-col shrink-0 border-b md:border-b-0 md:border-l border-white/5 bg-[#070b19]/95 md:bg-transparent md:sticky md:top-0" style="z-index: var(--z-sidebar);">
         <div class="p-4 md:p-6 flex flex-row md:flex-col justify-between items-center md:items-start gap-4">
             <div class="flex justify-between w-full items-center">
@@ -285,7 +282,7 @@
         <nav class="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto w-full px-2 pb-2 md:px-4 md:py-4 gap-2 hide-scrollbar flex-shrink-0" style="scroll-snap-type: x mandatory;">
             <button onclick="switchTab('dashboard')" data-tab-target="dashboard" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
             <button onclick="switchTab('courses')" data-tab-target="courses" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
-            <button onclick="switchTab('quizzes')" data-tab-target="quizzes" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
+            <button onclick="switchTab('quizzes')" data-tab-target="quizzes" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختارت الإلكترونية</button>
             <button onclick="switchTab('points')" data-tab-target="points" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
             <button onclick="switchTab('questions')" data-tab-target="questions" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
         </nav>
@@ -298,8 +295,10 @@
         </div>
     </aside>
 
+    <!-- منطقة العرض الرئيسية -->
     <main class="flex-grow h-full overflow-y-auto p-3 md:p-8 relative scroll-smooth" id="mainGrid">
 
+        <!-- لوحة المذاكرة -->
         <div id="tab-dashboard" class="tab-content active space-y-4 md:space-y-6">
             <div class="flex flex-col lg:flex-row gap-4 md:gap-6">
                 <div class="flex-1 glass-panel rounded-2xl border-t-4 border-yellow-500 overflow-hidden shadow-2xl animate-fade-in-up bg-[#0a0f1c]">
@@ -390,6 +389,7 @@
             </div>
         </div>
 
+        <!-- المحاضرات والحصص -->
         <div id="tab-courses" class="tab-content">
             <h1 class="text-2xl font-bold mb-2">المحاضرات والحصص</h1>
             <p class="text-gray-400 text-sm mb-6">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك.</p>
@@ -400,6 +400,7 @@
             </div>
         </div>
 
+        <!-- الاختبارات الإلكترونية -->
         <div id="tab-quizzes" class="tab-content font-sans" style="background: radial-gradient(circle at top right, rgba(234,179,8,.05), transparent 35%);">
             <div class="flex items-center gap-3 mb-2 pt-4">
                 <div class="bg-yellow-500/20 p-2.5 rounded-[12px]">
@@ -449,6 +450,7 @@
             </div>
         </div>
 
+        <!-- أهم نقاط المنهج -->
         <div id="tab-points" class="tab-content">
             <h1 class="text-2xl font-bold mb-2">أهم نقاط المنهج</h1>
             <p class="text-gray-400 text-sm mb-6">ملاحظات وتلخيصات سريعة لتثبيت المعلومات.</p>
@@ -457,6 +459,7 @@
             </div>
         </div>
 
+        <!-- الأسئلة المقالية -->
         <div id="tab-questions" class="tab-content">
             <h1 class="text-2xl font-bold mb-2">أهم الأسئلة المقالية</h1>
             <p class="text-gray-400 text-sm mb-6">تدرب على نمط الأسئلة المقالية المتوقعة مع معرفة الإجابات النموذجية.</p>
@@ -466,6 +469,7 @@
         </div>
     </main>
 
+    <!-- نافذة عرض الاختبار المقفلة والذكية -->
     <div id="quizModal" class="fixed inset-0 z-[100] bg-black/95 hidden flex items-center justify-center p-4 backdrop-blur-xl" role="dialog" aria-modal="true">
         <div class="bg-[#0a0f1c] border border-white/10 w-full max-w-3xl rounded-[2rem] p-5 md:p-8 max-h-[95vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)]" id="quizModalBox">
             <div id="quizModalContent"></div>
@@ -473,7 +477,7 @@
     </div>
 
     <script>
-        // دالة التنقل الفخمة والسلسة الخاصة بالملف الأول متوافقة مع الأداء الميكانيكي للملف الثاني
+        // دالة التنقل بين التبويبات الفخمة
         window.switchTab = function(tabId) {
             const activeTab = localStorage.getItem('activeTab');
             if (activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
@@ -483,13 +487,13 @@
             document.querySelectorAll('.tab-content').forEach(el => {
                 if (el.id === `tab-${tabId}`) {
                     el.style.display = 'block';
-                    void el.offsetWidth; // Force Reflow لإبقاء الأنيميشن ناعماً
+                    void el.offsetWidth;
                     el.classList.add('active');
                 } else {
                     el.classList.remove('active');
                     setTimeout(() => {
                         if (!el.classList.contains('active')) el.style.display = 'none';
-                    }, 500); // متوافق مع وقت الـ transition للملف الأول
+                    }, 500);
                 }
             });
 
@@ -504,14 +508,25 @@
             });
         };
 
-        // المحرك المطور لإدارة الاختبارات المأخوذ بالكامل من الملف الثاني
+        // إدارة فتح المحاضرة والاختبارات عبر ملف quiz.js الخارجي
         const QuizEngine = {
             open: (quizData) => {
-                console.log("Opening Quiz via Engine:", quizData);
+                // التحقق الفوري ما إذا كان الاختبار مكتملًا مسبقًا لمنع تكرار الدخول
+                if (quizData.attempted) {
+                    alert("عذراً، لقد قمت بإنهاء هذا الاختبار مسبقاً. يُسمح بدخول الاختبار ومحاولته لمرة واحدة فقط.");
+                    return;
+                }
+
+                console.log("إرسال طلب بدء الاختبار إلى ملف التشغيل الخارجي quiz.js...");
+                
+                // الاعتماد الكلي على دالة الفتح المتواجدة داخل ملف quiz.js
                 if (typeof window.openQuizModal === 'function') {
                     window.openQuizModal(quizData);
+                } else if (typeof window.loadQuiz === 'function') {
+                    window.loadQuiz(quizData.id);
                 } else {
-                    alert(`بدء اختبار: ${quizData.title}`);
+                    // حل احتياطي في حال تأخر تحميل الملف الخارجي
+                    alert(`جاري بدء الاختبار: ${quizData.title}`);
                 }
             }
         };
@@ -569,7 +584,6 @@
                     <div class="relative z-10">
                         <div class="flex items-center gap-2 mb-3">
                             <span class="text-[11px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-[10px] tracking-wider">جديد</span>
-                            <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
                         </div>
                         <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
                         <p class="text-sm text-gray-400 flex items-center gap-1.5">
@@ -587,18 +601,20 @@
             `;
 
             const renderCompletedCard = (quiz) => `
-                <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار ${quiz.title}" class="quiz-card completed-card animate-fade" data-id="${quiz.id}">
+                <div class="quiz-card completed-card animate-fade" data-id="${quiz.id}" title="تم اجتياز هذا الاختبار ولا يمكن دخوله مرة أخرى">
                     <div class="relative z-10 flex justify-between items-start mb-3">
-                        <span class="text-[11px] font-bold text-white bg-white/10 px-2 py-1 rounded-[10px] tracking-wider">مكتمل</span>
+                        <span class="text-[11px] font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-[10px] tracking-wider">تم إرسال الحل</span>
                     </div>
-                    <h3 class="relative z-10 text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
+                    <h3 class="relative z-10 text-base font-semibold text-gray-400 mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
                     <div class="relative z-10 text-xs text-gray-500 space-y-1 mb-4">
-                        ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
-                        ${quiz.lastAttempt ? `<p>آخر محاولة: ${quiz.lastAttempt}</p>` : ''}
+                        <p class="text-rose-400/85 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m0-6V9m0 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            مغلق (محاولة واحدة فقط)
+                        </p>
                     </div>
                     <div class="relative z-10 mt-auto pt-4 border-t border-white/[0.03] flex items-end justify-between">
-                        <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
-                        <div class="text-3xl font-black text-yellow-400 leading-none">${quiz.score || 0}%</div>
+                        <span class="text-xs text-gray-500 mb-1">درجتك المحفوظة</span>
+                        <div class="text-3xl font-black text-emerald-400 leading-none">${quiz.score || 0}%</div>
                     </div>
                 </div>
             `;
@@ -622,6 +638,13 @@
                 container.addEventListener('click', (e) => {
                     const card = e.target.closest('.quiz-card');
                     if(!card) return;
+                    
+                    // إذا كان الكارت يحتوي على كلاس التدشين المكتمل فلا تتخذ أي رد فعل (مغلق)
+                    if(card.classList.contains('completed-card')) {
+                        alert("لقد أتممت هذا الاختبار بالفعل، لا يمكنك إعادة الدخول بناءً على الصلاحيات المقررة.");
+                        return;
+                    }
+
                     const quizId = card.getAttribute('data-id');
                     const quizData = quizzesData.find(q => q.id == quizId);
                     if(quizData) { QuizEngine.open(quizData); }
@@ -667,20 +690,17 @@
             return { init };
         })();
 
-        // تهيئة التبويبات والمستمعات عند استقرار العناصر بالصفحة
         document.addEventListener('DOMContentLoaded', () => {
-            // تفعيل أزرار القائمة الجانبية للتنقل الفخم
             document.querySelectorAll('[data-tab-target]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     window.switchTab(e.currentTarget.dataset.tabTarget);
                 });
             });
 
-            // استرجاع أخر صفحة مسجلة بالـ LocalStorage
             const savedTab = localStorage.getItem('activeTab') || 'dashboard';
             window.switchTab(savedTab);
 
-            // تهيئة واجهة الاختبارات الافتراضية الجاهزة لاستقبال مصفوفة البيانات الدقيقة
+            // تهيئة واجهة الاختبارات (يمكنك تمرير مسار الملف المصدري أو تركه للملف الخارجي quiz.js ليقوم بضخ مصفوفته هنا)
             QuizApp.init([]); 
         });
     </script>
