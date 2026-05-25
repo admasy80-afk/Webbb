@@ -49,9 +49,6 @@
             --ease-out: cubic-bezier(.22, 1, .36, 1);
         }
 
-        /* تم إصلاح مشكلة الأداء: تم نقل الفونت لـ body, html 
-           بدل الـ universal selector
-        */
         * {
             -webkit-tap-highlight-color: transparent;
             box-sizing: border-box;
@@ -66,7 +63,7 @@
             text-rendering: optimizeLegibility;
         }
 
-        /* Accessibility Fixes: تم حذف outline: none بالكامل والإبقاء على focus-visible */
+        /* Accessibility Fixes */
         *:focus-visible {
             outline: 2px solid rgba(234, 179, 8, 0.6);
             outline-offset: 2px;
@@ -85,6 +82,17 @@
             z-index: var(--z-bg);
         }
 
+        @media (max-width: 768px) {
+            body::before {
+                display: none; /* توفير استهلاك الـ GPU على الموبايل */
+            }
+            .glass-panel {
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                background: #0f172aee;
+            }
+        }
+
         /* Utilities */
         .soft-border { border: 1px solid rgba(255, 255, 255, 0.03); }
 
@@ -96,24 +104,18 @@
             box-shadow: 0 10px 30px rgba(0,0,0,.2);
         }
 
-        @media (max-width: 768px) {
-            .glass-panel {
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-                background: #0f172aee;
-            }
-        }
-
         /* ============================================================
            Layout & Structure
            ============================================================ */
         #mainGrid {
-            contain: layout style paint;
+            contain: content; /* تم التعديل لمنع كسر הـ Sticky والتطبيقات المشابهة */
         }
 
         /* Sidebar Tabs */
         .tab-btn {
-            transition: all var(--d-fast) var(--ease-out);
+            transition: background-color var(--d-fast) var(--ease-out),
+                        color var(--d-fast) var(--ease-out),
+                        transform var(--d-fast) var(--ease-out);
             position: relative;
             will-change: transform;
             scroll-snap-align: start;
@@ -126,23 +128,28 @@
             color: var(--text);
             font-weight: 700;
             background: rgba(255,255,255,.04);
-            border-inline-start: 3px solid var(--accent); /* Logical Property */
+            border-inline-start: 3px solid var(--accent);
         }
 
-        /* تم إصلاح الـ Tab System:
-           إزالة absolute، وإزالة content-visibility 
-           استخدام display: none للتعامل مع الـ Mobile بـ Performance حقيقي
-        */
+        /* Tab System (Opacity/Visibility) */
         @keyframes fadeInTab {
             from { opacity: 0; transform: translateY(8px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
         .tab-content {
-            display: none;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            height: 0;
+            overflow: hidden;
         }
         .tab-content.active {
-            display: block;
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+            height: auto;
+            overflow: visible;
             animation: fadeInTab var(--d-base) var(--ease-out) forwards;
         }
 
@@ -178,10 +185,11 @@
                 background-color: var(--bg-elev-3);
                 border-color: rgba(234,179,8,.18);
             }
-            .quiz-card:hover .action-icon {
-                background: var(--accent);
-                color: #000;
-                transform: translateX(-2px); /* RTL Context */
+            html[dir="rtl"] .quiz-card:hover .action-icon {
+                transform: translateX(2px); /* تم تعديل اتجاه الحركة ليتوافق مع RTL */
+            }
+            html[dir="ltr"] .quiz-card:hover .action-icon {
+                transform: translateX(-2px);
             }
         }
         .quiz-card:active { transform: translate3d(0, -1px, 0); }
@@ -191,7 +199,11 @@
             background: linear-gradient(180deg, rgba(34,197,94,.02), transparent), var(--bg-elev-2);
         }
 
-        .action-icon { transition: all var(--d-fast) var(--ease-out); }
+        .action-icon { 
+            transition: transform var(--d-fast) var(--ease-out),
+                        background-color var(--d-fast) var(--ease-out),
+                        color var(--d-fast) var(--ease-out); 
+        }
 
         /* Shimmer Skeleton */
         @keyframes shimmer {
@@ -339,12 +351,11 @@
     </main>
 
     <script>
-        // 1. Toast System: حل مشكلة الـ Memory Leak باستخدام transitionend
+        // 1. Toast System: حل دائم لـ Memory Leak
         const Toast = {
             show: (msg, type = 'success') => {
                 const toast = document.createElement('div');
-                // تم استخدام Tailwind Logical Utilities للـ Positioning (start-1/2)
-                toast.className = `fixed bottom-5 start-1/2 -translate-x-1/2 rtl:translate-x-1/2 px-6 py-3 rounded-xl text-sm font-semibold shadow-2xl flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-4 ${type === 'success' ? 'bg-green-500 text-white' : type === 'warning' ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'}`;
+                toast.className = `fixed bottom-5 left-1/2 -translate-x-1/2 px-6 py-3 rounded-xl text-sm font-semibold shadow-2xl flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-4 ${type === 'success' ? 'bg-green-500 text-white' : type === 'warning' ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'}`;
                 toast.style.zIndex = 'var(--z-toast)';
                 toast.innerHTML = msg;
                 document.body.appendChild(toast);
@@ -353,9 +364,16 @@
                     toast.classList.remove('opacity-0', 'translate-y-4');
                 });
 
+                const cleanup = () => {
+                    if (toast.parentNode) {
+                        toast.remove();
+                    }
+                };
+
                 setTimeout(() => {
                     toast.classList.add('opacity-0', 'translate-y-4');
-                    toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+                    toast.addEventListener('transitionend', cleanup, { once: true });
+                    setTimeout(cleanup, 400); // Fallback لو الـ transition معطل
                 }, 3000);
             }
         };
@@ -365,26 +383,31 @@
             quizzes: []
         };
 
-        window.switchTab = function(tabId) {
-            if (AppState.activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
-            
-            AppState.activeTab = tabId;
-            localStorage.setItem('activeTab', tabId);
+        // هندسة Module الـ Tabs لمنع تلوث الـ Global Scope
+        const Tabs = (() => {
+            const switchTab = (tabId) => {
+                if (AppState.activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
+                
+                AppState.activeTab = tabId;
+                localStorage.setItem('activeTab', tabId);
 
-            document.querySelectorAll('.tab-content').forEach(el => {
-                el.classList.toggle('active', el.id === `tab-${tabId}`);
-            });
+                document.querySelectorAll('.tab-content').forEach(el => {
+                    el.classList.toggle('active', el.id === `tab-${tabId}`);
+                });
 
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                if (b.dataset.tabTarget === tabId) {
-                    b.classList.add('active', 'bg-white/5');
-                    b.classList.remove('text-gray-300');
-                } else {
-                    b.classList.remove('active', 'bg-white/5');
-                    b.classList.add('text-gray-300');
-                }
-            });
-        };
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    if (b.dataset.tabTarget === tabId) {
+                        b.classList.add('active', 'bg-white/5');
+                        b.classList.remove('text-gray-300');
+                    } else {
+                        b.classList.remove('active', 'bg-white/5');
+                        b.classList.add('text-gray-300');
+                    }
+                });
+            };
+
+            return { switchTab };
+        })();
 
         const QuizEngine = {
             open: (quizData) => {
@@ -396,7 +419,7 @@
             const container = document.getElementById('onlineQuizzesContainer');
             const emptyState = document.getElementById('empty-state');
             let currentFilter = 'all';
-            let initialized = false; // Flag لمنع تكرار الـ Listeners
+            let initialized = false; 
 
             const renderSkeleton = () => {
                 container.innerHTML = Array(6).fill('').map(() => `
@@ -423,11 +446,12 @@
                 document.getElementById('stat-average').textContent = completed > 0 ? `${avgScore}%` : '-';
             };
 
+            // استخدام Semantic Button كروت الكويز
             const renderCard = (quiz, index) => {
                 const isCompleted = quiz.attempted;
                 return `
-                <div tabindex="0" role="button" aria-label="اختبار ${quiz.title}"
-                    class="quiz-card animate-fade ${isCompleted ? 'completed-card' : ''}"
+                <button type="button" aria-label="اختبار ${quiz.title}"
+                    class="quiz-card text-start w-full animate-fade ${isCompleted ? 'completed-card' : ''}"
                     style="--delay: ${index * 60}ms; animation-delay: var(--delay);"
                     data-id="${quiz.id}">
                     
@@ -444,7 +468,7 @@
                         <div class="text-xs text-gray-500 space-y-1 mb-4">
                             <p>المحاولات: ${quiz.attempts || 1}</p>
                         </div>
-                        <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
+                        <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between w-full">
                             <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
                             <div class="text-2xl font-bold text-yellow-400 leading-none">${quiz.score || 0}%</div>
                         </div>
@@ -452,14 +476,14 @@
                         <p class="text-xs text-gray-400 flex items-center gap-1.5">
                             ${quiz.questionsCount || 0} سؤال
                         </p>
-                        <div class="mt-auto pt-5 border-t border-white/5 flex items-center justify-between">
+                        <div class="mt-auto pt-5 border-t border-white/5 flex items-center justify-between w-full">
                             <span class="text-xs font-medium text-gray-400">اضغط للبدء</span>
-                            <div class="action-icon w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400">
+                            <div class="action-icon w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 shrink-0">
                                 <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                             </div>
                         </div>
                     `}
-                </div>`;
+                </button>`;
             };
 
             const renderQuizzes = () => {
@@ -467,7 +491,6 @@
                 if(currentFilter === 'new') filtered = AppState.quizzes.filter(q => !q.attempted);
                 else if(currentFilter === 'completed') filtered = AppState.quizzes.filter(q => q.attempted);
 
-                // تم إصلاح الـ Mutation: استخدمنا Copy للـ Array قبل الـ Sort
                 const sorted = [...filtered].sort((a, b) => (a.attempted === b.attempted) ? 0 : a.attempted ? 1 : -1);
 
                 if(!sorted.length) {
@@ -477,15 +500,24 @@
                 }
 
                 emptyState.classList.replace('flex', 'hidden');
-                container.innerHTML = sorted.map((q, i) => renderCard(q, i)).join('');
+                
+                // استخدام DocumentFragment لضمان أفضل أداء Rendering للبطاقات
+                const fragment = document.createDocumentFragment();
+                const tempContainer = document.createElement('div');
+                tempContainer.innerHTML = sorted.map((q, i) => renderCard(q, i)).join('');
+                
+                while (tempContainer.firstChild) {
+                    fragment.appendChild(tempContainer.firstChild);
+                }
+                
+                container.innerHTML = '';
+                container.appendChild(fragment);
             };
 
             const init = async (dataSource) => {
-                // منع تكرار إضافة الـ Listeners
                 if (!initialized) {
                     initialized = true;
 
-                    // Click Delegation
                     container.addEventListener('click', (e) => {
                         const card = e.target.closest('.quiz-card');
                         if(card) {
@@ -494,17 +526,7 @@
                         }
                     });
 
-                    // Keyboard Accessibility Support (Enter & Space)
-                    container.addEventListener('keydown', (e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            const card = e.target.closest('.quiz-card');
-                            if(card) {
-                                e.preventDefault(); // يمنع النزول بالصفحة لو ضغط مسطرة
-                                const q = AppState.quizzes.find(x => x.id == card.dataset.id);
-                                if(q) QuizEngine.open(q);
-                            }
-                        }
-                    });
+                    // لم يعد هناك حاجة لـ keydown الخاص بـ Enter و Space لأننا نستخدم <button> الآن وسيقوم المتصفح بالتعامل معه مباشرة كـ click
 
                     document.querySelectorAll('.filter-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
@@ -523,9 +545,7 @@
 
                 renderSkeleton();
 
-                // تم إزالة الـ Fake Delay
                 try {
-                    // افتراضيا بناخد الـ Data اللي مبعوته، ولو فاضية بنحط Dummy Data للتجربة
                     AppState.quizzes = (Array.isArray(dataSource) && dataSource.length > 0) ? dataSource : [
                         { id: 1, title: 'اختبار التاريخ الشامل - الفصل الأول', attempted: false, duration: 15, questionsCount: 20 },
                         { id: 2, title: 'كويز سريع على المحاضرة الثانية', attempted: true, score: 85, attempts: 1 },
@@ -546,16 +566,13 @@
             return { init };
         })();
 
-        // تهيئة التطبيق الأساسية
         document.addEventListener('DOMContentLoaded', () => {
-            // ربط أزرار التبويبات اللي اتغيرت لـ data-tab-target
             document.querySelectorAll('[data-tab-target]').forEach(btn => {
                 btn.addEventListener('click', (e) => {
-                    switchTab(e.currentTarget.dataset.tabTarget);
+                    Tabs.switchTab(e.currentTarget.dataset.tabTarget);
                 });
             });
 
-            // ربط أزرار تسجيل الخروج
             document.querySelectorAll('[data-action="logout"]').forEach(btn => {
                 btn.addEventListener('click', () => {
                     if (window.DahihApp && typeof DahihApp.logout === 'function') {
@@ -566,7 +583,7 @@
                 });
             });
 
-            switchTab(AppState.activeTab);
+            Tabs.switchTab(AppState.activeTab);
             QuizApp.init([]); 
         });
     </script>
