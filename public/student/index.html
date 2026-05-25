@@ -15,6 +15,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="player.css">
+    <script src="player.js" defer></script>
+    <script src="quiz.js" defer></script>
 
     <style>
         /* ============================================================
@@ -42,11 +44,11 @@
             --z-modal: 100;
             --z-toast: 200;
 
-            /* Motion */
-            --d-fast: 180ms;
-            --d-base: 260ms;
-            --d-slow: 420ms;
-            --ease-out: cubic-bezier(.22, 1, .36, 1);
+            /* Motion - تم إبطاء السرعة لتعطي إحساس بالثقل والفخامة */
+            --d-fast: 250ms;
+            --d-base: 400ms;
+            --d-slow: 600ms;
+            --ease-out: cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         * {
@@ -63,7 +65,6 @@
             text-rendering: optimizeLegibility;
         }
 
-        /* Accessibility Fixes */
         *:focus-visible {
             outline: 2px solid rgba(234, 179, 8, 0.6);
             outline-offset: 2px;
@@ -71,7 +72,6 @@
         }
         button { cursor: pointer; }
 
-        /* Performance optimized noise */
         body::before {
             content: '';
             position: fixed;
@@ -83,9 +83,7 @@
         }
 
         @media (max-width: 768px) {
-            body::before {
-                display: none; /* توفير استهلاك الـ GPU على الموبايل */
-            }
+            body::before { display: none; }
             .glass-panel {
                 backdrop-filter: none;
                 -webkit-backdrop-filter: none;
@@ -93,7 +91,6 @@
             }
         }
 
-        /* Utilities */
         .soft-border { border: 1px solid rgba(255, 255, 255, 0.03); }
 
         .glass-panel {
@@ -104,17 +101,11 @@
             box-shadow: 0 10px 30px rgba(0,0,0,.2);
         }
 
-        /* ============================================================
-           Layout & Structure
-           ============================================================ */
-        #mainGrid {
-            contain: content; /* تم التعديل لمنع كسر הـ Sticky والتطبيقات المشابهة */
-        }
+        #mainGrid { contain: content; }
 
-        /* Sidebar Tabs */
         .tab-btn {
-            transition: background-color var(--d-fast) var(--ease-out),
-                        color var(--d-fast) var(--ease-out),
+            transition: background-color var(--d-base) var(--ease-out),
+                        color var(--d-base) var(--ease-out),
                         transform var(--d-fast) var(--ease-out);
             position: relative;
             will-change: transform;
@@ -131,9 +122,9 @@
             border-inline-start: 3px solid var(--accent);
         }
 
-        /* Tab System (Opacity/Visibility) */
+        /* أنيميشن أثقل وأبطأ للتبويبات */
         @keyframes fadeInTab {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(15px); }
             to   { opacity: 1; transform: translateY(0); }
         }
 
@@ -150,14 +141,11 @@
             pointer-events: auto;
             height: auto;
             overflow: visible;
-            animation: fadeInTab var(--d-base) var(--ease-out) forwards;
+            animation: fadeInTab var(--d-slow) var(--ease-out) forwards;
         }
 
-        /* ============================================================
-           Cards & Animations
-           ============================================================ */
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translate3d(0, 12px, 0); }
+            from { opacity: 0; transform: translate3d(0, 15px, 0); }
             to   { opacity: 1; transform: translate3d(0, 0, 0); }
         }
         .animate-fade-in-up { animation: fadeInUp var(--d-slow) var(--ease-out) both; }
@@ -174,29 +162,29 @@
             min-height: 170px;
             position: relative;
             transform: translate3d(0, 0, 0);
-            transition: transform var(--d-base) var(--ease-out),
-                        background-color var(--d-base),
-                        border-color var(--d-base);
+            transition: transform var(--d-fast) var(--ease-out),
+                        background-color var(--d-fast),
+                        border-color var(--d-fast);
         }
         
+        /* تطبيق الـ Hover فقط على الكروت غير المكتملة */
         @media (hover: hover) {
-            .quiz-card:hover {
-                transform: translate3d(0, -3px, 0);
+            .quiz-card:not(.completed-card):hover {
+                transform: translate3d(0, -4px, 0);
                 background-color: var(--bg-elev-3);
                 border-color: rgba(234,179,8,.18);
             }
-            html[dir="rtl"] .quiz-card:hover .action-icon {
-                transform: translateX(2px); /* تم تعديل اتجاه الحركة ليتوافق مع RTL */
-            }
-            html[dir="ltr"] .quiz-card:hover .action-icon {
-                transform: translateX(-2px);
+            html[dir="rtl"] .quiz-card:not(.completed-card):hover .action-icon {
+                transform: translateX(3px); 
             }
         }
-        .quiz-card:active { transform: translate3d(0, -1px, 0); }
+        .quiz-card:not(.completed-card):active { transform: translate3d(0, -1px, 0); }
 
+        /* ستايل الكارت المقفل */
         .completed-card {
-            border-color: rgba(34,197,94,.12);
-            background: linear-gradient(180deg, rgba(34,197,94,.02), transparent), var(--bg-elev-2);
+            border-color: rgba(255,255,255,.02);
+            background: rgba(255,255,255,.01);
+            cursor: default;
         }
 
         .action-icon { 
@@ -205,7 +193,6 @@
                         color var(--d-fast) var(--ease-out); 
         }
 
-        /* Shimmer Skeleton */
         @keyframes shimmer {
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }
@@ -272,8 +259,11 @@
                         </div>
                         <h2 id="playingVideoTitle" class="font-bold text-sm md:text-base truncate text-white">اختر محاضرة للبدء</h2>
                     </div>
-                    <div class="p-2 md:p-5 bg-black/50 aspect-video flex items-center justify-center">
-                         <p class="text-gray-500 text-sm">Video Player Placeholder</p>
+                    <div class="p-2 md:p-5 bg-black/50 aspect-video flex items-center justify-center relative group" id="fs-wrapper">
+                        <div id="videoContainer" class="w-full h-full flex flex-col items-center justify-center">
+                            <svg class="w-12 h-12 text-white/20 mb-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <p class="text-gray-500 text-sm">سيتم عرض المحاضرة هنا عبر player.js</p>
+                        </div>
                     </div>
                 </div>
 
@@ -304,7 +294,7 @@
                 </div>
                 <h1 class="text-2xl font-bold text-white">الاختبارات الإلكترونية</h1>
             </div>
-            <p class="text-gray-400 text-sm mb-6">اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط.</p>
+            <p class="text-gray-400 text-sm mb-6">اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.</p>
 
             <div class="max-w-7xl mx-auto">
                 <div class="pb-4 border-b border-white/5 mb-5">
@@ -351,7 +341,6 @@
     </main>
 
     <script>
-        // 1. Toast System: حل دائم لـ Memory Leak
         const Toast = {
             show: (msg, type = 'success') => {
                 const toast = document.createElement('div');
@@ -365,15 +354,13 @@
                 });
 
                 const cleanup = () => {
-                    if (toast.parentNode) {
-                        toast.remove();
-                    }
+                    if (toast.parentNode) toast.remove();
                 };
 
                 setTimeout(() => {
                     toast.classList.add('opacity-0', 'translate-y-4');
                     toast.addEventListener('transitionend', cleanup, { once: true });
-                    setTimeout(cleanup, 400); // Fallback لو الـ transition معطل
+                    setTimeout(cleanup, 400); 
                 }, 3000);
             }
         };
@@ -383,7 +370,6 @@
             quizzes: []
         };
 
-        // هندسة Module الـ Tabs لمنع تلوث الـ Global Scope
         const Tabs = (() => {
             const switchTab = (tabId) => {
                 if (AppState.activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
@@ -405,16 +391,10 @@
                     }
                 });
             };
-
             return { switchTab };
         })();
 
-        const QuizEngine = {
-            open: (quizData) => {
-                Toast.show(`جاري تجهيز اختبار: ${quizData.title}`, 'warning');
-            }
-        };
-
+        // إعداد QuizApp للتعامل مع البيانات الحقيقية والمنطق الجديد
         const QuizApp = (() => {
             const container = document.getElementById('onlineQuizzesContainer');
             const emptyState = document.getElementById('empty-state');
@@ -446,31 +426,33 @@
                 document.getElementById('stat-average').textContent = completed > 0 ? `${avgScore}%` : '-';
             };
 
-            // استخدام Semantic Button كروت الكويز
             const renderCard = (quiz, index) => {
                 const isCompleted = quiz.attempted;
+                // إذا كان الاختبار مكتمل يتم تغيير واجهة الكارت لمنع التفاعل معه وإظهار "مقفل"
                 return `
                 <button type="button" aria-label="اختبار ${quiz.title}"
-                    class="quiz-card text-start w-full animate-fade ${isCompleted ? 'completed-card' : ''}"
+                    class="quiz-card text-start w-full animate-fade ${isCompleted ? 'completed-card opacity-80' : ''}"
                     style="--delay: ${index * 60}ms; animation-delay: var(--delay);"
                     data-id="${quiz.id}">
                     
                     <div class="flex items-center gap-2 mb-3">
-                        <span class="text-[11px] font-bold px-2 py-1 rounded-lg tracking-wider ${isCompleted ? 'bg-white/10 text-white' : 'bg-yellow-400/10 text-yellow-400'}">
-                            ${isCompleted ? 'مكتمل' : 'جديد'}
-                        </span>
-                        ${!isCompleted ? `<span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>` : ''}
+                        ${isCompleted ? `
+                            <span class="text-[11px] font-bold px-2 py-1 rounded-lg tracking-wider bg-red-500/10 text-red-400 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                مقفل
+                            </span>
+                        ` : `
+                            <span class="text-[11px] font-bold px-2 py-1 rounded-lg tracking-wider bg-yellow-400/10 text-yellow-400">جديد</span>
+                            <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
+                        `}
                     </div>
 
-                    <h3 class="text-sm font-semibold text-white mb-2 line-clamp-2">${quiz.title}</h3>
+                    <h3 class="text-sm font-semibold ${isCompleted ? 'text-gray-400' : 'text-white'} mb-2 line-clamp-2">${quiz.title}</h3>
 
                     ${isCompleted ? `
-                        <div class="text-xs text-gray-500 space-y-1 mb-4">
-                            <p>المحاولات: ${quiz.attempts || 1}</p>
-                        </div>
                         <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between w-full">
-                            <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
-                            <div class="text-2xl font-bold text-yellow-400 leading-none">${quiz.score || 0}%</div>
+                            <span class="text-xs text-gray-500 mb-1">النتيجة النهائية</span>
+                            <div class="text-2xl font-bold text-gray-300 leading-none">${quiz.score || 0}%</div>
                         </div>
                     ` : `
                         <p class="text-xs text-gray-400 flex items-center gap-1.5">
@@ -501,7 +483,6 @@
 
                 emptyState.classList.replace('flex', 'hidden');
                 
-                // استخدام DocumentFragment لضمان أفضل أداء Rendering للبطاقات
                 const fragment = document.createDocumentFragment();
                 const tempContainer = document.createElement('div');
                 tempContainer.innerHTML = sorted.map((q, i) => renderCard(q, i)).join('');
@@ -514,19 +495,30 @@
                 container.appendChild(fragment);
             };
 
-            const init = async (dataSource) => {
+            const init = async (dataSourceUrlOrArray) => {
                 if (!initialized) {
                     initialized = true;
 
+                    // معالجة الضغط على الكارت
                     container.addEventListener('click', (e) => {
                         const card = e.target.closest('.quiz-card');
                         if(card) {
                             const q = AppState.quizzes.find(x => x.id == card.dataset.id);
-                            if(q) QuizEngine.open(q);
+                            if(q) {
+                                // لو الطالب امتحن قبل كده، امنع الدخول وأظهر توست
+                                if (q.attempted) {
+                                    Toast.show('لقد قمت باجتياز هذا الاختبار مسبقاً (مقفل)', 'warning');
+                                } else {
+                                    // إذا لم يمتحن، قم باستدعاء الدالة الخاصة بفتح الاختبار (الموجودة بملف quiz.js)
+                                    if (typeof QuizEngine !== 'undefined' && QuizEngine.open) {
+                                        QuizEngine.open(q);
+                                    } else {
+                                        console.error("ملف quiz.js غير متصل أو الدالة QuizEngine.open غير موجودة");
+                                    }
+                                }
+                            }
                         }
                     });
-
-                    // لم يعد هناك حاجة لـ keydown الخاص بـ Enter و Space لأننا نستخدم <button> الآن وسيقوم المتصفح بالتعامل معه مباشرة كـ click
 
                     document.querySelectorAll('.filter-btn').forEach(btn => {
                         btn.addEventListener('click', (e) => {
@@ -546,11 +538,22 @@
                 renderSkeleton();
 
                 try {
-                    AppState.quizzes = (Array.isArray(dataSource) && dataSource.length > 0) ? dataSource : [
-                        { id: 1, title: 'اختبار التاريخ الشامل - الفصل الأول', attempted: false, duration: 15, questionsCount: 20 },
-                        { id: 2, title: 'كويز سريع على المحاضرة الثانية', attempted: true, score: 85, attempts: 1 },
-                        { id: 3, title: 'اختبار الجغرافيا - التضاريس', attempted: false, duration: 10, questionsCount: 15 },
-                    ];
+                    // سحب البيانات الحقيقية من الـ API إذا تم إرسال رابط
+                    if (typeof dataSourceUrlOrArray === 'string') {
+                        const response = await fetch(dataSourceUrlOrArray);
+                        if (!response.ok) throw new Error('فشل في جلب بيانات الاختبارات');
+                        const data = await response.json();
+                        AppState.quizzes = Array.isArray(data) ? data : (data.data || []);
+                    } else if (Array.isArray(dataSourceUrlOrArray) && dataSourceUrlOrArray.length > 0) {
+                        AppState.quizzes = dataSourceUrlOrArray;
+                    } else {
+                        // Dummy Data في حالة عدم ربط الباك اند لتجربة الواجهة فقط
+                        AppState.quizzes = [
+                            { id: 1, title: 'اختبار التاريخ الشامل - الفصل الأول', attempted: false, duration: 15, questionsCount: 20 },
+                            { id: 2, title: 'كويز سريع على المحاضرة الثانية', attempted: true, score: 85, attempts: 1 },
+                            { id: 3, title: 'اختبار الجغرافيا - التضاريس', attempted: false, duration: 10, questionsCount: 15 },
+                        ];
+                    }
 
                     requestAnimationFrame(() => {
                         updateStats(AppState.quizzes);
@@ -565,6 +568,14 @@
 
             return { init };
         })();
+
+        // في حال لم يكن quiz.js يحتوي على الكائن، نقوم بإنشاء Fallback لمنع الأخطاء
+        window.QuizEngine = window.QuizEngine || {
+            open: (quizData) => {
+                Toast.show(`جاري فتح الاختبار...`, 'success');
+                // هنا منطق ملف quiz.js سيقوم بعمله
+            }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             document.querySelectorAll('[data-tab-target]').forEach(btn => {
@@ -584,6 +595,9 @@
             });
 
             Tabs.switchTab(AppState.activeTab);
+            
+            // سحب البيانات من الـ API الخاص بك هنا (ضع رابط الـ API مكان الـ Array الفارغ)
+            // QuizApp.init('/api/quizzes/get-student-quizzes');
             QuizApp.init([]); 
         });
     </script>
