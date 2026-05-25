@@ -148,6 +148,27 @@
             .finally(() => window.location.replace('/logina.html'));
     }
 
+    // 🚀 [Fix] Robust Multi-Browser Fullscreen Handler
+    function toggleFullscreen() {
+        const container = $('videoContainer');
+        if (!container) return;
+        try {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+                if (container.requestFullscreen) container.requestFullscreen();
+                else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+                else if (container.mozRequestFullScreen) container.mozRequestFullScreen();
+                else if (container.msRequestFullscreen) container.msRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                else if (document.mozCancelFullScreen) document.mozCancelFullScreen();
+                else if (document.msExitFullscreen) document.msExitFullscreen();
+            }
+        } catch (e) {
+            Toast.show("🚨 عذراً، ميزة ملء الشاشة غير مدعومة بالكامل على هذا الجهاز", 'warn');
+        }
+    }
+
     const Toast = {
         MAX_TOASTS: 4, 
         init() {
@@ -522,7 +543,7 @@
         const patchCard = (el, course, idx) => {
             const id = course.telegramMsgId, isActive = String(state.currentMsgId) === String(id);
             const title = course.courseName || 'محاضرة', desc = course.description || 'لا يوجد وصف', duration = course.duration || 'غير محدد';
-            // 🚀 [Fix: 7 & 8] Aria-label & optimized transition classes
+            
             el.setAttribute('aria-label', `تشغيل ${title}`);
             el.className = `${isActive ? 'is-playing ' : ''}flex flex-col bg-white/5 border ${isActive ? 'border-yellow-500/40 shadow-md' : 'border-white/10 shadow-sm'} rounded-xl overflow-hidden hover:-translate-y-1 hover:border-white/20 transition-transform transition-colors duration-300 course-card-v4 cursor-pointer`;
             el.querySelector('.course-img').src = course.image && course.image.length > 10 ? course.image : 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
@@ -579,7 +600,6 @@
 
         const patchQuiz = (el, quiz) => {
             el.dataset.attempted = String(quiz.attempted);
-            // 🚀 [Fix: 7 & 8] Aria-label & optimized transition classes
             el.setAttribute('aria-label', `اختبار ${quiz.title || 'بدون عنوان'}`);
             el.className = `quiz-card ${quiz.attempted ? 'completed-card' : ''} animate-fade w-full text-left transition-transform transition-colors`;
             
@@ -592,7 +612,6 @@
 
         const visFn = q => state.currentQuizFilter === 'all' || (state.currentQuizFilter === 'new' && !q.attempted) || (state.currentQuizFilter === 'completed' && q.attempted);
         
-        // 🚀 [Fix: 1 & 15] Memory leak free quiz render
         reconcileDOM(container, processed, 'id', q => cyrb53(`${q.id}|${q.attempted}|${q.score}|${q.attempts}|${q.title}`), buildQuiz, patchQuiz, visFn);
 
         if (emptyState) {
