@@ -461,13 +461,11 @@
     <div id="quizModal" class="hidden"></div>
 
     <script>
-        // الجسر البرمجي لتأمين استدعاءات ملف الـ quiz.js دون تجميد أو كراش
         window.DahihApp = window.DahihApp || {
             token: "secure_default_session_token",
             user: { email: "student@dahih-edu.com", name: "طالب الدحيح" },
             getState() { return { token: this.token, user: this.user }; },
             fetchWithTimeout: async function(url, options) {
-                // محاكاة الإرسال للخلفية لكي يحفظ محرك quiz.js المحاولة برمجياً بنجاح
                 console.log(`%c[DahihAPI] جاري تسجيل وحفظ النتيجة في: ${url}`, "color: #22c55e; font-weight: bold;");
                 return new Promise(resolve => setTimeout(() => resolve({ ok: true }), 400));
             },
@@ -477,7 +475,6 @@
             }
         };
 
-        // دالة التنقل بين التبويبات 
         window.switchTab = function(tabId) {
             const activeTab = localStorage.getItem('activeTab');
             if (activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
@@ -513,6 +510,7 @@
             const emptyState = document.getElementById('empty-state');
             let quizzesData = [];
             let currentFilter = 'all';
+            let listenersInitialized = false; // ← إضافة المتغير لمنع تكرار الـ listeners
 
             const renderSkeleton = () => {
                 let html = '';
@@ -626,7 +624,6 @@
                     
                     if(quizData) { 
                         if (window.QuizEngine && typeof window.QuizEngine.open === 'function') {
-                            // تمرير البيانات مباشرة إلى دالة الفتح الصريحة الخاصة بـ quiz.js
                             window.QuizEngine.open(quizData);
                         } else {
                             alert("جاري الاتصال بمحرك الاختبارات الذكي... انتظر لحظة.");
@@ -651,9 +648,15 @@
                 });
             };
 
+            // الدالة الجديدة مع إضافة حماية التكرار !listenersInitialized
             const init = async (dataSource) => {
                 renderSkeleton();
-                setupEventListeners();
+
+                if (!listenersInitialized) {
+                    setupEventListeners();
+                    listenersInitialized = true;
+                }
+
                 if (Array.isArray(dataSource)) {
                     quizzesData = dataSource;
                     updateStats(quizzesData);
@@ -661,17 +664,24 @@
                 }
             };
 
-            const reload = () => {
-                // تحديث كروت الشاشة محلياً بشكل فوري بعد إنهاء الطالب للاختبار
-                quizzesData.forEach(quiz => {
-                    const savedState = JSON.parse(localStorage.getItem(`dq_${quiz.id}`));
-                    // إذا لم يعد ملف التخزين المحلي للاختبار موجوداً بعد انتهاء المودال، فهذا يعني أنه تم التسليم وحساب الدرجة بنجاح
-                    if (!savedState && !quiz.attempted) {
-                        // محاكاة حساب وتثبيت النتيجة للعرض الفوري لمنع تكرار الدخول
-                        quiz.attempted = true;
-                        quiz.score = Math.floor(Math.random() * 41) + 60; // وضع درجة افتراضية ذكية لحين جلبها من الـ API
-                    }
-                });
+            // الدالة الجديدة بديلة للقديمة وتم حذف الكود العشوائي
+            const reload = (quizId, result = null) => {
+                if (!quizId) {
+                    updateStats(quizzesData);
+                    renderQuizzes();
+                    return;
+                }
+
+                const quiz = quizzesData.find(q => q.id === quizId);
+
+                if (!quiz) return;
+
+                quiz.attempted = true;
+
+                if (result && typeof result.score !== 'undefined') {
+                    quiz.score = result.score;
+                }
+
                 updateStats(quizzesData);
                 renderQuizzes();
             };
@@ -689,45 +699,9 @@
             const savedTab = localStorage.getItem('activeTab') || 'dashboard';
             window.switchTab(savedTab);
 
-            // مصفوفة اختبارات تجريبية متكاملة الهيكل لتعمل فوراً داخل محرك quiz.js بشكل مبهر ومتجاوب
-            const mockQuizzes = [
-                {
-                    id: "quiz_physics_01",
-                    title: "الاختبار الشامل على الفصل الأول - فيزياء كهربائية",
-                    duration: 600, // الوقت بالثواني
-                    attempted: false,
-                    score: 0,
-                    questions: [
-                        {
-                            questionText: "ما هو العنصر المسؤول عن مقاومة تدفق التيار الكهربائي في الدائرة المغلقة؟",
-                            options: ["المقاومة الكهربائية", "المكثف", "الملف الحثي", "البطارية"],
-                            correctAnswer: 0
-                        },
-                        {
-                            questionText: "إذا زادت مساحة مقطع موصل كهربائي إلى الضعف، فإن مقاومته الكهربائية للتيار:",
-                            options: ["تزداد للضعف", "تقل إلى النصف", "تظل ثابتة لا تتغير", "تزداد لأربعة أمثالها"],
-                            correctAnswer: 1
-                        }
-                    ]
-                },
-                {
-                    id: "quiz_chemistry_02",
-                    title: "الاختبار التقيمي الأول - الكيمياء العضوية والروابط",
-                    duration: 300,
-                    attempted: true, // مغلق مسبقاً لحفظ المحاولة
-                    score: 95,
-                    questions: [
-                        {
-                            questionText: "أي من المركبات التالية يصنف كمركب هيدروكربوني مشبع؟",
-                            options: ["الإيثان", "الإيثيلين", "الأسيتيلين", "البنزين"],
-                            correctAnswer: 0
-                        }
-                    ]
-                }
-            ];
-
-            // تهيئة واجهة التطبيق ميكانيكياً بالبيانات
-            QuizApp.init(mockQuizzes); 
+            // تم حذف البيانات الوهمية، النظام يستقبل الآن مصفوفة فارغة 
+            // وسيقوم بجلب أو استقبال الاختبارات الحقيقية لاحقاً من الـ API
+            QuizApp.init([]); 
         });
     </script>
 </body>
