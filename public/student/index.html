@@ -100,18 +100,20 @@
         }
         .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
-        .scrollbar-hide::-webkit-scrollbar { display: none; }
-        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-
         /* ============================================================
-           ستايل قسم الاختبارات الجديد (Premium UI/UX)
+           ستايل قسم الاختبارات الجديد 
            ============================================================ */
 
-        /* إخفاء السكرول بار للتصنيفات */
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
 
-        /* أزرار فلترة الاختبارات (الكل - الجديدة - المكتملة) */
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* Filter Buttons (زوايا 12px) */
         .filter-btn {
             padding: 8px 16px;
             border-radius: 12px;
@@ -122,77 +124,115 @@
             transition: all 0.2s;
             white-space: nowrap;
         }
-        .filter-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .filter-btn.active { background: #1f2937; color: #fff; }
 
-        /* الكارد الأساسي للاختبارات */
+        .filter-btn:hover {
+            color: #fff;
+            background: rgba(255,255,255,0.03);
+        }
+
+        .filter-btn.active {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+        }
+
+        /* Quiz Card Premium Base (زوايا 16px للبطاقات) */
         .quiz-card {
-            background: #111827;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: #0f172a;
+            border: 1px solid rgba(255,255,255,.05);
             border-radius: 16px;
             padding: 20px;
             display: flex;
             flex-direction: column;
             height: 100%;
-            min-height: 210px;
+            min-height: 170px;
             cursor: pointer;
-            transition: transform 0.2s ease, border-color 0.2s ease;
             position: relative;
             overflow: hidden;
             outline: none;
+            
+            /* Inner glow خفيف جدًا */
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+            
+            /* أنيميشن ناعم للعناصر المحددة فقط */
+            transition: background .25s ease, 
+                        border-color .25s ease, 
+                        transform .25s ease, 
+                        box-shadow .25s ease;
         }
 
-        /* Gradient للكارد الجديد */
-        .card-new::before {
+        /* Texture Layer فوق البطاقة */
+        .quiz-card::before {
             content: "";
             position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 3px;
-            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            inset: 0;
+            background: linear-gradient(180deg, rgba(255,255,255,.03), transparent);
+            pointer-events: none;
+            border-radius: inherit;
         }
 
-        /* Hover State للديسكتوب فقط */
-        @media (hover: hover) {
-            .quiz-card:hover {
-                transform: translateY(-2px);
-                border-color: rgba(255, 255, 255, 0.1);
-            }
-            .quiz-card:hover .action-icon {
-                background: #3b82f6;
-                color: #fff;
-                transform: translateX(-4px);
-            }
+        /* Premium Hover */
+        .quiz-card:hover {
+            transform: translateY(-3px);
+            background: #131d33;
+            border-color: rgba(234,179,8,.18);
+            box-shadow: 0 10px 30px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.04);
         }
 
         .quiz-card:focus-visible {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+            border-color: #eab308;
+            box-shadow: 0 0 0 2px rgba(234,179,8,.5);
         }
 
+        /* Completed Card Variant */
+        .completed-card {
+            border-color: rgba(34,197,94,.12);
+            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), #0f172a;
+        }
+
+        .completed-card:hover {
+            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), #131d33;
+            border-color: rgba(34,197,94,.25);
+        }
+
+        /* Action Icon Motion */
         .action-icon {
-            transition: all 0.2s ease;
+            transition: transform .25s ease, background .2s ease, color .2s ease;
         }
 
-        /* Fade Animation */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+        .quiz-card:hover .action-icon {
+            background: #eab308;
+            color: #000;
+            transform: translateX(-2px); /* حركة خفيفة وفخمة */
         }
+
+        /* Smooth Entrance Animation */
         .animate-fade {
-            animation: fadeIn 0.4s ease forwards;
+            animation: cardIn .45s cubic-bezier(.2,.8,.2,1) both;
         }
 
-        /* Skeleton Animation */
+        @keyframes cardIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Skeleton */
         .skeleton {
             animation: pulse 1.5s infinite;
-            background: #1f2937;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+            background: rgba(255,255,255,0.03);
         }
 
-        /* زر البدء الأساسي (لو استخدم في أماكن أخرى) */
+        @keyframes pulse {
+            0%,100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
+        /* زر البدء الأساسي */
         .btn-start-quiz {
             background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%); 
             color: #000; font-weight: 800;
@@ -375,35 +415,50 @@
             </div>
         </div>
 
-        <div id="tab-quizzes" class="tab-content bg-transparent font-sans">
-            <div class="flex items-center gap-3 mb-2">
-                <div class="bg-yellow-500/20 p-2.5 rounded-xl">
+        <div id="tab-quizzes" class="tab-content font-sans" 
+             style="background: radial-gradient(circle at top right, rgba(234,179,8,.08), transparent 35%); min-height: 100vh;">
+
+            <div class="flex items-center gap-3 mb-2 pt-4">
+                <div class="bg-yellow-500/20 p-2.5 rounded-[12px]">
                     <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
                     </svg>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-black text-white">الاختبارات الإلكترونية</h1>
+
+                <h1 class="text-2xl md:text-3xl font-black text-white">
+                    الاختبارات الإلكترونية
+                </h1>
             </div>
-            <p class="text-gray-400 text-sm md:text-base mb-6">اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.</p>
+
+            <p class="text-gray-400 text-sm md:text-base mb-6">
+                اختبر مستواك، يتم تسجيل المحاولة مرة واحدة فقط لحفظ التقييم بدقة.
+            </p>
 
             <div class="max-w-7xl mx-auto">
-                <div class="sticky top-0 z-20 pt-2 pb-6 bg-[#070b19]/90 backdrop-blur-xl border-b border-white/5 mb-8">
+
+                <div class="pb-4 border-b border-white/[0.03] mb-5">
+
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
                             <p class="text-gray-400 text-xs font-semibold tracking-wide">الإجمالي</p>
-                            <h4 id="stat-total" class="text-2xl font-bold text-white mt-1">-</h4>
+                            <h4 id="stat-total" class="text-lg font-bold text-white mt-1">-</h4>
                         </div>
-                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+
+                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
                             <p class="text-gray-400 text-xs font-semibold tracking-wide">مكتمل</p>
-                            <h4 id="stat-completed" class="text-2xl font-bold text-green-400 mt-1">-</h4>
+                            <h4 id="stat-completed" class="text-lg font-bold text-white mt-1">-</h4>
                         </div>
-                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+
+                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
                             <p class="text-gray-400 text-xs font-semibold tracking-wide">متبقي</p>
-                            <h4 id="stat-remaining" class="text-2xl font-bold text-blue-400 mt-1">-</h4>
+                            <h4 id="stat-remaining" class="text-lg font-bold text-yellow-400 mt-1">-</h4>
                         </div>
-                        <div class="bg-[#111827] border border-white/5 p-4 rounded-2xl flex flex-col justify-center">
+
+                        <div class="bg-[rgba(255,255,255,0.03)] border border-white/[0.03] p-3 rounded-[12px] flex flex-col justify-center">
                             <p class="text-gray-400 text-xs font-semibold tracking-wide">المتوسط</p>
-                            <h4 id="stat-average" class="text-2xl font-bold text-yellow-400 mt-1">-%</h4>
+                            <h4 id="stat-average" class="text-lg font-bold text-yellow-400 mt-1">-%</h4>
                         </div>
                     </div>
 
@@ -412,19 +467,26 @@
                         <button class="filter-btn" data-filter="new">الجديدة</button>
                         <button class="filter-btn" data-filter="completed">المكتملة</button>
                     </div>
+
                 </div>
 
                 <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
-                    <div class="w-16 h-16 bg-[#111827] rounded-2xl flex items-center justify-center mb-4 border border-white/5">
-                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                    <div class="w-16 h-16 bg-[rgba(255,255,255,0.03)] rounded-[16px] flex items-center justify-center mb-4 border border-white/[0.03]">
+                        <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                            </path>
+                        </svg>
                     </div>
                     <h3 class="text-lg font-semibold text-white mb-1">لا توجد اختبارات</h3>
                     <p class="text-sm text-gray-400">لم يتم العثور على اختبارات تطابق هذا التصنيف.</p>
                 </div>
 
                 <div id="onlineQuizzesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    </div>
+                </div>
+
             </div>
+
         </div>
         <div id="tab-points" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">أهم نقاط المنهج</h1>
@@ -458,29 +520,36 @@
 
     <script>
         const QuizEngine = {
-            // استدعاء نظام الاختبار المدمج الخاص بك (في ملف quiz.js)
-            open: (quizData) => console.log("Opening Quiz:", quizData)
+            open: (quizData) => {
+                console.log("Opening Quiz:", quizData);
+                alert(`بدء اختبار: ${quizData.title}`);
+            }
         };
 
-        const QuizApp = (function() {
+        const QuizApp = (() => {
+
             const container = document.getElementById('onlineQuizzesContainer');
             const emptyState = document.getElementById('empty-state');
+
             let quizzesData = [];
             let currentFilter = 'all';
 
+            /* =========================================
+               Skeleton
+            ========================================= */
             const renderSkeleton = () => {
                 let html = '';
-                for (let i = 0; i < 6; i++) {
+                for(let i = 0; i < 6; i++) {
                     html += `
                         <div class="quiz-card justify-between border-transparent pointer-events-none">
-                            <div>
-                                <div class="skeleton h-6 w-16 rounded-md mb-4"></div>
+                            <div class="relative z-10">
+                                <div class="skeleton h-6 w-16 rounded-[10px] mb-4"></div>
                                 <div class="skeleton h-5 w-3/4 rounded mb-2"></div>
                                 <div class="skeleton h-4 w-1/2 rounded"></div>
                             </div>
-                            <div class="flex justify-between items-center mt-6 pt-4 border-t border-white/5">
+                            <div class="relative z-10 flex justify-between items-center mt-6 pt-4 border-t border-white/[0.03]">
                                 <div class="skeleton h-4 w-20 rounded"></div>
-                                <div class="skeleton h-8 w-8 rounded-lg"></div>
+                                <div class="skeleton h-8 w-8 rounded-[10px]"></div>
                             </div>
                         </div>
                     `;
@@ -488,22 +557,27 @@
                 container.innerHTML = html;
             };
 
+            /* =========================================
+               Stats
+            ========================================= */
             const updateStats = (quizzes) => {
-                if (!quizzes || quizzes.length === 0) {
-                     document.getElementById('stat-total').textContent = '0';
-                     document.getElementById('stat-completed').textContent = '0';
-                     document.getElementById('stat-remaining').textContent = '0';
-                     document.getElementById('stat-average').textContent = '0%';
-                     return;
+                if(!quizzes.length) {
+                    document.getElementById('stat-total').textContent = '0';
+                    document.getElementById('stat-completed').textContent = '0';
+                    document.getElementById('stat-remaining').textContent = '0';
+                    document.getElementById('stat-average').textContent = '0%';
+                    return;
                 }
 
                 const total = quizzes.length;
                 const completed = quizzes.filter(q => q.attempted).length;
                 const remaining = total - completed;
-                
                 let avgScore = 0;
-                if (completed > 0) {
-                    const totalScore = quizzes.filter(q => q.attempted).reduce((acc, q) => acc + (q.score || 0), 0);
+
+                if(completed > 0) {
+                    const totalScore = quizzes
+                        .filter(q => q.attempted)
+                        .reduce((acc, q) => acc + (q.score || 0), 0);
                     avgScore = Math.round(totalScore / completed);
                 }
 
@@ -513,63 +587,106 @@
                 document.getElementById('stat-average').textContent = completed > 0 ? `${avgScore}%` : '-';
             };
 
+            /* =========================================
+               Cards
+            ========================================= */
             const renderAvailableCard = (quiz) => `
-                <div tabindex="0" role="button" aria-label="بدء اختبار ${quiz.title}" class="quiz-card card-new animate-fade" data-id="${quiz.id}">
-                    <div>
+                <div tabindex="0"
+                    role="button"
+                    aria-label="بدء اختبار ${quiz.title}"
+                    class="quiz-card animate-fade"
+                    style="animation-delay: ${quiz.id * 0.05}s;"
+                    data-id="${quiz.id}">
+
+                    <div class="relative z-10">
                         <div class="flex items-center gap-2 mb-3">
-                            <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
-                            <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
+                            <span class="text-[11px] font-bold text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded-[10px] tracking-wider">
+                                جديد
+                            </span>
+                            <span class="text-xs text-gray-500">
+                                ${quiz.duration || 0} دقيقة
+                            </span>
                         </div>
-                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
+
+                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">
+                            ${quiz.title}
+                        </h3>
+
                         <p class="text-sm text-gray-400 flex items-center gap-1.5">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                                </path>
+                            </svg>
                             ${quiz.questionsCount || 0} سؤال
                         </p>
                     </div>
-                    
-                    <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
-                        <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
-                        <div class="action-icon w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
-                            <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+
+                    <div class="relative z-10 flex items-center justify-between mt-auto pt-5 border-t border-white/[0.03]">
+                        <span class="text-sm font-medium text-gray-400">
+                            اضغط للبدء
+                        </span>
+
+                        <div class="action-icon w-8 h-8 rounded-[10px] bg-white/5 flex items-center justify-center text-gray-400">
+                            <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
                         </div>
                     </div>
                 </div>
             `;
 
             const renderCompletedCard = (quiz) => `
-                <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار ${quiz.title}" class="quiz-card animate-fade border-r-2 border-r-green-500/50" data-id="${quiz.id}">
-                    <div class="flex justify-between items-start mb-3">
-                        <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider">مكتمل</span>
+                <div tabindex="0"
+                    role="button"
+                    aria-label="عرض نتيجة اختبار ${quiz.title}"
+                    class="quiz-card completed-card animate-fade"
+                    style="animation-delay: ${quiz.id * 0.05}s;"
+                    data-id="${quiz.id}">
+
+                    <div class="relative z-10 flex justify-between items-start mb-3">
+                        <span class="text-[11px] font-bold text-white bg-white/10 px-2 py-1 rounded-[10px] tracking-wider">
+                            مكتمل
+                        </span>
                     </div>
-                    
-                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title}</h3>
-                    
-                    <div class="text-xs text-gray-500 space-y-1 mb-4">
+
+                    <h3 class="relative z-10 text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">
+                        ${quiz.title}
+                    </h3>
+
+                    <div class="relative z-10 text-xs text-gray-500 space-y-1 mb-4">
                         ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
                         ${quiz.lastAttempt ? `<p>آخر محاولة: ${quiz.lastAttempt}</p>` : ''}
                     </div>
 
-                    <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
-                        <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
-                        <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-green-400' : 'text-red-400'} leading-none">
+                    <div class="relative z-10 mt-auto pt-4 border-t border-white/[0.03] flex items-end justify-between">
+                        <span class="text-xs text-gray-400 mb-1">
+                            النتيجة النهائية
+                        </span>
+                        <div class="text-3xl font-black text-yellow-400 leading-none">
                             ${quiz.score || 0}%
                         </div>
                     </div>
                 </div>
             `;
 
+            /* =========================================
+               Render
+            ========================================= */
             const renderQuizzes = () => {
                 let filteredQuizzes = quizzesData;
-                
-                if (currentFilter === 'new') {
+
+                if(currentFilter === 'new') {
                     filteredQuizzes = quizzesData.filter(q => !q.attempted);
-                } else if (currentFilter === 'completed') {
+                } else if(currentFilter === 'completed') {
                     filteredQuizzes = quizzesData.filter(q => q.attempted);
                 }
 
-                filteredQuizzes.sort((a, b) => (a.attempted === b.attempted) ? 0 : a.attempted ? 1 : -1);
+                filteredQuizzes.sort((a, b) =>
+                    (a.attempted === b.attempted) ? 0 : a.attempted ? 1 : -1
+                );
 
-                if (filteredQuizzes.length === 0) {
+                if(filteredQuizzes.length === 0) {
                     container.innerHTML = '';
                     emptyState.classList.remove('hidden');
                     emptyState.classList.add('flex');
@@ -579,33 +696,42 @@
                 emptyState.classList.add('hidden');
                 emptyState.classList.remove('flex');
 
-                const html = filteredQuizzes.map(quiz => 
+                const html = filteredQuizzes.map(quiz =>
                     quiz.attempted ? renderCompletedCard(quiz) : renderAvailableCard(quiz)
                 ).join('');
 
                 container.innerHTML = html;
             };
 
+            /* =========================================
+               Events
+            ========================================= */
             const setupEventListeners = () => {
+
                 container.addEventListener('click', (e) => {
                     const card = e.target.closest('.quiz-card');
-                    if (!card) return;
+                    if(!card) return;
                     const quizId = card.getAttribute('data-id');
                     const quizData = quizzesData.find(q => q.id == quizId);
-                    if (quizData) QuizEngine.open(quizData);
-                });
-
-                container.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        const card = e.target.closest('.quiz-card');
-                        if (card) { e.preventDefault(); card.click(); }
+                    if(quizData) {
+                        QuizEngine.open(quizData);
                     }
                 });
 
-                // الانتباه: تم تغيير الكلاس إلى filter-btn لمنع التضارب
+                container.addEventListener('keydown', (e) => {
+                    if(e.key === 'Enter' || e.key === ' ') {
+                        const card = e.target.closest('.quiz-card');
+                        if(card) {
+                            e.preventDefault();
+                            card.click();
+                        }
+                    }
+                });
+
                 document.querySelectorAll('.filter-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
-                        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.filter-btn')
+                            .forEach(b => b.classList.remove('active'));
                         e.target.classList.add('active');
                         currentFilter = e.target.getAttribute('data-filter');
                         renderQuizzes();
@@ -613,37 +739,41 @@
                 });
             };
 
+            /* =========================================
+               Init
+            ========================================= */
             const init = async (dataSource) => {
                 renderSkeleton();
                 setupEventListeners();
 
                 try {
-                    // ديناميكية: يقبل API أو مصفوفة بيانات مباشرة
-                    if (typeof dataSource === 'string') {
+                    if(typeof dataSource === 'string') {
                         const response = await fetch(dataSource);
-                        if (!response.ok) throw new Error('فشل جلب البيانات');
+                        if(!response.ok) throw new Error('فشل جلب البيانات');
                         const data = await response.json();
                         quizzesData = Array.isArray(data) ? data : (data.data || []);
-                    } else if (Array.isArray(dataSource)) {
+                    }
+                    else if(Array.isArray(dataSource)) {
                         quizzesData = dataSource;
-                    } else {
+                    }
+                    else {
                         quizzesData = [];
                     }
-
                     updateStats(quizzesData);
                     renderQuizzes();
-
-                } catch (error) {
-                    console.error('Error fetching quizzes:', error);
+                }
+                catch(error) {
+                    console.error(error);
                     container.innerHTML = `
                         <div class="col-span-full py-10 text-center">
-                            <p class="text-red-400">حدث خطأ أثناء تحميل الاختبارات. يرجى المحاولة لاحقاً.</p>
+                            <p class="text-red-400">حدث خطأ أثناء تحميل الاختبارات.</p>
                         </div>
                     `;
                 }
             };
 
             return { init };
+
         })();
 
         // تهيئة التطبيق عند اكتمال تحميل الصفحة (انتظار البيانات الحقيقية)
