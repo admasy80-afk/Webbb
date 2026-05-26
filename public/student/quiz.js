@@ -1,3 +1,26 @@
+// --- 1) إعداد الـ Polling الصحيح والتحكم في حالة الاختبار ---
+window.__dashboardInterval = window.__dashboardInterval || null;
+window.DahihApp = window.DahihApp || {};
+
+window.DahihApp.setQuizState = function(active) {
+    window.__QUIZ_OPEN__ = active;
+
+    if (active) {
+        if (window.__dashboardInterval) {
+            clearInterval(window.__dashboardInterval);
+            window.__dashboardInterval = null;
+        }
+    } else {
+        if (!window.__dashboardInterval && typeof window.fetchDashboardData === 'function') {
+            window.__dashboardInterval = setInterval(() => {
+                if (window.__QUIZ_OPEN__) return;
+                window.fetchDashboardData();
+            }, 5000);
+        }
+    }
+};
+
+// --- 2) محرك الاختبار (Quiz Engine) ---
 (function () {
     'use strict';
 
@@ -128,13 +151,13 @@
                 height: 100dvh; width: 100vw;
                 opacity: 0; transform: scale(0.98);
                 transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-                contain: strict;
+                contain: layout style;
             }
             #quizModal:not(.hidden) { opacity: 1; transform: scale(1); }
 
             .qe-top-bar {
                 background: rgba(5, 5, 5, 0.92); 
-                backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); 
+                backdrop-filter: none; -webkit-backdrop-filter: none; 
                 border-bottom: 1px solid var(--qe-border);
                 position: sticky; top: 0; z-index: 100;
                 display: flex; flex-direction: column;
@@ -163,10 +186,10 @@
                 display: flex; align-items: center; justify-content: center;
                 font-weight: 700; font-size: 1.1rem; cursor: pointer;
                 border: 2px solid transparent; color: var(--qe-text-muted);
-                background: var(--qe-surface); transition: all 0.3s var(--qe-ease);
+                background: var(--qe-surface); transition: transform .2s ease;
                 position: relative; overflow: hidden;
             }
-            .qe-page-num::after { content:''; position:absolute; inset:0; border:2px solid var(--qe-border); border-radius:50%; transition:all 0.3s; }
+            .qe-page-num::after { content:''; position:absolute; inset:0; border:2px solid var(--qe-border); border-radius:50%; transition: opacity .2s ease; }
             .qe-page-num.answered { color: var(--qe-primary); background: var(--qe-primary-soft); }
             .qe-page-num.answered::after { border-color: var(--qe-primary); opacity: 0.5; }
             .qe-page-num.active { 
@@ -202,7 +225,7 @@
                 display: flex; align-items: center; padding: 1.4rem; margin-bottom: 1rem;
                 background: var(--qe-surface); border: 2px solid transparent;
                 border-radius: 1rem; cursor: pointer; position: relative; overflow: hidden;
-                transition: all 0.2s ease-out; transform: translateZ(0);
+                transition: transform .2s ease; transform: translateZ(0);
                 box-shadow: inset 0 0 0 1px var(--qe-border);
             }
             .qe-option:hover { background: var(--qe-surface-2); transform: translate3d(-4px, 0, 0); }
@@ -216,7 +239,7 @@
             .qe-option-letter { 
                 width: 44px; height: 44px; border-radius: 10px; background: rgba(255,255,255,0.03); 
                 display: flex; align-items: center; justify-content: center; 
-                font-weight: 900; font-size: 1.2rem; margin-left: 1.2rem; transition: 0.3s; color: var(--qe-text-muted); 
+                font-weight: 900; font-size: 1.2rem; margin-left: 1.2rem; transition: opacity .2s ease; color: var(--qe-text-muted); 
                 border: 1px solid rgba(255,255,255,0.1);
             }
             .qe-option.selected .qe-option-letter { background: var(--qe-primary); color: #000; border-color: var(--qe-primary); }
@@ -224,7 +247,7 @@
 
             .qe-bottom-bar {
                 position: fixed; bottom: 0; left: 0; width: 100%;
-                background: rgba(5,5,5,0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+                background: rgba(5,5,5,0.92); backdrop-filter: none; -webkit-backdrop-filter: none;
                 border-top: 1px solid var(--qe-border); padding: 1.2rem 1.5rem;
                 display: flex; justify-content: center; z-index: 100;
                 box-sizing: border-box; contain: layout paint;
@@ -234,7 +257,7 @@
             
             .qe-btn { 
                 padding: 0 2rem; height: 56px; border-radius: 14px; font-weight: 700; font-size: 1.1rem; 
-                cursor: pointer; border: none; font-family: inherit; transition: all 0.2s ease; 
+                cursor: pointer; border: none; font-family: inherit; transition: transform .2s ease; 
                 display: flex; align-items: center; justify-content: center; user-select: none;
             }
             .qe-btn-primary { background: var(--qe-primary); color: #000; }
@@ -250,7 +273,7 @@
             .qe-submitting-overlay { 
                 position: fixed; inset: 0; background: rgba(5,5,5,0.96); z-index: 99999999; 
                 display: none; flex-direction: column; align-items: center; justify-content: center; 
-                opacity: 0; transition: opacity 0.4s ease; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+                opacity: 0; transition: opacity 0.4s ease; backdrop-filter: none; -webkit-backdrop-filter: none;
             }
             .qe-submitting-overlay.show { display: flex; opacity: 1; }
             
@@ -301,7 +324,7 @@
             #qe-finish-btn {
                 background: var(--qe-success); color: white; border: none;
                 height: 60px; border-radius: 18px; font-size: 1.2rem; font-weight: 800; cursor: pointer; width: 100%;
-                box-shadow: 0 4px 20px rgba(34,197,94,0.3); transition: all 0.25s ease;
+                box-shadow: 0 4px 20px rgba(34,197,94,0.3); transition: transform .2s ease;
                 display: flex; align-items: center; justify-content: center; gap: 10px;
             }
             #qe-finish-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(34,197,94,0.4); }
@@ -355,7 +378,6 @@
             await EngineCore.detectEnvironment();
             injectStyles();
             
-            // 🚀 [Integration]: إيقاف جلب البيانات في لوحة التحكم أثناء إجراء الاختبار
             if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.setQuizState === 'function') {
                 window.DahihApp.setQuizState(true);
             }
@@ -688,24 +710,18 @@
                 Scheduler.idle(() => localStorage.removeItem(`dq_${this.quiz.id}`));
                 Sensory.success();
                 
-                // الحل الأكيد: منع إنشاء Worker لمكتبة Confetti
-                if (percentage >= 85 && !EngineCore.isLowEnd && typeof confetti === 'function') {
-                    confetti({ 
-                        particleCount: 250, 
-                        spread: 110, 
-                        origin: { y: 0.4 }, 
-                        colors: ['#facc15', '#22c55e', '#ffffff'], 
-                        zIndex: 99999999,
-                        useWorker: false,
-                        disableForReducedMotion: true
-                    });
-                } else if (typeof confetti === 'function') {
-                    confetti({ 
-                        particleCount: 150, 
-                        spread: 80, 
+                // منع الكونفيتي نهائياً على الجوال (وعدم استخدام Workers)
+                if (
+                    percentage >= 85 &&
+                    !EngineCore.isLowEnd &&
+                    !/Android|iPhone|iPad/i.test(navigator.userAgent) &&
+                    typeof confetti === 'function'
+                ) {
+                    confetti({
+                        particleCount: 120,
+                        spread: 70,
                         origin: { y: 0.6 },
-                        useWorker: false,
-                        disableForReducedMotion: true
+                        useWorker: false
                     });
                 }
 
@@ -768,7 +784,6 @@
             window.removeEventListener('resize', this.resizeHandler);
             document.documentElement.classList.remove('qe-active');
             
-            // 🚀 [Integration]: السماح للوحة التحكم بالعودة لجلب البيانات (إلغاء التجميد)
             if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.setQuizState === 'function') {
                 window.DahihApp.setQuizState(false);
             }
