@@ -688,21 +688,6 @@
 
             return { init, reload };
         })();
-
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('[data-tab-target]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    window.switchTab(e.currentTarget.dataset.tabTarget);
-                });
-            });
-
-            const savedTab = localStorage.getItem('activeTab') || 'dashboard';
-            window.switchTab(savedTab);
-
-            // تم حذف البيانات الوهمية، النظام يستقبل الآن مصفوفة فارغة 
-            // وسيقوم بجلب أو استقبال الاختبارات الحقيقية لاحقاً من الـ API
-            QuizApp.init([]); 
-        });
     </script>
 </body>
 </html>
