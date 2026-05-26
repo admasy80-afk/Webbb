@@ -14,15 +14,19 @@
         quizzesHash: '',
         pointsHash: '',
         questionsHash: '',
+        lastDataHash: null, // 🚀 [تحسين]: تخزين بصمة البيانات كاملة لمنع الـ Re-render الوهمي
         availableQuizzes: [],
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
-        isPolling: false, 
+        isTesting: false, // 🚀 [تحسين]: حالة الاختبار لمنع جلب البيانات أثناء حل الكويز
         dashboardAbortController: null,
         videoAbortController: null, 
         videoRequestId: 0, 
         reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
+
+    // 🚀 [تحسين]: نظام Polling آمن لا يتكرر ولا يتراكم
+    const poller = { timer: null };
 
     const $ = (id) => document.getElementById(id);
 
@@ -281,9 +285,8 @@
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
 
+            // 🚀 [تحسين]: إيقاف الفيديو الحالي دون تفريغ الـ src والتسبب في Flashing
             this.video.pause();
-            this.video.removeAttribute('src');
-            this.video.load();
             
             try {
                 const access = await fetchWithTimeout('/api/student/video/access', {
@@ -302,8 +305,11 @@
 
                 if (currentReqId !== state.videoRequestId) return;
 
-                this.video.src = data.signedUrl;
-                this.video.load();
+                // 🚀 [تحسين]: تعيين الـ src فقط إذا كان مختلفاً (تجنب إعادة تحميل الفيديو بلا داعٍ)
+                if (this.video.src !== data.signedUrl) {
+                    this.video.src = data.signedUrl;
+                    this.video.load();
+                }
 
                 const playPromise = this.video.play();
                 if (playPromise && playPromise.catch) {
@@ -433,8 +439,9 @@
         requestAnimationFrame(step);
     }
 
-    // --- منطقة الربط الحقيقية مع API السيرفر ---
     async function fetchData(initial = false) {
+        if (state.isTesting) return; // منع الجلب تماماً أثناء أداء الاختبار
+
         if (state.dashboardAbortController) {
             state.dashboardAbortController.abort();
         }
@@ -453,7 +460,6 @@
         }
 
         try {
-            // نستخدم هذا الـ Endpoint الشامل لأنه يجلب الكورسات والاختبارات وبيانات الطالب في طلب واحد
             const res = await fetchWithTimeout('/api/student/dashboard-data', {
                 method: 'POST',
                 headers: {
@@ -473,6 +479,14 @@
             }
 
             const data = await res.json();
+
+            // 🚀 [تحسين]: فحص الـ Hash الكلي للبيانات لمنع تدمير وإعادة بناء الـ DOM إذا لم يتغير شيء
+            const newDataHash = JSON.stringify(data.content || data);
+            if (!initial && state.lastDataHash === newDataHash) {
+                return; // لم تتغير البيانات، لا داعي لتحديث الواجهة
+            }
+            state.lastDataHash = newDataHash;
+
             renderAll(data, initial);
             
         } catch (err) {
@@ -491,28 +505,21 @@
 
     function renderAll(data, initial) {
         try {
-            // استخراج البيانات القادمة من الـ API
             const courses = data.courses || data.content?.courses || [];
             const quizzes = data.content?.quizzes || [];
             const points = data.content?.points || [];
             const questions = data.content?.questions || [];
 
-            // 1. تحديث بيانات الطالب ديناميكياً (إن توفرت في استجابة السيرفر)
             if (data.studentName) $('studentName').textContent = data.studentName;
             if (data.studentGrade) $('studentGrade').textContent = data.studentGrade;
 
-            // 2. تحديث الكورسات في الواجهة
             renderCourses(courses, initial);
-            
-            // 3. تحديث الاختبارات في الواجهة (الكروت)
             renderQuizzes(quizzes);
 
-            // 4. تهيئة نظام الاختبارات (QuizApp) بالبيانات الحقيقية بدلاً من المصفوفة الفارغة
             if (window.QuizApp && typeof window.QuizApp.init === 'function') {
                 window.QuizApp.init(quizzes);
             }
 
-            // 5. باقي التحديثات
             renderPoints(points);
             renderQuestions(questions);
             renderScore(parseInt(data.studentPoints || 0));
@@ -541,6 +548,7 @@
 
         container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
         
+        // 🚀 [تحسين]: استبدال الـ background-image المكلفة برمجياً بـ <img> مع loading="lazy"
         container.innerHTML = list.map((course, idx) => {
             const id = course.telegramMsgId;
             const num = idx + 1;
@@ -553,8 +561,11 @@
 
             return `
                 <div class="flex flex-col bg-white/5 border ${isActive ? 'border-yellow-500/40 shadow-[0_4px_20px_rgba(234,179,8,0.1)]' : 'border-white/10 shadow-lg'} rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 course-card-v4" id="course_${id}">
-                    <div class="relative h-36 p-4 flex flex-col justify-between course-cover" data-bg="${safeImage}">
-                        <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white'}">الدرس ${num}</span>
+                    <div class="relative h-36 p-4 flex flex-col justify-between overflow-hidden">
+                        <img src="${safeImage}" loading="lazy" class="absolute inset-0 w-full h-full object-cover z-0 filter brightness-50" alt="غلاف الكورس">
+                        <div class="relative z-10 flex flex-col justify-between h-full">
+                            <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white'}">الدرس ${num}</span>
+                        </div>
                     </div>
                     <div class="p-5 flex flex-col flex-grow">
                         <h3 class="text-lg font-bold text-white mb-3 truncate" title="${title}">${title}</h3>
@@ -565,15 +576,6 @@
                     </div>
                 </div>`;
         }).join('');
-
-        requestAnimationFrame(() => {
-            container.querySelectorAll('.course-cover').forEach(el => {
-                const bg = el.dataset.bg;
-                el.style.backgroundImage = `linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url("${bg}")`;
-                el.style.backgroundSize = 'cover';
-                el.style.backgroundPosition = 'center';
-            });
-        });
 
         if (state.currentMsgId) updateActiveCourseCard(state.currentMsgId);
     }
@@ -678,15 +680,26 @@
         }
     };
 
-    async function startPolling() {
-        if (state.isPolling) return;
-        state.isPolling = true;
-        while (!document.hidden) {
-            await new Promise(r => setTimeout(r, 10000));
-            if (document.hidden) break;
-            await fetchData(false);
+    // 🚀 [تحسين]: دوال الـ Polling الجديدة اللي تعتمد على setInterval بدل الـ while loop
+    function startDashboardPolling() {
+        if (poller.timer) {
+            console.warn('Polling already exists');
+            return;
         }
-        state.isPolling = false;
+        if (state.isTesting) return; // لا تعمل إذا كان يختبر
+
+        // طلب جلب البيانات كل 30 ثانية لتخفيف الضغط
+        poller.timer = setInterval(async () => {
+            if (document.hidden || state.isTesting) return;
+            await fetchData(false);
+        }, 30000); 
+    }
+
+    function stopDashboardPolling() {
+        if (poller.timer) {
+            clearInterval(poller.timer);
+            poller.timer = null;
+        }
     }
 
     function setupGlobalListeners() {
@@ -745,7 +758,6 @@
                 }
             } else {
                 fetchData(false);
-                startPolling();
             }
         });
 
@@ -759,7 +771,6 @@
     function init() {
         if (!authGate()) return;
 
-        // تهيئة الواجهة المبدئية من التخزين المحلي ريثما تصل البيانات من السيرفر
         const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
         $('studentName').textContent = firstName;
         $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
@@ -767,21 +778,31 @@
         player.init();
         setupGlobalListeners();
         
-        // التحميل الأولي (جلب بيانات الطالب، الكورسات، الاختبارات) وبدء الـ Polling
         fetchData(true).then(() => {
             if (!document.hidden) {
-                startPolling();
+                startDashboardPolling();
             }
         });
     }
 
+    // 🚀 [تحسين]: تصدير الدوال اللازمة للـ quiz.js عشان يوقف الـ polling ويرجعه
     Object.freeze(window.DahihApp = {
         logout, 
         toggleFullscreen, 
         refresh: () => fetchData(true),
         getState: () => state,
         fetchWithTimeout: fetchWithTimeout,
-        toast: showToast
+        toast: showToast,
+        startDashboardPolling, // تم إتاحتها
+        stopDashboardPolling,  // تم إتاحتها
+        setQuizState: (isTesting) => { 
+            state.isTesting = isTesting; 
+            if (isTesting) {
+                stopDashboardPolling();
+            } else {
+                startDashboardPolling();
+            }
+        }
     });
 
     if (document.readyState === 'loading') {
@@ -790,4 +811,3 @@
         init();
     }
 })();
-
