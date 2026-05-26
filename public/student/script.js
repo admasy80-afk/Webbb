@@ -1,6 +1,10 @@
 (function () {
     'use strict';
 
+    // منع تكرار تهيئة السكربت لو تم حقنه أكثر من مرة
+    if (window.__DAHIH_INITIALIZED__) return;
+    window.__DAHIH_INITIALIZED__ = true;
+
     const state = {
         user: null,
         token: null,
@@ -13,14 +17,15 @@
         availableQuizzes: [],
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
-        pollTimer: null,
+        isPolling: false, // تم استبدال pollTimer بنظام Smart Polling
         dashboardAbortController: null,
+        videoAbortController: null, 
+        videoRequestId: 0, 
         reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
 
     const $ = (id) => document.getElementById(id);
 
-    // نظام الـ Toast مع حل مشكلة الـ transitionend fallback
     const showToast = (message, type = 'info') => {
         let container = $('toastContainer');
         if (!container) {
@@ -47,12 +52,12 @@
 
         setTimeout(() => {
             toast.classList.add('translate-y-2', 'opacity-0');
-            // Fallback: في حال تعطلت أحداث الـ transition
             const fallbackTimer = setTimeout(() => toast.remove(), 1000);
+            
             toast.addEventListener('transitionend', () => {
                 clearTimeout(fallbackTimer);
                 toast.remove();
-            });
+            }, { once: true });
         }, 4000);
     };
 
@@ -74,9 +79,21 @@
     };
 
     const getSafeImageUrl = (url) => {
-        if (!url || typeof url !== 'string') return 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
-        const cleanUrl = url.trim().replace(/['"()]/g, '');
-        return (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://') || cleanUrl.startsWith('/')) ? cleanUrl : '';
+        const defaultImg = 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
+        if (!url || typeof url !== 'string') return defaultImg;
+        
+        try {
+            const parsed = new URL(url.trim(), location.origin);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return parsed.href;
+            }
+            if (parsed.origin === location.origin) {
+                return parsed.pathname;
+            }
+            return defaultImg;
+        } catch {
+            return defaultImg;
+        }
     };
 
     const formatTime = (t) => {
@@ -92,7 +109,6 @@
     };
 
     function authGate() {
-        // إذا تم الانتقال لـ HttpOnly Cookies مستقبلاً، يمكن إزالة الاعتماد على localStorage للتوكن هنا
         const userStr = localStorage.getItem('dahih_user');
         const token = localStorage.getItem('dahih_token');
         if (!userStr || !token) {
@@ -110,20 +126,45 @@
     }
 
     function logout() {
+        if (player && player.video) {
+            try {
+                player.video.pause();
+                player.video.removeAttribute('src');
+                player.video.load();
+            } catch (e) {
+                console.error("Error clearing video on logout:", e);
+            }
+        }
         localStorage.removeItem('dahih_user');
         localStorage.removeItem('dahih_token');
         window.location.replace('/login.html');
     }
 
+    // 1. حل مشكلة Memory Leak وتنظيف الـ AbortListener
     async function fetchWithTimeout(url, options = {}, timeout = 15000) {
         const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), timeout);
+        const timeoutId = setTimeout(() => controller.abort(), timeout);
+        const abortHandler = () => controller.abort();
+
+        if (options.signal) {
+            if (options.signal.aborted) {
+                controller.abort();
+            } else {
+                options.signal.addEventListener('abort', abortHandler, { once: true });
+            }
+        }
+
         try {
-            // إضافة credentials استعداداً لدعم HttpOnly Cookies
-            const signal = options.signal ? options.signal : controller.signal;
-            return await fetch(url, { ...options, signal, credentials: 'omit' /* عدلها لـ include لاحقاً */ });
+            return await fetch(url, {
+                ...options,
+                signal: controller.signal,
+                credentials: 'omit'
+            });
         } finally {
-            clearTimeout(id);
+            clearTimeout(timeoutId);
+            if (options.signal) {
+                options.signal.removeEventListener('abort', abortHandler);
+            }
         }
     }
 
@@ -155,6 +196,7 @@
         currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
         centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
+        lastProgressSave: 0,
 
         init() {
             this.video         = $('dahihPlayer');
@@ -175,8 +217,12 @@
 
             if (!this.video) return;
 
-            // تحسين أداء الفيديو (Preload)
             this.video.preload = 'metadata';
+            
+            // 4. حماية إضافية للفيديو
+            this.video.crossOrigin = 'anonymous';
+            this.video.playsInline = true;
+            this.video.disablePictureInPicture = true;
 
             this.video.addEventListener('click', () => this.togglePlay());
             this.centerPlay.addEventListener('click', () => this.togglePlay());
@@ -215,7 +261,6 @@
             });
         },
 
-        // تم تحويل الدالة لـ async لدعم الـ Temporary Signed URL
         async load(msgId, title) {
             if (!this.video) return;
             if (String(state.currentMsgId) === String(msgId)) {
@@ -227,26 +272,40 @@
             this.titleEl.textContent = title || 'جاري التحميل...';
             this.lastSentTime = -1;
 
+            if (state.videoAbortController) {
+                state.videoAbortController.abort();
+            }
+            state.videoAbortController = new AbortController();
+
+            const currentReqId = ++state.videoRequestId;
+
             this.poster.classList.add('hidden', 'is-hidden'); 
             this.video.classList.remove('hidden');
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
+
+            // 2. تفريغ الفيديو القديم بالكامل لمنع الـ Buffering بالخلفية
             this.video.pause();
+            this.video.removeAttribute('src');
+            this.video.load();
             
             try {
-                // الطريقة الاحترافية للتعامل مع الفيديوهات المشفرة (بديل الـ Query Token)
-                const access = await fetch('/api/student/video/access', {
+                const access = await fetchWithTimeout('/api/student/video/access', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${state.token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ msgId })
-                });
+                    body: JSON.stringify({ msgId }),
+                    signal: state.videoAbortController.signal
+                }, 15000);
 
                 if (!access.ok) throw new Error('Failed to fetch signed URL');
                 
                 const data = await access.json();
+
+                if (currentReqId !== state.videoRequestId) return;
+
                 this.video.src = data.signedUrl;
                 this.video.load();
 
@@ -264,6 +323,8 @@
                 this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
 
             } catch (err) {
+                if (err.name === 'AbortError') return; 
+                if (currentReqId !== state.videoRequestId) return; 
                 console.error("Video Access Error:", err);
                 showToast("🚨 تعذر جلب رابط الفيديو. يرجى المحاولة لاحقاً.", "error");
             }
@@ -295,7 +356,6 @@
             this.currentTimeEl.textContent = formatTime(this.video.currentTime);
 
             const currentSec = Math.floor(this.video.currentTime);
-            // Debounce Sync كل 10 ثواني باستخدام keepalive لدعم الـ Unload
             if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
                 this.lastSentTime = currentSec;
                 this.saveProgressBackground();
@@ -304,12 +364,15 @@
 
         forceSaveProgress() {
             if (this.video && this.video.currentTime > 0) {
-                this.saveProgressBackground();
+                this.saveProgressBackground(true);
             }
         },
 
-        saveProgressBackground() {
-            // keepalive: true يضمن استكمال الطلب حتى لو أقفل المستخدم التبويب أو عمل Pause فجأة
+        saveProgressBackground(force = false) {
+            const now = Date.now();
+            if (!force && now - this.lastProgressSave < 5000) return;
+            this.lastProgressSave = now;
+
             fetch('/api/student/save-progress', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
@@ -350,7 +413,9 @@
             const req = wrapper.requestFullscreen || wrapper.webkitRequestFullscreen;
             if (req) {
                 req.call(wrapper).then(() => {
-                    if (screen.orientation && screen.orientation.lock) { screen.orientation.lock('landscape').catch(() => {}); }
+                    if (screen.orientation && typeof screen.orientation.lock === 'function') { 
+                        screen.orientation.lock('landscape').catch(() => {}); 
+                    }
                 }).catch(() => {});
             }
         } else {
@@ -456,6 +521,7 @@
         }
 
         container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
+        
         container.innerHTML = list.map((course, idx) => {
             const id = course.telegramMsgId;
             const num = idx + 1;
@@ -468,7 +534,7 @@
 
             return `
                 <div class="flex flex-col bg-white/5 border ${isActive ? 'border-yellow-500/40 shadow-[0_4px_20px_rgba(234,179,8,0.1)]' : 'border-white/10 shadow-lg'} rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 course-card-v4" id="course_${id}">
-                    <div class="relative h-36 p-4 flex flex-col justify-between" style="background: linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url('${safeImage}'); background-size: cover; background-position: center;">
+                    <div class="relative h-36 p-4 flex flex-col justify-between course-cover" data-bg="${safeImage}">
                         <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white'}">الدرس ${num}</span>
                     </div>
                     <div class="p-5 flex flex-col flex-grow">
@@ -480,6 +546,16 @@
                     </div>
                 </div>`;
         }).join('');
+
+        // 5. تحسين أداء renderCourses بالـ requestAnimationFrame لمنع الـ Reflow
+        requestAnimationFrame(() => {
+            container.querySelectorAll('.course-cover').forEach(el => {
+                const bg = el.dataset.bg;
+                el.style.backgroundImage = `linear-gradient(to bottom right, rgba(0,0,0,0.3), rgba(0,0,0,0.8)), url("${bg}")`;
+                el.style.backgroundSize = 'cover';
+                el.style.backgroundPosition = 'center';
+            });
+        });
 
         if (state.currentMsgId) updateActiveCourseCard(state.currentMsgId);
     }
@@ -540,15 +616,16 @@
     }
 
     const generateQuizCardHTML = (quiz) => {
+        const titleSafe = escapeHTML(quiz.title) || 'بدون عنوان';
         if (!quiz.attempted) {
             return `
-            <div tabindex="0" role="button" class="quiz-card card-new animate-fade bg-white/5 border border-white/10 p-5 rounded-2xl hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
+            <div tabindex="0" role="button" aria-label="بدء اختبار: ${titleSafe}" class="quiz-card card-new animate-fade bg-white/5 border border-white/10 p-5 rounded-2xl hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
                 <div class="flex-grow">
                     <div class="flex items-center gap-2 mb-3">
                         <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
                         <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
                     </div>
-                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${escapeHTML(quiz.title) || 'بدون عنوان'}</h3>
+                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${titleSafe}</h3>
                     <p class="text-sm text-gray-400 flex items-center gap-1.5">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         ${quiz.questionsCount || 0} سؤال
@@ -563,11 +640,11 @@
             </div>`;
         } else {
             return `
-            <div tabindex="0" role="button" class="quiz-card animate-fade bg-white/5 border border-white/10 border-r-4 border-r-green-500/80 p-5 rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
+            <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار: ${titleSafe}" class="quiz-card animate-fade bg-white/5 border border-white/10 border-r-4 border-r-green-500/80 p-5 rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
                 <div class="flex justify-between items-start mb-3 flex-grow">
                     <div>
                         <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider mb-3 inline-block">مكتمل</span>
-                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${escapeHTML(quiz.title) || 'بدون عنوان'}</h3>
+                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${titleSafe}</h3>
                     </div>
                 </div>
                 <div class="text-xs text-gray-500 space-y-1 mb-4 flex-grow">
@@ -582,6 +659,18 @@
             </div>`;
         }
     };
+
+    // 3. Smart Polling Loop
+    async function startPolling() {
+        if (state.isPolling) return;
+        state.isPolling = true;
+        while (!document.hidden) {
+            await new Promise(r => setTimeout(r, 10000));
+            if (document.hidden) break;
+            await fetchData(false);
+        }
+        state.isPolling = false;
+    }
 
     function setupGlobalListeners() {
         document.addEventListener('click', (e) => {
@@ -619,7 +708,6 @@
             }
         });
 
-        // إضافة أحداث تفاعلية خاملة (Passive) لتحسين أداء السكرول واللمس
         document.addEventListener('touchstart', () => {}, { passive: true });
         window.addEventListener('scroll', () => {}, { passive: true });
 
@@ -633,28 +721,21 @@
             }
         });
 
-        // إيقاف الـ Polling عند مغادرة التبويب أو إخفائه لتوفير استهلاك الخوادم والبطارية
+        // التعامل الذكي مع حالة التبويب (Visibility)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                if (state.pollTimer) {
-                    clearInterval(state.pollTimer);
-                    state.pollTimer = null;
-                }
-                // ضمان حفظ آخر تقدم للمشاهدة لحظة تصغير المتصفح
                 if (player.video && !player.video.paused) {
-                    player.saveProgressBackground();
+                    player.saveProgressBackground(true);
                 }
             } else {
                 fetchData(false);
-                if (!state.pollTimer) {
-                    state.pollTimer = setInterval(() => fetchData(false), 10000);
-                }
+                startPolling();
             }
         });
 
         window.addEventListener('beforeunload', () => {
-            if (state.pollTimer) clearInterval(state.pollTimer);
             if (state.dashboardAbortController) state.dashboardAbortController.abort();
+            if (state.videoAbortController) state.videoAbortController.abort();
             player.forceSaveProgress();
         });
     }
@@ -668,21 +749,24 @@
 
         player.init();
         setupGlobalListeners();
-        fetchData(true);
-
-        if (!state.pollTimer && !document.hidden) {
-            state.pollTimer = setInterval(() => fetchData(false), 10000);
-        }
+        
+        // التحميل الأولي وبدء الـ Polling
+        fetchData(true).then(() => {
+            if (!document.hidden) {
+                startPolling();
+            }
+        });
     }
 
-    window.DahihApp = {
+    // 6. حماية متقدمة: منع أي سكربت خارجي من التلاعب بوظائف النظام
+    Object.freeze(window.DahihApp = {
         logout, 
         toggleFullscreen, 
         refresh: () => fetchData(true),
         getState: () => state,
         fetchWithTimeout: fetchWithTimeout,
         toast: showToast
-    };
+    });
 
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
