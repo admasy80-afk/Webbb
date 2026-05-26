@@ -1,26 +1,109 @@
-// --- 1) إعداد الـ Polling الصحيح والتحكم في حالة الاختبار ---
-window.__dashboardInterval = window.__dashboardInterval || null;
+// ======================================================
+// ✅ DASHBOARD POLLING SYSTEM (ANTI-CRASH)
+// ======================================================
+
+window.__dashboardPoller = {
+    timer: null,
+    controller: null,
+    running: false,
+    stopped: false
+};
+
 window.DahihApp = window.DahihApp || {};
 
+window.DahihApp.stopDashboardPolling = function () {
+    const poller = window.__dashboardPoller;
+
+    poller.stopped = true;
+
+    if (poller.timer) {
+        clearTimeout(poller.timer);
+        poller.timer = null;
+    }
+
+    if (poller.controller) {
+        poller.controller.abort();
+        poller.controller = null;
+    }
+
+    poller.running = false;
+};
+
+window.DahihApp.startDashboardPolling = function () {
+    const poller = window.__dashboardPoller;
+
+    poller.stopped = false;
+
+    const loop = async () => {
+
+        // ❌ لا تسحب بيانات أثناء الاختبار
+        if (window.__QUIZ_OPEN__) {
+            poller.timer = setTimeout(loop, 5000);
+            return;
+        }
+
+        // ❌ منع التكرار
+        if (poller.running) {
+            poller.timer = setTimeout(loop, 3000);
+            return;
+        }
+
+        poller.running = true;
+
+        try {
+
+            // ❌ إلغاء أي طلب قديم
+            if (poller.controller) {
+                poller.controller.abort();
+            }
+
+            poller.controller = new AbortController();
+
+            // يجب التأكد أن دالة fetchDashboardData في ملفك الأساسي تستقبل signal 
+            if (typeof window.fetchDashboardData === 'function') {
+                await window.fetchDashboardData({
+                    signal: poller.controller.signal
+                });
+            }
+
+        } catch (err) {
+
+            // تجاهل الإلغاء الطبيعي
+            if (err.name !== 'AbortError') {
+                console.error('Dashboard Poll Error:', err);
+            }
+
+        } finally {
+
+            poller.running = false;
+
+            if (!poller.stopped) {
+                poller.timer = setTimeout(loop, 5000);
+            }
+        }
+    };
+
+    loop();
+};
+
 window.DahihApp.setQuizState = function(active) {
+
     window.__QUIZ_OPEN__ = active;
 
     if (active) {
-        if (window.__dashboardInterval) {
-            clearInterval(window.__dashboardInterval);
-            window.__dashboardInterval = null;
-        }
+        // وقف كل شيء فوراً
+        window.DahihApp.stopDashboardPolling();
     } else {
-        if (!window.__dashboardInterval && typeof window.fetchDashboardData === 'function') {
-            window.__dashboardInterval = setInterval(() => {
-                if (window.__QUIZ_OPEN__) return;
-                window.fetchDashboardData();
-            }, 5000);
-        }
+        // ارجع التشغيل بعد هدوء بسيط
+        setTimeout(() => {
+            window.DahihApp.startDashboardPolling();
+        }, 1500);
     }
 };
 
-// --- 2) محرك الاختبار (Quiz Engine) ---
+// ======================================================
+// ✅ محرك الاختبار (Quiz Engine)
+// ======================================================
 (function () {
     'use strict';
 
@@ -704,13 +787,17 @@ window.DahihApp.setQuizState = function(active) {
                     });
                 }
                 
+                // 🚀 [أهم إضافة]: إيقاف الـ Polling تماماً لتجنب أي تعارض في الـ State
+                if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.stopDashboardPolling === 'function') {
+                    window.DahihApp.stopDashboardPolling();
+                }
+
                 this.quiz.attempted = true;
                 this.quiz.score = percentage;
                 
                 Scheduler.idle(() => localStorage.removeItem(`dq_${this.quiz.id}`));
                 Sensory.success();
                 
-                // منع الكونفيتي نهائياً على الجوال (وعدم استخدام Workers)
                 if (
                     percentage >= 85 &&
                     !EngineCore.isLowEnd &&
@@ -756,19 +843,31 @@ window.DahihApp.setQuizState = function(active) {
                                 
                                 this.close();
                                 
+                                // 🚀 إعادة تشغيل الـ Dashboard بشكل آمن بعد الإغلاق بـ 2500ms
                                 setTimeout(() => {
-                                    if (typeof window.DahihApp !== 'undefined' && window.DahihApp.refresh) {
+                                    if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.startDashboardPolling === 'function') {
+                                        window.DahihApp.startDashboardPolling();
+                                    }
+                                    if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.refresh === 'function') {
                                         window.DahihApp.refresh();
                                     }
                                     if (typeof QuizApp !== 'undefined' && QuizApp.reload) {
                                         QuizApp.reload();
                                     }
-                                }, 250);
+                                }, 2500);
+
                             }, 350);
                         };
                     }, 500); 
                 } else {
                     this.close();
+                    
+                    // احتياطي في حال عدم وجود overlay
+                    setTimeout(() => {
+                        if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.startDashboardPolling === 'function') {
+                            window.DahihApp.startDashboardPolling();
+                        }
+                    }, 2500);
                 }
 
             } catch (err) { 
