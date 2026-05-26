@@ -112,7 +112,7 @@
                 --qe-text: #ffffff; 
                 --qe-text-muted: #a1a1aa;
                 --qe-ease: cubic-bezier(0.175, 0.885, 0.32, 1.1); 
-                --qe-reading-width: 768px;
+                --qe-reading-width: 860px; /* تم التوسيع قليلاً لتناسب الـ Grid */
                 --qe-success: #22c55e;
             }
 
@@ -186,41 +186,75 @@
             }
             #qe-virtual-dom { position: relative; width: 100%; min-height: 50vh; touch-action: pan-y; }
             
+            /* --- دمج ستايل لوحة التحكم مع محرك الاختبار --- */
             .qe-card-layer {
                 display: none; opacity: 0; width: 100%;
                 transition: opacity 0.3s ease, transform 0.4s var(--qe-ease);
                 will-change: transform, opacity; contain: content;
                 transform: translate3d(30px, 0, 0);
+                
+                /* الستايل الجديد (Glass Panel + Border) */
+                background: rgba(255, 255, 255, 0.03);
+                backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-right: 4px solid var(--qe-primary);
+                border-radius: 1.5rem;
+                padding: 1.5rem;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
             }
             .qe-card-layer.active { display: block; opacity: 1; transform: translate3d(0, 0, 0); position: relative; }
             .qe-card-layer.exit-prev { display: block; opacity: 0; transform: translate3d(-30px, 0, 0); position: absolute; top: 0; }
             .qe-card-layer.exit-next { display: block; opacity: 0; transform: translate3d(30px, 0, 0); position: absolute; top: 0; }
 
-            .qe-q-text { font-size: 1.6rem; font-weight: 900; line-height: 1.7; margin: 0 0 2.5rem 0; color: white; text-align: right; }
+            .qe-q-header {
+                display: flex; justify-content: space-between; align-items: center;
+                margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05);
+            }
+            .qe-q-title {
+                color: var(--qe-primary); font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; margin: 0;
+            }
+
+            .qe-q-text-box {
+                background: rgba(0, 0, 0, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 0.75rem;
+                padding: 1.2rem;
+                color: white;
+                font-size: 1.4rem; font-weight: 800; line-height: 1.8;
+                margin-bottom: 1.5rem; text-align: right;
+            }
+            
+            .qe-options-grid {
+                display: grid; grid-template-columns: 1fr; gap: 1rem;
+            }
+            @media (min-width: 640px) {
+                .qe-options-grid { grid-template-columns: 1fr 1fr; gap: 1rem 0.75rem; }
+            }
             
             .qe-option {
-                display: flex; align-items: center; padding: 1.4rem; margin-bottom: 1rem;
-                background: var(--qe-surface); border: 2px solid transparent;
-                border-radius: 1rem; cursor: pointer; position: relative; overflow: hidden;
+                display: flex; align-items: center; padding: 0.8rem 1rem;
+                background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 0.75rem; cursor: pointer; position: relative; overflow: hidden;
                 transition: all 0.2s ease-out; transform: translateZ(0);
-                box-shadow: inset 0 0 0 1px var(--qe-border);
             }
-            .qe-option:hover { background: var(--qe-surface-2); transform: translate3d(-4px, 0, 0); }
+            .qe-option:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(250, 204, 21, 0.5); }
             .qe-option input[type="radio"] { opacity: 0; position: absolute; }
             .qe-option.selected { 
-                background: var(--qe-surface-2); 
-                box-shadow: inset 0 0 0 2px var(--qe-primary), 0 4px 15px rgba(0,0,0,0.4); 
-                transform: scale(1.01); 
+                background: rgba(250, 204, 21, 0.1); 
+                border-color: var(--qe-primary);
+                box-shadow: 0 0 15px rgba(250,204,21,0.15); 
+                transform: scale(1.02); 
             }
             
             .qe-option-letter { 
-                width: 44px; height: 44px; border-radius: 10px; background: rgba(255,255,255,0.03); 
+                width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); 
                 display: flex; align-items: center; justify-content: center; 
-                font-weight: 900; font-size: 1.2rem; margin-left: 1.2rem; transition: 0.3s; color: var(--qe-text-muted); 
-                border: 1px solid rgba(255,255,255,0.1);
+                font-weight: 900; font-size: 1rem; margin-left: 0.8rem; transition: 0.3s; color: var(--qe-text-muted); 
+                flex-shrink: 0;
             }
-            .qe-option.selected .qe-option-letter { background: var(--qe-primary); color: #000; border-color: var(--qe-primary); }
-            .qe-opt-text { font-size: 1.2rem; font-weight: 600; color: var(--qe-text); line-height: 1.6; flex: 1; text-align: right; } 
+            .qe-option.selected .qe-option-letter { background: var(--qe-primary); color: #000; }
+            .qe-opt-text { font-size: 1.1rem; font-weight: 700; color: var(--qe-text); line-height: 1.6; flex: 1; text-align: right; } 
+            /* ------------------------------------------------ */
 
             .qe-bottom-bar {
                 position: fixed; bottom: 0; left: 0; width: 100%;
@@ -320,16 +354,16 @@
 
                 #quizModalContent { padding: 1.5rem 1rem calc(130px + env(safe-area-inset-bottom)); }
                 
-                .qe-card-layer { padding: 0; background: none; border: none; box-shadow: none; transition: opacity 0.15s ease !important; transform: none !important; }
+                /* الحفاظ على الستايل الجديد حتى في الموبايل */
+                .qe-card-layer { padding: 1.2rem; }
                 .qe-card-layer.active { opacity: 1; }
                 .qe-card-layer.exit-prev, .qe-card-layer.exit-next { opacity: 0; pointer-events: none; }
                 
-                .qe-q-text { font-size: 1.3rem; line-height: 1.8; margin-bottom: 1.5rem; }
+                .qe-q-text-box { font-size: 1.2rem; padding: 1rem; }
                 
-                .qe-option { padding: 1rem; border-radius: 16px; margin-bottom: 0.8rem; }
-                .qe-option:hover { transform: none; background: var(--qe-surface); }
-                .qe-option-letter { width: 38px; height: 38px; font-size: 1rem; margin-left: 0.8rem; }
-                .qe-opt-text { font-size: 1.05rem; line-height: 1.7; }
+                .qe-option { padding: 0.8rem; }
+                .qe-option-letter { width: 30px; height: 30px; font-size: 0.9rem; }
+                .qe-opt-text { font-size: 1rem; }
 
                 .qe-bottom-bar { padding: 0.8rem 1rem; background: #080808; border-top: 1px solid rgba(255,255,255,0.05); }
                 .qe-nav-container { flex-direction: row; gap: 0.6rem; }
@@ -484,6 +518,7 @@
             if(content) content.scrollTo({ top: 0, behavior: EngineCore.isLowEnd ? 'auto' : 'smooth' });
         },
 
+        // --- تحديث الـ Virtual DOM لتوليد شكل الـ UI الجديد ---
         renderVirtualDOM(direction = 0) {
             UIState.set(UIState.TRANSITIONING);
             const total = this.quiz.questions.length;
@@ -505,9 +540,19 @@
                     let enterClass = idx === this.currentIndex ? 'active' : (direction === 0 ? (idx < this.currentIndex ? 'exit-prev' : 'exit-next') : (direction > 0 ? 'exit-next' : 'exit-prev'));
 
                     const card = $el('div', { className: `qe-card-layer ${enterClass}`, 'data-index': idx });
-                    card.appendChild($el('h4', { className: 'qe-q-text' }, [escapeHTML(q.questionText)]));
                     
-                    const group = $el('div', { role: 'radiogroup' });
+                    // توليد الترويسة (Header) الخاصة بالسؤال
+                    const header = $el('div', { className: 'qe-q-header' });
+                    const title = $el('h3', { className: 'qe-q-title' });
+                    title.innerHTML = `<svg style="width:1.25rem;height:1.25rem;color:#6b7280" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> السؤال رقم ${idx + 1}`;
+                    header.appendChild(title);
+                    card.appendChild(header);
+
+                    // توليد مربع نص السؤال (Dark Box)
+                    card.appendChild($el('div', { className: 'qe-q-text-box' }, [escapeHTML(q.questionText)]));
+                    
+                    // توليد شبكة الخيارات (Grid Options)
+                    const group = $el('div', { className: 'qe-options-grid', role: 'radiogroup' });
                     q.options.forEach((opt, oi) => {
                         const isChecked = this.answers[`q_${idx}`] == oi;
                         const label = $el('label', { className: `qe-option ${isChecked ? 'selected' : ''}` });
@@ -725,7 +770,6 @@
                                 
                                 this.close();
                                 
-                                // التعديل الجديد لمنع الكراش
                                 setTimeout(() => {
                                     if (
                                         typeof window.DahihApp !== 'undefined' &&
@@ -758,7 +802,6 @@
             window.removeEventListener('resize', this.resizeHandler);
             document.documentElement.classList.remove('qe-active');
             
-            // 🚀 [Integration]: السماح للوحة التحكم بالعودة لجلب البيانات (إلغاء التجميد)
             if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.setQuizState === 'function') {
                 window.DahihApp.setQuizState(false);
             }
