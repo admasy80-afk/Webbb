@@ -688,10 +688,25 @@
                 Scheduler.idle(() => localStorage.removeItem(`dq_${this.quiz.id}`));
                 Sensory.success();
                 
+                // الحل الأكيد: منع إنشاء Worker لمكتبة Confetti
                 if (percentage >= 85 && !EngineCore.isLowEnd && typeof confetti === 'function') {
-                    confetti({ particleCount: 250, spread: 110, origin: { y: 0.4 }, colors: ['#facc15', '#22c55e', '#ffffff'], zIndex: 99999999 });
+                    confetti({ 
+                        particleCount: 250, 
+                        spread: 110, 
+                        origin: { y: 0.4 }, 
+                        colors: ['#facc15', '#22c55e', '#ffffff'], 
+                        zIndex: 99999999,
+                        useWorker: false,
+                        disableForReducedMotion: true
+                    });
                 } else if (typeof confetti === 'function') {
-                    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                    confetti({ 
+                        particleCount: 150, 
+                        spread: 80, 
+                        origin: { y: 0.6 },
+                        useWorker: false,
+                        disableForReducedMotion: true
+                    });
                 }
 
                 if (overlay) {
