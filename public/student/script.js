@@ -17,7 +17,7 @@
         availableQuizzes: [],
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
-        isPolling: false, // تم استبدال pollTimer بنظام Smart Polling
+        isPolling: false, 
         dashboardAbortController: null,
         videoAbortController: null, 
         videoRequestId: 0, 
@@ -140,7 +140,6 @@
         window.location.replace('/login.html');
     }
 
-    // 1. حل مشكلة Memory Leak وتنظيف الـ AbortListener
     async function fetchWithTimeout(url, options = {}, timeout = 15000) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -218,8 +217,6 @@
             if (!this.video) return;
 
             this.video.preload = 'metadata';
-            
-            // 4. حماية إضافية للفيديو
             this.video.crossOrigin = 'anonymous';
             this.video.playsInline = true;
             this.video.disablePictureInPicture = true;
@@ -284,7 +281,6 @@
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
 
-            // 2. تفريغ الفيديو القديم بالكامل لمنع الـ Buffering بالخلفية
             this.video.pause();
             this.video.removeAttribute('src');
             this.video.load();
@@ -385,7 +381,7 @@
             const err = this.video.error;
             if(err) {
                 console.error(`Video Error: ${err.code} - ${err.message}`);
-                showToast("🚨 تعذر تشغيل الفيديو. يرجى التحقق من اتصالك بالإنترنت أو إغلاق تطبيقات الـ Proxy.", "error");
+                showToast("🚨 تعذر تشغيل الفيديو. يرجى التحقق من اتصالك بالإنترنت.", "error");
             }
         },
 
@@ -437,6 +433,7 @@
         requestAnimationFrame(step);
     }
 
+    // --- منطقة الربط الحقيقية مع API السيرفر ---
     async function fetchData(initial = false) {
         if (state.dashboardAbortController) {
             state.dashboardAbortController.abort();
@@ -451,11 +448,12 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p class="font-bold text-lg text-gray-300">جاري جلب المحاضرات...</p>
+                    <p class="font-bold text-lg text-gray-300">جاري جلب البيانات من السيرفر...</p>
                 </div>`;
         }
 
         try {
+            // نستخدم هذا الـ Endpoint الشامل لأنه يجلب الكورسات والاختبارات وبيانات الطالب في طلب واحد
             const res = await fetchWithTimeout('/api/student/dashboard-data', {
                 method: 'POST',
                 headers: {
@@ -493,11 +491,32 @@
 
     function renderAll(data, initial) {
         try {
-            renderCourses(data.courses || data.content?.courses || [], initial);
-            renderQuizzes(data.content?.quizzes || []);
-            renderPoints(data.content?.points || []);
-            renderQuestions(data.content?.questions || []);
+            // استخراج البيانات القادمة من الـ API
+            const courses = data.courses || data.content?.courses || [];
+            const quizzes = data.content?.quizzes || [];
+            const points = data.content?.points || [];
+            const questions = data.content?.questions || [];
+
+            // 1. تحديث بيانات الطالب ديناميكياً (إن توفرت في استجابة السيرفر)
+            if (data.studentName) $('studentName').textContent = data.studentName;
+            if (data.studentGrade) $('studentGrade').textContent = data.studentGrade;
+
+            // 2. تحديث الكورسات في الواجهة
+            renderCourses(courses, initial);
+            
+            // 3. تحديث الاختبارات في الواجهة (الكروت)
+            renderQuizzes(quizzes);
+
+            // 4. تهيئة نظام الاختبارات (QuizApp) بالبيانات الحقيقية بدلاً من المصفوفة الفارغة
+            if (window.QuizApp && typeof window.QuizApp.init === 'function') {
+                window.QuizApp.init(quizzes);
+            }
+
+            // 5. باقي التحديثات
+            renderPoints(points);
+            renderQuestions(questions);
             renderScore(parseInt(data.studentPoints || 0));
+
         } catch(e) {
             console.error("DOM Render Error:", e);
         }
@@ -547,7 +566,6 @@
                 </div>`;
         }).join('');
 
-        // 5. تحسين أداء renderCourses بالـ requestAnimationFrame لمنع الـ Reflow
         requestAnimationFrame(() => {
             container.querySelectorAll('.course-cover').forEach(el => {
                 const bg = el.dataset.bg;
@@ -660,7 +678,6 @@
         }
     };
 
-    // 3. Smart Polling Loop
     async function startPolling() {
         if (state.isPolling) return;
         state.isPolling = true;
@@ -721,7 +738,6 @@
             }
         });
 
-        // التعامل الذكي مع حالة التبويب (Visibility)
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
                 if (player.video && !player.video.paused) {
@@ -743,6 +759,7 @@
     function init() {
         if (!authGate()) return;
 
+        // تهيئة الواجهة المبدئية من التخزين المحلي ريثما تصل البيانات من السيرفر
         const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
         $('studentName').textContent = firstName;
         $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
@@ -750,7 +767,7 @@
         player.init();
         setupGlobalListeners();
         
-        // التحميل الأولي وبدء الـ Polling
+        // التحميل الأولي (جلب بيانات الطالب، الكورسات، الاختبارات) وبدء الـ Polling
         fetchData(true).then(() => {
             if (!document.hidden) {
                 startPolling();
@@ -758,7 +775,6 @@
         });
     }
 
-    // 6. حماية متقدمة: منع أي سكربت خارجي من التلاعب بوظائف النظام
     Object.freeze(window.DahihApp = {
         logout, 
         toggleFullscreen, 
@@ -774,3 +790,4 @@
         init();
     }
 })();
+
