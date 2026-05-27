@@ -1,881 +1,2412 @@
-@property --glow-angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  CINEMATIC PLAYER UI ENGINE  ▓▓▓
+   Enterprise-Grade Video Player Design System
+   Architecture: Cascade Layers · Container Queries · Houdini · Scroll Timelines
+   Inspired by: Apple TV+ · Netflix · Vision Pro · Disney+ · HBO Max
+   ═══════════════════════════════════════════════════════════════════════════════
+   
+   ▌ ENGINE STRUCTURE (logical modules within layers)
+   ├─ @layer foundation          → resets, base, container setup
+   ├─ @layer tokens              → design tokens, semantic vars, theme contracts
+   ├─ @layer houdini             → @property registrations for animatable customs
+   ├─ @layer motion              → keyframes, easing curves, motion physics
+   ├─ @layer themes              → light/dark/hdr/oled adaptive themes
+   ├─ @layer surfaces            → glass, depth, elevation, ambient
+   ├─ @layer cinematic-effects   → ambient glow engine, lighting, vignette
+   ├─ @layer overlays            → poster, intro, metadata, loaders
+   ├─ @layer states              → idle/paused/playing/buffering/seeking/etc
+   ├─ @layer controls            → buttons, time, menus, micro-interactions
+   ├─ @layer progress            → timeline, scrubber, chapters, heatmap, preview
+   ├─ @layer audio-ui            → volume, EQ, spatial, mute transitions
+   ├─ @layer gestures            → tap zones, skip, swipe, ripple, prediction
+   ├─ @layer fullscreen          → cinema mode, theater, pip, mini-player
+   ├─ @layer mobile              → touch, safe-area, thumb zones, edge swipe
+   ├─ @layer accessibility       → reduced-motion, transparency, high-contrast, focus
+   ├─ @layer performance         → containment, paint isolation, low-power, GPU
+   └─ @layer utilities           → atomic helpers, sr-only, debug
+   
+   ▌ NAMING CONVENTION
+   ├─ Tokens          : --p-* (player), --c-* (cinematic), --m-* (motion), --s-* (surface)
+   ├─ State classes   : .is-*  (is-paused, is-buffering, is-seeking, ...)
+   ├─ Modifier classes: .has-* (has-chapters, has-thumbnails, ...)
+   ├─ Variant classes : .v-*   (v-theater, v-mini, v-pip, ...)
+   └─ Component       : BEM-ish (block__element--modifier) where useful
+   
+   ▌ FUTURE-PROOF
+   All experimental features are wrapped in @supports.
+   All Houdini @property declarations gracefully degrade to static values.
+   Adaptive scaling via container queries replaces media queries inside the player.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   LAYER ORDER DECLARATION
+   Lower priority → higher priority. Utilities win last; accessibility overrides.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer foundation,
+       houdini,
+       tokens,
+       themes,
+       motion,
+       surfaces,
+       cinematic-effects,
+       overlays,
+       states,
+       controls,
+       progress,
+       audio-ui,
+       gestures,
+       fullscreen,
+       mobile,
+       performance,
+       accessibility,
+       utilities;
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer houdini  ▓▓▓
+   CSS Houdini @property declarations.
+   These enable animation/transition of custom properties with type safety.
+   Each property is registered with syntax + initial-value + inheritance contract.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer houdini {
+
+    /* ─── Ambient lighting engine ─────────────────────────────────────────────── */
+    @property --glow-angle           { syntax: '<angle>';      initial-value: 0deg;  inherits: false; }
+    @property --ambient-hue          { syntax: '<angle>';      initial-value: 340deg;inherits: false; }
+    @property --ambient-intensity    { syntax: '<number>';     initial-value: 1;     inherits: true;  }
+    @property --ambient-spread       { syntax: '<percentage>'; initial-value: 100%;  inherits: false; }
+
+    /* ─── Progress / timeline engine ──────────────────────────────────────────── */
+    @property --progress-shine       { syntax: '<percentage>'; initial-value: -20%;  inherits: false; }
+    @property --progress-pct         { syntax: '<percentage>'; initial-value: 0%;    inherits: true;  }
+    @property --buffered-pct         { syntax: '<percentage>'; initial-value: 0%;    inherits: true;  }
+    @property --hover-pct            { syntax: '<percentage>'; initial-value: 0%;    inherits: true;  }
+
+    /* ─── Audio reactive engine ───────────────────────────────────────────────── */
+    @property --volume-pct           { syntax: '<percentage>'; initial-value: 100%;  inherits: false; }
+    @property --audio-level          { syntax: '<number>';     initial-value: 0;     inherits: true;  }
+    @property --bass-pulse           { syntax: '<number>';     initial-value: 0;     inherits: true;  }
+
+    /* ─── Cinematic depth engine ──────────────────────────────────────────────── */
+    @property --depth-z              { syntax: '<length>';     initial-value: 0px;   inherits: false; }
+    @property --parallax-x           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
+    @property --parallax-y           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
+    @property --tilt-x               { syntax: '<angle>';      initial-value: 0deg;  inherits: false; }
+    @property --tilt-y               { syntax: '<angle>';      initial-value: 0deg;  inherits: false; }
+
+    /* ─── Adaptive contrast / HDR-like ─────────────────────────────────────────── */
+    @property --hdr-luminance        { syntax: '<number>';     initial-value: 1;     inherits: true;  }
+    @property --hdr-saturation       { syntax: '<number>';     initial-value: 1;     inherits: true;  }
+    @property --vignette-strength    { syntax: '<number>';     initial-value: 0;     inherits: false; }
+
+    /* ─── Magnetic / elastic interactions ─────────────────────────────────────── */
+    @property --magnetic-x           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
+    @property --magnetic-y           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
+    @property --elastic-scale        { syntax: '<number>';     initial-value: 1;     inherits: false; }
 }
 
-@property --progress-shine {
-    syntax: '<percentage>';
-    initial-value: -20%;
-    inherits: false;
-}
 
-@property --ambient-hue {
-    syntax: '<angle>';
-    initial-value: 340deg;
-    inherits: false;
-}
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer foundation  ▓▓▓
+   Box model reset · color-scheme · base typography · scroll-behavior
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer foundation {
 
-:root {
-    --p-accent: #ff375f;
-    --p-accent-2: #ff6b9d;
-    --ambient-color: var(--p-accent);
-    --p-accent-hover: color-mix(in srgb, var(--p-accent) 85%, #fff);
-    --p-accent-active: color-mix(in srgb, var(--p-accent) 70%, #000);
-    --p-accent-glow: color-mix(in srgb, var(--p-accent) 25%, transparent);
-    --p-accent-glow-strong: color-mix(in srgb, var(--p-accent) 55%, transparent);
-    --p-bg-base: #000;
-    --p-bg-elev: #0a0a0a;
-    --p-text-main: #fff;
-    --p-text-dim: rgb(255 255 255 / 0.62);
-    --p-text-faint: rgb(255 255 255 / 0.38);
-    --p-stroke: rgb(255 255 255 / 0.08);
-    --p-stroke-strong: rgb(255 255 255 / 0.16);
-    --p-radius-xs: clamp(4px, 1cqi, 6px);
-    --p-radius-sm: clamp(8px, 2cqi, 12px);
-    --p-radius-md: clamp(16px, 4cqi, 28px);
-    --p-radius-lg: clamp(24px, 6cqi, 36px);
-    --p-radius-pill: 9999px;
-    --p-ctrl-height: clamp(40px, 8cqi, 48px);
-    --ease-cinematic: cubic-bezier(0.32, 0.72, 0, 1);
-    --ease-fluid: cubic-bezier(0.4, 0, 0.2, 1);
-    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-    --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
-    --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
-    --t-instant: 0.12s var(--ease-cinematic);
-    --t-fast: 0.22s var(--ease-cinematic);
-    --t-base: 0.42s var(--ease-cinematic);
-    --t-slow: 0.65s var(--ease-fluid);
-    --t-cinematic: 0.85s var(--ease-emphasized);
-    --shadow-elevation: 0 10px 30px rgb(0 0 0 / 0.45), 0 2px 8px rgb(255 255 255 / 0.05) inset, 0 1px 0 rgb(255 255 255 / 0.06) inset;
-    --shadow-glass: 0 8px 32px rgb(0 0 0 / 0.4), 0 1px 0 rgb(255 255 255 / 0.08) inset;
-    --shadow-glow: 0 0 40px var(--p-accent-glow-strong), 0 0 80px var(--p-accent-glow);
-    --shadow-deep: 0 24px 60px rgb(0 0 0 / 0.6), 0 8px 16px rgb(0 0 0 / 0.4);
-    --blur-glass: 24px;
-    --blur-deep: 40px;
-    --z-media: 1;
-    --z-noise: 2;
-    --z-grain: 3;
-    --z-poster: 10;
-    --z-buffering: 15;
-    --z-gestures: 20;
-    --z-osd: 30;
-    --z-controls: 40;
-    --z-tooltips: 50;
-    --z-overlay: 60;
-}
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
 
-@keyframes ambientRotate {
-    from { --ambient-hue: 0deg; }
-    to { --ambient-hue: 360deg; }
-}
+    .video-container,
+    .video-container *,
+    .video-container *::before,
+    .video-container *::after {
+        margin: 0;
+        padding: 0;
+        -webkit-tap-highlight-color: transparent;
+    }
 
-@keyframes glowRotate {
-    from { --glow-angle: 0deg; }
-    to { --glow-angle: 360deg; }
-}
+    .video-container {
+        color-scheme: dark;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        font-synthesis: none;
+        forced-color-adjust: none;
+    }
 
-@keyframes progressShine {
-    0% { --progress-shine: -20%; }
-    100% { --progress-shine: 120%; }
-}
+    .video-container button {
+        font: inherit;
+        color: inherit;
+        background: none;
+        border: none;
+    }
 
-@keyframes shimmerSweep {
-    0% { transform: translateX(-100%) skewX(-15deg); opacity: 0; }
-    50% { opacity: 1; }
-    100% { transform: translateX(200%) skewX(-15deg); opacity: 0; }
-}
-
-@keyframes cinematicPulse {
-    0% { transform: scale(0.85); opacity: 0.25; filter: blur(0px); }
-    100% { transform: scale(1.15); opacity: 0.9; filter: blur(0.5px); }
-}
-
-@keyframes orbitalSpin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-@keyframes breathe {
-    0%, 100% { transform: scale(1); filter: brightness(1); }
-    50% { transform: scale(1.02); filter: brightness(1.08); }
-}
-
-@keyframes floatUp {
-    from { opacity: 0; transform: translateY(12px) scale(0.96); filter: blur(4px); }
-    to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
-}
-
-@keyframes posterReveal {
-    from { opacity: 0; transform: scale(1.08); filter: blur(20px) brightness(0.5); }
-    to { opacity: 1; transform: scale(1); filter: blur(0) brightness(1); }
-}
-
-@keyframes posterDismiss {
-    to { opacity: 0; transform: scale(1.04); filter: blur(8px) brightness(0.7); visibility: hidden; }
-}
-
-@keyframes skipCinematic {
-    0% { opacity: 0; transform: translateY(-50%) scale(0.85) translateX(calc(var(--skip-dir, 0) * -8px)); filter: blur(4px); }
-    20% { opacity: 1; transform: translateY(-50%) scale(1.05) translateX(0); filter: blur(0); }
-    70% { opacity: 1; transform: translateY(-50%) scale(1) translateX(0); filter: blur(0); }
-    100% { opacity: 0; transform: translateY(-50%) scale(0.95) translateX(calc(var(--skip-dir, 0) * 16px)); filter: blur(2px); }
-}
-
-@keyframes rippleExpand {
-    0% { transform: scale(0); opacity: 0.6; }
-    100% { transform: scale(2.5); opacity: 0; }
-}
-
-@keyframes iconPop {
-    0% { transform: scale(0.6) rotate(-8deg); opacity: 0; }
-    60% { transform: scale(1.1) rotate(2deg); opacity: 1; }
-    100% { transform: scale(1) rotate(0); opacity: 1; }
-}
-
-@keyframes thumbPulse {
-    0%, 100% { box-shadow: 0 2px 8px rgb(0 0 0 / 0.5), 0 0 0 0 var(--p-accent-glow-strong); }
-    50% { box-shadow: 0 2px 8px rgb(0 0 0 / 0.5), 0 0 0 8px transparent; }
-}
-
-@keyframes spinnerOrbit {
-    0% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.05); }
-    100% { transform: rotate(360deg) scale(1); }
-}
-
-@keyframes spinnerDot {
-    0%, 100% { opacity: 0.3; transform: scale(0.8); }
-    50% { opacity: 1; transform: scale(1.2); }
-}
-
-.video-container {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: var(--p-bg-base);
-    border-radius: var(--p-radius-md);
-    overflow: hidden;
-    box-shadow: var(--shadow-deep);
-    contain: layout style paint;
-    content-visibility: auto;
-    container-type: inline-size;
-    isolation: isolate;
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    -webkit-user-select: none;
-    user-select: none;
-    touch-action: manipulation;
-    -webkit-tap-highlight-color: transparent;
-    font-family: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-    transition: box-shadow var(--t-cinematic), border-radius var(--t-base), transform var(--t-cinematic);
-    will-change: transform;
-}
-
-@media (hover: hover) {
-    .video-container:hover {
-        box-shadow: var(--shadow-deep), 0 0 60px color-mix(in srgb, var(--ambient-color) 18%, transparent);
+    .video-container svg {
+        display: block;
+        flex-shrink: 0;
     }
 }
 
-.video-container::before {
-    content: "";
-    position: absolute;
-    inset: -30%;
-    background: 
-        conic-gradient(from var(--glow-angle), 
-            color-mix(in srgb, var(--ambient-color) 18%, transparent), 
-            color-mix(in srgb, var(--p-accent-2) 12%, transparent), 
-            color-mix(in srgb, var(--ambient-color) 18%, transparent)),
-        radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--ambient-color) 20%, transparent), transparent 55%),
-        radial-gradient(circle at 70% 80%, color-mix(in srgb, var(--p-accent-2) 15%, transparent), transparent 55%);
-    filter: blur(80px) saturate(140%);
-    opacity: 0;
-    z-index: 0;
-    pointer-events: none;
-    transition: opacity var(--t-cinematic);
-    animation: glowRotate 24s linear infinite;
-    will-change: opacity, transform;
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer tokens  ▓▓▓
+   The single source of truth for the design system.
+   ─────────────────────────────────────────────────────────────────────────────
+   Token taxonomy:
+     ▸ Primitive  : raw values (colors, sizes)
+     ▸ Semantic   : intent-based aliases (accent, text-main, surface)
+     ▸ Component  : component-scoped overrides
+     ▸ Adaptive   : container/media-query reactive
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer tokens {
+
+    :root {
+
+        /* ╔═══ PRIMITIVE · BRAND PALETTE ════════════════════════════════════════╗ */
+        --c-brand-50:  #ffe4eb;
+        --c-brand-100: #ffc5d2;
+        --c-brand-200: #ff9bb1;
+        --c-brand-300: #ff6b8e;
+        --c-brand-400: #ff4f76;
+        --c-brand-500: #ff375f;  /* canonical brand */
+        --c-brand-600: #e62e54;
+        --c-brand-700: #c52647;
+        --c-brand-800: #9b1d38;
+        --c-brand-900: #6e1428;
+
+        /* ╔═══ PRIMITIVE · NEUTRAL PALETTE ══════════════════════════════════════╗ */
+        --c-ink-0:    #000000;
+        --c-ink-50:   #050507;
+        --c-ink-100:  #0a0a0c;
+        --c-ink-200:  #111114;
+        --c-ink-300:  #18181c;
+        --c-ink-400:  #1f1f24;
+        --c-ink-500:  #2a2a30;
+        --c-ink-600:  #3a3a42;
+        --c-ink-700:  #4f4f57;
+        --c-ink-800:  #6e6e78;
+        --c-ink-900:  #9b9ba5;
+        --c-snow:     #ffffff;
+
+        /* ╔═══ PRIMITIVE · ALPHA SCALES (white-on-dark) ═════════════════════════╗ */
+        --a-w-04: rgb(255 255 255 / 0.04);
+        --a-w-06: rgb(255 255 255 / 0.06);
+        --a-w-08: rgb(255 255 255 / 0.08);
+        --a-w-10: rgb(255 255 255 / 0.10);
+        --a-w-12: rgb(255 255 255 / 0.12);
+        --a-w-16: rgb(255 255 255 / 0.16);
+        --a-w-20: rgb(255 255 255 / 0.20);
+        --a-w-24: rgb(255 255 255 / 0.24);
+        --a-w-32: rgb(255 255 255 / 0.32);
+        --a-w-40: rgb(255 255 255 / 0.40);
+        --a-w-50: rgb(255 255 255 / 0.50);
+        --a-w-62: rgb(255 255 255 / 0.62);
+        --a-w-75: rgb(255 255 255 / 0.75);
+        --a-w-90: rgb(255 255 255 / 0.90);
+
+        --a-k-08: rgb(0 0 0 / 0.08);
+        --a-k-12: rgb(0 0 0 / 0.12);
+        --a-k-20: rgb(0 0 0 / 0.20);
+        --a-k-30: rgb(0 0 0 / 0.30);
+        --a-k-40: rgb(0 0 0 / 0.40);
+        --a-k-50: rgb(0 0 0 / 0.50);
+        --a-k-60: rgb(0 0 0 / 0.60);
+        --a-k-70: rgb(0 0 0 / 0.70);
+        --a-k-80: rgb(0 0 0 / 0.80);
+        --a-k-90: rgb(0 0 0 / 0.90);
+
+        /* ╔═══ SEMANTIC · BRAND ═════════════════════════════════════════════════╗ */
+        --p-accent:              var(--c-brand-500);
+        --p-accent-2:            #ff6b9d;
+        --p-accent-3:            #ff9d6b;
+        --ambient-color:         var(--p-accent);
+        --p-accent-hover:        color-mix(in srgb, var(--p-accent) 85%, #fff);
+        --p-accent-active:       color-mix(in srgb, var(--p-accent) 70%, #000);
+        --p-accent-soft:         color-mix(in srgb, var(--p-accent) 12%, transparent);
+        --p-accent-glow:         color-mix(in srgb, var(--p-accent) 25%, transparent);
+        --p-accent-glow-strong:  color-mix(in srgb, var(--p-accent) 55%, transparent);
+        --p-accent-glow-intense: color-mix(in srgb, var(--p-accent) 80%, transparent);
+
+        /* ╔═══ SEMANTIC · BACKGROUND / SURFACE ══════════════════════════════════╗ */
+        --p-bg-base:    var(--c-ink-0);
+        --p-bg-elev-1:  var(--c-ink-100);
+        --p-bg-elev-2:  var(--c-ink-200);
+        --p-bg-elev-3:  var(--c-ink-300);
+        --p-bg-glass:   rgb(20 20 22 / 0.55);
+        --p-bg-glass-2: rgb(20 20 22 / 0.75);
+        --p-bg-veil:    rgb(0 0 0 / 0.45);
+
+        /* ╔═══ SEMANTIC · TEXT ══════════════════════════════════════════════════╗ */
+        --p-text-main:   var(--c-snow);
+        --p-text-strong: #ffffff;
+        --p-text-dim:    var(--a-w-62);
+        --p-text-faint:  var(--a-w-40);
+        --p-text-mute:   var(--a-w-24);
+
+        /* ╔═══ SEMANTIC · STROKE / BORDER ═══════════════════════════════════════╗ */
+        --p-stroke:         var(--a-w-08);
+        --p-stroke-strong:  var(--a-w-16);
+        --p-stroke-emphasis:var(--a-w-24);
+        --p-stroke-focus:   var(--p-accent);
+
+        /* ╔═══ SEMANTIC · STATE FEEDBACK ════════════════════════════════════════╗ */
+        --p-state-success: #34d399;
+        --p-state-warning: #fbbf24;
+        --p-state-danger:  #f87171;
+        --p-state-info:    #60a5fa;
+        --p-state-live:    #ff3030;
+
+        /* ╔═══ RADII ════════════════════════════════════════════════════════════╗ */
+        --p-radius-2xs:  clamp(2px,  0.5cqi, 4px);
+        --p-radius-xs:   clamp(4px,  1cqi,   6px);
+        --p-radius-sm:   clamp(8px,  2cqi,  12px);
+        --p-radius-md:   clamp(16px, 4cqi,  28px);
+        --p-radius-lg:   clamp(24px, 6cqi,  36px);
+        --p-radius-xl:   clamp(32px, 8cqi,  48px);
+        --p-radius-pill: 9999px;
+
+        /* ╔═══ CONTROL DIMENSIONS ═══════════════════════════════════════════════╗ */
+        --p-ctrl-height:    clamp(40px, 8cqi, 48px);
+        --p-ctrl-icon-sm:   clamp(16px, 3.5cqi, 20px);
+        --p-ctrl-icon-md:   clamp(19px, 4.2cqi, 24px);
+        --p-ctrl-icon-lg:   clamp(24px, 5.5cqi, 32px);
+        --p-ctrl-tap:       44px;  /* Apple HIG min tap target */
+
+        /* ╔═══ SPACING SCALE ════════════════════════════════════════════════════╗ */
+        --p-space-1: clamp(2px,  0.4cqi,  4px);
+        --p-space-2: clamp(4px,  0.8cqi,  6px);
+        --p-space-3: clamp(6px,  1.2cqi,  8px);
+        --p-space-4: clamp(8px,  1.6cqi, 12px);
+        --p-space-5: clamp(12px, 2.4cqi, 16px);
+        --p-space-6: clamp(16px, 3.2cqi, 22px);
+        --p-space-7: clamp(22px, 4.4cqi, 28px);
+        --p-space-8: clamp(28px, 5.6cqi, 36px);
+        --p-space-9: clamp(36px, 7.2cqi, 48px);
+
+        /* ╔═══ TYPOGRAPHY ═══════════════════════════════════════════════════════╗ */
+        --p-font-display: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        --p-font-mono:    ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Mono", monospace;
+
+        --p-fs-xs:  clamp(0.7rem,  1.6cqi, 0.78rem);
+        --p-fs-sm:  clamp(0.75rem, 2cqi,   0.85rem);
+        --p-fs-md:  clamp(0.85rem, 2.2cqi, 0.95rem);
+        --p-fs-lg:  clamp(1rem,    2.6cqi, 1.15rem);
+        --p-fs-xl:  clamp(1.2rem,  3cqi,   1.4rem);
+        --p-fs-2xl: clamp(1.6rem,  4cqi,   2rem);
+
+        --p-fw-normal:   400;
+        --p-fw-medium:   500;
+        --p-fw-semibold: 600;
+        --p-fw-bold:     700;
+
+        /* ╔═══ MOTION CURVES (cinematic library) ════════════════════════════════╗ */
+        --ease-cinematic:  cubic-bezier(0.32, 0.72, 0,    1);
+        --ease-fluid:      cubic-bezier(0.4,  0,    0.2,  1);
+        --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
+        --ease-spring-soft:cubic-bezier(0.5,  1.25, 0.55, 1);
+        --ease-emphasized: cubic-bezier(0.2,  0,    0,    1);
+        --ease-decelerate: cubic-bezier(0,    0,    0.2,  1);
+        --ease-accelerate: cubic-bezier(0.4,  0,    1,    1);
+        --ease-anticipate: cubic-bezier(0.68,-0.55, 0.27, 1.55);
+        --ease-overshoot:  cubic-bezier(0.22, 1.36, 0.32, 1);
+        --ease-snap:       cubic-bezier(0.16, 1,    0.3,  1);
+
+        /* ╔═══ MOTION DURATIONS ═════════════════════════════════════════════════╗ */
+        --t-instant:    0.12s var(--ease-cinematic);
+        --t-fast:       0.22s var(--ease-cinematic);
+        --t-base:       0.42s var(--ease-cinematic);
+        --t-slow:       0.65s var(--ease-fluid);
+        --t-cinematic:  0.85s var(--ease-emphasized);
+        --t-epic:       1.2s  var(--ease-emphasized);
+
+        /* ╔═══ ELEVATION / SHADOWS ══════════════════════════════════════════════╗ */
+        --shadow-flat:      0 1px 0 var(--a-k-12);
+        --shadow-low:       0 4px 12px var(--a-k-30);
+        --shadow-medium:    0 8px 24px var(--a-k-40);
+        --shadow-elevation: 0 10px 30px var(--a-k-40), 0 2px 8px var(--a-w-04) inset, 0 1px 0 var(--a-w-06) inset;
+        --shadow-glass:     0 8px 32px var(--a-k-40), 0 1px 0 var(--a-w-08) inset;
+        --shadow-deep:      0 24px 60px rgb(0 0 0 / 0.6), 0 8px 16px var(--a-k-40);
+        --shadow-cinema:    0 32px 80px rgb(0 0 0 / 0.7), 0 12px 24px rgb(0 0 0 / 0.5);
+        --shadow-glow:      0 0 40px var(--p-accent-glow-strong), 0 0 80px var(--p-accent-glow);
+        --shadow-glow-soft: 0 0 24px var(--p-accent-glow), 0 0 48px var(--p-accent-soft);
+
+        /* ╔═══ BLUR / GLASSMORPHISM ═════════════════════════════════════════════╗ */
+        --blur-subtle:  8px;
+        --blur-glass:   24px;
+        --blur-deep:    40px;
+        --blur-cinema:  64px;
+
+        /* ╔═══ Z-INDEX SCALE ════════════════════════════════════════════════════╗ */
+        --z-media:     1;
+        --z-noise:     2;
+        --z-grain:     3;
+        --z-vignette:  4;
+        --z-poster:    10;
+        --z-buffering: 15;
+        --z-gestures:  20;
+        --z-osd:       30;
+        --z-controls:  40;
+        --z-tooltips:  50;
+        --z-overlay:   60;
+        --z-toast:     70;
+
+        /* ╔═══ ENVIRONMENTAL ════════════════════════════════════════════════════╗ */
+        --safe-top:    env(safe-area-inset-top, 0px);
+        --safe-right:  env(safe-area-inset-right, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-left:   env(safe-area-inset-left, 0px);
+    }
 }
 
-.video-container.is-paused::before,
-.video-container.is-idle::before { opacity: 0.65; }
 
-.video-container::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    opacity: 0.04;
-    background-image: 
-        radial-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1px),
-        radial-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px);
-    background-size: 3px 3px, 7px 7px;
-    background-position: 0 0, 1.5px 1.5px;
-    mix-blend-mode: soft-light;
-    z-index: var(--z-noise);
-}
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer themes  ▓▓▓
+   Dynamic theme contracts. Switch via [data-theme] attribute on the container.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer themes {
 
-.video-container.is-idle { cursor: none; }
+    /* ─── DARK (default cinema) ───────────────────────────────────────────────── */
+    .video-container,
+    .video-container[data-theme="dark"] {
+        --theme-bg: #000;
+        --theme-fg: #fff;
+        color: var(--p-text-main);
+        background: var(--p-bg-base);
+    }
 
-#dahihPlayer {
-    width: 100%;
-    height: 100%;
-    background: var(--p-bg-base);
-    object-fit: contain;
-    display: block !important;
-    transition: filter var(--t-cinematic), transform var(--t-cinematic);
-    z-index: var(--z-media);
-    position: relative;
-    transform-origin: center;
-    will-change: transform, filter;
-}
+    /* ─── OLED (true black, max contrast) ─────────────────────────────────────── */
+    .video-container[data-theme="oled"] {
+        --p-bg-base:    #000;
+        --p-bg-elev-1:  #000;
+        --p-bg-elev-2:  #050505;
+        --p-bg-glass:   rgb(0 0 0 / 0.85);
+        --shadow-deep:  0 24px 80px rgb(0 0 0 / 0.95);
+    }
 
-#dahihPlayer.fit-cover { object-fit: cover; }
+    /* ─── HDR-AWARE (boosted luminance using rec2020 / display-p3) ────────────── */
+    @supports (color: color(display-p3 1 0 0)) {
+        .video-container[data-theme="hdr"] {
+            --p-accent:    color(display-p3 1 0.22 0.37);
+            --p-accent-2:  color(display-p3 1 0.42 0.62);
+            --p-text-main: color(display-p3 1 1 1 / 1);
+        }
+    }
 
-.video-container.is-paused #dahihPlayer {
-    filter: brightness(0.6) saturate(1.15) contrast(1.05);
-    transform: scale(1.012);
-}
+    /* ─── LIGHT (rare, but supported for embedded contexts) ───────────────────── */
+    .video-container[data-theme="light"] {
+        --p-bg-base:   #f5f5f7;
+        --p-bg-elev-1: #fff;
+        --p-text-main: #1d1d1f;
+        --p-text-dim:  rgb(0 0 0 / 0.6);
+        --p-text-faint:rgb(0 0 0 / 0.4);
+        --p-stroke:    rgb(0 0 0 / 0.08);
+        color-scheme: light;
+    }
 
-.video-container.is-buffering #dahihPlayer {
-    filter: brightness(0.45) blur(2px) saturate(1.2);
-    transform: scale(1.02);
-}
+    /* ─── ACCENT VARIANTS (per-show theming) ──────────────────────────────────── */
+    .video-container[data-accent="azure"]   { --p-accent: #0a84ff; --p-accent-2: #5ac8fa; }
+    .video-container[data-accent="emerald"] { --p-accent: #30d158; --p-accent-2: #34c759; }
+    .video-container[data-accent="amber"]   { --p-accent: #ff9f0a; --p-accent-2: #ffd60a; }
+    .video-container[data-accent="violet"]  { --p-accent: #bf5af2; --p-accent-2: #ff375f; }
+    .video-container[data-accent="rose"]    { --p-accent: #ff375f; --p-accent-2: #ff6b9d; }
 
-video::-webkit-media-controls,
-video::-webkit-media-controls-enclosure,
-video::-webkit-media-controls-panel { display: none !important; -webkit-appearance: none !important; }
-
-.video-poster {
-    position: absolute; inset: 0; z-index: var(--z-poster);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background-size: cover; background-position: center;
-    opacity: 1; visibility: visible;
-    animation: posterReveal 0.9s var(--ease-emphasized) both;
-    transition: opacity var(--t-cinematic), visibility var(--t-cinematic), transform var(--t-cinematic), filter var(--t-cinematic);
-    will-change: opacity, transform, filter;
-    transform-origin: center;
-}
-
-.video-poster::before {
-    content: ""; position: absolute; inset: 0;
-    background: 
-        radial-gradient(ellipse at center, rgb(0 0 0 / 0.25) 0%, rgb(0 0 0 / 0.7) 60%, rgb(0 0 0 / 0.92) 100%),
-        linear-gradient(180deg, transparent 0%, rgb(0 0 0 / 0.4) 100%);
-    z-index: 1;
-}
-
-.video-poster::after {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(135deg, transparent 30%, rgb(255 255 255 / 0.04) 50%, transparent 70%);
-    z-index: 2; pointer-events: none;
-    mix-blend-mode: overlay;
-}
-
-@supports (backdrop-filter: blur(12px)) {
-    @media (update: fast) {
-        .video-poster::before {
-            backdrop-filter: blur(var(--blur-glass)) saturate(140%) brightness(0.85);
-            -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(140%) brightness(0.85);
+    /* ─── AUTO (respect system) ───────────────────────────────────────────────── */
+    @media (prefers-color-scheme: light) {
+        .video-container[data-theme="auto"] {
+            --p-bg-base:   #f5f5f7;
+            --p-text-main: #1d1d1f;
         }
     }
 }
 
-.video-poster.is-hidden, .video-poster.hidden {
-    opacity: 0; visibility: hidden; pointer-events: none;
-    transform: scale(1.04);
-    filter: blur(12px) brightness(0.6);
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer motion  ▓▓▓
+   The motion library. All keyframes live here for discoverability.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer motion {
+
+    /* ─── AMBIENT / GLOW ──────────────────────────────────────────────────────── */
+    @keyframes glowRotate {
+        from { --glow-angle: 0deg; }
+        to   { --glow-angle: 360deg; }
+    }
+
+    @keyframes ambientRotate {
+        from { --ambient-hue: 0deg; }
+        to   { --ambient-hue: 360deg; }
+    }
+
+    @keyframes ambientPulse {
+        0%, 100% { --ambient-intensity: 0.85; --ambient-spread: 100%; }
+        50%      { --ambient-intensity: 1.15; --ambient-spread: 120%; }
+    }
+
+    /* ─── PROGRESS / SHINE ────────────────────────────────────────────────────── */
+    @keyframes progressShine {
+        0%   { --progress-shine: -20%; }
+        100% { --progress-shine: 120%; }
+    }
+
+    @keyframes shimmerSweep {
+        0%   { transform: translateX(-100%) skewX(-15deg); opacity: 0; }
+        50%  { opacity: 1; }
+        100% { transform: translateX(200%)  skewX(-15deg); opacity: 0; }
+    }
+
+    /* ─── SPINNER / BUFFERING ─────────────────────────────────────────────────── */
+    @keyframes cinematicPulse {
+        0%   { transform: scale(0.85); opacity: 0.25; filter: blur(0); }
+        100% { transform: scale(1.15); opacity: 0.9;  filter: blur(0.5px); }
+    }
+
+    @keyframes orbitalSpin {
+        0%   { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    @keyframes spinnerOrbit {
+        0%   { transform: rotate(0deg)   scale(1); }
+        50%  { transform: rotate(180deg) scale(1.05); }
+        100% { transform: rotate(360deg) scale(1); }
+    }
+
+    @keyframes spinnerDot {
+        0%, 100% { opacity: 0.3; transform: scale(0.8); }
+        50%      { opacity: 1;   transform: scale(1.2); }
+    }
+
+    /* ─── SURFACE BREATHING ───────────────────────────────────────────────────── */
+    @keyframes breathe {
+        0%, 100% { transform: scale(1);    filter: brightness(1); }
+        50%      { transform: scale(1.02); filter: brightness(1.08); }
+    }
+
+    @keyframes breatheSubtle {
+        0%, 100% { transform: scale(1); }
+        50%      { transform: scale(1.008); }
+    }
+
+    /* ─── REVEAL / DISMISS ────────────────────────────────────────────────────── */
+    @keyframes floatUp {
+        from { opacity: 0; transform: translateY(12px) scale(0.96); filter: blur(4px); }
+        to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0); }
+    }
+
+    @keyframes floatDown {
+        from { opacity: 0; transform: translateY(-12px) scale(0.96); filter: blur(4px); }
+        to   { opacity: 1; transform: translateY(0)     scale(1);    filter: blur(0); }
+    }
+
+    @keyframes fadeScale {
+        from { opacity: 0; transform: scale(0.92); }
+        to   { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes posterReveal {
+        from { opacity: 0; transform: scale(1.08); filter: blur(20px) brightness(0.5); }
+        to   { opacity: 1; transform: scale(1);    filter: blur(0)    brightness(1); }
+    }
+
+    @keyframes posterDismiss {
+        to { opacity: 0; transform: scale(1.04); filter: blur(8px) brightness(0.7); visibility: hidden; }
+    }
+
+    /* ─── GESTURE / SKIP ──────────────────────────────────────────────────────── */
+    @keyframes skipCinematic {
+        0%   { opacity: 0; transform: translateY(-50%) scale(0.85) translateX(calc(var(--skip-dir, 0) * -8px));  filter: blur(4px); }
+        20%  { opacity: 1; transform: translateY(-50%) scale(1.05) translateX(0);                                 filter: blur(0); }
+        70%  { opacity: 1; transform: translateY(-50%) scale(1)    translateX(0);                                 filter: blur(0); }
+        100% { opacity: 0; transform: translateY(-50%) scale(0.95) translateX(calc(var(--skip-dir, 0) * 16px));   filter: blur(2px); }
+    }
+
+    @keyframes rippleExpand {
+        0%   { transform: scale(0);   opacity: 0.6; }
+        100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    @keyframes ripplePremium {
+        0%   { transform: scale(0);   opacity: 0.7; box-shadow: 0 0 0 0 var(--p-accent-glow-strong); }
+        50%  {                         opacity: 0.4; }
+        100% { transform: scale(3);   opacity: 0;   box-shadow: 0 0 0 30px transparent; }
+    }
+
+    @keyframes iconPop {
+        0%   { transform: scale(0.6) rotate(-8deg); opacity: 0; }
+        60%  { transform: scale(1.1) rotate(2deg);  opacity: 1; }
+        100% { transform: scale(1)   rotate(0);     opacity: 1; }
+    }
+
+    @keyframes iconMorph {
+        0%   { transform: scale(1) rotate(0); }
+        50%  { transform: scale(0.85) rotate(180deg); opacity: 0.6; }
+        100% { transform: scale(1) rotate(360deg); }
+    }
+
+    /* ─── PROGRESS THUMB PULSE ────────────────────────────────────────────────── */
+    @keyframes thumbPulse {
+        0%, 100% { box-shadow: 0 2px 8px var(--a-k-50), 0 0 0 0   var(--p-accent-glow-strong); }
+        50%      { box-shadow: 0 2px 8px var(--a-k-50), 0 0 0 8px transparent; }
+    }
+
+    @keyframes thumbHaloRing {
+        0%   { box-shadow: 0 0 0 0   var(--p-accent-glow-strong); }
+        100% { box-shadow: 0 0 0 14px transparent; }
+    }
+
+    /* ─── AUDIO REACTIVE ──────────────────────────────────────────────────────── */
+    @keyframes eqBar {
+        0%, 100% { transform: scaleY(0.3); }
+        50%      { transform: scaleY(1); }
+    }
+
+    @keyframes audioWavePulse {
+        0%, 100% { transform: scale(1);    opacity: 0.6; }
+        50%      { transform: scale(1.15); opacity: 1; }
+    }
+
+    /* ─── LIVE INDICATOR ──────────────────────────────────────────────────────── */
+    @keyframes livePulse {
+        0%, 100% { opacity: 1;   transform: scale(1); }
+        50%      { opacity: 0.6; transform: scale(0.9); }
+    }
+
+    @keyframes liveBroadcast {
+        0%   { box-shadow: 0 0 0 0   color-mix(in srgb, var(--p-state-live) 60%, transparent); }
+        100% { box-shadow: 0 0 0 12px transparent; }
+    }
+
+    /* ─── FULLSCREEN TRANSITION ───────────────────────────────────────────────── */
+    @keyframes fsEnter {
+        from { transform: scale(0.94); opacity: 0.6; filter: blur(8px); }
+        to   { transform: scale(1);    opacity: 1;   filter: blur(0); }
+    }
+
+    @keyframes fsExit {
+        from { transform: scale(1.04); opacity: 0.7; }
+        to   { transform: scale(1);    opacity: 1; }
+    }
+
+    /* ─── TOAST / NOTIFICATION ────────────────────────────────────────────────── */
+    @keyframes toastIn {
+        from { opacity: 0; transform: translateY(20px) scale(0.95); filter: blur(6px); }
+        to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0); }
+    }
+
+    @keyframes toastOut {
+        to { opacity: 0; transform: translateY(-8px) scale(0.96); filter: blur(4px); }
+    }
+
+    /* ─── CHAPTER MARKER REVEAL ───────────────────────────────────────────────── */
+    @keyframes chapterPing {
+        0%   { transform: scale(1);   opacity: 1; }
+        100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    /* ─── DEPTH / TILT ────────────────────────────────────────────────────────── */
+    @keyframes depthFloat {
+        0%, 100% { transform: translateZ(0); }
+        50%      { transform: translateZ(8px); }
+    }
 }
 
-.video-poster > * { position: relative; z-index: 3; }
 
-.buffering-spinner {
-    position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%, -50%) scale(0.92);
-    width: clamp(56px, 11cqi, 72px); height: clamp(56px, 11cqi, 72px);
-    z-index: var(--z-buffering);
-    opacity: 0; visibility: hidden; pointer-events: none;
-    transition: opacity var(--t-base), transform var(--t-base);
-}
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer surfaces  ▓▓▓
+   The video container — root surface · glass · containment · depth context
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer surfaces {
 
-.video-container.is-buffering .buffering-spinner {
-    opacity: 1; visibility: visible; transform: translate(-50%, -50%) scale(1);
-}
+    .video-container {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: var(--p-bg-base);
+        border-radius: var(--p-radius-md);
+        overflow: hidden;
 
-.buffering-spinner::before {
-    content: ""; position: absolute; inset: -20%;
-    border-radius: 50%;
-    background: conic-gradient(from var(--glow-angle), transparent, var(--p-accent), transparent 40%);
-    filter: blur(12px); opacity: 0.6;
-    animation: glowRotate 1.5s linear infinite;
-}
+        /* Performance: paint isolation + composited stacking context */
+        contain: layout style paint;
+        content-visibility: auto;
+        container-type: inline-size;
+        container-name: player;
+        isolation: isolate;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        perspective: 1200px;
 
-.buffering-spinner::after {
-    content: ""; display: block; width: 100%; height: 100%;
-    border-radius: 50%;
-    background: 
-        radial-gradient(circle at center, rgb(255 255 255 / 0.18), transparent 65%),
-        conic-gradient(from var(--glow-angle), transparent 0deg, rgb(255 255 255 / 0.9) 90deg, transparent 180deg);
-    box-shadow: 0 0 30px rgb(255 255 255 / 0.15), 0 0 60px var(--p-accent-glow);
-    animation: glowRotate 1.2s linear infinite, cinematicPulse 2s var(--ease-cinematic) infinite alternate;
-    mask: radial-gradient(circle, transparent 55%, #000 56%, #000 100%);
-    -webkit-mask: radial-gradient(circle, transparent 55%, #000 56%, #000 100%);
-}
+        /* Typography baseline */
+        font-family: var(--p-font-display);
+        font-size: var(--p-fs-md);
+        line-height: 1.4;
+        color: var(--p-text-main);
 
-.tap-zone {
-    position: absolute; top: 0; height: calc(100% - clamp(80px, 15cqi, 120px)); width: 28%;
-    z-index: var(--z-gestures); cursor: pointer;
-}
-.tap-zone.left { left: 0; }
-.tap-zone.right { right: 0; }
+        /* Selection / touch behavior */
+        -webkit-user-select: none;
+        user-select: none;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
 
-.tap-zone::after {
-    content: ""; position: absolute; inset: 0;
-    background: radial-gradient(circle at center, rgb(255 255 255 / 0.1) 0%, transparent 55%);
-    opacity: 0; transform: scale(0.7);
-    transition: opacity var(--t-fast), transform var(--t-base);
-    border-radius: 50%; pointer-events: none;
-    mix-blend-mode: overlay;
-}
+        /* Elevation */
+        box-shadow: var(--shadow-deep);
+        transition:
+            box-shadow var(--t-cinematic),
+            border-radius var(--t-base),
+            transform var(--t-cinematic),
+            filter var(--t-cinematic);
+        will-change: transform;
+    }
 
-@media (hover: none) and (pointer: coarse) {
-    .tap-zone:active::after { opacity: 1; transform: scale(1.4); }
-}
-
-.skip-indicator {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 6px; z-index: var(--z-osd);
-    color: var(--p-text-main); font-weight: 600; font-size: clamp(0.85rem, 2cqi, 1rem);
-    letter-spacing: 0.4px;
-    background: rgb(0 0 0 / 0.55);
-    padding: clamp(14px, 3.2cqi, 18px) clamp(18px, 4.5cqi, 26px);
-    border-radius: var(--p-radius-pill);
-    border: 0.5px solid rgb(255 255 255 / 0.14);
-    box-shadow: var(--shadow-glass), 0 0 30px color-mix(in srgb, var(--ambient-color) 25%, transparent);
-    opacity: 0; pointer-events: none;
-    will-change: transform, opacity, filter;
-}
-
-@supports (backdrop-filter: blur(12px)) {
-    @media (update: fast) {
-        .skip-indicator {
-            backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-            -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-            background: rgb(0 0 0 / 0.4);
+    @media (hover: hover) {
+        .video-container:hover {
+            box-shadow:
+                var(--shadow-deep),
+                0 0 60px color-mix(in srgb, var(--ambient-color) 18%, transparent);
         }
     }
+
+    /* ─── VIDEO ELEMENT ───────────────────────────────────────────────────────── */
+    #dahihPlayer,
+    .video-container > video {
+        width: 100%;
+        height: 100%;
+        background: var(--p-bg-base);
+        object-fit: contain;
+        display: block !important;
+        z-index: var(--z-media);
+        position: relative;
+        transform-origin: center;
+        will-change: transform, filter;
+        transition: filter var(--t-cinematic), transform var(--t-cinematic);
+    }
+
+    #dahihPlayer.fit-cover,
+    .video-container > video.fit-cover { object-fit: cover; }
+
+    /* Native chrome obliteration */
+    video::-webkit-media-controls,
+    video::-webkit-media-controls-enclosure,
+    video::-webkit-media-controls-panel,
+    video::-webkit-media-controls-play-button,
+    video::-webkit-media-controls-start-playback-button {
+        display: none !important;
+        -webkit-appearance: none !important;
+    }
 }
 
-.skip-indicator.left { left: 6%; --skip-dir: -1; }
-.skip-indicator.right { right: 6%; --skip-dir: 1; }
 
-.skip-indicator.is-active, .skip-indicator.show {
-    animation: skipCinematic 0.7s var(--ease-emphasized) forwards;
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer cinematic-effects  ▓▓▓
+   The visual engines that make this feel like a streaming platform.
+   ─────────────────────────────────────────────────────────────────────────────
+     ▸ Ambient Reactive Glow Engine    : ::before conic + radial gradient orbit
+     ▸ Cinematic Grain                  : ::after dotted noise (mix-blend soft-light)
+     ▸ Intelligent Vignette             : edge darkening reactive to state
+     ▸ Edge Light Bleeding              : color extraction simulated via accent
+     ▸ Temporal Overlays                : soft flares & light leaks
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer cinematic-effects {
+
+    /* ─── AMBIENT REACTIVE GLOW (orbiting conic + multi-radial) ──────────────── */
+    .video-container::before {
+        content: "";
+        position: absolute;
+        inset: -30%;
+        background:
+            conic-gradient(
+                from var(--glow-angle),
+                color-mix(in srgb, var(--ambient-color) 18%, transparent),
+                color-mix(in srgb, var(--p-accent-2)    12%, transparent),
+                color-mix(in srgb, var(--ambient-color) 18%, transparent)
+            ),
+            radial-gradient(
+                circle at 30% 20%,
+                color-mix(in srgb, var(--ambient-color) 20%, transparent),
+                transparent 55%
+            ),
+            radial-gradient(
+                circle at 70% 80%,
+                color-mix(in srgb, var(--p-accent-2) 15%, transparent),
+                transparent 55%
+            );
+        filter: blur(80px) saturate(140%);
+        opacity: 0;
+        z-index: 0;
+        pointer-events: none;
+        transition: opacity var(--t-cinematic), filter var(--t-cinematic);
+        animation: glowRotate 24s linear infinite;
+        will-change: opacity, transform;
+    }
+
+    .video-container.is-paused::before,
+    .video-container.is-idle::before { opacity: 0.65; }
+    .video-container.is-buffering::before { opacity: 0.85; filter: blur(100px) saturate(170%); }
+
+    /* ─── CINEMATIC GRAIN (dual-layer noise) ──────────────────────────────────── */
+    .video-container::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        opacity: 0.04;
+        background-image:
+            radial-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1px),
+            radial-gradient(rgb(255 255 255 / 0.06) 1px, transparent 1px);
+        background-size: 3px 3px, 7px 7px;
+        background-position: 0 0, 1.5px 1.5px;
+        mix-blend-mode: soft-light;
+        z-index: var(--z-noise);
+    }
+
+    /* ─── INTELLIGENT VIGNETTE (edge darkening reactive to focus) ─────────────── */
+    .cinema-vignette {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-vignette);
+        pointer-events: none;
+        background:
+            radial-gradient(ellipse at center, transparent 55%, rgb(0 0 0 / 0.35) 100%);
+        opacity: var(--vignette-strength, 0);
+        transition: opacity var(--t-cinematic);
+        mix-blend-mode: multiply;
+    }
+
+    .video-container.is-paused      .cinema-vignette,
+    .video-container.is-buffering   .cinema-vignette,
+    .video-container.is-seeking     .cinema-vignette { --vignette-strength: 1; }
+
+    /* ─── DYNAMIC EDGE LIGHT BLEEDING ─────────────────────────────────────────── */
+    .edge-light {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-grain);
+        pointer-events: none;
+        background:
+            linear-gradient(90deg,
+                color-mix(in srgb, var(--ambient-color) 8%, transparent) 0%,
+                transparent 12%, transparent 88%,
+                color-mix(in srgb, var(--p-accent-2) 8%, transparent) 100%);
+        mix-blend-mode: screen;
+        opacity: 0;
+        transition: opacity var(--t-cinematic);
+    }
+
+    .video-container.is-playing .edge-light { opacity: 0.7; }
+
+    /* ─── TEMPORAL LIGHT LEAK (subtle film flare on play) ─────────────────────── */
+    .light-leak {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-grain);
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 100% 0%,
+                color-mix(in srgb, var(--p-accent-3) 14%, transparent) 0%,
+                transparent 35%);
+        opacity: 0;
+        transition: opacity var(--t-epic);
+        mix-blend-mode: screen;
+    }
+
+    .video-container.is-playing .light-leak { opacity: 0.5; }
+
+    /* ─── HDR-LIKE LUMINANCE BOOST (simulated) ────────────────────────────────── */
+    .video-container[data-hdr="on"] #dahihPlayer {
+        filter:
+            brightness(calc(1 + (var(--hdr-luminance) - 1) * 0.15))
+            saturate(calc(1 + (var(--hdr-saturation) - 1) * 0.2))
+            contrast(1.05);
+    }
+
+    /* ─── PAUSED STATE CINEMATIC FILTER ───────────────────────────────────────── */
+    .video-container.is-paused #dahihPlayer {
+        filter: brightness(0.6) saturate(1.15) contrast(1.05);
+        transform: scale(1.012);
+    }
+
+    .video-container.is-buffering #dahihPlayer {
+        filter: brightness(0.45) blur(2px) saturate(1.2);
+        transform: scale(1.02);
+    }
+
+    .video-container.is-seeking #dahihPlayer {
+        filter: brightness(0.55) saturate(1.1) contrast(1.08);
+    }
+
+    /* ─── DYNAMIC AMBIENT CYCLER ──────────────────────────────────────────────── */
+    .video-container.has-ambient-cycle {
+        animation: ambientPulse 8s var(--ease-fluid) infinite;
+    }
 }
 
-.center-play {
-    position: absolute; inset: 0; z-index: var(--z-osd);
-    display: flex; align-items: center; justify-content: center;
-    opacity: 0; transform: scale(1.06);
-    pointer-events: none;
-    transition: opacity var(--t-base), transform var(--t-base);
-    will-change: opacity, transform;
-}
 
-.video-container.is-buffering .center-play { display: none; }
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer overlays  ▓▓▓
+   Poster · Hero metadata · Loading · Error · End-card · Buffering Spinner
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer overlays {
 
-.center-play.is-visible {
-    opacity: 1; transform: scale(1); pointer-events: auto;
-}
+    /* ─── POSTER (cinematic reveal) ───────────────────────────────────────────── */
+    .video-poster {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-poster);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-size: cover;
+        background-position: center;
+        opacity: 1;
+        visibility: visible;
+        animation: posterReveal 0.9s var(--ease-emphasized) both;
+        transition:
+            opacity    var(--t-cinematic),
+            visibility var(--t-cinematic),
+            transform  var(--t-cinematic),
+            filter     var(--t-cinematic);
+        will-change: opacity, transform, filter;
+        transform-origin: center;
+    }
 
-.center-play > div {
-    position: relative;
-    width: clamp(68px, 13cqi, 88px); height: clamp(68px, 13cqi, 88px); border-radius: 50%;
-    background: rgb(0 0 0 / 0.45);
-    color: var(--p-text-main);
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: var(--shadow-elevation), 0 0 40px color-mix(in srgb, var(--ambient-color) 30%, transparent);
-    border: 0.5px solid rgb(255 255 255 / 0.18);
-    cursor: pointer;
-    transition: transform var(--t-fast), background var(--t-fast), box-shadow var(--t-base), border-color var(--t-fast);
-    animation: breathe 4s ease-in-out infinite;
-    overflow: hidden;
-}
+    .video-poster::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse at center,
+                rgb(0 0 0 / 0.25) 0%,
+                rgb(0 0 0 / 0.7)  60%,
+                rgb(0 0 0 / 0.92) 100%),
+            linear-gradient(180deg, transparent 0%, rgb(0 0 0 / 0.4) 100%);
+        z-index: 1;
+    }
 
-.center-play > div::before {
-    content: ""; position: absolute; inset: -2px;
-    border-radius: inherit; padding: 1px;
-    background: conic-gradient(from var(--glow-angle), transparent 70%, rgb(255 255 255 / 0.5), transparent);
-    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    animation: glowRotate 6s linear infinite;
-    pointer-events: none;
-    opacity: 0.7;
-}
+    .video-poster::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, transparent 30%, rgb(255 255 255 / 0.04) 50%, transparent 70%);
+        z-index: 2;
+        pointer-events: none;
+        mix-blend-mode: overlay;
+    }
 
-.center-play > div::after {
-    content: ""; position: absolute; inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(circle at 50% 30%, rgb(255 255 255 / 0.18), transparent 60%);
-    pointer-events: none;
-}
-
-@supports (backdrop-filter: blur(12px)) {
-    @media (update: fast) {
-        .center-play > div {
-            backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-            -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-            background: rgb(0 0 0 / 0.35);
+    @supports (backdrop-filter: blur(12px)) {
+        @media (update: fast) {
+            .video-poster::before {
+                backdrop-filter: blur(var(--blur-glass)) saturate(140%) brightness(0.85);
+                -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(140%) brightness(0.85);
+            }
         }
     }
-}
 
-.center-play > div svg {
-    position: relative; z-index: 1;
-    width: clamp(26px, 5.5cqi, 36px);
-    height: clamp(26px, 5.5cqi, 36px);
-    fill: currentColor;
-    margin-left: 4px;
-    stroke: currentColor;
-    stroke-width: 0.5px;
-    filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.4));
-    transition: transform var(--t-fast);
-}
-.center-play.pause > div svg { margin-left: 0; }
-
-@media (hover: hover) {
-    .center-play > div:hover {
-        transform: scale(1.06);
-        background: rgb(255 255 255 / 0.18);
-        border-color: rgb(255 255 255 / 0.35);
-        box-shadow: var(--shadow-elevation), 0 0 60px color-mix(in srgb, var(--ambient-color) 50%, transparent);
-        animation-play-state: paused;
+    .video-poster.is-hidden,
+    .video-poster.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: scale(1.04);
+        filter: blur(12px) brightness(0.6);
     }
-    .center-play > div:hover svg { transform: scale(1.08); }
-}
 
-.center-play > div:active { transform: scale(0.94); }
+    .video-poster > * { position: relative; z-index: 3; }
 
-.controls {
-    position: absolute;
-    bottom: clamp(12px, 3cqi, 22px);
-    left: clamp(12px, 3cqi, 22px);
-    right: clamp(12px, 3cqi, 22px);
-    z-index: var(--z-controls);
-    padding: clamp(12px, 2.4cqi, 18px) clamp(18px, 4cqi, 24px);
-    border-radius: var(--p-radius-md);
-    background: 
-        linear-gradient(180deg, rgb(20 20 22 / 0.55) 0%, rgb(0 0 0 / 0.85) 100%),
-        radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.08), transparent 70%);
-    border: 1px solid rgb(255 255 255 / 0.1);
-    box-shadow: 
-        var(--shadow-elevation),
-        0 1px 0 rgb(255 255 255 / 0.08) inset,
-        0 -1px 0 rgb(0 0 0 / 0.3) inset;
-    opacity: 0; visibility: hidden;
-    transform: translateY(12px) scale(0.985);
-    transition: opacity var(--t-base), transform var(--t-base), visibility var(--t-base);
-    pointer-events: none;
-    will-change: opacity, transform;
-    display: flex; flex-direction: column; gap: clamp(8px, 1.8cqi, 12px);
-    overflow: hidden;
-}
-
-.controls::before {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.04) 50%, transparent 60%);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity var(--t-cinematic);
-}
-
-.video-container.is-active .controls::before,
-.video-container:not(.is-idle):hover .controls::before { opacity: 1; }
-
-@supports (backdrop-filter: blur(12px)) {
-    @media (update: fast) {
-        .controls {
-            backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-            -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
-            background: 
-                linear-gradient(180deg, rgb(20 20 22 / 0.45) 0%, rgb(0 0 0 / 0.7) 100%),
-                radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.1), transparent 70%);
-        }
+    /* ─── POSTER METADATA (title, subtitle, badges) ───────────────────────────── */
+    .poster-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--p-space-3);
+        text-align: center;
+        max-width: 80%;
+        animation: floatUp 1.1s var(--ease-emphasized) 0.3s both;
     }
-}
 
-.controls > * {
-    opacity: 0;
-    transform: translateY(6px);
-    transition: opacity var(--t-base) var(--stagger, 0s), transform var(--t-base) var(--stagger, 0s);
-}
-
-.controls .progress-wrapper { --stagger: 0.05s; }
-.controls .controls-bar { --stagger: 0.1s; }
-
-.video-container.is-active .controls,
-.video-container:not(.is-idle):hover .controls,
-.controls:focus-within,
-.video-container.is-paused .controls {
-    opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto;
-}
-
-.video-container.is-active .controls > *,
-.video-container:not(.is-idle):hover .controls > *,
-.controls:focus-within > *,
-.video-container.is-paused .controls > * {
-    opacity: 1; transform: translateY(0);
-}
-
-.progress-wrapper {
-    position: relative; width: 100%; height: clamp(22px, 4.5cqi, 28px);
-    display: flex; align-items: center; cursor: pointer;
-    touch-action: none; z-index: 2;
-}
-
-.progress {
-    width: 100%; height: 3px;
-    background: rgb(255 255 255 / 0.18);
-    border-radius: var(--p-radius-pill);
-    position: relative; overflow: visible;
-    transition: height var(--t-fast), background var(--t-fast);
-    box-shadow: 0 1px 0 rgb(0 0 0 / 0.2) inset;
-}
-
-@media (hover: hover) {
-    .progress-wrapper:hover .progress { 
-        height: 6px; 
-        background: rgb(255 255 255 / 0.22);
+    .poster-meta__title {
+        font-size: var(--p-fs-2xl);
+        font-weight: var(--p-fw-bold);
+        letter-spacing: -0.02em;
+        line-height: 1.05;
+        text-wrap: balance;
+        text-shadow: 0 4px 24px rgb(0 0 0 / 0.6);
     }
-}
 
-.progress-wrapper:active .progress { height: 6px; }
-
-.progress-loaded {
-    position: absolute; top: 0; left: 0; height: 100%;
-    background: rgb(255 255 255 / 0.32);
-    border-radius: inherit; width: 0;
-    transition: width 0.3s var(--ease-decelerate);
-    pointer-events: none;
-}
-
-.progress-fill {
-    position: absolute; top: 0; left: 0; height: 100%;
-    background: linear-gradient(90deg, var(--p-accent), var(--p-accent-2));
-    border-radius: inherit; width: 0;
-    pointer-events: none;
-    will-change: width;
-    box-shadow: 0 0 12px var(--p-accent-glow-strong), 0 0 4px var(--p-accent);
-    overflow: hidden;
-}
-
-.progress-fill::before {
-    content: ""; position: absolute; inset: 0;
-    background: linear-gradient(90deg, 
-        transparent 0%, 
-        transparent calc(var(--progress-shine) - 10%), 
-        rgb(255 255 255 / 0.4) var(--progress-shine), 
-        transparent calc(var(--progress-shine) + 10%), 
-        transparent 100%);
-    animation: progressShine 2.5s var(--ease-fluid) infinite;
-    pointer-events: none;
-}
-
-.progress-fill::after {
-    content: ""; position: absolute; right: -7px; top: 50%;
-    transform: translateY(-50%) scale(0.01);
-    width: clamp(13px, 3cqi, 16px); height: clamp(13px, 3cqi, 16px); border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #fff, color-mix(in srgb, var(--p-accent) 30%, #fff));
-    box-shadow: 
-        0 2px 8px rgb(0 0 0 / 0.5), 
-        0 0 12px var(--p-accent-glow-strong),
-        0 0 0 0 var(--p-accent-glow);
-    transition: transform var(--t-fast), box-shadow var(--t-base);
-    pointer-events: none;
-}
-
-@media (hover: hover) {
-    .progress-wrapper:hover .progress-fill::after,
-    .progress-fill:focus-within::after { 
-        transform: translateY(-50%) scale(1); 
-        animation: thumbPulse 1.6s var(--ease-fluid) infinite;
+    .poster-meta__subtitle {
+        font-size: var(--p-fs-md);
+        font-weight: var(--p-fw-medium);
+        color: var(--p-text-dim);
+        letter-spacing: 0.01em;
+        text-wrap: pretty;
     }
-}
 
-.progress-wrapper:active .progress-fill::after,
-.video-container:has(.progress-wrapper:active) .progress-fill::after {
-    transform: translateY(-50%) scale(1.2);
-    box-shadow: 
-        0 4px 12px rgb(0 0 0 / 0.6), 
-        0 0 20px var(--p-accent-glow-strong),
-        0 0 0 6px color-mix(in srgb, var(--p-accent) 18%, transparent);
-}
+    .poster-meta__badges {
+        display: flex;
+        gap: var(--p-space-3);
+        flex-wrap: wrap;
+        justify-content: center;
+    }
 
-.progress-hover-tooltip {
-    position: absolute; bottom: 100%; left: 0;
-    transform: translateX(-50%) translateY(-10px) scale(0.92);
-    background: rgb(20 20 22 / 0.85);
-    border: 0.5px solid rgb(255 255 255 / 0.16);
-    border-radius: var(--p-radius-sm); padding: 6px 10px;
-    display: flex; flex-direction: column; align-items: center; gap: 4px;
-    opacity: 0; visibility: hidden; pointer-events: none;
-    transition: opacity var(--t-fast), transform var(--t-fast), visibility var(--t-fast);
-    z-index: var(--z-tooltips);
-    box-shadow: var(--shadow-glass);
-}
+    .poster-meta__badge {
+        padding: 4px 10px;
+        border-radius: var(--p-radius-pill);
+        background: var(--a-w-12);
+        border: 0.5px solid var(--p-stroke-strong);
+        font-size: var(--p-fs-xs);
+        font-weight: var(--p-fw-semibold);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        backdrop-filter: blur(var(--blur-glass));
+        -webkit-backdrop-filter: blur(var(--blur-glass));
+    }
 
-.progress-hover-tooltip::after {
-    content: ""; position: absolute; bottom: -4px; left: 50%;
-    transform: translateX(-50%) rotate(45deg);
-    width: 8px; height: 8px;
-    background: inherit;
-    border-right: 0.5px solid rgb(255 255 255 / 0.16);
-    border-bottom: 0.5px solid rgb(255 255 255 / 0.16);
-}
+    /* ─── BUFFERING SPINNER (orbiting halo + masked conic) ────────────────────── */
+    .buffering-spinner {
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%) scale(0.92);
+        width: clamp(56px, 11cqi, 72px);
+        height: clamp(56px, 11cqi, 72px);
+        z-index: var(--z-buffering);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity var(--t-base), transform var(--t-base);
+    }
 
-@supports (backdrop-filter: blur(12px)) {
-    .progress-hover-tooltip {
-        background: rgb(0 0 0 / 0.5);
+    .video-container.is-buffering .buffering-spinner {
+        opacity: 1;
+        visibility: visible;
+        transform: translate(-50%, -50%) scale(1);
+    }
+
+    .buffering-spinner::before {
+        content: "";
+        position: absolute;
+        inset: -20%;
+        border-radius: 50%;
+        background: conic-gradient(from var(--glow-angle), transparent, var(--p-accent), transparent 40%);
+        filter: blur(12px);
+        opacity: 0.6;
+        animation: glowRotate 1.5s linear infinite;
+    }
+
+    .buffering-spinner::after {
+        content: "";
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background:
+            radial-gradient(circle at center, rgb(255 255 255 / 0.18), transparent 65%),
+            conic-gradient(from var(--glow-angle), transparent 0deg, rgb(255 255 255 / 0.9) 90deg, transparent 180deg);
+        box-shadow:
+            0 0 30px rgb(255 255 255 / 0.15),
+            0 0 60px var(--p-accent-glow);
+        animation:
+            glowRotate 1.2s linear infinite,
+            cinematicPulse 2s var(--ease-cinematic) infinite alternate;
+        mask: radial-gradient(circle, transparent 55%, #000 56%, #000 100%);
+        -webkit-mask: radial-gradient(circle, transparent 55%, #000 56%, #000 100%);
+    }
+
+    /* ─── ERROR OVERLAY ───────────────────────────────────────────────────────── */
+    .player-error {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-overlay);
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--p-space-4);
+        background: rgb(0 0 0 / 0.85);
+        backdrop-filter: blur(var(--blur-deep));
+        -webkit-backdrop-filter: blur(var(--blur-deep));
+        animation: fadeScale var(--t-cinematic) both;
+    }
+
+    .video-container.is-error .player-error { display: flex; }
+
+    .player-error__icon {
+        width: 64px;
+        height: 64px;
+        color: var(--p-state-danger);
+        filter: drop-shadow(0 0 20px color-mix(in srgb, var(--p-state-danger) 40%, transparent));
+    }
+
+    .player-error__title {
+        font-size: var(--p-fs-lg);
+        font-weight: var(--p-fw-semibold);
+    }
+
+    .player-error__message {
+        font-size: var(--p-fs-sm);
+        color: var(--p-text-dim);
+        text-align: center;
+        max-width: 60%;
+    }
+
+    /* ─── END-CARD / NEXT EPISODE ─────────────────────────────────────────────── */
+    .end-card {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-overlay);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background:
+            linear-gradient(135deg, rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.4)),
+            var(--p-bg-base);
+        backdrop-filter: blur(var(--blur-cinema));
+        -webkit-backdrop-filter: blur(var(--blur-cinema));
+    }
+
+    .video-container.is-ended .end-card { display: flex; animation: fadeScale var(--t-cinematic) both; }
+
+    /* ─── TOAST / SNACKBAR ────────────────────────────────────────────────────── */
+    .player-toast {
+        position: absolute;
+        top: var(--p-space-5);
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: var(--z-toast);
+        padding: var(--p-space-3) var(--p-space-5);
+        background: rgb(0 0 0 / 0.6);
         backdrop-filter: blur(var(--blur-glass)) saturate(180%);
         -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+        border: 0.5px solid var(--p-stroke-strong);
+        border-radius: var(--p-radius-pill);
+        font-size: var(--p-fs-sm);
+        font-weight: var(--p-fw-medium);
+        color: var(--p-text-main);
+        box-shadow: var(--shadow-glass);
+        animation: toastIn var(--t-base) var(--ease-spring-soft) both;
+        pointer-events: none;
+    }
+
+    .player-toast.is-leaving { animation: toastOut var(--t-fast) forwards; }
+
+    /* ─── LIVE INDICATOR ──────────────────────────────────────────────────────── */
+    .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: var(--p-radius-pill);
+        background: var(--p-state-live);
+        color: #fff;
+        font-size: var(--p-fs-xs);
+        font-weight: var(--p-fw-bold);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        box-shadow: 0 0 16px color-mix(in srgb, var(--p-state-live) 60%, transparent);
+    }
+
+    .live-badge::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #fff;
+        animation: livePulse 1.6s var(--ease-fluid) infinite, liveBroadcast 2s ease-out infinite;
     }
 }
 
-@media (hover: hover) {
-    .progress-wrapper:hover .progress-hover-tooltip {
-        opacity: 1; visibility: visible; transform: translateX(-50%) translateY(-14px) scale(1);
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer states  ▓▓▓
+   Player state machine reflected in CSS.
+   States: idle · paused · playing · buffering · seeking · scrubbing
+           gesture-active · theater · fullscreen · mini · pip · audio · live · low-power
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer states {
+
+    .video-container.is-idle      { cursor: none; }
+    .video-container.is-idle .controls { opacity: 0; visibility: hidden; }
+
+    .video-container.is-playing   { /* ambient at rest */ }
+    .video-container.is-paused    { /* dim filter, ambient on, ctrls visible */ }
+
+    .video-container.is-buffering .center-play { display: none; }
+
+    .video-container.is-seeking,
+    .video-container.is-scrubbing { cursor: ew-resize; }
+
+    .video-container.is-gesture-active * { transition-duration: 0.05s !important; }
+
+    /* Theater mode: wider, darker surrounding */
+    .video-container.v-theater {
+        border-radius: 0;
+        box-shadow: none;
+        max-width: 100vw;
     }
-}
 
-.progress-hover-tooltip span {
-    font-size: clamp(0.72rem, 2cqi, 0.82rem); font-weight: 600; color: var(--p-text-main);
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.4px;
-    text-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
-}
-
-.controls-bar {
-    display: flex; justify-content: space-between; align-items: center;
-    width: 100%; z-index: 2;
-}
-
-.controls-bar .group {
-    display: flex; align-items: center; gap: clamp(6px, 1.6cqi, 12px);
-}
-
-.time-display {
-    color: var(--p-text-main); font-size: clamp(0.74rem, 2cqi, 0.86rem); font-weight: 500;
-    font-variant-numeric: tabular-nums; letter-spacing: 0.5px;
-    display: flex; align-items: center; gap: 5px;
-    user-select: none;
-    opacity: 0.92;
-    padding: 0 6px;
-    transition: opacity var(--t-fast);
-}
-
-.time-display:hover { opacity: 1; }
-.time-display .separator, .time-display .duration { color: var(--p-text-dim); font-weight: 400; }
-
-.icon-btn {
-    width: clamp(34px, 8cqi, 42px); height: clamp(34px, 8cqi, 42px);
-    display: inline-flex; align-items: center; justify-content: center;
-    background: transparent; border: none;
-    color: var(--p-text-main); cursor: pointer;
-    border-radius: var(--p-radius-sm);
-    transition: opacity var(--t-fast), transform var(--t-fast), color var(--t-fast);
-    outline: none; position: relative;
-    -webkit-tap-highlight-color: transparent;
-    opacity: 0.85;
-    overflow: visible;
-}
-
-.icon-btn svg {
-    width: clamp(19px, 4.2cqi, 24px); height: clamp(19px, 4.2cqi, 24px); fill: currentColor;
-    stroke: currentColor; stroke-width: 0.2px;
-    transition: transform var(--t-fast), filter var(--t-fast);
-    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.3));
-    z-index: 2; position: relative;
-}
-
-.icon-btn::before {
-    content: ""; position: absolute; inset: 0;
-    background: rgb(255 255 255 / 0.14);
-    border-radius: inherit;
-    opacity: 0; transform: scale(0.85);
-    transition: opacity var(--t-fast), transform var(--t-fast); z-index: 0;
-}
-
-.icon-btn::after {
-    content: ""; position: absolute; inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(circle at center, rgb(255 255 255 / 0.4), transparent 60%);
-    opacity: 0;
-    transition: opacity 0.6s var(--ease-cinematic);
-    pointer-events: none; z-index: 1;
-}
-
-@media (hover: hover) {
-    .icon-btn:hover { 
-        opacity: 1; 
-        transform: scale(1.06); 
+    /* Mini-player: tiny floating window */
+    .video-container.v-mini {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        width: clamp(240px, 30vw, 360px);
+        z-index: 9999;
+        border-radius: var(--p-radius-md);
+        box-shadow: var(--shadow-cinema);
+        animation: floatUp var(--t-base) var(--ease-spring-soft) both;
     }
-    .icon-btn:hover::before { opacity: 1; transform: scale(1); }
-    .icon-btn:hover svg { transform: scale(1.05); filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.4)); }
-}
 
-.icon-btn:active { 
-    transform: scale(0.92); 
-    opacity: 0.75;
-    transition-duration: 0.08s;
-}
-.icon-btn:active::after { opacity: 1; transition-duration: 0s; }
-
-.icon-btn:focus-visible {
-    opacity: 1; transform: scale(1.06);
-    box-shadow: 0 0 0 2px rgb(0 0 0 / 0.6), 0 0 0 4px var(--p-accent);
-    background: rgb(255 255 255 / 0.18);
-}
-.icon-btn:focus-visible::before { display: none; }
-
-.icon-btn.is-pressed svg { animation: iconPop 0.4s var(--ease-spring); }
-
-.volume-container {
-    display: flex; align-items: center;
-    background: transparent; border-radius: var(--p-radius-pill);
-    transition: background var(--t-fast), padding var(--t-fast);
-    position: relative;
-}
-
-@media (hover: hover) {
-    .volume-container:hover {
-        background: rgb(255 255 255 / 0.08);
-        padding-right: 14px;
+    /* PiP simulation */
+    .video-container.v-pip {
+        border: 2px solid var(--p-stroke-strong);
     }
-}
 
-.volume-slider-wrapper {
-    width: 0; opacity: 0; overflow: hidden;
-    transition: width var(--t-base), opacity var(--t-fast);
-    transform-origin: left center;
-    display: flex; align-items: center; height: var(--p-ctrl-height);
-}
+    /* Audio-only mode: hide video, show waveform */
+    .video-container.v-audio #dahihPlayer { opacity: 0; }
+    .video-container.v-audio { background: linear-gradient(135deg, var(--c-ink-200), var(--c-ink-100)); }
 
-@media (hover: hover) {
-    .volume-container:hover .volume-slider-wrapper,
-    .volume-slider-wrapper:focus-within {
-        width: clamp(64px, 16cqi, 88px); opacity: 1;
+    /* Live-stream mode: no scrubbing, live badge */
+    .video-container.v-live .progress-fill::after { display: none; }
+    .video-container.v-live .progress { background: var(--p-state-live); opacity: 0.4; }
+
+    /* Low-power mode (battery saver): simplify everything */
+    .video-container.v-low-power {
+        --blur-glass: 0px;
+        --blur-deep:  0px;
     }
-}
-
-.volume-slider {
-    -webkit-appearance: none; appearance: none;
-    width: 100%; height: 3px; 
-    background: linear-gradient(90deg, 
-        var(--p-text-main) 0%, 
-        var(--p-text-main) var(--volume-pct, 50%), 
-        rgb(255 255 255 / 0.25) var(--volume-pct, 50%), 
-        rgb(255 255 255 / 0.25) 100%);
-    border-radius: var(--p-radius-pill); cursor: pointer;
-    outline: none; position: relative;
-    transition: height var(--t-fast);
-}
-
-.volume-slider:hover { height: 4px; }
-
-.volume-slider::-webkit-slider-runnable-track { width: 100%; height: 100%; cursor: pointer; }
-.volume-slider::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    height: 13px; width: 13px; border-radius: 50%;
-    background: var(--p-text-main); margin-top: -5px;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.5), 0 0 0 0 rgb(255 255 255 / 0.3);
-    transition: transform var(--t-fast), box-shadow var(--t-fast);
-}
-
-.volume-slider::-moz-range-thumb {
-    height: 13px; width: 13px; border-radius: 50%; border: none;
-    background: var(--p-text-main);
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
-}
-
-@media (hover: hover) {
-    .volume-slider:hover::-webkit-slider-thumb { 
-        transform: scale(1.2); 
-        box-shadow: 0 2px 8px rgb(0 0 0 / 0.6), 0 0 0 6px rgb(255 255 255 / 0.12);
-    }
-}
-
-.volume-slider:active::-webkit-slider-thumb { transform: scale(1.1); }
-
-#fs-wrapper { 
-    transition: background var(--t-cinematic); 
-    width: 100%; height: 100%; 
-    overscroll-behavior: none; 
-}
-
-#fs-wrapper:fullscreen,
-#fs-wrapper:-webkit-full-screen {
-    background: var(--p-bg-base); width: 100vw; height: 100dvh;
-    padding: 0 !important; margin: 0 !important;
-    display: flex; align-items: center; justify-content: center;
-}
-
-#fs-wrapper:fullscreen .video-container,
-#fs-wrapper:-webkit-full-screen .video-container {
-    width: 100vw; height: 100dvh; border-radius: 0; border: none;
-    box-shadow: none; max-width: none; max-height: none;
-}
-
-#fs-wrapper:fullscreen .controls {
-    bottom: max(env(safe-area-inset-bottom, 32px), 32px);
-    left: max(env(safe-area-inset-left, 32px), 32px);
-    right: max(env(safe-area-inset-right, 32px), 32px);
-    max-width: 1280px;
-    margin: 0 auto;
-}
-
-#fs-wrapper:fullscreen .icon-btn.fullscreen-btn svg {
-    transform: scale(0.95) rotate(180deg);
-}
-
-@container (max-width: 480px) {
-    .controls {
-        left: 10px; right: 10px; bottom: 10px;
-        padding: 12px 14px;
-        border-radius: clamp(14px, 3.5cqi, 22px);
-    }
-    .volume-container { display: none; }
-    .time-display .duration, .time-display .separator { display: none; }
-    .progress-fill::after { transform: translateY(-50%) scale(0.92); opacity: 1; }
-}
-
-@media (update: slow) or (prefers-reduced-transparency) {
-    .video-container * {
+    .video-container.v-low-power *,
+    .video-container.v-low-power *::before,
+    .video-container.v-low-power *::after {
+        animation: none !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
-    }
-    .video-container::after, .video-container::before { display: none; }
-    .video-poster::before { background: rgb(0 0 0 / 0.88); }
-    .controls { background: rgb(15 15 15 / 0.96); border: 1px solid rgb(50 50 50); }
-    .progress-fill::before { display: none; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    *, ::before, ::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-        scroll-behavior: auto !important;
+        box-shadow: none !important;
+        filter: none !important;
     }
 }
 
-.visually-hidden {
-    position: absolute; width: 1px; height: 1px; padding: 0;
-    margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0);
-    white-space: nowrap; border: 0;
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer controls  ▓▓▓
+   The control bar · buttons · time display · menus · micro-interactions
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer controls {
+
+    /* ─── CENTER PLAY (hero glass orb) ────────────────────────────────────────── */
+    .center-play {
+        position: absolute;
+        inset: 0;
+        z-index: var(--z-osd);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: scale(1.06);
+        pointer-events: none;
+        transition: opacity var(--t-base), transform var(--t-base);
+        will-change: opacity, transform;
+    }
+
+    .video-container.is-buffering .center-play { display: none; }
+
+    .center-play.is-visible {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+    }
+
+    .center-play > div {
+        position: relative;
+        width: clamp(68px, 13cqi, 88px);
+        height: clamp(68px, 13cqi, 88px);
+        border-radius: 50%;
+        background: rgb(0 0 0 / 0.45);
+        color: var(--p-text-main);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow:
+            var(--shadow-elevation),
+            0 0 40px color-mix(in srgb, var(--ambient-color) 30%, transparent);
+        border: 0.5px solid var(--p-stroke-emphasis);
+        cursor: pointer;
+        overflow: hidden;
+        animation: breathe 4s ease-in-out infinite;
+        transition:
+            transform var(--t-fast),
+            background var(--t-fast),
+            box-shadow var(--t-base),
+            border-color var(--t-fast);
+    }
+
+    /* Conic halo ring */
+    .center-play > div::before {
+        content: "";
+        position: absolute;
+        inset: -2px;
+        border-radius: inherit;
+        padding: 1px;
+        background: conic-gradient(from var(--glow-angle), transparent 70%, rgb(255 255 255 / 0.5), transparent);
+        -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+                mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+        -webkit-mask-composite: xor;
+                mask-composite: exclude;
+        animation: glowRotate 6s linear infinite;
+        pointer-events: none;
+        opacity: 0.7;
+    }
+
+    /* Top-light specular */
+    .center-play > div::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: radial-gradient(circle at 50% 30%, rgb(255 255 255 / 0.18), transparent 60%);
+        pointer-events: none;
+    }
+
+    @supports (backdrop-filter: blur(12px)) {
+        @media (update: fast) {
+            .center-play > div {
+                backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+                -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+                background: rgb(0 0 0 / 0.35);
+            }
+        }
+    }
+
+    .center-play > div svg {
+        position: relative;
+        z-index: 1;
+        width: clamp(26px, 5.5cqi, 36px);
+        height: clamp(26px, 5.5cqi, 36px);
+        fill: currentColor;
+        margin-left: 4px;
+        stroke: currentColor;
+        stroke-width: 0.5px;
+        filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.4));
+        transition: transform var(--t-fast);
+    }
+
+    .center-play.pause > div svg { margin-left: 0; }
+
+    @media (hover: hover) {
+        .center-play > div:hover {
+            transform: scale(1.06);
+            background: rgb(255 255 255 / 0.18);
+            border-color: var(--a-w-32);
+            box-shadow:
+                var(--shadow-elevation),
+                0 0 60px color-mix(in srgb, var(--ambient-color) 50%, transparent);
+            animation-play-state: paused;
+        }
+        .center-play > div:hover svg { transform: scale(1.08); }
+    }
+
+    .center-play > div:active { transform: scale(0.94); }
+
+    /* ─── CONTROLS BAR (glass dock) ───────────────────────────────────────────── */
+    .controls {
+        position: absolute;
+        bottom: clamp(12px, 3cqi, 22px);
+        left:   clamp(12px, 3cqi, 22px);
+        right:  clamp(12px, 3cqi, 22px);
+        z-index: var(--z-controls);
+        padding: clamp(12px, 2.4cqi, 18px) clamp(18px, 4cqi, 24px);
+        border-radius: var(--p-radius-md);
+        background:
+            linear-gradient(180deg, rgb(20 20 22 / 0.55) 0%, rgb(0 0 0 / 0.85) 100%),
+            radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.08), transparent 70%);
+        border: 1px solid rgb(255 255 255 / 0.1);
+        box-shadow:
+            var(--shadow-elevation),
+            0 1px 0 rgb(255 255 255 / 0.08) inset,
+            0 -1px 0 rgb(0 0 0 / 0.3) inset;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(12px) scale(0.985);
+        pointer-events: none;
+        will-change: opacity, transform;
+        display: flex;
+        flex-direction: column;
+        gap: clamp(8px, 1.8cqi, 12px);
+        overflow: hidden;
+        transition:
+            opacity    var(--t-base),
+            transform  var(--t-base),
+            visibility var(--t-base);
+    }
+
+    /* Sweeping shimmer on activation */
+    .controls::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(105deg, transparent 40%, rgb(255 255 255 / 0.04) 50%, transparent 60%);
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity var(--t-cinematic);
+    }
+
+    .video-container.is-active .controls::before,
+    .video-container:not(.is-idle):hover .controls::before { opacity: 1; }
+
+    @supports (backdrop-filter: blur(12px)) {
+        @media (update: fast) {
+            .controls {
+                backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+                -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+                background:
+                    linear-gradient(180deg, rgb(20 20 22 / 0.45) 0%, rgb(0 0 0 / 0.7) 100%),
+                    radial-gradient(ellipse at 50% 0%, rgb(255 255 255 / 0.1), transparent 70%);
+            }
+        }
+    }
+
+    /* Staggered children reveal */
+    .controls > * {
+        opacity: 0;
+        transform: translateY(6px);
+        transition:
+            opacity   var(--t-base) var(--stagger, 0s),
+            transform var(--t-base) var(--stagger, 0s);
+    }
+
+    .controls .progress-wrapper { --stagger: 0.05s; }
+    .controls .controls-bar     { --stagger: 0.1s; }
+
+    /* Visible states */
+    .video-container.is-active .controls,
+    .video-container:not(.is-idle):hover .controls,
+    .controls:focus-within,
+    .video-container.is-paused .controls {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    .video-container.is-active .controls > *,
+    .video-container:not(.is-idle):hover .controls > *,
+    .controls:focus-within > *,
+    .video-container.is-paused .controls > * {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    /* ─── CONTROLS BAR ROW ────────────────────────────────────────────────────── */
+    .controls-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        z-index: 2;
+    }
+
+    .controls-bar .group {
+        display: flex;
+        align-items: center;
+        gap: clamp(6px, 1.6cqi, 12px);
+    }
+
+    /* ─── TIME DISPLAY (tabular nums) ─────────────────────────────────────────── */
+    .time-display {
+        color: var(--p-text-main);
+        font-size: clamp(0.74rem, 2cqi, 0.86rem);
+        font-weight: var(--p-fw-medium);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        user-select: none;
+        opacity: 0.92;
+        padding: 0 6px;
+        transition: opacity var(--t-fast);
+    }
+
+    .time-display:hover { opacity: 1; }
+    .time-display .separator,
+    .time-display .duration { color: var(--p-text-dim); font-weight: var(--p-fw-normal); }
+    .time-display.is-remaining .duration::before { content: "-"; }
+
+    /* ─── ICON BUTTON (the workhorse) ─────────────────────────────────────────── */
+    .icon-btn {
+        width:  clamp(34px, 8cqi, 42px);
+        height: clamp(34px, 8cqi, 42px);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: var(--p-text-main);
+        cursor: pointer;
+        border-radius: var(--p-radius-sm);
+        outline: none;
+        position: relative;
+        opacity: 0.85;
+        overflow: visible;
+        -webkit-tap-highlight-color: transparent;
+        transition:
+            opacity   var(--t-fast),
+            transform var(--t-fast),
+            color     var(--t-fast);
+    }
+
+    .icon-btn svg {
+        width:  var(--p-ctrl-icon-md);
+        height: var(--p-ctrl-icon-md);
+        fill: currentColor;
+        stroke: currentColor;
+        stroke-width: 0.2px;
+        filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.3));
+        z-index: 2;
+        position: relative;
+        transition: transform var(--t-fast), filter var(--t-fast);
+    }
+
+    /* Hover plate */
+    .icon-btn::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: var(--a-w-12);
+        border-radius: inherit;
+        opacity: 0;
+        transform: scale(0.85);
+        transition: opacity var(--t-fast), transform var(--t-fast);
+        z-index: 0;
+    }
+
+    /* Press ripple */
+    .icon-btn::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background: radial-gradient(circle at center, rgb(255 255 255 / 0.4), transparent 60%);
+        opacity: 0;
+        transition: opacity 0.6s var(--ease-cinematic);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    @media (hover: hover) {
+        .icon-btn:hover {
+            opacity: 1;
+            transform: scale(1.06);
+        }
+        .icon-btn:hover::before { opacity: 1; transform: scale(1); }
+        .icon-btn:hover svg {
+            transform: scale(1.05);
+            filter: drop-shadow(0 2px 4px rgb(0 0 0 / 0.4));
+        }
+    }
+
+    .icon-btn:active {
+        transform: scale(0.92);
+        opacity: 0.75;
+        transition-duration: 0.08s;
+    }
+
+    .icon-btn:active::after { opacity: 1; transition-duration: 0s; }
+
+    .icon-btn:focus-visible {
+        opacity: 1;
+        transform: scale(1.06);
+        box-shadow: 0 0 0 2px rgb(0 0 0 / 0.6), 0 0 0 4px var(--p-accent);
+        background: var(--a-w-20);
+    }
+    .icon-btn:focus-visible::before { display: none; }
+
+    .icon-btn.is-pressed svg { animation: iconPop 0.4s var(--ease-spring); }
+
+    /* ─── ICON BUTTON VARIANTS ────────────────────────────────────────────────── */
+    .icon-btn.v-primary {
+        background: var(--p-accent);
+        color: #fff;
+        box-shadow: 0 4px 14px var(--p-accent-glow-strong);
+    }
+    .icon-btn.v-primary::before { display: none; }
+
+    .icon-btn.v-pill {
+        width: auto;
+        padding: 0 var(--p-space-4);
+        border-radius: var(--p-radius-pill);
+        gap: 6px;
+        font-size: var(--p-fs-sm);
+        font-weight: var(--p-fw-semibold);
+    }
+
+    /* ─── SETTINGS MENU (popover) ─────────────────────────────────────────────── */
+    .settings-menu {
+        position: absolute;
+        bottom: calc(100% + 12px);
+        right: 0;
+        min-width: clamp(180px, 30cqi, 240px);
+        padding: var(--p-space-3);
+        background: rgb(20 20 22 / 0.85);
+        backdrop-filter: blur(var(--blur-deep)) saturate(180%);
+        -webkit-backdrop-filter: blur(var(--blur-deep)) saturate(180%);
+        border: 0.5px solid var(--p-stroke-strong);
+        border-radius: var(--p-radius-md);
+        box-shadow: var(--shadow-glass), var(--shadow-deep);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(8px) scale(0.96);
+        transform-origin: bottom right;
+        transition:
+            opacity   var(--t-fast),
+            transform var(--t-fast),
+            visibility var(--t-fast);
+        z-index: var(--z-tooltips);
+    }
+
+    .settings-menu.is-open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+    }
+
+    .settings-menu__item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--p-space-4);
+        padding: var(--p-space-3) var(--p-space-4);
+        border-radius: var(--p-radius-sm);
+        font-size: var(--p-fs-sm);
+        color: var(--p-text-main);
+        cursor: pointer;
+        transition: background var(--t-fast), color var(--t-fast);
+    }
+
+    .settings-menu__item:hover { background: var(--a-w-08); }
+    .settings-menu__item.is-selected { color: var(--p-accent); }
+
+    .settings-menu__item .label    { font-weight: var(--p-fw-medium); }
+    .settings-menu__item .value    { color: var(--p-text-dim); font-variant-numeric: tabular-nums; }
+
+    /* ─── TOOLTIP (contextual) ────────────────────────────────────────────────── */
+    .tooltip {
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(4px);
+        padding: 4px 10px;
+        background: rgb(0 0 0 / 0.85);
+        backdrop-filter: blur(var(--blur-glass));
+        -webkit-backdrop-filter: blur(var(--blur-glass));
+        border-radius: var(--p-radius-xs);
+        font-size: var(--p-fs-xs);
+        font-weight: var(--p-fw-medium);
+        color: var(--p-text-main);
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        z-index: var(--z-tooltips);
+        transition:
+            opacity   var(--t-fast),
+            transform var(--t-fast),
+            visibility var(--t-fast);
+    }
+
+    @media (hover: hover) {
+        .icon-btn:hover .tooltip,
+        [data-tooltip]:hover .tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+            transition-delay: 0.4s;
+        }
+    }
+
+    /* ─── PLAYBACK SPEED INDICATOR ────────────────────────────────────────────── */
+    .speed-indicator {
+        font-variant-numeric: tabular-nums;
+        font-weight: var(--p-fw-bold);
+        font-size: var(--p-fs-xs);
+        padding: 2px 6px;
+        border-radius: var(--p-radius-2xs);
+        background: var(--a-w-12);
+    }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer progress  ▓▓▓
+   Streaming-grade scrubber: chapters · heatmap · thumbnails · physics
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer progress {
+
+    .progress-wrapper {
+        position: relative;
+        width: 100%;
+        height: clamp(22px, 4.5cqi, 28px);
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        touch-action: none;
+        z-index: 2;
+    }
+
+    .progress {
+        width: 100%;
+        height: 3px;
+        background: rgb(255 255 255 / 0.18);
+        border-radius: var(--p-radius-pill);
+        position: relative;
+        overflow: visible;
+        box-shadow: 0 1px 0 rgb(0 0 0 / 0.2) inset;
+        transition: height var(--t-fast), background var(--t-fast);
+    }
+
+    @media (hover: hover) {
+        .progress-wrapper:hover .progress {
+            height: 6px;
+            background: rgb(255 255 255 / 0.22);
+        }
+    }
+    .progress-wrapper:active .progress { height: 6px; }
+
+    /* Buffered (loaded) layer */
+    .progress-loaded {
+        position: absolute;
+        top: 0; left: 0;
+        height: 100%;
+        background: rgb(255 255 255 / 0.32);
+        border-radius: inherit;
+        width: var(--buffered-pct, 0%);
+        pointer-events: none;
+        transition: width 0.3s var(--ease-decelerate);
+    }
+
+    /* Played fill */
+    .progress-fill {
+        position: absolute;
+        top: 0; left: 0;
+        height: 100%;
+        width: var(--progress-pct, 0%);
+        background: linear-gradient(90deg, var(--p-accent), var(--p-accent-2));
+        border-radius: inherit;
+        pointer-events: none;
+        will-change: width;
+        box-shadow:
+            0 0 12px var(--p-accent-glow-strong),
+            0 0 4px  var(--p-accent);
+        overflow: hidden;
+    }
+
+    /* Internal shine sweep */
+    .progress-fill::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg,
+            transparent 0%,
+            transparent calc(var(--progress-shine) - 10%),
+            rgb(255 255 255 / 0.4) var(--progress-shine),
+            transparent calc(var(--progress-shine) + 10%),
+            transparent 100%);
+        animation: progressShine 2.5s var(--ease-fluid) infinite;
+        pointer-events: none;
+    }
+
+    /* Thumb */
+    .progress-fill::after {
+        content: "";
+        position: absolute;
+        right: -7px;
+        top: 50%;
+        transform: translateY(-50%) scale(0.01);
+        width:  clamp(13px, 3cqi, 16px);
+        height: clamp(13px, 3cqi, 16px);
+        border-radius: 50%;
+        background: radial-gradient(circle at 30% 30%, #fff, color-mix(in srgb, var(--p-accent) 30%, #fff));
+        box-shadow:
+            0 2px 8px rgb(0 0 0 / 0.5),
+            0 0 12px var(--p-accent-glow-strong),
+            0 0 0 0 var(--p-accent-glow);
+        transition: transform var(--t-fast), box-shadow var(--t-base);
+        pointer-events: none;
+    }
+
+    @media (hover: hover) {
+        .progress-wrapper:hover .progress-fill::after,
+        .progress-fill:focus-within::after {
+            transform: translateY(-50%) scale(1);
+            animation: thumbPulse 1.6s var(--ease-fluid) infinite;
+        }
+    }
+
+    .progress-wrapper:active .progress-fill::after,
+    .video-container:has(.progress-wrapper:active) .progress-fill::after {
+        transform: translateY(-50%) scale(1.2);
+        box-shadow:
+            0 4px 12px rgb(0 0 0 / 0.6),
+            0 0 20px var(--p-accent-glow-strong),
+            0 0 0 6px color-mix(in srgb, var(--p-accent) 18%, transparent);
+    }
+
+    /* ─── HOVER TOOLTIP (timestamp + thumbnail) ───────────────────────────────── */
+    .progress-hover-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        transform: translateX(-50%) translateY(-10px) scale(0.92);
+        background: rgb(20 20 22 / 0.85);
+        border: 0.5px solid rgb(255 255 255 / 0.16);
+        border-radius: var(--p-radius-sm);
+        padding: 6px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        z-index: var(--z-tooltips);
+        box-shadow: var(--shadow-glass);
+        transition:
+            opacity   var(--t-fast),
+            transform var(--t-fast),
+            visibility var(--t-fast);
+    }
+
+    .progress-hover-tooltip::after {
+        content: "";
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        background: inherit;
+        border-right:  0.5px solid rgb(255 255 255 / 0.16);
+        border-bottom: 0.5px solid rgb(255 255 255 / 0.16);
+        transform: translateX(-50%) rotate(45deg);
+    }
+
+    @supports (backdrop-filter: blur(12px)) {
+        .progress-hover-tooltip {
+            background: rgb(0 0 0 / 0.5);
+            backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+            -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+        }
+    }
+
+    @media (hover: hover) {
+        .progress-wrapper:hover .progress-hover-tooltip {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(-14px) scale(1);
+        }
+    }
+
+    .progress-hover-tooltip span {
+        font-size: clamp(0.72rem, 2cqi, 0.82rem);
+        font-weight: var(--p-fw-semibold);
+        color: var(--p-text-main);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.4px;
+        text-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+    }
+
+    /* ─── THUMBNAIL PREVIEW (sprite-driven) ───────────────────────────────────── */
+    .progress-thumbnail {
+        width:  clamp(120px, 24cqi, 180px);
+        aspect-ratio: 16 / 9;
+        border-radius: var(--p-radius-xs);
+        background-image: var(--thumb-sprite, none);
+        background-size: var(--thumb-bg-size, auto);
+        background-position: var(--thumb-bg-pos, 0 0);
+        border: 0.5px solid var(--p-stroke-strong);
+        box-shadow: var(--shadow-medium);
+        overflow: hidden;
+    }
+
+    /* ─── CHAPTER MARKERS ─────────────────────────────────────────────────────── */
+    .chapter-marker {
+        position: absolute;
+        top: 0;
+        width: 2px;
+        height: 100%;
+        background: rgb(0 0 0 / 0.6);
+        z-index: 3;
+        pointer-events: none;
+    }
+
+    .chapter-marker::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--p-text-main);
+        transform: translate(-50%, -50%) scale(0);
+        transition: transform var(--t-fast);
+    }
+
+    .progress-wrapper:hover .chapter-marker::after { transform: translate(-50%, -50%) scale(1); }
+    .chapter-marker.is-active::after { background: var(--p-accent); animation: chapterPing 1.2s ease-out infinite; }
+
+    /* ─── BUFFERED HEATMAP (rare engagement zones) ────────────────────────────── */
+    .progress-heatmap {
+        position: absolute;
+        top: -2px;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+            color-mix(in srgb, var(--p-accent) 0%,  transparent) 0%,
+            color-mix(in srgb, var(--p-accent) 60%, transparent) 25%,
+            color-mix(in srgb, var(--p-accent) 100%,transparent) 50%,
+            color-mix(in srgb, var(--p-accent) 40%, transparent) 75%,
+            color-mix(in srgb, var(--p-accent) 0%,  transparent) 100%);
+        opacity: 0;
+        transition: opacity var(--t-base), height var(--t-fast);
+        pointer-events: none;
+    }
+
+    .progress-wrapper.has-heatmap:hover .progress-heatmap {
+        opacity: 0.7;
+        height: 16px;
+        top: -16px;
+        filter: blur(2px);
+    }
+
+    /* ─── SEEKING / SCRUBBING STATE ───────────────────────────────────────────── */
+    .video-container.is-seeking .progress { height: 6px; }
+    .video-container.is-seeking .progress-fill::after {
+        transform: translateY(-50%) scale(1.3);
+        animation: thumbHaloRing 1s ease-out infinite;
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer audio-ui  ▓▓▓
+   Volume slider · EQ visualizer · spatial bass-reactive lighting
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer audio-ui {
+
+    .volume-container {
+        display: flex;
+        align-items: center;
+        background: transparent;
+        border-radius: var(--p-radius-pill);
+        position: relative;
+        transition: background var(--t-fast), padding var(--t-fast);
+    }
+
+    @media (hover: hover) {
+        .volume-container:hover {
+            background: var(--a-w-08);
+            padding-right: 14px;
+        }
+    }
+
+    .volume-slider-wrapper {
+        width: 0;
+        opacity: 0;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        height: var(--p-ctrl-height);
+        transform-origin: left center;
+        transition: width var(--t-base), opacity var(--t-fast);
+    }
+
+    @media (hover: hover) {
+        .volume-container:hover .volume-slider-wrapper,
+        .volume-slider-wrapper:focus-within {
+            width: clamp(64px, 16cqi, 88px);
+            opacity: 1;
+        }
+    }
+
+    .volume-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 100%;
+        height: 3px;
+        background: linear-gradient(90deg,
+            var(--p-text-main)         0%,
+            var(--p-text-main)         var(--volume-pct, 50%),
+            rgb(255 255 255 / 0.25)    var(--volume-pct, 50%),
+            rgb(255 255 255 / 0.25)    100%);
+        border-radius: var(--p-radius-pill);
+        cursor: pointer;
+        outline: none;
+        position: relative;
+        transition: height var(--t-fast);
+    }
+
+    .volume-slider:hover { height: 4px; }
+
+    .volume-slider::-webkit-slider-runnable-track { width: 100%; height: 100%; cursor: pointer; }
+    .volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 13px;
+        width: 13px;
+        border-radius: 50%;
+        background: var(--p-text-main);
+        margin-top: -5px;
+        box-shadow: 0 2px 6px rgb(0 0 0 / 0.5), 0 0 0 0 rgb(255 255 255 / 0.3);
+        transition: transform var(--t-fast), box-shadow var(--t-fast);
+    }
+
+    .volume-slider::-moz-range-thumb {
+        height: 13px;
+        width: 13px;
+        border-radius: 50%;
+        border: none;
+        background: var(--p-text-main);
+        box-shadow: 0 2px 6px rgb(0 0 0 / 0.5);
+    }
+
+    @media (hover: hover) {
+        .volume-slider:hover::-webkit-slider-thumb {
+            transform: scale(1.2);
+            box-shadow: 0 2px 8px rgb(0 0 0 / 0.6), 0 0 0 6px rgb(255 255 255 / 0.12);
+        }
+    }
+
+    .volume-slider:active::-webkit-slider-thumb { transform: scale(1.1); }
+
+    /* ─── EQ VISUALIZER (bars sync via JS-set --audio-level) ──────────────────── */
+    .eq-visualizer {
+        display: inline-flex;
+        align-items: end;
+        gap: 2px;
+        height: 18px;
+        padding: 0 4px;
+    }
+
+    .eq-visualizer__bar {
+        width: 2px;
+        height: 100%;
+        background: linear-gradient(180deg, var(--p-accent), var(--p-accent-2));
+        border-radius: var(--p-radius-pill);
+        transform-origin: bottom;
+        animation: eqBar 1s var(--ease-fluid) infinite;
+    }
+
+    .eq-visualizer__bar:nth-child(1) { animation-delay: 0.0s; }
+    .eq-visualizer__bar:nth-child(2) { animation-delay: 0.15s; }
+    .eq-visualizer__bar:nth-child(3) { animation-delay: 0.3s; }
+    .eq-visualizer__bar:nth-child(4) { animation-delay: 0.45s; }
+    .eq-visualizer__bar:nth-child(5) { animation-delay: 0.6s; }
+
+    .video-container:not(.is-playing) .eq-visualizer__bar { animation-play-state: paused; }
+
+    /* ─── BASS REACTIVE PULSE on the container ────────────────────────────────── */
+    .video-container.has-audio-reactive {
+        --bass-glow: calc(var(--bass-pulse) * 40px);
+        box-shadow:
+            var(--shadow-deep),
+            0 0 var(--bass-glow) color-mix(in srgb, var(--ambient-color) 40%, transparent);
+        transition: box-shadow 0.1s linear;
+    }
+
+    /* ─── MUTE TRANSITION (icon morph) ────────────────────────────────────────── */
+    .icon-btn.mute-btn.is-muted svg { animation: iconMorph 0.45s var(--ease-emphasized); }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer gestures  ▓▓▓
+   Tap-zones · skip indicators · ripple feedback · gesture prediction visuals
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer gestures {
+
+    .tap-zone {
+        position: absolute;
+        top: 0;
+        height: calc(100% - clamp(80px, 15cqi, 120px));
+        width: 28%;
+        z-index: var(--z-gestures);
+        cursor: pointer;
+    }
+    .tap-zone.left  { left: 0; }
+    .tap-zone.right { right: 0; }
+
+    .tap-zone::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at center, rgb(255 255 255 / 0.1) 0%, transparent 55%);
+        opacity: 0;
+        transform: scale(0.7);
+        border-radius: 50%;
+        pointer-events: none;
+        mix-blend-mode: overlay;
+        transition: opacity var(--t-fast), transform var(--t-base);
+    }
+
+    @media (hover: none) and (pointer: coarse) {
+        .tap-zone:active::after { opacity: 1; transform: scale(1.4); }
+    }
+
+    /* ─── SKIP INDICATOR (Apple TV-style) ─────────────────────────────────────── */
+    .skip-indicator {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        z-index: var(--z-osd);
+        color: var(--p-text-main);
+        font-weight: var(--p-fw-semibold);
+        font-size: clamp(0.85rem, 2cqi, 1rem);
+        letter-spacing: 0.4px;
+        background: rgb(0 0 0 / 0.55);
+        padding: clamp(14px, 3.2cqi, 18px) clamp(18px, 4.5cqi, 26px);
+        border-radius: var(--p-radius-pill);
+        border: 0.5px solid rgb(255 255 255 / 0.14);
+        box-shadow:
+            var(--shadow-glass),
+            0 0 30px color-mix(in srgb, var(--ambient-color) 25%, transparent);
+        opacity: 0;
+        pointer-events: none;
+        will-change: transform, opacity, filter;
+    }
+
+    @supports (backdrop-filter: blur(12px)) {
+        @media (update: fast) {
+            .skip-indicator {
+                backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+                -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+                background: rgb(0 0 0 / 0.4);
+            }
+        }
+    }
+
+    .skip-indicator.left  { left: 6%;  --skip-dir: -1; }
+    .skip-indicator.right { right: 6%; --skip-dir: 1; }
+
+    .skip-indicator.is-active,
+    .skip-indicator.show {
+        animation: skipCinematic 0.7s var(--ease-emphasized) forwards;
+    }
+
+    /* ─── GESTURE PREDICTION (subtle hint on edge approach) ───────────────────── */
+    .gesture-hint {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 40%;
+        background: linear-gradient(180deg, transparent, var(--p-accent), transparent);
+        opacity: 0;
+        transition: opacity var(--t-base);
+        pointer-events: none;
+        filter: blur(1px);
+        z-index: var(--z-osd);
+    }
+
+    .gesture-hint.left  { left:  0; }
+    .gesture-hint.right { right: 0; }
+
+    .video-container.is-gesture-active .gesture-hint { opacity: 0.6; }
+
+    /* ─── RIPPLE LAYER (per-tap feedback) ─────────────────────────────────────── */
+    .ripple {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgb(255 255 255 / 0.4), transparent 70%);
+        pointer-events: none;
+        animation: ripplePremium 0.7s var(--ease-decelerate) forwards;
+    }
+
+    /* ─── EDGE SWIPE INDICATORS (mobile brightness/volume) ────────────────────── */
+    .edge-swipe-indicator {
+        position: absolute;
+        z-index: var(--z-osd);
+        padding: var(--p-space-3) var(--p-space-4);
+        background: rgb(0 0 0 / 0.55);
+        border-radius: var(--p-radius-pill);
+        backdrop-filter: blur(var(--blur-glass));
+        -webkit-backdrop-filter: blur(var(--blur-glass));
+        font-size: var(--p-fs-sm);
+        font-weight: var(--p-fw-semibold);
+        font-variant-numeric: tabular-nums;
+        opacity: 0;
+        transition: opacity var(--t-fast), transform var(--t-base);
+    }
+
+    .edge-swipe-indicator.brightness {
+        left: var(--p-space-5);
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .edge-swipe-indicator.volume {
+        right: var(--p-space-5);
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .video-container.is-gesture-active .edge-swipe-indicator.is-visible { opacity: 1; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer fullscreen  ▓▓▓
+   Cinema mode · theater · safe-area aware · landscape lock simulation
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer fullscreen {
+
+    #fs-wrapper {
+        width: 100%;
+        height: 100%;
+        overscroll-behavior: none;
+        transition: background var(--t-cinematic);
+    }
+
+    #fs-wrapper:fullscreen,
+    #fs-wrapper:-webkit-full-screen {
+        background: var(--p-bg-base);
+        width: 100vw;
+        height: 100dvh;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: fsEnter var(--t-cinematic) var(--ease-emphasized) both;
+    }
+
+    #fs-wrapper:fullscreen .video-container,
+    #fs-wrapper:-webkit-full-screen .video-container {
+        width: 100vw;
+        height: 100dvh;
+        border-radius: 0;
+        border: none;
+        box-shadow: none;
+        max-width: none;
+        max-height: none;
+    }
+
+    #fs-wrapper:fullscreen .controls {
+        bottom: max(var(--safe-bottom), 32px);
+        left:   max(var(--safe-left),   32px);
+        right:  max(var(--safe-right),  32px);
+        max-width: 1280px;
+        margin: 0 auto;
+    }
+
+    #fs-wrapper:fullscreen .icon-btn.fullscreen-btn svg {
+        transform: scale(0.95) rotate(180deg);
+    }
+
+    /* Theater mode (within document, not OS fullscreen) */
+    .video-container.v-theater {
+        width: 100vw;
+        height: 70vh;
+        border-radius: 0;
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer mobile  ▓▓▓
+   Touch-first refinements · safe-area · thumb-reach · adaptive density
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer mobile {
+
+    @container player (max-width: 480px) {
+        .controls {
+            left: 10px;
+            right: 10px;
+            bottom: max(var(--safe-bottom), 10px);
+            padding: 12px 14px;
+            border-radius: clamp(14px, 3.5cqi, 22px);
+        }
+        .volume-container { display: none; }
+        .time-display .duration,
+        .time-display .separator { display: none; }
+        .progress-fill::after {
+            transform: translateY(-50%) scale(0.92);
+            opacity: 1;
+        }
+        .icon-btn { min-width: var(--p-ctrl-tap); min-height: var(--p-ctrl-tap); }
+    }
+
+    @container player (max-width: 360px) {
+        .center-play > div {
+            width:  56px;
+            height: 56px;
+        }
+        .controls-bar .group { gap: 4px; }
+    }
+
+    /* Mobile portrait: stronger ambient (compensate for small screen) */
+    @media (orientation: portrait) and (pointer: coarse) {
+        .video-container::before { opacity: 0.85; }
+    }
+
+    /* Disable hover-only effects on touch */
+    @media (hover: none) {
+        .icon-btn:hover { transform: none; opacity: 0.85; }
+        .progress-fill::after { transform: translateY(-50%) scale(1); opacity: 1; }
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer performance  ▓▓▓
+   GPU compositing hints · paint isolation · low-power adaptive scaling
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer performance {
+
+    /* Compositing hints */
+    .controls,
+    .center-play,
+    .progress-fill,
+    .skip-indicator,
+    .video-poster,
+    .buffering-spinner {
+        will-change: transform, opacity;
+        transform: translateZ(0);
+    }
+
+    /* When idle, drop will-change to free GPU memory */
+    .video-container.is-idle .controls,
+    .video-container.is-idle .center-play { will-change: auto; }
+
+    /* Low-end device fallback: detect via slow update or save-data */
+    @media (update: slow) or (prefers-reduced-transparency) {
+        .video-container * {
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+        }
+        .video-container::after,
+        .video-container::before { display: none; }
+        .video-poster::before { background: rgb(0 0 0 / 0.88); }
+        .controls {
+            background: rgb(15 15 15 / 0.96);
+            border: 1px solid rgb(50 50 50);
+        }
+        .progress-fill::before { display: none; }
+    }
+
+    /* Battery / data saver modes */
+    @media (prefers-reduced-data: reduce) {
+        .video-container::before { animation: none; opacity: 0.2; }
+        .progress-fill::before { display: none; }
+    }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer accessibility  ▓▓▓
+   Reduced motion · transparency · forced-colors · keyboard focus · screen readers
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer accessibility {
+
+    /* ─── REDUCED MOTION (the gold standard) ──────────────────────────────────── */
+    @media (prefers-reduced-motion: reduce) {
+        .video-container *,
+        .video-container *::before,
+        .video-container *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+            scroll-behavior: auto !important;
+        }
+    }
+
+    /* ─── FORCED COLORS (Windows High Contrast) ───────────────────────────────── */
+    @media (forced-colors: active) {
+        .video-container {
+            border: 1px solid CanvasText;
+            box-shadow: none;
+        }
+        .icon-btn {
+            border: 1px solid CanvasText;
+            color: ButtonText;
+        }
+        .icon-btn:focus-visible {
+            outline: 2px solid Highlight;
+            outline-offset: 2px;
+        }
+        .progress-fill { background: Highlight; }
+        .progress      { background: ButtonFace; border: 1px solid CanvasText; }
+    }
+
+    /* ─── KEYBOARD FOCUS RING ─────────────────────────────────────────────────── */
+    .video-container :focus-visible {
+        outline: 2px solid var(--p-accent);
+        outline-offset: 3px;
+        border-radius: var(--p-radius-xs);
+    }
+
+    /* ─── SCREEN READER ONLY ──────────────────────────────────────────────────── */
+    .visually-hidden,
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* ─── ARIA STATES ─────────────────────────────────────────────────────────── */
+    [aria-disabled="true"],
+    [disabled] {
+        opacity: 0.4 !important;
+        pointer-events: none !important;
+        cursor: not-allowed !important;
+    }
+
+    [aria-busy="true"] { cursor: progress; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  @layer utilities  ▓▓▓
+   Atomic helpers — last layer wins.
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@layer utilities {
+
+    .u-hidden        { display: none !important; }
+    .u-invisible     { visibility: hidden !important; }
+    .u-no-pointer    { pointer-events: none !important; }
+    .u-pointer       { pointer-events: auto !important; }
+    .u-no-select     { user-select: none !important; -webkit-user-select: none !important; }
+    .u-fade-in       { animation: fadeScale var(--t-base) var(--ease-spring-soft) both; }
+    .u-float-up      { animation: floatUp   var(--t-base) var(--ease-emphasized)  both; }
+    .u-shimmer       { animation: shimmerSweep 2s var(--ease-fluid) infinite; }
+    .u-glow          { box-shadow: var(--shadow-glow); }
+    .u-glow-soft     { box-shadow: var(--shadow-glow-soft); }
+    .u-glass         {
+        background: var(--p-bg-glass);
+        backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+        -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(180%);
+        border: 0.5px solid var(--p-stroke-strong);
+    }
+    .u-glass-deep    {
+        background: var(--p-bg-glass-2);
+        backdrop-filter: blur(var(--blur-deep)) saturate(180%);
+        -webkit-backdrop-filter: blur(var(--blur-deep)) saturate(180%);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   ▓▓▓  END OF CINEMATIC PLAYER UI ENGINE  ▓▓▓
+   ═══════════════════════════════════════════════════════════════════════════════ */
