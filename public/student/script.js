@@ -201,9 +201,9 @@
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
         
-        // 🚀 [تحسين]: متغيرات تتبع حالة الخمول والوقت الزمني للاختفاء
+        // 🚀 [تحسين]: متغيرات إدارة ونظام الخمول الذكي لرفع الأداء
         idleTimer: null,
-        idleTimeout: 3000, // المدة الزمنية قبل إخفاء عناصر التحكم (3 ثوانٍ)
+        idleTimeout: 3000, 
 
         init() {
             this.video         = $('dahihPlayer');
@@ -224,6 +224,26 @@
 
             if (!this.video) return;
 
+            // 🚀 [تحسين الجرافيكس]: حقن كود ستايل ديناميكي لإلغاء العمليات الرسومية المعقدة أثناء الخمول تماماً وتفعيل تسريع الهاردوير للفيديو
+            const styleId = 'dahih-player-perf-boost';
+            if (!$(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = `
+                    #dahihPlayer {
+                        will-change: transform;
+                        transform: translateZ(0);
+                    }
+                    /* تعطيل عمليات الفلاتر والبلور المجهدة للمعالج وكارت الشاشة عندما يختفي شريط التحكم */
+                    #videoContainer.is-idle * {
+                        backdrop-filter: none !important;
+                        -webkit-backdrop-filter: none !important;
+                        pointer-events: none !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
             this.video.preload = 'metadata';
             this.video.crossOrigin = 'anonymous';
             this.video.playsInline = true;
@@ -239,7 +259,7 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
-            // 🚀 [تحسين]: مراقبة نشاط وحركة المستخدم لإخفاء وإظهار الواجهة
+            // 🚀 [تحسين]: رصد الحركة واللمس لتصفير عداد الخمول فوراً وإعادة إظهار الشريط بسلاسة
             if (this.container) {
                 const triggerActivity = () => this.resetIdleTimer();
                 this.container.addEventListener('mousemove', triggerActivity);
@@ -247,7 +267,6 @@
                 this.container.addEventListener('touchmove', triggerActivity, { passive: true });
                 this.container.addEventListener('touchstart', triggerActivity, { passive: true });
 
-                // إخفاء فوري لشريط التحكم عند خروج الماوس تماماً من حاوية الفيديو (بشرط أن يكون الفيديو يعمل)
                 this.container.addEventListener('mouseleave', () => {
                     if (this.video && !this.video.paused) {
                         this.container.classList.add('is-idle');
@@ -285,14 +304,23 @@
             });
         },
 
-        // 🚀 [تحسين]: دالة إدارة كلاس الخمول (is-idle) وإعادة تصفير المؤقت
+        // 🚀 [تحسين أداء]: دالة تصفير مؤقت الخمول الذكية مع مزامنة فجائية للـ DOM عند الاستيقاظ
         resetIdleTimer() {
             if (!this.container) return;
 
-            this.container.classList.remove('is-idle');
+            if (this.container.classList.contains('is-idle')) {
+                this.container.classList.remove('is-idle');
+                
+                // تحديث خاطف وفوري لشريط التقدم والنصوص بمجرد ظهور الواجهة لضمان دقة العرض دون تعليق مسبق
+                if (this.video && isFinite(this.video.duration)) {
+                    const pct = (this.video.currentTime / this.video.duration) * 100;
+                    if (this.progressBar) this.progressBar.style.width = pct + '%';
+                    if (this.currentTimeEl) this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+                }
+            }
+            
             clearTimeout(this.idleTimer);
 
-            // تفعيل عداد الإخفاء فقط إذا كان الفيديو قيد التشغيل حالياً وليس موقوفاً مؤقتاً
             if (this.video && !this.video.paused) {
                 this.idleTimer = setTimeout(() => {
                     this.container.classList.add('is-idle');
@@ -323,13 +351,11 @@
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
 
-            // إيقاف الفيديو الحالي دون تفريغ الـ src والتسبب في Flashing
             this.video.pause();
             
             try {
                 const videoUrl = `/api/student/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
-                // فحص اتصال الرابط لمعرفة إذا كان السيرفر يرد بشكل سليم
                 const response = await fetchWithTimeout(videoUrl, { 
                     headers: { 'Range': 'bytes=0-100' },
                     signal: state.videoAbortController.signal
@@ -341,7 +367,6 @@
 
                 if (currentReqId !== state.videoRequestId) return;
 
-                // تعيين الـ src فقط إذا كان مختلفاً
                 if (this.video.src !== videoUrl) {
                     this.video.src = videoUrl;
                     this.video.load();
@@ -360,7 +385,7 @@
                 updateActiveCourseCard(msgId);
                 this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
                 
-                this.resetIdleTimer(); // تهيئة وإعادة تصفير عداد الخمول عند بداية التحميل
+                this.resetIdleTimer();
 
             } catch (err) {
                 if (err.name === 'AbortError') return; 
@@ -380,7 +405,7 @@
             this.centerPlay.style.opacity = "0";
             this.centerPlay.style.transform = "scale(1.5)";
             this.centerPlay.style.pointerEvents = "none";
-            this.resetIdleTimer(); // بدء مؤقت إخفاء العناصر فور بدء التشغيل
+            this.resetIdleTimer();
         },
 
         onPause() {
@@ -389,16 +414,20 @@
             this.centerPlay.style.transform = "scale(1)";
             this.centerPlay.style.pointerEvents = "auto";
             
-            // عند إيقاف الفيديو مؤقتاً، نلغي مؤقت الخمول تماماً لإبقاء العناصر ظاهرة بشكل دائم للمستخدم
             if (this.container) this.container.classList.remove('is-idle');
             clearTimeout(this.idleTimer);
         },
 
         onTimeUpdate() {
             if (!isFinite(this.video.duration)) return;
-            const pct = (this.video.currentTime / this.video.duration) * 100;
-            this.progressBar.style.width = pct + '%';
-            this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+
+            // 🚀 [تحسين فائق للأداء]: منع تعديل الـ DOM للـ Progress Bar نهائياً إذا كان الشريط مخفياً لتفادي الـ Reflows العشوائية
+            const isIdle = this.container && this.container.classList.contains('is-idle');
+            if (!isIdle) {
+                const pct = (this.video.currentTime / this.video.duration) * 100;
+                if (this.progressBar) this.progressBar.style.width = pct + '%';
+                if (this.currentTimeEl) this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+            }
 
             const currentSec = Math.floor(this.video.currentTime);
             if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
@@ -442,7 +471,7 @@
             void this.skipIndicator.offsetWidth;
             this.skipIndicator.classList.add('is-active');
             haptic(35);
-            this.resetIdleTimer(); // إعادة تعيين العداد عند التخطي للامام أو الخلف
+            this.resetIdleTimer();
         },
 
         updateMuteIcon() {
@@ -484,7 +513,7 @@
     }
 
     async function fetchData(initial = false) {
-        if (state.isTesting) return; // منع الجلب تماماً أثناء أداء الاختبار
+        if (state.isTesting) return; 
 
         if (state.dashboardAbortController) {
             state.dashboardAbortController.abort();
@@ -524,10 +553,9 @@
 
             const data = await res.json();
 
-            // 🚀 [تحسين]: فحص الـ Hash الكلي للبيانات لمنع تدمير وإعادة بناء الـ DOM إذا لم يتغير شيء
             const newDataHash = JSON.stringify(data.content || data);
             if (!initial && state.lastDataHash === newDataHash) {
-                return; // لم تتغير البيانات، لا داعي لتحديث الواجهة
+                return; 
             }
             state.lastDataHash = newDataHash;
 
@@ -592,7 +620,6 @@
 
         container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
         
-        // 🚀 [تحسين]: استبدال الـ background-image المكلفة برمجياً بـ <img> مع loading="lazy"
         container.innerHTML = list.map((course, idx) => {
             const id = course.telegramMsgId;
             const num = idx + 1;
