@@ -6,6 +6,7 @@
 
 :root {
     --p-accent: #ff375f;
+    --ambient-color: var(--p-accent);
     --p-accent-hover: color-mix(in srgb, var(--p-accent) 85%, #fff);
     --p-accent-active: color-mix(in srgb, var(--p-accent) 70%, #000);
     --p-accent-glow: color-mix(in srgb, var(--p-accent) 25%, transparent);
@@ -22,16 +23,16 @@
     --t-fast: 0.22s var(--ease-cinematic);
     --t-base: 0.42s var(--ease-cinematic);
     --t-slow: 0.65s var(--ease-fluid);
-    --shadow-elevation: 0 10px 30px rgb(0 0 0 / 0.28), 0 2px 8px rgb(255 255 255 / 0.06) inset;
-    --shadow-glass: 0 8px 32px rgb(0 0 0 / 0.2);
+    --shadow-elevation: 0 10px 30px rgb(0 0 0 / 0.35), 0 2px 8px rgb(255 255 255 / 0.04) inset;
+    --shadow-glass: 0 8px 32px rgb(0 0 0 / 0.3);
     --z-media: 1;
+    --z-noise: 2;
     --z-poster: 10;
     --z-buffering: 15;
     --z-gestures: 20;
     --z-osd: 30;
     --z-controls: 40;
     --z-tooltips: 50;
-    --z-noise: 100;
 }
 
 .video-container {
@@ -60,17 +61,17 @@
     content: "";
     position: absolute;
     inset: -20%;
-    background: radial-gradient(circle at center, color-mix(in srgb, var(--p-accent) 12%, transparent), transparent 60%);
-    filter: blur(80px);
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--ambient-color) 15%, transparent), transparent 65%);
+    filter: blur(60px);
     opacity: 0;
     z-index: 0;
     pointer-events: none;
-    transition: opacity var(--t-slow);
+    transition: opacity var(--t-slow), background var(--t-slow);
 }
 
 .video-container.is-paused::before,
 .video-container.is-idle::before {
-    opacity: 0.4;
+    opacity: 0.5;
 }
 
 .video-container::after {
@@ -98,17 +99,20 @@
     transition: filter var(--t-slow), transform var(--t-slow);
     z-index: var(--z-media);
     position: relative;
+    transform-origin: center;
+    will-change: transform, filter;
 }
 
 #dahihPlayer.fit-cover { object-fit: cover; }
 
 .video-container.is-paused #dahihPlayer { 
-    filter: brightness(0.7) saturate(1.1); 
+    filter: brightness(0.65) saturate(1.1);
+    transform: scale(1.008);
 }
 
 .video-container.is-buffering #dahihPlayer {
-    filter: brightness(0.6) blur(1.5px);
-    transform: scale(1.01);
+    filter: brightness(0.5) blur(1.5px);
+    transform: scale(1.015);
 }
 
 video::-webkit-media-controls { display: none !important; }
@@ -124,15 +128,15 @@ video::-webkit-media-controls { display: none !important; }
 
 .video-poster::before {
     content: ""; position: absolute; inset: 0;
-    background: radial-gradient(circle at center, rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.8));
+    background: radial-gradient(circle at center, rgb(0 0 0 / 0.3), rgb(0 0 0 / 0.85));
     z-index: 1;
 }
 
 @supports (backdrop-filter: blur(12px)) {
     @media (update: fast) {
         .video-poster::before {
-            backdrop-filter: blur(12px) saturate(1.2);
-            -webkit-backdrop-filter: blur(12px) saturate(1.2);
+            backdrop-filter: blur(12px) saturate(120%);
+            -webkit-backdrop-filter: blur(12px) saturate(120%);
         }
     }
 }
@@ -160,16 +164,14 @@ video::-webkit-media-controls { display: none !important; }
 .buffering-spinner::after {
     content: ""; display: block; width: 100%; height: 100%;
     border-radius: 50%;
-    border: 2px solid transparent;
-    border-top-color: var(--p-text-main);
-    border-right-color: rgb(255 255 255 / 0.2);
-    animation: spinSmooth 0.8s var(--ease-cinematic) infinite;
-    box-shadow: inset 0 0 8px rgb(255 255 255 / 0.05);
+    background: radial-gradient(circle at center, rgb(255 255 255 / 0.15), transparent 70%);
+    box-shadow: 0 0 20px rgb(255 255 255 / 0.1);
+    animation: cinematicPulse 2s var(--ease-cinematic) infinite alternate;
 }
 
-@keyframes spinSmooth { 
-    0% { transform: rotate(0deg); } 
-    100% { transform: rotate(360deg); } 
+@keyframes cinematicPulse { 
+    0% { transform: scale(0.8); opacity: 0.3; } 
+    100% { transform: scale(1.1); opacity: 0.8; } 
 }
 
 .tap-zone {
@@ -181,7 +183,7 @@ video::-webkit-media-controls { display: none !important; }
 
 .tap-zone::after {
     content: ""; position: absolute; inset: 0;
-    background: radial-gradient(circle at center, rgb(255 255 255 / 0.06) 0%, transparent 60%);
+    background: radial-gradient(circle at center, rgb(255 255 255 / 0.08) 0%, transparent 60%);
     opacity: 0; transform: scale(0.8);
     transition: opacity var(--t-fast), transform var(--t-base);
     border-radius: 50%; pointer-events: none;
@@ -197,17 +199,21 @@ video::-webkit-media-controls { display: none !important; }
     gap: 6px; z-index: var(--z-osd);
     color: var(--p-text-main); font-weight: 600; font-size: clamp(0.9rem, 2cqi, 1rem);
     letter-spacing: 0.5px;
-    background: rgb(0 0 0 / 0.4); 
+    background: rgb(0 0 0 / 0.6); 
     padding: clamp(12px, 3cqi, 16px) clamp(16px, 4cqi, 24px); 
     border-radius: var(--p-radius-pill);
-    border: 0.5px solid rgb(255 255 255 / 0.1);
+    border: 0.5px solid rgb(255 255 255 / 0.12);
     opacity: 0; pointer-events: none;
     will-change: transform, opacity;
 }
 
-@supports (backdrop-filter: blur(16px)) {
+@supports (backdrop-filter: blur(12px)) {
     @media (update: fast) {
-        .skip-indicator { backdrop-filter: blur(16px) saturate(180%); -webkit-backdrop-filter: blur(16px) saturate(180%); }
+        .skip-indicator { 
+            backdrop-filter: blur(12px) saturate(120%); 
+            -webkit-backdrop-filter: blur(12px) saturate(120%); 
+            background: rgb(0 0 0 / 0.45);
+        }
     }
 }
 
@@ -244,7 +250,7 @@ video::-webkit-media-controls { display: none !important; }
 
 .center-play > div {
     width: clamp(64px, 12cqi, 80px); height: clamp(64px, 12cqi, 80px); border-radius: 50%;
-    background: rgb(0 0 0 / 0.3);
+    background: rgb(0 0 0 / 0.5);
     color: var(--p-text-main);
     display: flex; align-items: center; justify-content: center;
     box-shadow: var(--shadow-elevation);
@@ -259,9 +265,13 @@ video::-webkit-media-controls { display: none !important; }
     100% { transform: scale(1.015); }
 }
 
-@supports (backdrop-filter: blur(24px)) {
+@supports (backdrop-filter: blur(12px)) {
     @media (update: fast) {
-        .center-play > div { backdrop-filter: blur(24px) saturate(150%); -webkit-backdrop-filter: blur(24px) saturate(150%); }
+        .center-play > div { 
+            backdrop-filter: blur(12px) saturate(120%); 
+            -webkit-backdrop-filter: blur(12px) saturate(120%); 
+            background: rgb(0 0 0 / 0.4);
+        }
     }
 }
 
@@ -278,8 +288,8 @@ video::-webkit-media-controls { display: none !important; }
 @media (hover: hover) {
     .center-play > div:hover {
         transform: scale(1.04);
-        background: rgb(255 255 255 / 0.15);
-        border-color: rgb(255 255 255 / 0.3);
+        background: rgb(255 255 255 / 0.2);
+        border-color: rgb(255 255 255 / 0.4);
         animation-play-state: paused;
     }
 }
@@ -288,38 +298,54 @@ video::-webkit-media-controls { display: none !important; }
 
 .controls {
     position: absolute; 
-    bottom: clamp(16px, 4cqi, 24px); 
-    left: clamp(16px, 4cqi, 24px); 
-    right: clamp(16px, 4cqi, 24px); 
+    bottom: clamp(12px, 3cqi, 20px); 
+    left: clamp(12px, 3cqi, 20px); 
+    right: clamp(12px, 3cqi, 20px); 
     z-index: var(--z-controls);
-    padding: clamp(12px, 3cqi, 20px) clamp(16px, 4cqi, 24px);
+    padding: clamp(10px, 2cqi, 16px) clamp(16px, 4cqi, 20px);
     border-radius: var(--p-radius-md);
-    background: linear-gradient(to top, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.32), transparent), radial-gradient(circle at 50% 0%, rgb(255 255 255 / 0.06), transparent);
-    border: 0.5px solid rgb(255 255 255 / 0.08);
+    background: linear-gradient(to top, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.5)), radial-gradient(circle at 50% 0%, rgb(255 255 255 / 0.06), transparent);
+    border: 1px solid rgb(255 255 255 / 0.12);
     box-shadow: var(--shadow-elevation);
     opacity: 0; visibility: hidden;
     transform: translateY(8px) scale(0.99);
     transition: opacity var(--t-base), transform var(--t-base), visibility var(--t-base);
     pointer-events: none;
     will-change: opacity, transform;
-    display: flex; flex-direction: column; gap: clamp(8px, 2cqi, 12px);
+    display: flex; flex-direction: column; gap: clamp(6px, 1.5cqi, 10px);
 }
 
-@supports (backdrop-filter: blur(24px)) {
+@supports (backdrop-filter: blur(12px)) {
     @media (update: fast) {
         .controls { 
-            backdrop-filter: blur(24px) saturate(180%); 
-            -webkit-backdrop-filter: blur(24px) saturate(180%); 
-            background: linear-gradient(to top, rgb(0 0 0 / 0.4), rgb(0 0 0 / 0.1)), radial-gradient(circle at 50% 0%, rgb(255 255 255 / 0.08), transparent);
+            backdrop-filter: blur(12px) saturate(120%); 
+            -webkit-backdrop-filter: blur(12px) saturate(120%); 
+            background: linear-gradient(to top, rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.45)), radial-gradient(circle at 50% 0%, rgb(255 255 255 / 0.08), transparent);
         }
     }
 }
+
+.controls > * {
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity var(--t-base) var(--stagger, 0s), transform var(--t-base) var(--stagger, 0s);
+}
+
+.controls .progress-wrapper { --stagger: 0.04s; }
+.controls .controls-bar { --stagger: 0.08s; }
 
 .video-container.is-active .controls,
 .video-container:not(.is-idle):hover .controls,
 .controls:focus-within,
 .video-container.is-paused .controls { 
     opacity: 1; visibility: visible; transform: translateY(0) scale(1); pointer-events: auto; 
+}
+
+.video-container.is-active .controls > *,
+.video-container:not(.is-idle):hover .controls > *,
+.controls:focus-within > *,
+.video-container.is-paused .controls > * {
+    opacity: 1; transform: translateY(0);
 }
 
 .progress-wrapper {
@@ -330,7 +356,7 @@ video::-webkit-media-controls { display: none !important; }
 
 .progress {
     width: 100%; height: 3px; 
-    background: rgb(255 255 255 / 0.2);
+    background: rgb(255 255 255 / 0.25);
     border-radius: var(--p-radius-pill); 
     position: relative; overflow: visible;
     transition: height var(--t-fast);
@@ -344,7 +370,7 @@ video::-webkit-media-controls { display: none !important; }
 
 .progress-loaded {
     position: absolute; top: 0; left: 0; height: 100%;
-    background: rgb(255 255 255 / 0.3); 
+    background: rgb(255 255 255 / 0.35); 
     border-radius: inherit; width: 0;
     transition: width 0.25s var(--ease-fluid);
     pointer-events: none;
@@ -363,7 +389,7 @@ video::-webkit-media-controls { display: none !important; }
     transform: translateY(-50%) scale(0.01);
     width: clamp(12px, 3cqi, 14px); height: clamp(12px, 3cqi, 14px); border-radius: 50%; 
     background: #fff;
-    box-shadow: 0 2px 6px rgb(0 0 0 / 0.3);
+    box-shadow: 0 2px 6px rgb(0 0 0 / 0.4);
     transition: transform var(--t-fast);
     pointer-events: none;
 }
@@ -381,8 +407,8 @@ video::-webkit-media-controls { display: none !important; }
 .progress-hover-tooltip {
     position: absolute; bottom: 100%; left: 0;
     transform: translateX(-50%) translateY(-8px) scale(0.95);
-    background: rgb(20 20 20 / 0.85); 
-    border: 0.5px solid rgb(255 255 255 / 0.1);
+    background: rgb(20 20 20 / 0.9); 
+    border: 0.5px solid rgb(255 255 255 / 0.15);
     border-radius: var(--p-radius-xs); padding: 4px 8px;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     opacity: 0; visibility: hidden; pointer-events: none;
@@ -393,7 +419,7 @@ video::-webkit-media-controls { display: none !important; }
 
 @supports (backdrop-filter: blur(12px)) {
     .progress-hover-tooltip {
-        background: rgb(0 0 0 / 0.4);
+        background: rgb(0 0 0 / 0.5);
         backdrop-filter: blur(12px) saturate(150%);
         -webkit-backdrop-filter: blur(12px) saturate(150%);
     }
@@ -436,7 +462,7 @@ video::-webkit-media-controls { display: none !important; }
     background: transparent; border: none;
     color: var(--p-text-main); cursor: pointer; 
     border-radius: var(--p-radius-sm);
-    transition: opacity var(--t-fast), transform var(--t-fast);
+    transition: opacity var(--t-fast), transform var(--t-fast), box-shadow var(--t-fast);
     outline: none; position: relative;
     -webkit-tap-highlight-color: transparent;
     opacity: 0.85;
@@ -449,7 +475,7 @@ video::-webkit-media-controls { display: none !important; }
 
 .icon-btn::before {
     content: ""; position: absolute; inset: 0;
-    background: rgb(255 255 255 / 0.1); border-radius: inherit;
+    background: rgb(255 255 255 / 0.15); border-radius: inherit;
     opacity: 0; transform: scale(0.9);
     transition: opacity var(--t-fast), transform var(--t-fast); z-index: -1;
 }
@@ -460,10 +486,12 @@ video::-webkit-media-controls { display: none !important; }
 }
 
 .icon-btn:active { transform: scale(0.95); opacity: 0.7; }
-.icon-btn:focus-visible::before {
-    opacity: 1; transform: scale(1);
-    box-shadow: 0 0 0 2px rgb(255 255 255 / 0.3);
+.icon-btn:focus-visible {
+    opacity: 1; transform: scale(1.05);
+    box-shadow: 0 0 0 3px rgb(255 255 255 / 0.4), var(--shadow-elevation);
+    background: rgb(255 255 255 / 0.2);
 }
+.icon-btn:focus-visible::before { display: none; }
 
 .volume-container { 
     display: flex; align-items: center; 
@@ -473,7 +501,7 @@ video::-webkit-media-controls { display: none !important; }
 
 @media (hover: hover) {
     .volume-container:hover {
-        background: rgb(255 255 255 / 0.08);
+        background: rgb(255 255 255 / 0.1);
         padding-right: 12px;
     }
 }
@@ -494,7 +522,7 @@ video::-webkit-media-controls { display: none !important; }
 
 .volume-slider {
     -webkit-appearance: none; appearance: none;
-    width: 100%; height: 3px; background: rgb(255 255 255 / 0.2);
+    width: 100%; height: 3px; background: rgb(255 255 255 / 0.3);
     border-radius: var(--p-radius-pill); cursor: pointer;
     outline: none; position: relative;
 }
@@ -504,7 +532,7 @@ video::-webkit-media-controls { display: none !important; }
     -webkit-appearance: none; appearance: none;
     height: 12px; width: 12px; border-radius: 50%;
     background: var(--p-text-main); margin-top: -4.5px;
-    box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+    box-shadow: 0 1px 4px rgb(0 0 0 / 0.5);
     transition: transform var(--t-fast);
 }
 
@@ -558,7 +586,7 @@ video::-webkit-media-controls { display: none !important; }
         -webkit-backdrop-filter: none !important;
         box-shadow: none !important;
     }
-    .video-container::after { display: none; }
+    .video-container::after, .video-container::before { display: none; }
     .video-poster::before { background: rgb(0 0 0 / 0.85); }
     .controls { background: rgb(15 15 15 / 0.95); border: 1px solid rgb(50 50 50); }
 }
@@ -577,4 +605,3 @@ video::-webkit-media-controls { display: none !important; }
     margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0);
     white-space: nowrap; border: 0;
 }
-
