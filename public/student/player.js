@@ -2924,20 +2924,33 @@ const TitaniumQuantum = (() => {
                     animation:tqSpeedPulse 0.6s ease-in-out infinite;
                 }
                 @keyframes tqSpeedPulse {
-                    0%,100% { box-shadow:0 12px 50px rgba(239,68,68,0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
-                    50% { box-shadow:0 16px 70px rgba(239,68,68,0.85), inset 0 1px 0 rgba(255,255,255,0.3); }
-                }
+    0%,100% {
+        box-shadow:0 12px 50px rgba(239,68,68,0.6),
+        inset 0 1px 0 rgba(255,255,255,0.2);
+    }
 
-                .tq-captions {
-                    position:absolute; bottom:90px; left:0; width:100%;
-                    text-align:center; pointer-events:none; opacity:0;
-                    transition:opacity 0.3s cubic-bezier(0.4,0,0.2,1); z-index:100;
-                }
-                .tq-cue-wrap { display:inline-block; max-width:90%; }
-                .tq-captions span {
-                    display:inline-block; background:rgba(0,0,0,0.86);
-                    color:#fff; padding:7px 16px; font-weight:700;
-                    border-radius:8px; text-shadow:0 2px 8px rgba(0,0,0,0.95);
-                    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
-                    line-height:1.45;
-                    font-family:system-ui, -apple-system, 'Segoe UI', sans
+    50% {
+        box-shadow:0 16px 70px rgba(239,68,68,0.85),
+        inset 0 1px 0 rgba(255,255,255,0.3);
+    }
+}
+
+.tq-cue-wrap {
+    display:inline-block;
+    max-width:90%;
+}
+
+.tq-captions span {
+    display:inline-block;
+    background:rgba(0,0,0,0.86);
+    color:#fff;
+    padding:7px 16px;
+    font-weight:700;
+    border-radius:8px;
+    text-shadow:0 2px 8px rgba(0,0,0,0.95);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    line-height:1.45;
+    font-family:system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+`;
