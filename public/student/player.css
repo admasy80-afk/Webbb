@@ -1,48 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  CINEMATIC PLAYER UI ENGINE  ▓▓▓
-   Enterprise-Grade Video Player Design System
-   Architecture: Cascade Layers · Container Queries · Houdini · Scroll Timelines
-   Inspired by: Apple TV+ · Netflix · Vision Pro · Disney+ · HBO Max
-   ═══════════════════════════════════════════════════════════════════════════════
-   
-   ▌ ENGINE STRUCTURE (logical modules within layers)
-   ├─ @layer foundation          → resets, base, container setup
-   ├─ @layer tokens              → design tokens, semantic vars, theme contracts
-   ├─ @layer houdini             → @property registrations for animatable customs
-   ├─ @layer motion              → keyframes, easing curves, motion physics
-   ├─ @layer themes              → light/dark/hdr/oled adaptive themes
-   ├─ @layer surfaces            → glass, depth, elevation, ambient
-   ├─ @layer cinematic-effects   → ambient glow engine, lighting, vignette
-   ├─ @layer overlays            → poster, intro, metadata, loaders
-   ├─ @layer states              → idle/paused/playing/buffering/seeking/etc
-   ├─ @layer controls            → buttons, time, menus, micro-interactions
-   ├─ @layer progress            → timeline, scrubber, chapters, heatmap, preview
-   ├─ @layer audio-ui            → volume, EQ, spatial, mute transitions
-   ├─ @layer gestures            → tap zones, skip, swipe, ripple, prediction
-   ├─ @layer fullscreen          → cinema mode, theater, pip, mini-player
-   ├─ @layer mobile              → touch, safe-area, thumb zones, edge swipe
-   ├─ @layer accessibility       → reduced-motion, transparency, high-contrast, focus
-   ├─ @layer performance         → containment, paint isolation, low-power, GPU
-   └─ @layer utilities           → atomic helpers, sr-only, debug
-   
-   ▌ NAMING CONVENTION
-   ├─ Tokens          : --p-* (player), --c-* (cinematic), --m-* (motion), --s-* (surface)
-   ├─ State classes   : .is-*  (is-paused, is-buffering, is-seeking, ...)
-   ├─ Modifier classes: .has-* (has-chapters, has-thumbnails, ...)
-   ├─ Variant classes : .v-*   (v-theater, v-mini, v-pip, ...)
-   └─ Component       : BEM-ish (block__element--modifier) where useful
-   
-   ▌ FUTURE-PROOF
-   All experimental features are wrapped in @supports.
-   All Houdini @property declarations gracefully degrade to static values.
-   Adaptive scaling via container queries replaces media queries inside the player.
-   ═══════════════════════════════════════════════════════════════════════════════ */
-
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   LAYER ORDER DECLARATION
-   Lower priority → higher priority. Utilities win last; accessibility overrides.
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer foundation,
        houdini,
        tokens,
@@ -62,57 +17,32 @@
        accessibility,
        utilities;
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer houdini  ▓▓▓
-   CSS Houdini @property declarations.
-   These enable animation/transition of custom properties with type safety.
-   Each property is registered with syntax + initial-value + inheritance contract.
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer houdini {
-
-    /* ─── Ambient lighting engine ─────────────────────────────────────────────── */
     @property --glow-angle           { syntax: '<angle>';      initial-value: 0deg;  inherits: false; }
     @property --ambient-hue          { syntax: '<angle>';      initial-value: 340deg;inherits: false; }
     @property --ambient-intensity    { syntax: '<number>';     initial-value: 1;     inherits: true;  }
     @property --ambient-spread       { syntax: '<percentage>'; initial-value: 100%;  inherits: false; }
-
-    /* ─── Progress / timeline engine ──────────────────────────────────────────── */
     @property --progress-shine       { syntax: '<percentage>'; initial-value: -20%;  inherits: false; }
     @property --progress-pct         { syntax: '<percentage>'; initial-value: 0%;    inherits: true;  }
     @property --buffered-pct         { syntax: '<percentage>'; initial-value: 0%;    inherits: true;  }
     @property --hover-pct            { syntax: '<percentage>'; initial-value: 0%;    inherits: true;  }
-
-    /* ─── Audio reactive engine ───────────────────────────────────────────────── */
     @property --volume-pct           { syntax: '<percentage>'; initial-value: 100%;  inherits: false; }
     @property --audio-level          { syntax: '<number>';     initial-value: 0;     inherits: true;  }
     @property --bass-pulse           { syntax: '<number>';     initial-value: 0;     inherits: true;  }
-
-    /* ─── Cinematic depth engine ──────────────────────────────────────────────── */
     @property --depth-z              { syntax: '<length>';     initial-value: 0px;   inherits: false; }
     @property --parallax-x           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
     @property --parallax-y           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
     @property --tilt-x               { syntax: '<angle>';      initial-value: 0deg;  inherits: false; }
     @property --tilt-y               { syntax: '<angle>';      initial-value: 0deg;  inherits: false; }
-
-    /* ─── Adaptive contrast / HDR-like ─────────────────────────────────────────── */
     @property --hdr-luminance        { syntax: '<number>';     initial-value: 1;     inherits: true;  }
     @property --hdr-saturation       { syntax: '<number>';     initial-value: 1;     inherits: true;  }
     @property --vignette-strength    { syntax: '<number>';     initial-value: 0;     inherits: false; }
-
-    /* ─── Magnetic / elastic interactions ─────────────────────────────────────── */
     @property --magnetic-x           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
     @property --magnetic-y           { syntax: '<length>';     initial-value: 0px;   inherits: false; }
     @property --elastic-scale        { syntax: '<number>';     initial-value: 1;     inherits: false; }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer foundation  ▓▓▓
-   Box model reset · color-scheme · base typography · scroll-behavior
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer foundation {
-
     *,
     *::before,
     *::after {
@@ -150,34 +80,19 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer tokens  ▓▓▓
-   The single source of truth for the design system.
-   ─────────────────────────────────────────────────────────────────────────────
-   Token taxonomy:
-     ▸ Primitive  : raw values (colors, sizes)
-     ▸ Semantic   : intent-based aliases (accent, text-main, surface)
-     ▸ Component  : component-scoped overrides
-     ▸ Adaptive   : container/media-query reactive
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer tokens {
-
     :root {
-
-        /* ╔═══ PRIMITIVE · BRAND PALETTE ════════════════════════════════════════╗ */
         --c-brand-50:  #ffe4eb;
         --c-brand-100: #ffc5d2;
         --c-brand-200: #ff9bb1;
         --c-brand-300: #ff6b8e;
         --c-brand-400: #ff4f76;
-        --c-brand-500: #ff375f;  /* canonical brand */
+        --c-brand-500: #ff375f;
         --c-brand-600: #e62e54;
         --c-brand-700: #c52647;
         --c-brand-800: #9b1d38;
         --c-brand-900: #6e1428;
 
-        /* ╔═══ PRIMITIVE · NEUTRAL PALETTE ══════════════════════════════════════╗ */
         --c-ink-0:    #000000;
         --c-ink-50:   #050507;
         --c-ink-100:  #0a0a0c;
@@ -191,7 +106,6 @@
         --c-ink-900:  #9b9ba5;
         --c-snow:     #ffffff;
 
-        /* ╔═══ PRIMITIVE · ALPHA SCALES (white-on-dark) ═════════════════════════╗ */
         --a-w-04: rgb(255 255 255 / 0.04);
         --a-w-06: rgb(255 255 255 / 0.06);
         --a-w-08: rgb(255 255 255 / 0.08);
@@ -218,7 +132,6 @@
         --a-k-80: rgb(0 0 0 / 0.80);
         --a-k-90: rgb(0 0 0 / 0.90);
 
-        /* ╔═══ SEMANTIC · BRAND ═════════════════════════════════════════════════╗ */
         --p-accent:              var(--c-brand-500);
         --p-accent-2:            #ff6b9d;
         --p-accent-3:            #ff9d6b;
@@ -230,7 +143,6 @@
         --p-accent-glow-strong:  color-mix(in srgb, var(--p-accent) 55%, transparent);
         --p-accent-glow-intense: color-mix(in srgb, var(--p-accent) 80%, transparent);
 
-        /* ╔═══ SEMANTIC · BACKGROUND / SURFACE ══════════════════════════════════╗ */
         --p-bg-base:    var(--c-ink-0);
         --p-bg-elev-1:  var(--c-ink-100);
         --p-bg-elev-2:  var(--c-ink-200);
@@ -239,27 +151,23 @@
         --p-bg-glass-2: rgb(20 20 22 / 0.75);
         --p-bg-veil:    rgb(0 0 0 / 0.45);
 
-        /* ╔═══ SEMANTIC · TEXT ══════════════════════════════════════════════════╗ */
         --p-text-main:   var(--c-snow);
         --p-text-strong: #ffffff;
         --p-text-dim:    var(--a-w-62);
         --p-text-faint:  var(--a-w-40);
         --p-text-mute:   var(--a-w-24);
 
-        /* ╔═══ SEMANTIC · STROKE / BORDER ═══════════════════════════════════════╗ */
         --p-stroke:         var(--a-w-08);
         --p-stroke-strong:  var(--a-w-16);
         --p-stroke-emphasis:var(--a-w-24);
         --p-stroke-focus:   var(--p-accent);
 
-        /* ╔═══ SEMANTIC · STATE FEEDBACK ════════════════════════════════════════╗ */
         --p-state-success: #34d399;
         --p-state-warning: #fbbf24;
         --p-state-danger:  #f87171;
         --p-state-info:    #60a5fa;
         --p-state-live:    #ff3030;
 
-        /* ╔═══ RADII ════════════════════════════════════════════════════════════╗ */
         --p-radius-2xs:  clamp(2px,  0.5cqi, 4px);
         --p-radius-xs:   clamp(4px,  1cqi,   6px);
         --p-radius-sm:   clamp(8px,  2cqi,  12px);
@@ -268,14 +176,12 @@
         --p-radius-xl:   clamp(32px, 8cqi,  48px);
         --p-radius-pill: 9999px;
 
-        /* ╔═══ CONTROL DIMENSIONS ═══════════════════════════════════════════════╗ */
         --p-ctrl-height:    clamp(40px, 8cqi, 48px);
         --p-ctrl-icon-sm:   clamp(16px, 3.5cqi, 20px);
         --p-ctrl-icon-md:   clamp(19px, 4.2cqi, 24px);
         --p-ctrl-icon-lg:   clamp(24px, 5.5cqi, 32px);
-        --p-ctrl-tap:       44px;  /* Apple HIG min tap target */
+        --p-ctrl-tap:       44px;
 
-        /* ╔═══ SPACING SCALE ════════════════════════════════════════════════════╗ */
         --p-space-1: clamp(2px,  0.4cqi,  4px);
         --p-space-2: clamp(4px,  0.8cqi,  6px);
         --p-space-3: clamp(6px,  1.2cqi,  8px);
@@ -286,7 +192,6 @@
         --p-space-8: clamp(28px, 5.6cqi, 36px);
         --p-space-9: clamp(36px, 7.2cqi, 48px);
 
-        /* ╔═══ TYPOGRAPHY ═══════════════════════════════════════════════════════╗ */
         --p-font-display: "SF Pro Display", "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
         --p-font-mono:    ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Mono", monospace;
 
@@ -302,8 +207,7 @@
         --p-fw-semibold: 600;
         --p-fw-bold:     700;
 
-        /* ╔═══ MOTION CURVES (cinematic library) ════════════════════════════════╗ */
-        --ease-cinematic:  cubic-bezier(0.32, 0.72, 0,    1);
+        --ease-cinematic:  cubic-bezier(0.25, 1, 0.25, 1);
         --ease-fluid:      cubic-bezier(0.4,  0,    0.2,  1);
         --ease-spring:     cubic-bezier(0.34, 1.56, 0.64, 1);
         --ease-spring-soft:cubic-bezier(0.5,  1.25, 0.55, 1);
@@ -314,15 +218,13 @@
         --ease-overshoot:  cubic-bezier(0.22, 1.36, 0.32, 1);
         --ease-snap:       cubic-bezier(0.16, 1,    0.3,  1);
 
-        /* ╔═══ MOTION DURATIONS ═════════════════════════════════════════════════╗ */
         --t-instant:    0.12s var(--ease-cinematic);
-        --t-fast:       0.22s var(--ease-cinematic);
-        --t-base:       0.42s var(--ease-cinematic);
-        --t-slow:       0.65s var(--ease-fluid);
-        --t-cinematic:  0.85s var(--ease-emphasized);
-        --t-epic:       1.2s  var(--ease-emphasized);
+        --t-fast:       0.2s var(--ease-cinematic);
+        --t-base:       0.35s var(--ease-cinematic);
+        --t-slow:       0.55s var(--ease-fluid);
+        --t-cinematic:  0.75s var(--ease-emphasized);
+        --t-epic:       1.1s  var(--ease-emphasized);
 
-        /* ╔═══ ELEVATION / SHADOWS ══════════════════════════════════════════════╗ */
         --shadow-flat:      0 1px 0 var(--a-k-12);
         --shadow-low:       0 4px 12px var(--a-k-30);
         --shadow-medium:    0 8px 24px var(--a-k-40);
@@ -333,13 +235,11 @@
         --shadow-glow:      0 0 40px var(--p-accent-glow-strong), 0 0 80px var(--p-accent-glow);
         --shadow-glow-soft: 0 0 24px var(--p-accent-glow), 0 0 48px var(--p-accent-soft);
 
-        /* ╔═══ BLUR / GLASSMORPHISM ═════════════════════════════════════════════╗ */
         --blur-subtle:  8px;
         --blur-glass:   24px;
         --blur-deep:    40px;
         --blur-cinema:  64px;
 
-        /* ╔═══ Z-INDEX SCALE ════════════════════════════════════════════════════╗ */
         --z-media:     1;
         --z-noise:     2;
         --z-grain:     3;
@@ -353,7 +253,6 @@
         --z-overlay:   60;
         --z-toast:     70;
 
-        /* ╔═══ ENVIRONMENTAL ════════════════════════════════════════════════════╗ */
         --safe-top:    env(safe-area-inset-top, 0px);
         --safe-right:  env(safe-area-inset-right, 0px);
         --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -361,14 +260,7 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer themes  ▓▓▓
-   Dynamic theme contracts. Switch via [data-theme] attribute on the container.
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer themes {
-
-    /* ─── DARK (default cinema) ───────────────────────────────────────────────── */
     .video-container,
     .video-container[data-theme="dark"] {
         --theme-bg: #000;
@@ -377,7 +269,6 @@
         background: var(--p-bg-base);
     }
 
-    /* ─── OLED (true black, max contrast) ─────────────────────────────────────── */
     .video-container[data-theme="oled"] {
         --p-bg-base:    #000;
         --p-bg-elev-1:  #000;
@@ -386,7 +277,6 @@
         --shadow-deep:  0 24px 80px rgb(0 0 0 / 0.95);
     }
 
-    /* ─── HDR-AWARE (boosted luminance using rec2020 / display-p3) ────────────── */
     @supports (color: color(display-p3 1 0 0)) {
         .video-container[data-theme="hdr"] {
             --p-accent:    color(display-p3 1 0.22 0.37);
@@ -395,7 +285,6 @@
         }
     }
 
-    /* ─── LIGHT (rare, but supported for embedded contexts) ───────────────────── */
     .video-container[data-theme="light"] {
         --p-bg-base:   #f5f5f7;
         --p-bg-elev-1: #fff;
@@ -406,14 +295,12 @@
         color-scheme: light;
     }
 
-    /* ─── ACCENT VARIANTS (per-show theming) ──────────────────────────────────── */
     .video-container[data-accent="azure"]   { --p-accent: #0a84ff; --p-accent-2: #5ac8fa; }
     .video-container[data-accent="emerald"] { --p-accent: #30d158; --p-accent-2: #34c759; }
     .video-container[data-accent="amber"]   { --p-accent: #ff9f0a; --p-accent-2: #ffd60a; }
     .video-container[data-accent="violet"]  { --p-accent: #bf5af2; --p-accent-2: #ff375f; }
     .video-container[data-accent="rose"]    { --p-accent: #ff375f; --p-accent-2: #ff6b9d; }
 
-    /* ─── AUTO (respect system) ───────────────────────────────────────────────── */
     @media (prefers-color-scheme: light) {
         .video-container[data-theme="auto"] {
             --p-bg-base:   #f5f5f7;
@@ -422,14 +309,7 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer motion  ▓▓▓
-   The motion library. All keyframes live here for discoverability.
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer motion {
-
-    /* ─── AMBIENT / GLOW ──────────────────────────────────────────────────────── */
     @keyframes glowRotate {
         from { --glow-angle: 0deg; }
         to   { --glow-angle: 360deg; }
@@ -445,7 +325,6 @@
         50%      { --ambient-intensity: 1.15; --ambient-spread: 120%; }
     }
 
-    /* ─── PROGRESS / SHINE ────────────────────────────────────────────────────── */
     @keyframes progressShine {
         0%   { --progress-shine: -20%; }
         100% { --progress-shine: 120%; }
@@ -457,7 +336,6 @@
         100% { transform: translateX(200%)  skewX(-15deg); opacity: 0; }
     }
 
-    /* ─── SPINNER / BUFFERING ─────────────────────────────────────────────────── */
     @keyframes cinematicPulse {
         0%   { transform: scale(0.85); opacity: 0.25; filter: blur(0); }
         100% { transform: scale(1.15); opacity: 0.9;  filter: blur(0.5px); }
@@ -479,7 +357,6 @@
         50%      { opacity: 1;   transform: scale(1.2); }
     }
 
-    /* ─── SURFACE BREATHING ───────────────────────────────────────────────────── */
     @keyframes breathe {
         0%, 100% { transform: scale(1);    filter: brightness(1); }
         50%      { transform: scale(1.02); filter: brightness(1.08); }
@@ -490,7 +367,6 @@
         50%      { transform: scale(1.008); }
     }
 
-    /* ─── REVEAL / DISMISS ────────────────────────────────────────────────────── */
     @keyframes floatUp {
         from { opacity: 0; transform: translateY(12px) scale(0.96); filter: blur(4px); }
         to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0); }
@@ -515,7 +391,6 @@
         to { opacity: 0; transform: scale(1.04); filter: blur(8px) brightness(0.7); visibility: hidden; }
     }
 
-    /* ─── GESTURE / SKIP ──────────────────────────────────────────────────────── */
     @keyframes skipCinematic {
         0%   { opacity: 0; transform: translateY(-50%) scale(0.85) translateX(calc(var(--skip-dir, 0) * -8px));  filter: blur(4px); }
         20%  { opacity: 1; transform: translateY(-50%) scale(1.05) translateX(0);                                 filter: blur(0); }
@@ -546,7 +421,6 @@
         100% { transform: scale(1) rotate(360deg); }
     }
 
-    /* ─── PROGRESS THUMB PULSE ────────────────────────────────────────────────── */
     @keyframes thumbPulse {
         0%, 100% { box-shadow: 0 2px 8px var(--a-k-50), 0 0 0 0   var(--p-accent-glow-strong); }
         50%      { box-shadow: 0 2px 8px var(--a-k-50), 0 0 0 8px transparent; }
@@ -557,7 +431,6 @@
         100% { box-shadow: 0 0 0 14px transparent; }
     }
 
-    /* ─── AUDIO REACTIVE ──────────────────────────────────────────────────────── */
     @keyframes eqBar {
         0%, 100% { transform: scaleY(0.3); }
         50%      { transform: scaleY(1); }
@@ -568,7 +441,6 @@
         50%      { transform: scale(1.15); opacity: 1; }
     }
 
-    /* ─── LIVE INDICATOR ──────────────────────────────────────────────────────── */
     @keyframes livePulse {
         0%, 100% { opacity: 1;   transform: scale(1); }
         50%      { opacity: 0.6; transform: scale(0.9); }
@@ -579,7 +451,6 @@
         100% { box-shadow: 0 0 0 12px transparent; }
     }
 
-    /* ─── FULLSCREEN TRANSITION ───────────────────────────────────────────────── */
     @keyframes fsEnter {
         from { transform: scale(0.94); opacity: 0.6; filter: blur(8px); }
         to   { transform: scale(1);    opacity: 1;   filter: blur(0); }
@@ -590,7 +461,6 @@
         to   { transform: scale(1);    opacity: 1; }
     }
 
-    /* ─── TOAST / NOTIFICATION ────────────────────────────────────────────────── */
     @keyframes toastIn {
         from { opacity: 0; transform: translateY(20px) scale(0.95); filter: blur(6px); }
         to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0); }
@@ -600,26 +470,18 @@
         to { opacity: 0; transform: translateY(-8px) scale(0.96); filter: blur(4px); }
     }
 
-    /* ─── CHAPTER MARKER REVEAL ───────────────────────────────────────────────── */
     @keyframes chapterPing {
         0%   { transform: scale(1);   opacity: 1; }
         100% { transform: scale(2.5); opacity: 0; }
     }
 
-    /* ─── DEPTH / TILT ────────────────────────────────────────────────────────── */
     @keyframes depthFloat {
         0%, 100% { transform: translateZ(0); }
         50%      { transform: translateZ(8px); }
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer surfaces  ▓▓▓
-   The video container — root surface · glass · containment · depth context
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer surfaces {
-
     .video-container {
         position: relative;
         width: 100%;
@@ -627,8 +489,6 @@
         background: var(--p-bg-base);
         border-radius: var(--p-radius-md);
         overflow: hidden;
-
-        /* Performance: paint isolation + composited stacking context */
         contain: layout style paint;
         content-visibility: auto;
         container-type: inline-size;
@@ -637,20 +497,14 @@
         transform: translateZ(0);
         backface-visibility: hidden;
         perspective: 1200px;
-
-        /* Typography baseline */
         font-family: var(--p-font-display);
         font-size: var(--p-fs-md);
         line-height: 1.4;
         color: var(--p-text-main);
-
-        /* Selection / touch behavior */
         -webkit-user-select: none;
         user-select: none;
         touch-action: manipulation;
         -webkit-tap-highlight-color: transparent;
-
-        /* Elevation */
         box-shadow: var(--shadow-deep);
         transition:
             box-shadow var(--t-cinematic),
@@ -668,7 +522,6 @@
         }
     }
 
-    /* ─── VIDEO ELEMENT ───────────────────────────────────────────────────────── */
     #dahihPlayer,
     .video-container > video {
         width: 100%;
@@ -686,7 +539,6 @@
     #dahihPlayer.fit-cover,
     .video-container > video.fit-cover { object-fit: cover; }
 
-    /* Native chrome obliteration */
     video::-webkit-media-controls,
     video::-webkit-media-controls-enclosure,
     video::-webkit-media-controls-panel,
@@ -697,20 +549,7 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer cinematic-effects  ▓▓▓
-   The visual engines that make this feel like a streaming platform.
-   ─────────────────────────────────────────────────────────────────────────────
-     ▸ Ambient Reactive Glow Engine    : ::before conic + radial gradient orbit
-     ▸ Cinematic Grain                  : ::after dotted noise (mix-blend soft-light)
-     ▸ Intelligent Vignette             : edge darkening reactive to state
-     ▸ Edge Light Bleeding              : color extraction simulated via accent
-     ▸ Temporal Overlays                : soft flares & light leaks
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer cinematic-effects {
-
-    /* ─── AMBIENT REACTIVE GLOW (orbiting conic + multi-radial) ──────────────── */
     .video-container::before {
         content: "";
         position: absolute;
@@ -745,7 +584,6 @@
     .video-container.is-idle::before { opacity: 0.65; }
     .video-container.is-buffering::before { opacity: 0.85; filter: blur(100px) saturate(170%); }
 
-    /* ─── CINEMATIC GRAIN (dual-layer noise) ──────────────────────────────────── */
     .video-container::after {
         content: "";
         position: absolute;
@@ -761,7 +599,6 @@
         z-index: var(--z-noise);
     }
 
-    /* ─── INTELLIGENT VIGNETTE (edge darkening reactive to focus) ─────────────── */
     .cinema-vignette {
         position: absolute;
         inset: 0;
@@ -778,7 +615,6 @@
     .video-container.is-buffering   .cinema-vignette,
     .video-container.is-seeking     .cinema-vignette { --vignette-strength: 1; }
 
-    /* ─── DYNAMIC EDGE LIGHT BLEEDING ─────────────────────────────────────────── */
     .edge-light {
         position: absolute;
         inset: 0;
@@ -796,7 +632,6 @@
 
     .video-container.is-playing .edge-light { opacity: 0.7; }
 
-    /* ─── TEMPORAL LIGHT LEAK (subtle film flare on play) ─────────────────────── */
     .light-leak {
         position: absolute;
         inset: 0;
@@ -813,7 +648,6 @@
 
     .video-container.is-playing .light-leak { opacity: 0.5; }
 
-    /* ─── HDR-LIKE LUMINANCE BOOST (simulated) ────────────────────────────────── */
     .video-container[data-hdr="on"] #dahihPlayer {
         filter:
             brightness(calc(1 + (var(--hdr-luminance) - 1) * 0.15))
@@ -821,7 +655,6 @@
             contrast(1.05);
     }
 
-    /* ─── PAUSED STATE CINEMATIC FILTER ───────────────────────────────────────── */
     .video-container.is-paused #dahihPlayer {
         filter: brightness(0.6) saturate(1.15) contrast(1.05);
         transform: scale(1.012);
@@ -836,20 +669,12 @@
         filter: brightness(0.55) saturate(1.1) contrast(1.08);
     }
 
-    /* ─── DYNAMIC AMBIENT CYCLER ──────────────────────────────────────────────── */
     .video-container.has-ambient-cycle {
         animation: ambientPulse 8s var(--ease-fluid) infinite;
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer overlays  ▓▓▓
-   Poster · Hero metadata · Loading · Error · End-card · Buffering Spinner
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer overlays {
-
-    /* ─── POSTER (cinematic reveal) ───────────────────────────────────────────── */
     .video-poster {
         position: absolute;
         inset: 0;
@@ -915,7 +740,6 @@
 
     .video-poster > * { position: relative; z-index: 3; }
 
-    /* ─── POSTER METADATA (title, subtitle, badges) ───────────────────────────── */
     .poster-meta {
         display: flex;
         flex-direction: column;
@@ -963,7 +787,6 @@
         -webkit-backdrop-filter: blur(var(--blur-glass));
     }
 
-    /* ─── BUFFERING SPINNER (orbiting halo + masked conic) ────────────────────── */
     .buffering-spinner {
         position: absolute;
         top: 50%; left: 50%;
@@ -1013,7 +836,6 @@
         -webkit-mask: radial-gradient(circle, transparent 55%, #000 56%, #000 100%);
     }
 
-    /* ─── ERROR OVERLAY ───────────────────────────────────────────────────────── */
     .player-error {
         position: absolute;
         inset: 0;
@@ -1050,7 +872,6 @@
         max-width: 60%;
     }
 
-    /* ─── END-CARD / NEXT EPISODE ─────────────────────────────────────────────── */
     .end-card {
         position: absolute;
         inset: 0;
@@ -1067,7 +888,6 @@
 
     .video-container.is-ended .end-card { display: flex; animation: fadeScale var(--t-cinematic) both; }
 
-    /* ─── TOAST / SNACKBAR ────────────────────────────────────────────────────── */
     .player-toast {
         position: absolute;
         top: var(--p-space-5);
@@ -1090,7 +910,6 @@
 
     .player-toast.is-leaving { animation: toastOut var(--t-fast) forwards; }
 
-    /* ─── LIVE INDICATOR ──────────────────────────────────────────────────────── */
     .live-badge {
         display: inline-flex;
         align-items: center;
@@ -1116,36 +935,42 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer states  ▓▓▓
-   Player state machine reflected in CSS.
-   States: idle · paused · playing · buffering · seeking · scrubbing
-           gesture-active · theater · fullscreen · mini · pip · audio · live · low-power
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer states {
+    .video-container.is-idle { 
+        cursor: none !important; 
+    }
+    
+    .video-container.is-idle .controls { 
+        opacity: 0 !important; 
+        visibility: hidden !important; 
+        transform: translateY(18px) scale(0.96) !important; 
+        pointer-events: none !important;
+        transition: 
+            opacity var(--t-cinematic) var(--ease-emphasized),
+            transform var(--t-cinematic) var(--ease-emphasized),
+            visibility var(--t-cinematic) var(--ease-emphasized) !important;
+    }
 
-    .video-container.is-idle      { cursor: none; }
-    .video-container.is-idle .controls { opacity: 0; visibility: hidden; }
-
-    .video-container.is-playing   { /* ambient at rest */ }
-    .video-container.is-paused    { /* dim filter, ambient on, ctrls visible */ }
+    .video-container.is-idle .center-play {
+        opacity: 0 !important;
+        transform: scale(0.9) !important;
+        pointer-events: none !important;
+        transition: 
+            opacity var(--t-cinematic) var(--ease-emphasized),
+            transform var(--t-cinematic) var(--ease-emphasized) !important;
+    }
 
     .video-container.is-buffering .center-play { display: none; }
-
     .video-container.is-seeking,
     .video-container.is-scrubbing { cursor: ew-resize; }
-
     .video-container.is-gesture-active * { transition-duration: 0.05s !important; }
 
-    /* Theater mode: wider, darker surrounding */
     .video-container.v-theater {
         border-radius: 0;
         box-shadow: none;
         max-width: 100vw;
     }
 
-    /* Mini-player: tiny floating window */
     .video-container.v-mini {
         position: fixed;
         bottom: 16px;
@@ -1157,20 +982,16 @@
         animation: floatUp var(--t-base) var(--ease-spring-soft) both;
     }
 
-    /* PiP simulation */
     .video-container.v-pip {
         border: 2px solid var(--p-stroke-strong);
     }
 
-    /* Audio-only mode: hide video, show waveform */
     .video-container.v-audio #dahihPlayer { opacity: 0; }
     .video-container.v-audio { background: linear-gradient(135deg, var(--c-ink-200), var(--c-ink-100)); }
 
-    /* Live-stream mode: no scrubbing, live badge */
     .video-container.v-live .progress-fill::after { display: none; }
     .video-container.v-live .progress { background: var(--p-state-live); opacity: 0.4; }
 
-    /* Low-power mode (battery saver): simplify everything */
     .video-container.v-low-power {
         --blur-glass: 0px;
         --blur-deep:  0px;
@@ -1186,14 +1007,7 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer controls  ▓▓▓
-   The control bar · buttons · time display · menus · micro-interactions
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer controls {
-
-    /* ─── CENTER PLAY (hero glass orb) ────────────────────────────────────────── */
     .center-play {
         position: absolute;
         inset: 0;
@@ -1204,11 +1018,9 @@
         opacity: 0;
         transform: scale(1.06);
         pointer-events: none;
-        transition: opacity var(--t-base), transform var(--t-base);
+        transition: opacity var(--t-base) var(--ease-cinematic), transform var(--t-base) var(--ease-cinematic);
         will-change: opacity, transform;
     }
-
-    .video-container.is-buffering .center-play { display: none; }
 
     .center-play.is-visible {
         opacity: 1;
@@ -1240,7 +1052,6 @@
             border-color var(--t-fast);
     }
 
-    /* Conic halo ring */
     .center-play > div::before {
         content: "";
         position: absolute;
@@ -1257,7 +1068,6 @@
         opacity: 0.7;
     }
 
-    /* Top-light specular */
     .center-play > div::after {
         content: "";
         position: absolute;
@@ -1307,7 +1117,6 @@
 
     .center-play > div:active { transform: scale(0.94); }
 
-    /* ─── CONTROLS BAR (glass dock) ───────────────────────────────────────────── */
     .controls {
         position: absolute;
         bottom: clamp(12px, 3cqi, 22px);
@@ -1334,12 +1143,11 @@
         gap: clamp(8px, 1.8cqi, 12px);
         overflow: hidden;
         transition:
-            opacity    var(--t-base),
-            transform  var(--t-base),
-            visibility var(--t-base);
+            opacity    var(--t-base) var(--ease-cinematic),
+            transform  var(--t-base) var(--ease-cinematic),
+            visibility var(--t-base) var(--ease-cinematic);
     }
 
-    /* Sweeping shimmer on activation */
     .controls::before {
         content: "";
         position: absolute;
@@ -1365,7 +1173,6 @@
         }
     }
 
-    /* Staggered children reveal */
     .controls > * {
         opacity: 0;
         transform: translateY(6px);
@@ -1377,7 +1184,6 @@
     .controls .progress-wrapper { --stagger: 0.05s; }
     .controls .controls-bar     { --stagger: 0.1s; }
 
-    /* Visible states */
     .video-container.is-active .controls,
     .video-container:not(.is-idle):hover .controls,
     .controls:focus-within,
@@ -1396,7 +1202,6 @@
         transform: translateY(0);
     }
 
-    /* ─── CONTROLS BAR ROW ────────────────────────────────────────────────────── */
     .controls-bar {
         display: flex;
         justify-content: space-between;
@@ -1411,7 +1216,6 @@
         gap: clamp(6px, 1.6cqi, 12px);
     }
 
-    /* ─── TIME DISPLAY (tabular nums) ─────────────────────────────────────────── */
     .time-display {
         color: var(--p-text-main);
         font-size: clamp(0.74rem, 2cqi, 0.86rem);
@@ -1432,7 +1236,6 @@
     .time-display .duration { color: var(--p-text-dim); font-weight: var(--p-fw-normal); }
     .time-display.is-remaining .duration::before { content: "-"; }
 
-    /* ─── ICON BUTTON (the workhorse) ─────────────────────────────────────────── */
     .icon-btn {
         width:  clamp(34px, 8cqi, 42px);
         height: clamp(34px, 8cqi, 42px);
@@ -1467,7 +1270,6 @@
         transition: transform var(--t-fast), filter var(--t-fast);
     }
 
-    /* Hover plate */
     .icon-btn::before {
         content: "";
         position: absolute;
@@ -1480,7 +1282,6 @@
         z-index: 0;
     }
 
-    /* Press ripple */
     .icon-btn::after {
         content: "";
         position: absolute;
@@ -1523,7 +1324,6 @@
 
     .icon-btn.is-pressed svg { animation: iconPop 0.4s var(--ease-spring); }
 
-    /* ─── ICON BUTTON VARIANTS ────────────────────────────────────────────────── */
     .icon-btn.v-primary {
         background: var(--p-accent);
         color: #fff;
@@ -1540,7 +1340,6 @@
         font-weight: var(--p-fw-semibold);
     }
 
-    /* ─── SETTINGS MENU (popover) ─────────────────────────────────────────────── */
     .settings-menu {
         position: absolute;
         bottom: calc(100% + 12px);
@@ -1589,7 +1388,6 @@
     .settings-menu__item .label    { font-weight: var(--p-fw-medium); }
     .settings-menu__item .value    { color: var(--p-text-dim); font-variant-numeric: tabular-nums; }
 
-    /* ─── TOOLTIP (contextual) ────────────────────────────────────────────────── */
     .tooltip {
         position: absolute;
         bottom: calc(100% + 8px);
@@ -1624,7 +1422,6 @@
         }
     }
 
-    /* ─── PLAYBACK SPEED INDICATOR ────────────────────────────────────────────── */
     .speed-indicator {
         font-variant-numeric: tabular-nums;
         font-weight: var(--p-fw-bold);
@@ -1635,13 +1432,7 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer progress  ▓▓▓
-   Streaming-grade scrubber: chapters · heatmap · thumbnails · physics
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer progress {
-
     .progress-wrapper {
         position: relative;
         width: 100%;
@@ -1672,7 +1463,6 @@
     }
     .progress-wrapper:active .progress { height: 6px; }
 
-    /* Buffered (loaded) layer */
     .progress-loaded {
         position: absolute;
         top: 0; left: 0;
@@ -1684,7 +1474,6 @@
         transition: width 0.3s var(--ease-decelerate);
     }
 
-    /* Played fill */
     .progress-fill {
         position: absolute;
         top: 0; left: 0;
@@ -1700,7 +1489,6 @@
         overflow: hidden;
     }
 
-    /* Internal shine sweep */
     .progress-fill::before {
         content: "";
         position: absolute;
@@ -1715,7 +1503,6 @@
         pointer-events: none;
     }
 
-    /* Thumb */
     .progress-fill::after {
         content: "";
         position: absolute;
@@ -1751,7 +1538,6 @@
             0 0 0 6px color-mix(in srgb, var(--p-accent) 18%, transparent);
     }
 
-    /* ─── HOVER TOOLTIP (timestamp + thumbnail) ───────────────────────────────── */
     .progress-hover-tooltip {
         position: absolute;
         bottom: 100%;
@@ -1814,7 +1600,6 @@
         text-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
     }
 
-    /* ─── THUMBNAIL PREVIEW (sprite-driven) ───────────────────────────────────── */
     .progress-thumbnail {
         width:  clamp(120px, 24cqi, 180px);
         aspect-ratio: 16 / 9;
@@ -1827,7 +1612,6 @@
         overflow: hidden;
     }
 
-    /* ─── CHAPTER MARKERS ─────────────────────────────────────────────────────── */
     .chapter-marker {
         position: absolute;
         top: 0;
@@ -1854,7 +1638,6 @@
     .progress-wrapper:hover .chapter-marker::after { transform: translate(-50%, -50%) scale(1); }
     .chapter-marker.is-active::after { background: var(--p-accent); animation: chapterPing 1.2s ease-out infinite; }
 
-    /* ─── BUFFERED HEATMAP (rare engagement zones) ────────────────────────────── */
     .progress-heatmap {
         position: absolute;
         top: -2px;
@@ -1879,7 +1662,6 @@
         filter: blur(2px);
     }
 
-    /* ─── SEEKING / SCRUBBING STATE ───────────────────────────────────────────── */
     .video-container.is-seeking .progress { height: 6px; }
     .video-container.is-seeking .progress-fill::after {
         transform: translateY(-50%) scale(1.3);
@@ -1887,13 +1669,7 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer audio-ui  ▓▓▓
-   Volume slider · EQ visualizer · spatial bass-reactive lighting
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer audio-ui {
-
     .volume-container {
         display: flex;
         align-items: center;
@@ -1947,7 +1723,6 @@
     }
 
     .volume-slider:hover { height: 4px; }
-
     .volume-slider::-webkit-slider-runnable-track { width: 100%; height: 100%; cursor: pointer; }
     .volume-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
@@ -1979,7 +1754,6 @@
 
     .volume-slider:active::-webkit-slider-thumb { transform: scale(1.1); }
 
-    /* ─── EQ VISUALIZER (bars sync via JS-set --audio-level) ──────────────────── */
     .eq-visualizer {
         display: inline-flex;
         align-items: end;
@@ -2005,7 +1779,6 @@
 
     .video-container:not(.is-playing) .eq-visualizer__bar { animation-play-state: paused; }
 
-    /* ─── BASS REACTIVE PULSE on the container ────────────────────────────────── */
     .video-container.has-audio-reactive {
         --bass-glow: calc(var(--bass-pulse) * 40px);
         box-shadow:
@@ -2014,17 +1787,10 @@
         transition: box-shadow 0.1s linear;
     }
 
-    /* ─── MUTE TRANSITION (icon morph) ────────────────────────────────────────── */
     .icon-btn.mute-btn.is-muted svg { animation: iconMorph 0.45s var(--ease-emphasized); }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer gestures  ▓▓▓
-   Tap-zones · skip indicators · ripple feedback · gesture prediction visuals
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer gestures {
-
     .tap-zone {
         position: absolute;
         top: 0;
@@ -2053,7 +1819,6 @@
         .tap-zone:active::after { opacity: 1; transform: scale(1.4); }
     }
 
-    /* ─── SKIP INDICATOR (Apple TV-style) ─────────────────────────────────────── */
     .skip-indicator {
         position: absolute;
         top: 50%;
@@ -2098,7 +1863,6 @@
         animation: skipCinematic 0.7s var(--ease-emphasized) forwards;
     }
 
-    /* ─── GESTURE PREDICTION (subtle hint on edge approach) ───────────────────── */
     .gesture-hint {
         position: absolute;
         top: 50%;
@@ -2118,7 +1882,6 @@
 
     .video-container.is-gesture-active .gesture-hint { opacity: 0.6; }
 
-    /* ─── RIPPLE LAYER (per-tap feedback) ─────────────────────────────────────── */
     .ripple {
         position: absolute;
         width: 24px;
@@ -2129,7 +1892,6 @@
         animation: ripplePremium 0.7s var(--ease-decelerate) forwards;
     }
 
-    /* ─── EDGE SWIPE INDICATORS (mobile brightness/volume) ────────────────────── */
     .edge-swipe-indicator {
         position: absolute;
         z-index: var(--z-osd);
@@ -2160,13 +1922,7 @@
     .video-container.is-gesture-active .edge-swipe-indicator.is-visible { opacity: 1; }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer fullscreen  ▓▓▓
-   Cinema mode · theater · safe-area aware · landscape lock simulation
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer fullscreen {
-
     #fs-wrapper {
         width: 100%;
         height: 100%;
@@ -2210,7 +1966,6 @@
         transform: scale(0.95) rotate(180deg);
     }
 
-    /* Theater mode (within document, not OS fullscreen) */
     .video-container.v-theater {
         width: 100vw;
         height: 70vh;
@@ -2218,13 +1973,7 @@
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer mobile  ▓▓▓
-   Touch-first refinements · safe-area · thumb-reach · adaptive density
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer mobile {
-
     @container player (max-width: 480px) {
         .controls {
             left: 10px;
@@ -2251,26 +2000,17 @@
         .controls-bar .group { gap: 4px; }
     }
 
-    /* Mobile portrait: stronger ambient (compensate for small screen) */
     @media (orientation: portrait) and (pointer: coarse) {
         .video-container::before { opacity: 0.85; }
     }
 
-    /* Disable hover-only effects on touch */
     @media (hover: none) {
         .icon-btn:hover { transform: none; opacity: 0.85; }
         .progress-fill::after { transform: translateY(-50%) scale(1); opacity: 1; }
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer performance  ▓▓▓
-   GPU compositing hints · paint isolation · low-power adaptive scaling
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer performance {
-
-    /* Compositing hints */
     .controls,
     .center-play,
     .progress-fill,
@@ -2281,11 +2021,9 @@
         transform: translateZ(0);
     }
 
-    /* When idle, drop will-change to free GPU memory */
     .video-container.is-idle .controls,
     .video-container.is-idle .center-play { will-change: auto; }
 
-    /* Low-end device fallback: detect via slow update or save-data */
     @media (update: slow) or (prefers-reduced-transparency) {
         .video-container * {
             backdrop-filter: none !important;
@@ -2301,21 +2039,13 @@
         .progress-fill::before { display: none; }
     }
 
-    /* Battery / data saver modes */
     @media (prefers-reduced-data: reduce) {
         .video-container::before { animation: none; opacity: 0.2; }
         .progress-fill::before { display: none; }
     }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer accessibility  ▓▓▓
-   Reduced motion · transparency · forced-colors · keyboard focus · screen readers
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer accessibility {
-
-    /* ─── REDUCED MOTION (the gold standard) ──────────────────────────────────── */
     @media (prefers-reduced-motion: reduce) {
         .video-container *,
         .video-container *::before,
@@ -2327,7 +2057,6 @@
         }
     }
 
-    /* ─── FORCED COLORS (Windows High Contrast) ───────────────────────────────── */
     @media (forced-colors: active) {
         .video-container {
             border: 1px solid CanvasText;
@@ -2345,14 +2074,12 @@
         .progress      { background: ButtonFace; border: 1px solid CanvasText; }
     }
 
-    /* ─── KEYBOARD FOCUS RING ─────────────────────────────────────────────────── */
     .video-container :focus-visible {
         outline: 2px solid var(--p-accent);
         outline-offset: 3px;
         border-radius: var(--p-radius-xs);
     }
 
-    /* ─── SCREEN READER ONLY ──────────────────────────────────────────────────── */
     .visually-hidden,
     .sr-only {
         position: absolute;
@@ -2366,7 +2093,6 @@
         border: 0;
     }
 
-    /* ─── ARIA STATES ─────────────────────────────────────────────────────────── */
     [aria-disabled="true"],
     [disabled] {
         opacity: 0.4 !important;
@@ -2377,13 +2103,7 @@
     [aria-busy="true"] { cursor: progress; }
 }
 
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  @layer utilities  ▓▓▓
-   Atomic helpers — last layer wins.
-   ═══════════════════════════════════════════════════════════════════════════════ */
 @layer utilities {
-
     .u-hidden        { display: none !important; }
     .u-invisible     { visibility: hidden !important; }
     .u-no-pointer    { pointer-events: none !important; }
@@ -2406,7 +2126,3 @@
         -webkit-backdrop-filter: blur(var(--blur-deep)) saturate(180%);
     }
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════════
-   ▓▓▓  END OF CINEMATIC PLAYER UI ENGINE  ▓▓▓
-   ═══════════════════════════════════════════════════════════════════════════════ */
