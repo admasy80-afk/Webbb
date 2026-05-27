@@ -45,7 +45,6 @@
         if ('vibrate' in navigator) { try { navigator.vibrate(ms); } catch (e) {} }
     };
 
-    // المصادقة مع فحص وحقن تنبيهات الـ alert لمعرفة النقص
     function authGate() {
         const userStr = localStorage.getItem('dahih_user');
         const token = localStorage.getItem('dahih_token');
@@ -81,7 +80,6 @@
         }
     }
 
-    // كائن المشغل
     const player = {
         video: null, poster: null, container: null, progress: null, progressBar: null,
         currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
@@ -155,15 +153,14 @@
             this.titleEl.textContent = title || 'جاري التحميل...';
             this.lastSentTime = -1;
 
-            // ✅ التعديل: استخدام كلاس "hidden" بدلاً من "is-hidden" + إظهار الفيديو
             this.poster.classList.add('hidden');
-            this.poster.classList.add('is-hidden'); // إبقاء التوافق مع CSS القديم
+            this.poster.classList.add('is-hidden'); 
             this.video.classList.remove('hidden');
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
             this.video.pause();
             
-            const videoUrl = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
+            const videoUrl = `/api/student/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
             fetch(videoUrl, { headers: { 'Range': 'bytes=0-100' } })
                 .then(async (response) => {
@@ -182,7 +179,6 @@
             const playPromise = this.video.play();
             if (playPromise && playPromise.catch) {
                 playPromise.catch(() => {
-                    // ✅ التعديل: إظهار زر التشغيل المركزي بدون الاعتماد على كلاس is-visible فقط
                     this.centerPlay.classList.add('is-visible');
                     this.centerPlay.style.opacity = "1";
                     this.centerPlay.style.transform = "scale(1)";
@@ -207,7 +203,6 @@
             if (this.video.paused) { this.video.play().catch(() => {}); } else { this.video.pause(); }
         },
 
-        // ✅ التعديل: إخفاء زر التشغيل المركزي عبر الستايل المباشر + الكلاس
         onPlay() {
             this.centerPlay.classList.remove('is-visible');
             this.centerPlay.style.opacity = "0";
@@ -215,7 +210,6 @@
             this.centerPlay.style.pointerEvents = "none";
         },
 
-        // ✅ التعديل: إظهار زر التشغيل المركزي عبر الستايل المباشر + الكلاس
         onPause() {
             this.centerPlay.classList.add('is-visible');
             this.centerPlay.style.opacity = "1";
@@ -288,13 +282,12 @@
         requestAnimationFrame(step);
     }
 
-    // 📡 دالة جلب البيانات من السيرفر مع إظهار الـ Alert الفوري عند الفشل 📡
     async function fetchData(initial = false) {
         const container = $('studentCoursesContainer');
         if (initial && container) {
             container.innerHTML = `
                 <div class="text-center py-16 text-gray-500 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-white/10 w-full">
-                    <svg class="animate-spin h-10 w-10 text-yellow-500 mb-4" xmlns="[w3.org](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
+                    <svg class="animate-spin h-10 w-10 text-yellow-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -326,7 +319,6 @@
             renderAll(data, initial);
             
         } catch (err) {
-            // 🚨 إطلاق تنبيه فوري يحتوي تفاصيل المشكلة لرؤيتها من الجوال
             alert(`🚨 فشل جلب بيانات الـ Dashboard:\nالسبب: ${err.message}\n\nتأكد من عمل السيرفر الداخلي على مسار /api/student/dashboard-data بشكل سليم.`);
 
             if (container) {
@@ -340,7 +332,6 @@
         }
     }
 
-    // توزيع مخرجات التصاميم
     function renderAll(data, initial) {
         try {
             renderCourses(data.courses || data.content?.courses || [], initial);
@@ -376,7 +367,7 @@
             const title = escapeHTML(course.courseName || 'محاضرة');
             const desc = escapeHTML(course.description || 'لا يوجد وصف');
             const duration = escapeHTML(course.duration || 'غير محدد');
-            const image = course.image && course.image.length > 10 ? course.image : '[images.unsplash.com](https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop)';
+            const image = course.image && course.image.length > 10 ? course.image : 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
             const lastWatched = course.lastWatched;
             
             const borderColor = isActive ? 'border-yellow-500/40' : 'border-white/10';
@@ -421,38 +412,40 @@
         });
     }
 
+    // --- التعديل هنا لربط الدالة الخاصة بالكروت بالكود الأصلي ---
     function renderQuizzes(list) {
         const container = $('onlineQuizzesContainer');
         if (!container) return;
-        const h = hash(list.map(q => [q.id, q.title, q.questions.length, (q.results || []).length]));
+        
+        const h = hash(list.map(q => [q.id, q.title, q.questions?.length, (q.results || []).length]));
         if (h === state.quizzesHash) return;
         state.quizzesHash = h;
         state.availableQuizzes = list;
 
         if (!list.length) {
-            container.innerHTML = '<p class="empty">لا توجد اختبارات متاحة حالياً.</p>';
+            container.innerHTML = '<div id="empty-state" class="flex justify-center items-center py-10 w-full text-gray-500">لا توجد اختبارات متاحة حالياً.</div>';
             return;
         }
 
         const html = list.slice().reverse().map(quiz => {
             const result = quiz.results ? quiz.results.find(r => r.email === state.user.email) : null;
-            const action = result
-                ? `<div class="btn w-full md:w-auto mt-auto md:mt-0" style="background:rgba(34,197,94,0.1);color:#4ade80;border:1px solid rgba(34,197,94,0.25);cursor:default;">مكتمل (${result.percentage}%)</div>`
-                : `<button class="btn btn-primary quiz-start w-full md:w-auto mt-auto md:mt-0" data-quizid="${escapeHTML(quiz.id)}" type="button">بدء الاختبار</button>`;
+            
+            // تمرير البيانات بصيغة تتوافق مع دالة توليد الكروت الجديدة
+            const formattedQuiz = {
+                ...quiz,
+                attempted: !!result,
+                score: result ? result.percentage : 0,
+                attempts: result ? 1 : 0, 
+                questionsCount: quiz.questions ? quiz.questions.length : 0,
+                duration: quiz.duration || 15 // لو مفيش وقت افتراضي
+            };
 
-            return `
-                <article class="course-card flex flex-col md:flex-row justify-between h-full">
-                    <div class="mb-4 md:mb-0" style="flex:1;">
-                        <h3 class="text-white font-bold text-lg m-0">${escapeHTML(quiz.title)}</h3>
-                        <p class="text-gray-400 text-sm m-0">${quiz.questions.length} أسئلة</p>
-                    </div>
-                    ${action}
-                </article>`;
+            // استخدام الدالة الجديدة السحرية بتاعتك
+            return window.generateQuizCardHTML(formattedQuiz);
         }).join('');
-        container.innerHTML = `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${html}</div>`;
-        container.querySelectorAll('.quiz-start').forEach(btn => {
-            btn.addEventListener('click', () => openQuizModal(btn.dataset.quizid));
-        });
+        
+        // عرض الكروت جوة Grid مناسب بدال الـ flex القديم
+        container.innerHTML = `<div class="fade-in-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${html}</div>`;
     }
 
     function renderPoints(list) {
@@ -483,71 +476,63 @@
         state.currentPoints = newPoints;
     }
 
-    function openQuizModal(quizId) {
-        const quiz = state.availableQuizzes.find(q => q.id === quizId);
-        if (!quiz) return;
-        const content = $('quizModalContent');
-        const modal = $('quizModal');
-        if (!content || !modal) return;
-
-        const letters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'];
-        const questionsHTML = quiz.questions.map((q, qi) => `
-            <div style="background:rgba(0,0,0,0.4);padding:1rem;border-radius:0.75rem;border:1px solid var(--border);margin-bottom:1rem;">
-                <h4 style="font-size:0.95rem;font-weight:600;margin:0 0 0.85rem;line-height:1.6;color:white;"><span style="color:var(--accent);margin-left:0.4rem;">${qi + 1}.</span>${escapeHTML(q.questionText)}</h4>
-                <div style="display:grid;grid-template-columns:1fr;gap:0.5rem;">
-                    ${q.options.map((opt, oi) => `<label class="quiz-option"><input type="radio" name="q_${qi}" value="${oi}" required><div class="opt"><span class="opt-letter">${letters[oi] || (oi + 1)}</span><span style="color:#cbd5e1;font-size:0.9rem;line-height:1.6;">${escapeHTML(opt)}</span></div></label>`).join('')}
-                </div>
-            </div>`).join('');
-
-        content.innerHTML = `
-            <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:1rem;margin-bottom:1.25rem;">
-                <h2 id="quizModalTitle" style="font-size:1.15rem;font-weight:700;margin:0;color:white;">${escapeHTML(quiz.title)}</h2>
-            </div>
-            <form id="activeQuizForm" style="display:flex;flex-direction:column;">
-                ${questionsHTML}
-                <button type="submit" id="btnSubmitQuiz" class="btn btn-primary" style="padding:0.85rem;">إنهاء وتسليم الإجابات</button>
-                <button type="button" class="btn mt-2" onclick="DahihApp.closeQuiz()" style="background:transparent;border:1px solid var(--border);color:white;">إلغاء</button>
-            </form>`;
-
-        modal.classList.add('is-open');
-        modal.classList.remove('opacity-0', 'pointer-events-none');
-        $('activeQuizForm').addEventListener('submit', (e) => submitQuiz(e, quiz));
-    }
-
-    async function submitQuiz(event, quiz) {
-        event.preventDefault();
-        const btn = $('btnSubmitQuiz');
-        if (btn) { btn.disabled = true; btn.textContent = 'جاري التصحيح...'; }
-
-        const form = event.target;
-        let score = 0;
-        quiz.questions.forEach((q, qi) => {
-            const el = form.elements[`q_${qi}`];
-            if (el && parseInt(el.value) === q.correctAnswer) score++;
-        });
-        const percentage = Math.round((score / quiz.questions.length) * 100);
-
-        try {
-            await fetchWithTimeout('/api/student/submit-quiz', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
-                body: JSON.stringify({ email: state.user.email, studentName: state.user.name, grade: state.user.grade, quizId: quiz.id, score, percentage })
-            });
-            if (percentage >= 85 && typeof confetti === 'function' && !state.reduceMotion) { confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); }
-            closeQuiz();
-            fetchData(true);
-        } catch (err) {
-            alert(`🚨 فشل إرسال نتيجة الاختبار:\n${err.message}`);
-            if (btn) { btn.disabled = false; btn.textContent = 'حاول مجدداً'; }
+    // --- الحل السحري: إضافة دالة إنشاء الكروت هنا ---
+    window.generateQuizCardHTML = function(quiz) {
+        // إخفاء رسالة "لا توجد اختبارات" تلقائياً
+        const emptyState = document.getElementById('empty-state');
+        if(emptyState) {
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
         }
-    }
 
-    function closeQuiz() {
-        const modal = $('quizModal');
-        modal.classList.remove('is-open');
-        modal.classList.add('opacity-0', 'pointer-events-none');
-        document.body.style.overflow = '';
-    }
+        // رسم الكارت بالتصميم الجديد
+        if (!quiz.attempted) {
+            return `
+            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card card-new animate-fade bg-white/5 border border-white/10 p-5 rounded-2xl hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
+                <div class="flex-grow">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
+                        <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
+                    </div>
+                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
+                    <p class="text-sm text-gray-400 flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        ${quiz.questionsCount || 0} سؤال
+                    </p>
+                </div>
+                
+                <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
+                    <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
+                    <div class="action-icon w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
+                        <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </div>
+                </div>
+            </div>
+            `;
+        } else {
+            return `
+            <div tabindex="0" role="button" onclick='QuizEngine.open(${JSON.stringify(quiz).replace(/"/g, "&quot;")})' class="quiz-card animate-fade bg-white/5 border border-white/10 border-r-4 border-r-green-500/80 p-5 rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
+                <div class="flex justify-between items-start mb-3 flex-grow">
+                    <div>
+                        <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider mb-3 inline-block">مكتمل</span>
+                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${quiz.title || 'بدون عنوان'}</h3>
+                    </div>
+                </div>
+                
+                <div class="text-xs text-gray-500 space-y-1 mb-4 flex-grow">
+                    ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
+                </div>
+
+                <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
+                    <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
+                    <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-green-400' : 'text-red-400'} leading-none">
+                        ${quiz.score || 0}%
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+    };
 
     function init() {
         if (!authGate()) return;
@@ -562,11 +547,39 @@
         if (!state.pollTimer) {
             state.pollTimer = setInterval(() => fetchData(false), 10000);
         }
+
+        // --- إضافة أحداث أزرار الفلترة هنا لتشتغل عند تهيئة النظام ---
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // تفعيل شكل الزرار
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                // فلترة الكروت المعروضة
+                const filter = e.target.getAttribute('data-filter');
+                const cards = document.querySelectorAll('.quiz-card');
+                
+                cards.forEach(card => {
+                    if (filter === 'all') {
+                        card.style.display = 'flex';
+                    } else if (filter === 'new' && card.classList.contains('card-new')) {
+                        card.style.display = 'flex';
+                    } else if (filter === 'completed' && !card.classList.contains('card-new')) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
     }
 
     window.DahihApp = {
-        logout, toggleFullscreen, closeQuiz,
-        refresh: () => fetchData(true)
+        logout, 
+        toggleFullscreen, 
+        refresh: () => fetchData(true),
+        getState: () => state,
+        fetchWithTimeout: fetchWithTimeout
     };
 
     if (document.readyState === 'loading') {
