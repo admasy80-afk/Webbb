@@ -680,17 +680,12 @@
         }
     };
 
-    // 🚀 [تحسين]: دوال الـ Polling الجديدة اللي تعتمد على setInterval بدل الـ while loop
+    // 🚀 [تعديل]: تحسين دوال الـ Polling كما هو مطلوب بـ start و stop
     function startDashboardPolling() {
-        if (poller.timer) {
-            console.warn('Polling already exists');
-            return;
-        }
-        if (state.isTesting) return; // لا تعمل إذا كان يختبر
+        if (poller.timer) return;
 
-        // طلب جلب البيانات كل 30 ثانية لتخفيف الضغط
         poller.timer = setInterval(async () => {
-            if (document.hidden || state.isTesting) return;
+            if (state.isTesting) return;
             await fetchData(false);
         }, 30000); 
     }
@@ -703,6 +698,8 @@
     }
 
     function setupGlobalListeners() {
+        let lastVisibilityFetch = 0; // 🚀 [تعديل]: التحكم في الـ Fetch أثناء العودة للنافذة
+
         document.addEventListener('click', (e) => {
             const filterBtn = e.target.closest('.filter-btn');
             if (filterBtn) {
@@ -751,13 +748,24 @@
             }
         });
 
-        document.addEventListener('visibilitychange', () => {
+        // 🚀 [تعديل]: إصلاح الـ visibilitychange ليعمل بتناغم مع الدوال الجديدة
+        document.addEventListener('visibilitychange', async () => {
             if (document.hidden) {
+                stopDashboardPolling();
+                
+                // حفظ تقدم الفيديو إن وجد
                 if (player.video && !player.video.paused) {
                     player.saveProgressBackground(true);
                 }
-            } else {
-                fetchData(false);
+                return;
+            }
+
+            startDashboardPolling();
+
+            const now = Date.now();
+            if (now - lastVisibilityFetch > 15000) {
+                lastVisibilityFetch = now;
+                await fetchData(false);
             }
         });
 
@@ -785,7 +793,7 @@
         });
     }
 
-    // 🚀 [تحسين]: تصدير الدوال اللازمة للـ quiz.js عشان يوقف الـ polling ويرجعه
+    // 🚀 [تحسين]: تصدير الدوال اللازمة للـ quiz.js
     Object.freeze(window.DahihApp = {
         logout, 
         toggleFullscreen, 
