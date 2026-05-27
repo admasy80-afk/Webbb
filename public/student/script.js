@@ -200,6 +200,10 @@
         centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
+        
+        // 🚀 [تحسين]: متغيرات تتبع حالة الخمول والوقت الزمني للاختفاء
+        idleTimer: null,
+        idleTimeout: 3000, // المدة الزمنية قبل إخفاء عناصر التحكم (3 ثوانٍ)
 
         init() {
             this.video         = $('dahihPlayer');
@@ -235,6 +239,22 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
+            // 🚀 [تحسين]: مراقبة نشاط وحركة المستخدم لإخفاء وإظهار الواجهة
+            if (this.container) {
+                const triggerActivity = () => this.resetIdleTimer();
+                this.container.addEventListener('mousemove', triggerActivity);
+                this.container.addEventListener('pointermove', triggerActivity);
+                this.container.addEventListener('touchmove', triggerActivity, { passive: true });
+                this.container.addEventListener('touchstart', triggerActivity, { passive: true });
+
+                // إخفاء فوري لشريط التحكم عند خروج الماوس تماماً من حاوية الفيديو (بشرط أن يكون الفيديو يعمل)
+                this.container.addEventListener('mouseleave', () => {
+                    if (this.video && !this.video.paused) {
+                        this.container.classList.add('is-idle');
+                    }
+                });
+            }
+
             this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, '+10 ثواني'); });
             this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, '-10 ثواني'); });
 
@@ -243,12 +263,14 @@
                 state.speedIndex = (state.speedIndex + 1) % state.speeds.length;
                 this.video.playbackRate = state.speeds[state.speedIndex];
                 this.speedBtn.textContent = state.speeds[state.speedIndex] + 'x';
+                this.resetIdleTimer();
             });
 
             this.muteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.video.muted = !this.video.muted;
                 this.updateMuteIcon();
+                this.resetIdleTimer();
             });
 
             this.progress.addEventListener('click', (e) => {
@@ -259,7 +281,23 @@
                 if (isFinite(this.video.duration)) {
                     this.video.currentTime = pos * this.video.duration;
                 }
+                this.resetIdleTimer();
             });
+        },
+
+        // 🚀 [تحسين]: دالة إدارة كلاس الخمول (is-idle) وإعادة تصفير المؤقت
+        resetIdleTimer() {
+            if (!this.container) return;
+
+            this.container.classList.remove('is-idle');
+            clearTimeout(this.idleTimer);
+
+            // تفعيل عداد الإخفاء فقط إذا كان الفيديو قيد التشغيل حالياً وليس موقوفاً مؤقتاً
+            if (this.video && !this.video.paused) {
+                this.idleTimer = setTimeout(() => {
+                    this.container.classList.add('is-idle');
+                }, this.idleTimeout);
+            }
         },
 
         async load(msgId, title) {
@@ -285,11 +323,10 @@
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
 
-            // 🚀 [تحسين]: إيقاف الفيديو الحالي دون تفريغ الـ src والتسبب في Flashing
+            // إيقاف الفيديو الحالي دون تفريغ الـ src والتسبب في Flashing
             this.video.pause();
             
             try {
-                // ✅ [التعديل هنا]: تم استخدام المسار الدقيق الذي طلبته /api/student/video/stream/
                 const videoUrl = `/api/student/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
 
                 // فحص اتصال الرابط لمعرفة إذا كان السيرفر يرد بشكل سليم
@@ -304,7 +341,7 @@
 
                 if (currentReqId !== state.videoRequestId) return;
 
-                // 🚀 [تحسين]: تعيين الـ src فقط إذا كان مختلفاً
+                // تعيين الـ src فقط إذا كان مختلفاً
                 if (this.video.src !== videoUrl) {
                     this.video.src = videoUrl;
                     this.video.load();
@@ -322,6 +359,8 @@
 
                 updateActiveCourseCard(msgId);
                 this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
+                
+                this.resetIdleTimer(); // تهيئة وإعادة تصفير عداد الخمول عند بداية التحميل
 
             } catch (err) {
                 if (err.name === 'AbortError') return; 
@@ -341,6 +380,7 @@
             this.centerPlay.style.opacity = "0";
             this.centerPlay.style.transform = "scale(1.5)";
             this.centerPlay.style.pointerEvents = "none";
+            this.resetIdleTimer(); // بدء مؤقت إخفاء العناصر فور بدء التشغيل
         },
 
         onPause() {
@@ -348,6 +388,10 @@
             this.centerPlay.style.opacity = "1";
             this.centerPlay.style.transform = "scale(1)";
             this.centerPlay.style.pointerEvents = "auto";
+            
+            // عند إيقاف الفيديو مؤقتاً، نلغي مؤقت الخمول تماماً لإبقاء العناصر ظاهرة بشكل دائم للمستخدم
+            if (this.container) this.container.classList.remove('is-idle');
+            clearTimeout(this.idleTimer);
         },
 
         onTimeUpdate() {
@@ -398,6 +442,7 @@
             void this.skipIndicator.offsetWidth;
             this.skipIndicator.classList.add('is-active');
             haptic(35);
+            this.resetIdleTimer(); // إعادة تعيين العداد عند التخطي للامام أو الخلف
         },
 
         updateMuteIcon() {
