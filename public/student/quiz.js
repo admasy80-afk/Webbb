@@ -518,7 +518,6 @@
             if(content) content.scrollTo({ top: 0, behavior: EngineCore.isLowEnd ? 'auto' : 'smooth' });
         },
 
-        // --- تحديث الـ Virtual DOM لتوليد شكل الـ UI الجديد ---
         renderVirtualDOM(direction = 0) {
             UIState.set(UIState.TRANSITIONING);
             const total = this.quiz.questions.length;
@@ -541,17 +540,14 @@
 
                     const card = $el('div', { className: `qe-card-layer ${enterClass}`, 'data-index': idx });
                     
-                    // توليد الترويسة (Header) الخاصة بالسؤال
                     const header = $el('div', { className: 'qe-q-header' });
                     const title = $el('h3', { className: 'qe-q-title' });
                     title.innerHTML = `<svg style="width:1.25rem;height:1.25rem;color:#6b7280" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> السؤال رقم ${idx + 1}`;
                     header.appendChild(title);
                     card.appendChild(header);
 
-                    // توليد مربع نص السؤال (Dark Box)
                     card.appendChild($el('div', { className: 'qe-q-text-box' }, [escapeHTML(q.questionText)]));
                     
-                    // توليد شبكة الخيارات (Grid Options)
                     const group = $el('div', { className: 'qe-options-grid', role: 'radiogroup' });
                     q.options.forEach((opt, oi) => {
                         const isChecked = this.answers[`q_${idx}`] == oi;
@@ -733,10 +729,28 @@
                 Scheduler.idle(() => localStorage.removeItem(`dq_${this.quiz.id}`));
                 Sensory.success();
                 
-                if (percentage >= 85 && !EngineCore.isLowEnd && typeof confetti === 'function') {
-                    confetti({ particleCount: 250, spread: 110, origin: { y: 0.4 }, colors: ['#facc15', '#22c55e', '#ffffff'], zIndex: 99999999 });
-                } else if (typeof confetti === 'function') {
-                    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+                // 🚀 [إصلاح الأداء]: تغليف Confetti في Try-Catch وضبط عدد الجزيئات والـ zIndex
+                try {
+                    if (typeof confetti === 'function') {
+                        if (percentage >= 85 && !EngineCore.isLowEnd) {
+                            confetti({
+                                particleCount: 80,
+                                spread: 90,
+                                origin: { y: 0.6 },
+                                colors: ['#facc15', '#22c55e', '#ffffff'],
+                                zIndex: 9999
+                            });
+                        } else {
+                            confetti({
+                                particleCount: 50,
+                                spread: 70,
+                                origin: { y: 0.6 },
+                                zIndex: 9999
+                            });
+                        }
+                    }
+                } catch (err) {
+                    console.warn('Confetti blocked safely');
                 }
 
                 if (overlay) {
