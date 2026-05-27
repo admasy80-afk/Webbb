@@ -304,15 +304,16 @@
                     
                     <div class="p-2 md:p-5 bg-black/50 aspect-video flex items-center justify-center relative group" id="fs-wrapper">
                         
-                        <div id="videoContainer" class="video-container group w-full h-full">
+                        <!-- بداية قسم المشغل بتصميم Apple TV -->
+                        <div id="videoContainer" class="video-container group w-full h-full is-active" dir="ltr">
                             
-                            <!-- 1. الطبقات السينمائية (الـ Vignette والـ Fades مهمين عشان التباين) -->
+                            <!-- 1. الطبقات السينمائية -->
                             <div class="top-fade"></div>
                             <div class="bottom-fade"></div>
                             <div class="cinema-vignette"></div>
 
                             <!-- 2. بوستر البداية -->
-                            <div id="videoPoster" class="video-poster">
+                            <div id="videoPoster" class="video-poster" dir="rtl">
                                 <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-soft-bounce">
                                     <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                                 </div>
@@ -320,84 +321,94 @@
                                 <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل للبدء في المذاكرة</p>
                             </div>
 
-                            <div class="buffering-spinner"></div>
+                            <div class="buffering-spinner">
+                                <svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="20"></circle></svg>
+                            </div>
                             <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full"></video>
                             
-                            <!-- مناطق اللمس للتقديم والتأخير -->
+                            <!-- مناطق اللمس للتقديم والتأخير (Mobile) -->
                             <div class="tap-zone left" id="tapLeft"></div>
                             <div class="tap-zone right" id="tapRight"></div>
-                            <div class="skip-indicator left" id="skipIndicatorLeft" aria-hidden="true"><span id="skipTextLeft">-10</span></div>
-                            <div class="skip-indicator right" id="skipIndicatorRight" aria-hidden="true"><span id="skipTextRight">+10</span></div>
 
-                            <!-- 3. زراير التحكم اللي في النص (استخدمنا الكلاسات الزجاجية الخاصة بـ Apple) -->
+                            <!-- 3. الشريط العلوي (Top Bar) -->
+                            <div class="top-bar">
+                                <div class="top-bar__left">
+                                    <button class="glass-btn" style="width: 44px; height: 44px;" onclick="DahihApp.toggleFullscreen()" aria-label="Toggle Fullscreen">
+                                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" class="w-5 h-5"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+                                    </button>
+                                    <button class="glass-btn" style="width: 44px; height: 44px;" id="pipBtn" aria-label="Picture in Picture">
+                                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" class="w-5 h-5"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                    </button>
+                                </div>
+                                <div class="top-bar__right">
+                                    <button class="glass-btn" style="width: 44px; height: 44px;" aria-label="Cast">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 14h16V6H4v12zm0-4h2c0 2.2-1.8 4-4 4v-2c1.1 0 2-.9 2-2zm0-4h4c0 3.3-2.7 6-6 6v-2c2.2 0 4-1.8 4-4zm0-4h6c0 4.4-3.6 8-8 8v-2c3.3 0 6-2.7 6-6z"/></svg>
+                                    </button>
+                                    <div class="volume-container flex items-center gap-2 relative group" id="volumeContainer">
+                                        <button class="glass-btn" style="width: 44px; height: 44px;" id="muteBtn" aria-label="Mute">
+                                            <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. أزرار التحكم في منتصف الشاشة (Center Stack) -->
                             <div class="center-stack" id="centerPlay">
-                                 <button class="glass-btn skip-btn" aria-label="Skip backward">
-                                    <span class="skip-num">10</span>
-                                    <svg viewBox="0 0 24 24"><path d="M11 19l-7-7 7-7v14zm8 0l-7-7 7-7v14z"/></svg>
+                                 <button class="glass-btn skip-btn" aria-label="Skip backward 10s">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8zm-1.1 14H9.5v-3.72L8.06 15.8v-.84l2.7-1h.14v4.04zm4.4-1.92c0 .41-.05.77-.16 1.07-.11.3-.26.54-.46.72-.19.18-.42.31-.68.4-.26.09-.55.13-.86.13-.31 0-.6-.04-.86-.13-.26-.09-.49-.22-.68-.4-.19-.18-.35-.42-.46-.72-.11-.3-.16-.66-.16-1.07v-1.13c0-.41.05-.77.16-1.07.11-.3.26-.54.46-.72.19-.18.42-.31.68-.4.26-.09.55-.13.86-.13.31 0 .6.04.86.13.26.09.49.22.68.4.19.18.35.42.46.72.11.3.16.66.16 1.07v1.13zm-1.45-1.18c0-.3-.03-.54-.08-.73-.05-.18-.13-.32-.23-.41-.1-.09-.23-.14-.38-.14s-.28.05-.38.14c-.1.09-.18.23-.23.41-.05.19-.08.43-.08.73v1.23c0 .3.03.54.08.73.05.18.13.32.23.41.1.09.23.14.38.14s.28-.05.38-.14c.1-.09.18-.23.23-.41.05-.19.08-.43.08-.73v-1.23z"/></svg>
                                  </button>
                                  
-                                 <button class="glass-btn play-btn is-pressed" aria-label="Play/Pause">
+                                 <button class="glass-btn play-btn" aria-label="Play/Pause" id="heroPlayBtn">
                                      <div class="halo"></div>
-                                     <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
                                  </button>
                                  
-                                 <button class="glass-btn skip-btn forward" aria-label="Skip forward">
-                                    <span class="skip-num">10</span>
-                                    <svg viewBox="0 0 24 24"><path d="M13 5l7 7-7 7V5zM5 5l7 7-7 7V5z"/></svg>
+                                 <button class="glass-btn skip-btn forward" aria-label="Skip forward 10s">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 5c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8h-2c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4zm-1.1 14H9.5v-3.72L8.06 15.8v-.84l2.7-1h.14v4.04zm4.4-1.92c0 .41-.05.77-.16 1.07-.11.3-.26.54-.46.72-.19.18-.42.31-.68.4-.26.09-.55.13-.86.13-.31 0-.6-.04-.86-.13-.26-.09-.49-.22-.68-.4-.19-.18-.35-.42-.46-.72-.11-.3-.16-.66-.16-1.07v-1.13c0-.41.05-.77.16-1.07.11-.3.26-.54.46-.72.19-.18.42-.31.68-.4.26-.09.55-.13.86-.13.31 0 .6.04.86.13.26.09.49.22.68.4.19.18.35.42.46.72.11.3.16.66.16 1.07v1.13zm-1.45-1.18c0-.3-.03-.54-.08-.73-.05-.18-.13-.32-.23-.41-.1-.09-.23-.14-.38-.14s-.28.05-.38.14c-.1.09-.18.23-.23.41-.05.19-.08.43-.08.73v1.23c0 .3.03.54.08.73.05.18.13.32.23.41.1.09.23.14.38.14s.28-.05.38-.14c.1-.09.18-.23.23-.41.05-.19.08-.43.08-.73v-1.23z"/></svg>
                                  </button>
                             </div>
 
-                            <!-- 4. بيانات الفيديو (مهم تكون جوه الـ container عشان تظهر في الـ Fullscreen) -->
-                            <div class="meta-block">
+                            <!-- 5. بيانات المحاضرة (أسفل اليسار بدلاً من المنتصف) -->
+                            <div class="meta-block" dir="rtl" style="bottom: clamp(90px, 15cqi, 120px);">
+                                 <div class="meta-block__eyebrow">منصة الدحيح</div>
                                  <div class="meta-block__title" id="fullscreenVideoTitle">عنوان المحاضرة هيظهر هنا</div>
-                                 <div class="meta-block__chips">
-                                     <span class="meta-chip is-hdr">4K</span>
-                                     <span class="meta-chip">الفصل الأول</span>
-                                 </div>
                             </div>
 
-                            <!-- 5. شريط التحكم السفلي -->
-                            <div class="controls" dir="ltr">
-                                <div class="progress-wrapper" id="progressContainer" role="slider" tabindex="0">
-                                    <div class="progress">
-                                        <div class="progress-loaded" id="bufferedBar"></div>
-                                        <div class="progress-fill" id="progressBar"></div>
-                                    </div>
-                                    <div class="progress-hover-tooltip" id="progressTooltip"><span>00:00</span></div>
-                                </div>
+                            <!-- 6. أزرار جانبية (أسفل اليمين) -->
+                            <div class="side-rail flex-row" style="top: auto; bottom: clamp(90px, 15cqi, 120px); transform: none; flex-direction: row; right: clamp(24px, 5cqi, var(--pad-edge));">
+                                <button class="glass-btn" style="width: 44px; height: 44px;" aria-label="Audio & Subtitles">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                                </button>
+                                <button class="glass-btn" style="width: 44px; height: 44px;" id="settingsBtn" aria-label="Settings">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M21.9 11.6l-1.19-.32c-.17-.55-.38-1.08-.66-1.57l.79-1.03c.18-.24.15-.59-.08-.8l-1.55-1.55c-.21-.23-.56-.26-.8-.08l-1.03.79c-.49-.28-1.02-.49-1.57-.66L15.49 5.2c-.06-.29-.32-.5-.62-.5h-2.18c-.3 0-.56.21-.62.5l-.32 1.19c-.55.17-1.08.38-1.57.66l-1.03-.79c-.24-.18-.59-.15-.8.08L6.8 7.89c-.23.21-.26.56-.08.8l.79 1.03c-.28.49-.49 1.02-.66 1.57L5.66 11.6c-.29.06-.5.32-.5.62v2.18c0 .3.21.56.5.62l1.19.32c.17.55.38 1.08.66 1.57l-.79 1.03c-.18.24-.15.59.08.8l1.55 1.55c.21.23.56.26.8.08l1.03-.79c.49.28 1.02.49 1.57.66l.32 1.19c.06.29.32.5.62.5h2.18c.3 0 .56-.21.62-.5l.32-1.19c.55-.17 1.08-.38 1.57-.66l1.03.79c.24.18.59.15.8-.08l1.55-1.55c.23-.21.26-.56.08-.8l-.79-1.03c.28-.49.49-1.02.66-1.57l1.19-.32c.29-.06.5-.32.5-.62v-2.18c0-.3-.21-.56-.5-.62zm-8.33 3.97c-1.87 0-3.39-1.52-3.39-3.39s1.52-3.39 3.39-3.39 3.39 1.52 3.39 3.39-1.52 3.39-3.39 3.39z"/></svg>
+                                </button>
+                            </div>
 
-                                <div class="controls-row justify-between w-full mt-2">
-                                    <div class="group flex items-center gap-4">
-                                        <button class="glass-btn" style="width: 44px; height: 44px;" id="playPauseBtnBottom" aria-label="Play">
-                                            <svg viewBox="0 0 24 24" class="w-5 h-5"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
-                                        </button>
-                                        <div class="volume-container flex items-center gap-2" id="volumeContainer">
-                                            <button class="glass-btn" style="width: 44px; height: 44px;" id="muteBtn" aria-label="Mute">
-                                                <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
-                                            </button>
-                                            <!-- الـ volume slider الخاص بك هنا -->
-                                            <div class="volume-slider-wrapper">
-                                                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
-                                            </div>
+                            <!-- 7. شريط الوقت (Timeline - Bottom) -->
+                            <div class="controls" dir="ltr" style="bottom: clamp(40px, 6cqi, 56px);">
+                                <div class="controls-row" style="width: 100%;">
+                                    <div class="time-display" id="currentTimeDisplay">00:00</div>
+                                    
+                                    <div class="progress-wrapper" id="progressContainer" role="slider" tabindex="0" style="flex: 1;">
+                                        <div class="progress">
+                                            <div class="progress-loaded" id="bufferedBar"></div>
+                                            <div class="progress-fill" id="progressBar"></div>
                                         </div>
-                                        <div class="time-display flex items-center gap-1">
-                                            <span id="currentTimeDisplay">00:00</span>
-                                        </div>
+                                        <div class="progress-hover-tooltip" id="progressTooltip"><span>00:00</span></div>
                                     </div>
 
-                                    <div class="group flex items-center gap-3">
-                                        <div class="time-display right is-remaining">
-                                            <span id="durationDisplay">00:00</span>
-                                        </div>
-                                        <button class="glass-btn pill-btn" id="speedBtn">1x</button>
-                                        <button class="glass-btn" style="width: 44px; height: 44px;" onclick="DahihApp.toggleFullscreen()" title="Fullscreen">
-                                            <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
-                                        </button>
-                                    </div>
+                                    <div class="time-display right is-remaining" id="durationDisplay">00:00</div>
                                 </div>
                             </div>
-                            <div id="tt-boost"></div>
+
+                            <!-- 8. أزرار إضافية (تحت شريط الوقت) -->
+                            <div class="bottom-pills" dir="rtl" style="bottom: clamp(16px, 3cqi, 24px); left: clamp(24px, 5cqi, var(--pad-title-left));">
+                                <button class="glass-btn pill-btn" id="infoBtn">معلومات المحاضرة</button>
+                                <button class="glass-btn pill-btn" id="speedBtn" style="font-variant-numeric: normal;">تسريع: 1x</button>
+                            </div>
+
                         </div>
+                        <!-- نهاية المشغل -->
 
                     </div>
                 </div>
@@ -545,7 +556,7 @@
             const emptyState = document.getElementById('empty-state');
             let quizzesData = [];
             let currentFilter = 'all';
-            let listenersInitialized = false; // ← إضافة المتغير لمنع تكرار الـ listeners
+            let listenersInitialized = false;
 
             const renderSkeleton = () => {
                 let html = '';
@@ -661,7 +672,7 @@
                         if (window.QuizEngine && typeof window.QuizEngine.open === 'function') {
                             window.QuizEngine.open(quizData);
                         } else {
-                            alert("جاري الاتصال... انتظر لحظة.");
+                            alert("جاري الاتصال بمحرك الاختبارات الذكي... انتظر لحظة.");
                         }
                     }
                 });
@@ -683,7 +694,6 @@
                 });
             };
 
-            // الدالة الجديدة مع إضافة حماية التكرار !listenersInitialized
             const init = async (dataSource) => {
                 renderSkeleton();
 
@@ -699,7 +709,6 @@
                 }
             };
 
-            // الدالة الجديدة بديلة للقديمة وتم حذف الكود العشوائي
             const reload = (quizId, result = null) => {
                 if (!quizId) {
                     updateStats(quizzesData);
