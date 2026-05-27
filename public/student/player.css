@@ -2769,6 +2769,8 @@
         border: 0.5px solid var(--p-stroke-emphasis);
     }
 }
+/* إخفاء حاوية عناصر التحكم الكبرى بأكملها عند الخمول */
+.video-container.is-idle .controls-container,
 .video-container.is-idle .controls,
 .video-container.is-idle #progressContainer,
 .video-container.is-idle .tq-speed-ring {
@@ -2779,7 +2781,7 @@
     transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s !important;
 }
 
-
+/* إخفاء مؤشر الفأرة (الماوس) أثناء الخمول */
 .video-container.is-idle {
     cursor: none !important;
 }
