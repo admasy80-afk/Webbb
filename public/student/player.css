@@ -2769,3 +2769,16 @@
         border: 0.5px solid var(--p-stroke-emphasis);
     }
 }
+/* عندما يكون المشغل في وضع الخمول (Idle)، يتم إخفاء شريط التقدم وأدوات التحكم */
+.tq-player.tq-idle .tq-controls-container,
+.tq-player.tq-idle .tq-progress-bar,
+.tq-player.tq-idle .tq-speed-ring {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.4s ease-in-out, transform 0.4s ease-in-out !important;
+}
+
+/* إخفاء مؤشر الفأرة (الماوس) أيضاً داخل المشغل أثناء الخمول لراحة العين */
+.tq-player.tq-idle {
+    cursor: none !important;
+}
