@@ -14,20 +14,18 @@
         quizzesHash: '',
         pointsHash: '',
         questionsHash: '',
-        lastDataHash: null, // 🚀 [تحسين]: تخزين بصمة البيانات كاملة لمنع الـ Re-render الوهمي
+        lastDataHash: null,
         availableQuizzes: [],
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
-        isTesting: false, // 🚀 [تحسين]: حالة الاختبار لمنع جلب البيانات أثناء حل الكويز
+        isTesting: false,
         dashboardAbortController: null,
         videoAbortController: null, 
         videoRequestId: 0, 
         reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
 
-    // 🚀 [تحسين]: نظام Polling آمن لا يتكرر ولا يتراكم
     const poller = { timer: null };
-
     const $ = (id) => document.getElementById(id);
 
     const showToast = (message, type = 'info') => {
@@ -85,19 +83,12 @@
     const getSafeImageUrl = (url) => {
         const defaultImg = 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
         if (!url || typeof url !== 'string') return defaultImg;
-        
         try {
             const parsed = new URL(url.trim(), location.origin);
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-                return parsed.href;
-            }
-            if (parsed.origin === location.origin) {
-                return parsed.pathname;
-            }
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href;
+            if (parsed.origin === location.origin) return parsed.pathname;
             return defaultImg;
-        } catch {
-            return defaultImg;
-        }
+        } catch { return defaultImg; }
     };
 
     const formatTime = (t) => {
@@ -135,9 +126,7 @@
                 player.video.pause();
                 player.video.removeAttribute('src');
                 player.video.load();
-            } catch (e) {
-                console.error("Error clearing video on logout:", e);
-            }
+            } catch (e) { console.error(e); }
         }
         localStorage.removeItem('dahih_user');
         localStorage.removeItem('dahih_token');
@@ -150,24 +139,15 @@
         const abortHandler = () => controller.abort();
 
         if (options.signal) {
-            if (options.signal.aborted) {
-                controller.abort();
-            } else {
-                options.signal.addEventListener('abort', abortHandler, { once: true });
-            }
+            if (options.signal.aborted) controller.abort();
+            else options.signal.addEventListener('abort', abortHandler, { once: true });
         }
 
         try {
-            return await fetch(url, {
-                ...options,
-                signal: controller.signal,
-                credentials: 'omit'
-            });
+            return await fetch(url, { ...options, signal: controller.signal, credentials: 'omit' });
         } finally {
             clearTimeout(timeoutId);
-            if (options.signal) {
-                options.signal.removeEventListener('abort', abortHandler);
-            }
+            if (options.signal) options.signal.removeEventListener('abort', abortHandler);
         }
     }
 
@@ -200,8 +180,6 @@
         centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
-        
-        // 🚀 [تحسين]: متغيرات إدارة ونظام الخمول الذكي لرفع الأداء
         idleTimer: null,
         idleTimeout: 3000, 
 
@@ -224,7 +202,7 @@
 
             if (!this.video) return;
 
-            // 🚀 [تحسين الجرافيكس]: حقن كود ستايل ديناميكي لإلغاء العمليات الرسومية المعقدة أثناء الخمول تماماً وتفعيل تسريع الهاردوير للفيديو
+            // 🚀 [الحل الجذري لمشكلة الشاشة الكاملة]: إيقاف تأثيرات الـ CSS الثقيلة عن العمل في الخفاء
             const styleId = 'dahih-player-perf-boost';
             if (!$(styleId)) {
                 const style = document.createElement('style');
@@ -234,11 +212,18 @@
                         will-change: transform;
                         transform: translateZ(0);
                     }
-                    /* تعطيل عمليات الفلاتر والبلور المجهدة للمعالج وكارت الشاشة عندما يختفي شريط التحكم */
-                    #videoContainer.is-idle * {
-                        backdrop-filter: none !important;
-                        -webkit-backdrop-filter: none !important;
-                        pointer-events: none !important;
+                    /* تعطيل الأنيميشن والتدرجات الثقيلة التي تظهر من ملف الـ CSS أثناء الخمول */
+                    #videoContainer.is-idle::before,
+                    #videoContainer.is-idle::after,
+                    #videoContainer.is-idle .aurora-layer,
+                    #videoContainer.is-idle .cinema-vignette,
+                    #videoContainer.is-idle .scan-line,
+                    #videoContainer.is-idle .edge-light,
+                    #videoContainer.is-idle .light-leak {
+                        animation: none !important;
+                        opacity: 0 !important;
+                        visibility: hidden !important;
+                        display: none !important;
                     }
                 `;
                 document.head.appendChild(style);
@@ -259,7 +244,6 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
-            // 🚀 [تحسين]: رصد الحركة واللمس لتصفير عداد الخمول فوراً وإعادة إظهار الشريط بسلاسة
             if (this.container) {
                 const triggerActivity = () => this.resetIdleTimer();
                 this.container.addEventListener('mousemove', triggerActivity);
@@ -304,14 +288,12 @@
             });
         },
 
-        // 🚀 [تحسين أداء]: دالة تصفير مؤقت الخمول الذكية مع مزامنة فجائية للـ DOM عند الاستيقاظ
         resetIdleTimer() {
             if (!this.container) return;
 
             if (this.container.classList.contains('is-idle')) {
                 this.container.classList.remove('is-idle');
                 
-                // تحديث خاطف وفوري لشريط التقدم والنصوص بمجرد ظهور الواجهة لضمان دقة العرض دون تعليق مسبق
                 if (this.video && isFinite(this.video.duration)) {
                     const pct = (this.video.currentTime / this.video.duration) * 100;
                     if (this.progressBar) this.progressBar.style.width = pct + '%';
@@ -421,7 +403,6 @@
         onTimeUpdate() {
             if (!isFinite(this.video.duration)) return;
 
-            // 🚀 [تحسين فائق للأداء]: منع تعديل الـ DOM للـ Progress Bar نهائياً إذا كان الشريط مخفياً لتفادي الـ Reflows العشوائية
             const isIdle = this.container && this.container.classList.contains('is-idle');
             if (!isIdle) {
                 const pct = (this.video.currentTime / this.video.duration) * 100;
@@ -885,3 +866,4 @@
         init();
     }
 })();
+ق
