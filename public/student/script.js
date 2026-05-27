@@ -1,7 +1,7 @@
 (function () {
     'use strict';
 
-    // منع تكرار تهيئة السكربت (SPA Protection)
+    // منع تكرار تهيئة السكربت لو تم حقنه أكثر من مرة
     if (window.__DAHIH_INITIALIZED__) return;
     window.__DAHIH_INITIALIZED__ = true;
 
@@ -14,21 +14,22 @@
         quizzesHash: '',
         pointsHash: '',
         questionsHash: '',
-        lastDataHash: null,
+        lastDataHash: null, // 🚀 [تحسين]: تخزين بصمة البيانات كاملة لمنع الـ Re-render الوهمي
         availableQuizzes: [],
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
-        isTesting: false,
+        isTesting: false, // 🚀 [تحسين]: حالة الاختبار لمنع جلب البيانات أثناء حل الكويز
         dashboardAbortController: null,
         videoAbortController: null, 
         videoRequestId: 0, 
         reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
 
+    // 🚀 [تحسين]: نظام Polling آمن لا يتكرر ولا يتراكم
     const poller = { timer: null };
+
     const $ = (id) => document.getElementById(id);
 
-    // 🚀 [إصلاح]: منع Memory Leak في الـ Toast + تحسين الأداء
     const showToast = (message, type = 'info') => {
         let container = $('toastContainer');
         if (!container) {
@@ -50,65 +51,48 @@
         toast.textContent = message;
         container.appendChild(toast);
 
-        requestAnimationFrame(() => {
-            toast.classList.remove('translate-y-4', 'opacity-0');
-        });
+        void toast.offsetHeight;
+        toast.classList.remove('translate-y-4', 'opacity-0');
 
         setTimeout(() => {
             toast.classList.add('translate-y-2', 'opacity-0');
-            // استخدام ontransitionend أأمن من addEventListener لتجنب تسريب الذاكرة
-            toast.ontransitionend = (e) => {
-                if(e.propertyName === 'opacity') {
-                    toast.remove();
-                    toast.ontransitionend = null;
-                }
-            };
-            // Fallback
-            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 500);
+            const fallbackTimer = setTimeout(() => toast.remove(), 1000);
+            
+            toast.addEventListener('transitionend', () => {
+                clearTimeout(fallbackTimer);
+                toast.remove();
+            }, { once: true });
         }, 4000);
     };
 
     const escapeHTML = (str) => {
         if (str == null) return '';
-        return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     };
 
-    // 🚀 [إصلاح]: استبدال JSON.stringify بـ Hash سريع جدًا لتوفير CPU/RAM
     const fastHash = (list, keys = ['id']) => {
         if (!Array.isArray(list)) return String(list);
-        let hash = '';
-        for (let i = 0; i < list.length; i++) {
-            const item = list[i];
-            for (let j = 0; j < keys.length; j++) {
-                hash += (item?.[keys[j]] ?? '') + ':';
-            }
-            hash += '|';
-        }
-        return hash;
+        return list.map(item =>
+            keys.map(k => String(item?.[k] ?? '')).join(':')
+        ).join('|');
     };
 
-    const generateGlobalHash = (data) => {
-        const content = data.content || {};
-        const courses = data.courses || content.courses || [];
-        return [
-            fastHash(courses, ['telegramMsgId', 'lastWatched']),
-            fastHash(content.quizzes || [], ['id', 'updatedAt', 'score', 'attempted']),
-            fastHash(content.points || [], ['length']),
-            fastHash(content.questions || [], ['id', 'question']),
-            data.studentPoints || 0
-        ].join('#');
-    };
-
-    // 🚀 [إصلاح أمني]: Whitelist للصور
     const getSafeImageUrl = (url) => {
         const defaultImg = 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
         if (!url || typeof url !== 'string') return defaultImg;
         
-        const allowedHosts = ['images.unsplash.com', location.host, 'i.ytimg.com', 'res.cloudinary.com'];
         try {
             const parsed = new URL(url.trim(), location.origin);
-            if (allowedHosts.includes(parsed.hostname)) {
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
                 return parsed.href;
+            }
+            if (parsed.origin === location.origin) {
+                return parsed.pathname;
             }
             return defaultImg;
         } catch {
@@ -151,7 +135,9 @@
                 player.video.pause();
                 player.video.removeAttribute('src');
                 player.video.load();
-            } catch (e) {}
+            } catch (e) {
+                console.error("Error clearing video on logout:", e);
+            }
         }
         localStorage.removeItem('dahih_user');
         localStorage.removeItem('dahih_token');
@@ -172,7 +158,11 @@
         }
 
         try {
-            return await fetch(url, { ...options, signal: controller.signal, credentials: 'omit' });
+            return await fetch(url, {
+                ...options,
+                signal: controller.signal,
+                credentials: 'omit'
+            });
         } finally {
             clearTimeout(timeoutId);
             if (options.signal) {
@@ -187,7 +177,7 @@
             c.classList.add('border-white/10', 'shadow-lg');
             const btn = c.querySelector('.course-play button');
             if (btn) {
-                btn.className = "w-full bg-white/5 text-white border border-white/10 font-bold py-2.5 rounded-lg transition-colors pointer-events-none";
+                btn.className = "w-full bg-white/5 text-white border border-white/10 font-bold py-2.5 rounded-lg transition-colors";
                 btn.textContent = 'تشغيل المحاضرة';
             }
         });
@@ -198,7 +188,7 @@
             card.classList.add('border-yellow-500/40', 'shadow-[0_4px_20px_rgba(234,179,8,0.1)]');
             const btn = card.querySelector('.course-play button');
             if (btn) {
-                btn.className = "w-full bg-yellow-500 text-black font-bold py-2.5 rounded-lg transition-colors pointer-events-none";
+                btn.className = "w-full bg-yellow-500 text-black font-bold py-2.5 rounded-lg transition-colors";
                 btn.textContent = 'استكمال المشاهدة';
             }
         }
@@ -208,8 +198,8 @@
         video: null, poster: null, container: null, progress: null, progressBar: null,
         currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
         centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
-        tapLeft: null, tapRight: null, lastSentTime: -1, currentVideoId: null,
-        lastProgressSave: 0, playPromise: null,
+        tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
+        lastProgressSave: 0,
 
         init() {
             this.video         = $('dahihPlayer');
@@ -240,7 +230,9 @@
             this.video.addEventListener('play',  () => this.onPlay());
             this.video.addEventListener('pause', () => { this.onPause(); this.forceSaveProgress(); });
             this.video.addEventListener('timeupdate', () => this.onTimeUpdate());
-            this.video.addEventListener('loadedmetadata', () => { this.durationEl.textContent = formatTime(this.video.duration); });
+            this.video.addEventListener('loadedmetadata', () => {
+                this.durationEl.textContent = formatTime(this.video.duration);
+            });
             this.video.addEventListener('error', () => this.onError());
 
             this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, '+10 ثواني'); });
@@ -279,6 +271,7 @@
 
             state.currentMsgId = String(msgId);
             this.titleEl.textContent = title || 'جاري التحميل...';
+            this.lastSentTime = -1;
 
             if (state.videoAbortController) {
                 state.videoAbortController.abort();
@@ -292,41 +285,34 @@
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
 
-            // 🚀 [إصلاح]: معالجة Race Condition بشكل صحيح قبل طلب الـ URL
-            try {
-                if (!this.video.paused && this.playPromise !== undefined) {
-                    await this.playPromise;
-                    this.video.pause();
-                } else {
-                    this.video.pause();
-                }
-            } catch (e) {}
+            // 🚀 [تحسين]: إيقاف الفيديو الحالي دون تفريغ الـ src والتسبب في Flashing
+            this.video.pause();
             
             try {
-                const access = await fetchWithTimeout('/api/student/video/access', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${state.token}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ msgId }),
+                // ✅ [التعديل هنا]: إرجاع مسار البث المباشر القديم
+                const videoUrl = `/api/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
+
+                // فحص اتصال الرابط لمعرفة إذا كان السيرفر يرد بشكل سليم
+                const response = await fetchWithTimeout(videoUrl, { 
+                    headers: { 'Range': 'bytes=0-100' },
                     signal: state.videoAbortController.signal
                 }, 15000);
 
-                if (!access.ok) throw new Error('Failed to fetch signed URL');
-                
-                const data = await access.json();
+                if (!response.ok) {
+                    throw new Error('فشل الوصول إلى مسار الفيديو');
+                }
 
                 if (currentReqId !== state.videoRequestId) return;
 
-                // 🚀 [إصلاح]: الاعتماد على الـ ID وليس الـ URL لتجنب التحديث العشوائي
-                if (this.currentVideoId !== msgId) {
-                    this.currentVideoId = msgId;
-                    this.lastSentTime = -1; // Reset tracking
-                    this.video.src = data.signedUrl;
+                // 🚀 [تحسين]: تعيين الـ src فقط إذا كان مختلفاً
+                if (this.video.src !== videoUrl) {
+                    this.video.src = videoUrl;
                     this.video.load();
                 }
 
-                this.playPromise = this.video.play();
-                if (this.playPromise !== undefined) {
-                    this.playPromise.catch(() => {
+                const playPromise = this.video.play();
+                if (playPromise && playPromise.catch) {
+                    playPromise.catch(() => {
                         this.centerPlay.classList.add('is-visible');
                         this.centerPlay.style.opacity = "1";
                         this.centerPlay.style.transform = "scale(1)";
@@ -347,12 +333,7 @@
 
         togglePlay() {
             if (!this.video.src) return;
-            if (this.video.paused) { 
-                this.playPromise = this.video.play();
-                if(this.playPromise !== undefined) this.playPromise.catch(() => {}); 
-            } else { 
-                this.video.pause(); 
-            }
+            if (this.video.paused) { this.video.play().catch(() => {}); } else { this.video.pause(); }
         },
 
         onPlay() {
@@ -376,8 +357,7 @@
             this.currentTimeEl.textContent = formatTime(this.video.currentTime);
 
             const currentSec = Math.floor(this.video.currentTime);
-            // 🚀 [إصلاح]: التاكد من الحفظ بناءً على فارق الثواني بدل قسمة الموديولو لحل مشكلة تخطي الفريمات
-            if (currentSec > 0 && Math.abs(currentSec - this.lastSentTime) >= 10) {
+            if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
                 this.lastSentTime = currentSec;
                 this.saveProgressBackground();
             }
@@ -389,25 +369,16 @@
             }
         },
 
-        // 🚀 [إصلاح]: استخدام SendBeacon إذا كان force (أثناء إغلاق الصفحة)
         saveProgressBackground(force = false) {
             const now = Date.now();
             if (!force && now - this.lastProgressSave < 5000) return;
             this.lastProgressSave = now;
 
-            const payload = { msgId: state.currentMsgId, currentTime: this.video.currentTime };
-
-            if (force && navigator.sendBeacon) {
-                const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-                navigator.sendBeacon('/api/student/save-progress', blob);
-                return;
-            }
-
             fetch('/api/student/save-progress', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
-                body: JSON.stringify(payload),
-                keepalive: force
+                body: JSON.stringify({ msgId: state.currentMsgId, currentTime: this.video.currentTime }),
+                keepalive: true 
             }).catch(() => {});
         },
 
@@ -468,7 +439,7 @@
     }
 
     async function fetchData(initial = false) {
-        if (state.isTesting) return; 
+        if (state.isTesting) return; // منع الجلب تماماً أثناء أداء الاختبار
 
         if (state.dashboardAbortController) {
             state.dashboardAbortController.abort();
@@ -483,29 +454,35 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p class="font-bold text-lg text-gray-300">جاري جلب البيانات...</p>
+                    <p class="font-bold text-lg text-gray-300">جاري جلب البيانات من السيرفر...</p>
                 </div>`;
         }
 
         try {
             const res = await fetchWithTimeout('/api/student/dashboard-data', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${state.token}`
+                },
                 body: JSON.stringify({ email: state.user.email, grade: state.user.grade }),
                 signal: state.dashboardAbortController.signal
             }, 15000);
 
             if (!res.ok) {
-                if (res.status === 401 || res.status === 403) { logout(); return; }
-                throw new Error(`Error: ${res.status}`);
+                if (res.status === 401 || res.status === 403) {
+                    logout();
+                    return;
+                }
+                throw new Error(`رفض السيرفر الطلب برمز الحالة: ${res.status}`);
             }
 
             const data = await res.json();
 
-            // 🚀 [إصلاح]: استخدام الـ Smart Hash بدل JSON.stringify
-            const newDataHash = generateGlobalHash(data);
+            // 🚀 [تحسين]: فحص الـ Hash الكلي للبيانات لمنع تدمير وإعادة بناء الـ DOM إذا لم يتغير شيء
+            const newDataHash = JSON.stringify(data.content || data);
             if (!initial && state.lastDataHash === newDataHash) {
-                return; 
+                return; // لم تتغير البيانات، لا داعي لتحديث الواجهة
             }
             state.lastDataHash = newDataHash;
 
@@ -513,6 +490,7 @@
             
         } catch (err) {
             if (err.name === 'AbortError') return; 
+            console.error(err);
             if (container && initial) {
                 container.innerHTML = `
                     <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full">
@@ -546,11 +524,10 @@
             renderScore(parseInt(data.studentPoints || 0));
 
         } catch(e) {
-            console.error("Render Error:", e);
+            console.error("DOM Render Error:", e);
         }
     }
 
-    // 🚀 [إصلاح]: منع بناء الـ HTML مجدداً بالكامل للـ DOM Diffing المبسط عبر Hash Container
     function renderCourses(list, initial) {
         const container = $('studentCoursesContainer');
         if (!container) return;
@@ -570,11 +547,8 @@
 
         container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
         
-        // استخدام Fragment لتحسين الأداء
-        const frag = document.createDocumentFragment();
-        const wrapper = document.createElement('div');
-        
-        wrapper.innerHTML = list.map((course, idx) => {
+        // 🚀 [تحسين]: استبدال الـ background-image المكلفة برمجياً بـ <img> مع loading="lazy"
+        container.innerHTML = list.map((course, idx) => {
             const id = course.telegramMsgId;
             const num = idx + 1;
             const isActive = String(state.currentMsgId) === String(id);
@@ -596,15 +570,11 @@
                         <h3 class="text-lg font-bold text-white mb-3 truncate" title="${title}">${title}</h3>
                         ${lastWatchedHTML}
                         <div class="mt-auto pt-4 border-t border-white/10 course-play cursor-pointer" data-msgid="${id}" data-title="${title}">
-                            <div class="w-full text-center ${isActive ? 'bg-yellow-500 text-black' : 'bg-white/5 text-white border border-white/10'} font-bold py-2.5 rounded-lg transition-colors pointer-events-none">${isActive ? 'استكمال المشاهدة' : 'تشغيل المحاضرة'}</div>
+                            <button class="w-full ${isActive ? 'bg-yellow-500 text-black' : 'bg-white/5 text-white border border-white/10'} font-bold py-2.5 rounded-lg transition-colors">${isActive ? 'استكمال المشاهدة' : 'تشغيل المحاضرة'}</button>
                         </div>
                     </div>
                 </div>`;
         }).join('');
-        
-        while (wrapper.firstChild) frag.appendChild(wrapper.firstChild);
-        container.innerHTML = '';
-        container.appendChild(frag);
 
         if (state.currentMsgId) updateActiveCourseCard(state.currentMsgId);
     }
@@ -613,7 +583,7 @@
         const container = $('onlineQuizzesContainer');
         if (!container) return;
         
-        const h = fastHash(list, ['id', 'updatedAt', 'score']); // إدراج النتيجة ليتحدث تلقائياً
+        const h = fastHash(list, ['id', 'updatedAt']);
         if (h === state.quizzesHash) return;
         state.quizzesHash = h;
         state.availableQuizzes = list;
@@ -642,7 +612,7 @@
     function renderPoints(list) {
         const container = $('pointsContainer');
         if (!container) return;
-        const h = fastHash(list, ['length']);
+        const h = fastHash(list);
         if (h === state.pointsHash) return;
         state.pointsHash = h;
         container.innerHTML = !list.length ? '<p class="empty">لا توجد ملاحظات.</p>' : `<ul class="fade-in-stagger" style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.65rem;">${list.map(p => `<li style="color:#cbd5e1;font-size:0.9rem;">▸ ${escapeHTML(p)}</li>`).join('')}</ul>`;
@@ -651,7 +621,7 @@
     function renderQuestions(list) {
         const container = $('questionsContainer');
         if (!container) return;
-        const h = fastHash(list, ['id', 'question']);
+        const h = fastHash(list, ['question']);
         if (h === state.questionsHash) return;
         state.questionsHash = h;
         container.innerHTML = !list.length ? '<p class="empty">لا توجد أسئلة.</p>' : `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid #333;border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;color:#fff;margin:0 0 0.5rem;">${i + 1}. ${escapeHTML(q.question)}</h3><p style="color:#aaa;font-size:0.85rem;margin:0;">الإجابة: ${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
@@ -669,7 +639,7 @@
         if (!quiz.attempted) {
             return `
             <div tabindex="0" role="button" aria-label="بدء اختبار: ${titleSafe}" class="quiz-card card-new animate-fade bg-white/5 border border-white/10 p-5 rounded-2xl hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
-                <div class="flex-grow pointer-events-none">
+                <div class="flex-grow">
                     <div class="flex items-center gap-2 mb-3">
                         <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
                         <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
@@ -680,7 +650,7 @@
                         ${quiz.questionsCount || 0} سؤال
                     </p>
                 </div>
-                <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5 pointer-events-none">
+                <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
                     <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
                     <div class="action-icon w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
                         <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
@@ -690,16 +660,16 @@
         } else {
             return `
             <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار: ${titleSafe}" class="quiz-card animate-fade bg-white/5 border border-white/10 border-r-4 border-r-green-500/80 p-5 rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
-                <div class="flex justify-between items-start mb-3 flex-grow pointer-events-none">
+                <div class="flex justify-between items-start mb-3 flex-grow">
                     <div>
                         <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider mb-3 inline-block">مكتمل</span>
                         <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${titleSafe}</h3>
                     </div>
                 </div>
-                <div class="text-xs text-gray-500 space-y-1 mb-4 flex-grow pointer-events-none">
+                <div class="text-xs text-gray-500 space-y-1 mb-4 flex-grow">
                     ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
                 </div>
-                <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between pointer-events-none">
+                <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
                     <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
                     <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-green-400' : 'text-red-400'} leading-none">
                         ${quiz.score || 0}%
@@ -709,8 +679,10 @@
         }
     };
 
+    // 🚀 [تعديل]: تحسين دوال الـ Polling كما هو مطلوب بـ start و stop
     function startDashboardPolling() {
         if (poller.timer) return;
+
         poller.timer = setInterval(async () => {
             if (state.isTesting) return;
             await fetchData(false);
@@ -724,67 +696,71 @@
         }
     }
 
-    // 🚀 [إصلاح]: تحديد نطاق Delegation لتجنب الـ Bottleneck
-    function setupDelegatedListeners() {
-        const quizzesContainer = $('onlineQuizzesContainer');
-        const coursesContainer = $('studentCoursesContainer');
-        const tabsContainer = document.querySelector('.tabs-wrapper') || document.body;
+    function setupGlobalListeners() {
+        let lastVisibilityFetch = 0; // 🚀 [تعديل]: التحكم في الـ Fetch أثناء العودة للنافذة
 
-        if (tabsContainer) {
-            tabsContainer.addEventListener('click', (e) => {
-                const filterBtn = e.target.closest('.filter-btn');
-                if (filterBtn) {
-                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                    filterBtn.classList.add('active');
-                    const filter = filterBtn.getAttribute('data-filter');
-                    const cards = document.querySelectorAll('.quiz-card');
-                    cards.forEach(card => {
-                        const isNew = card.classList.contains('card-new');
-                        card.hidden = filter === 'all' ? false : (filter === 'new' ? !isNew : isNew);
-                    });
+        document.addEventListener('click', (e) => {
+            const filterBtn = e.target.closest('.filter-btn');
+            if (filterBtn) {
+                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                filterBtn.classList.add('active');
+                
+                const filter = filterBtn.getAttribute('data-filter');
+                const cards = document.querySelectorAll('.quiz-card');
+                
+                cards.forEach(card => {
+                    const isNew = card.classList.contains('card-new');
+                    if (filter === 'all') card.hidden = false;
+                    else if (filter === 'new') card.hidden = !isNew;
+                    else if (filter === 'completed') card.hidden = isNew;
+                });
+                return;
+            }
+
+            const quizCard = e.target.closest('.quiz-card');
+            if (quizCard) {
+                const quizId = quizCard.getAttribute('data-id');
+                const quiz = state.availableQuizzes.find(q => String(q.id) === String(quizId));
+                if (quiz && window.QuizEngine) {
+                    window.QuizEngine.open(quiz);
                 }
-            });
-        }
+                return;
+            }
 
-        if (quizzesContainer) {
-            quizzesContainer.addEventListener('click', (e) => {
+            const coursePlay = e.target.closest('.course-play');
+            if (coursePlay) {
+                if (typeof window.switchTab === 'function') window.switchTab('dashboard');
+                player.load(coursePlay.dataset.msgid, coursePlay.dataset.title);
+            }
+        });
+
+        document.addEventListener('touchstart', () => {}, { passive: true });
+        window.addEventListener('scroll', () => {}, { passive: true });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
                 const quizCard = e.target.closest('.quiz-card');
                 if (quizCard) {
-                    const quizId = quizCard.getAttribute('data-id');
-                    const quiz = state.availableQuizzes.find(q => String(q.id) === String(quizId));
-                    if (quiz && window.QuizEngine) window.QuizEngine.open(quiz);
+                    e.preventDefault();
+                    quizCard.click();
                 }
-            });
-            quizzesContainer.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    const quizCard = e.target.closest('.quiz-card');
-                    if (quizCard) { e.preventDefault(); quizCard.click(); }
-                }
-            });
-        }
+            }
+        });
 
-        if (coursesContainer) {
-            coursesContainer.addEventListener('click', (e) => {
-                const coursePlay = e.target.closest('.course-play');
-                if (coursePlay) {
-                    if (typeof window.switchTab === 'function') window.switchTab('dashboard');
-                    player.load(coursePlay.dataset.msgid, coursePlay.dataset.title);
-                }
-            });
-        }
-    }
-
-    function setupGlobalListeners() {
-        setupDelegatedListeners();
-
-        let lastVisibilityFetch = 0; 
+        // 🚀 [تعديل]: إصلاح الـ visibilitychange ليعمل بتناغم مع الدوال الجديدة
         document.addEventListener('visibilitychange', async () => {
             if (document.hidden) {
                 stopDashboardPolling();
-                if (player.video && !player.video.paused) player.saveProgressBackground(true);
+                
+                // حفظ تقدم الفيديو إن وجد
+                if (player.video && !player.video.paused) {
+                    player.saveProgressBackground(true);
+                }
                 return;
             }
-            if(!state.isTesting) startDashboardPolling();
+
+            startDashboardPolling();
+
             const now = Date.now();
             if (now - lastVisibilityFetch > 15000) {
                 lastVisibilityFetch = now;
@@ -810,12 +786,13 @@
         setupGlobalListeners();
         
         fetchData(true).then(() => {
-            if (!document.hidden && !state.isTesting) {
+            if (!document.hidden) {
                 startDashboardPolling();
             }
         });
     }
 
+    // 🚀 [تحسين]: تصدير الدوال اللازمة للـ quiz.js
     Object.freeze(window.DahihApp = {
         logout, 
         toggleFullscreen, 
@@ -823,12 +800,15 @@
         getState: () => state,
         fetchWithTimeout: fetchWithTimeout,
         toast: showToast,
-        startDashboardPolling,
-        stopDashboardPolling,
+        startDashboardPolling, // تم إتاحتها
+        stopDashboardPolling,  // تم إتاحتها
         setQuizState: (isTesting) => { 
             state.isTesting = isTesting; 
-            if (isTesting) stopDashboardPolling();
-            else startDashboardPolling();
+            if (isTesting) {
+                stopDashboardPolling();
+            } else {
+                startDashboardPolling();
+            }
         }
     });
 
