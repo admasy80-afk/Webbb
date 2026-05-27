@@ -1,11 +1,5 @@
 (function () {
     'use strict';
-
-    /**
-     * 🚀 QuizEngine Ultra™ - Mobile Optimized Edition
-     * Minimal GPU footprint, Soft Motion, Premium Feel.
-     */
-
     const EventBus = {
         events: new Map(),
         on(event, listener) {
@@ -59,7 +53,6 @@
         play(type) {
             if (EngineCore.isLowEnd || EngineCore.batterySaver || EngineCore.isCalmMode) return;
             try {
-                // استخدام ملفات خفيفة جدًا (يفضل توفيرها في المشروع)
                 const src = type === 'tick' ? '/assets/audio/tick.mp3' : '/assets/audio/success.mp3';
                 const audio = new Audio(src);
                 audio.volume = type === 'tick' ? 0.1 : 0.3;
@@ -599,7 +592,6 @@
             }
         },
 
-        // Clean lightweight gestures (No intermediate physics transforms)
         setupGestures() {
             this.vDOM.addEventListener('touchstart', e => {
                 if(EngineCore.isLowEnd || UIState.is(UIState.TRANSITIONING)) return;
@@ -680,10 +672,9 @@
                     setTimeout(() => {
                         if (spinnerContainer) spinnerContainer.classList.add('hide');
                         
-                        const emoji = percentage >= 85 ? '🏆' : (percentage >= 50 ? '🔥' : '💪');
+                        const emoji = percentage >= 85 ? 'ممتاز' : (percentage >= 50 ? 'جيد جدا' : 'مقبول');
                         const resultCard = $el('div', { className: 'qe-result-card' });
                         
-                        // إضافة Background خفيف بدل الكونفيتي
                         if (percentage >= 50) {
                             resultCard.appendChild($el('div', { className: 'qe-success-bg' }));
                         }
@@ -696,7 +687,7 @@
                                 حصدت <span>${score}</span> من <span>${this.quiz.questions.length}</span> نقاط
                             </div>
                             <button id="qe-finish-btn">
-                                العودة للمنصة
+                                العودة 
                             </button>
                         `;
                         overlay.appendChild(resultCard);
@@ -706,16 +697,7 @@
                             overlay.style.opacity = '0';
                             
                             setTimeout(() => {
-                                overlay.classList.remove('show');
-                                this.close();
-                                
-                                setTimeout(() => {
-                                    if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.startDashboardPolling === 'function') {
-                                        window.DahihApp.startDashboardPolling();
-                                    }
-                                    if (typeof QuizApp !== 'undefined' && QuizApp.reload) QuizApp.reload();
-                                }, 300);
-
+                                window.location.href = 'index.html';
                             }, 300);
                         };
                     }, 500); 
