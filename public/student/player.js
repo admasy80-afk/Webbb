@@ -84,6 +84,9 @@ const TitaniumQuantum = (() => {
             badging: 'setAppBadge' in navigator,
             virtualKeyboard: 'virtualKeyboard' in navigator,
             windowControlsOverlay: 'windowControlsOverlay' in navigator,
+            pointerEvents: 'PointerEvent' in window,
+            cssBackdropFilter: CSS.supports('backdrop-filter', 'blur(10px)') || CSS.supports('-webkit-backdrop-filter', 'blur(10px)'),
+            cssContainerQueries: CSS.supports('container-type', 'inline-size'),
         };
         const memory = caps.deviceMemory || 4;
         const cores = caps.hardwareConcurrency;
@@ -356,7 +359,7 @@ const TitaniumQuantum = (() => {
     });
 
     const telemetryWorkerCode = `
-        const DB='TQ_Hyperion_v16',ST='analytics',HM='heatmap',SE='sessions',PROFILES='profiles',CHUNK=80;
+        const DB='TQ_Hyperion_v17',ST='analytics',HM='heatmap',SE='sessions',PROFILES='profiles',CHUNK=80;
         let db=null,bo=1000;const MAX_BO=60000;
         function open(){return new Promise((res,rej)=>{const r=indexedDB.open(DB,5);
             r.onupgradeneeded=e=>{const d=e.target.result;
@@ -543,13 +546,14 @@ const TitaniumQuantum = (() => {
             this.container = container; this.video = video; this.governor = governor; this.subsystems = subsystems;
             this.canvas = null; this.gl = null; this.program = null;
             this.texture = null; this.lastDraw = 0;
-            this.rvfcHandle = null; this.bloomStrength = 0.7;
-            this.saturation = 1.7; this.contextLost = false;
+            this.rvfcHandle = null; this.bloomStrength = 0.85;
+            this.saturation = 1.85; this.contextLost = false;
             this.targetColor = [0, 0, 0]; this.currentColor = [0, 0, 0];
-            this.colorLerp = 0.05;
+            this.colorLerp = 0.06;
             this.state = 'sleep';
             this.minIntervalMs = 33;
             this.mounted = false;
+            this.pulseEnergy = 0;
         }
         mount() {
             if (this.mounted) return;
@@ -557,7 +561,7 @@ const TitaniumQuantum = (() => {
             this.canvas = document.createElement('canvas');
             this.canvas.className = 'tq-ambient';
             const tier = Capabilities.tier;
-            const dim = tier === 'apex' ? 256 : tier === 'high' ? 192 : tier === 'mid' ? 128 : 80;
+            const dim = tier === 'apex' ? 320 : tier === 'high' ? 224 : tier === 'mid' ? 144 : 96;
             this.canvas.width = dim; this.canvas.height = Math.round(dim * 0.5625);
             this.container.prepend(this.canvas);
             if (!Capabilities.webGL || Capabilities.lowPower) { this._fallbackMount(); return; }
@@ -577,26 +581,37 @@ const TitaniumQuantum = (() => {
         _initGL() {
             const gl = this.gl;
             const vs = `attribute vec2 p; varying vec2 v; void main(){ v = p*0.5+0.5; gl_Position = vec4(p,0.0,1.0); }`;
-            const fs = `precision mediump float; varying vec2 v; uniform sampler2D t; uniform float bloom; uniform float sat; uniform float time; uniform vec3 tint; uniform float vignette;
+            const fs = `precision highp float; varying vec2 v; uniform sampler2D t; uniform float bloom; uniform float sat; uniform float time; uniform vec3 tint; uniform float vignette; uniform float pulse;
+                vec3 chromaShift(sampler2D tex, vec2 uv, float amt){
+                    vec2 dir = (uv - 0.5);
+                    float r = texture2D(tex, uv - dir * amt * 0.6).r;
+                    float g = texture2D(tex, uv).g;
+                    float b = texture2D(tex, uv + dir * amt * 0.6).b;
+                    return vec3(r, g, b);
+                }
                 void main(){
-                    vec3 c = texture2D(t, v).rgb;
+                    vec3 c = chromaShift(t, v, 0.004 + pulse * 0.006);
                     vec3 b = vec3(0.0);
-                    float off = 0.014;
+                    float off = 0.016 + pulse * 0.008;
                     b += texture2D(t, v + vec2( off, 0.0)).rgb;
                     b += texture2D(t, v + vec2(-off, 0.0)).rgb;
                     b += texture2D(t, v + vec2(0.0,  off)).rgb;
                     b += texture2D(t, v + vec2(0.0, -off)).rgb;
                     b += texture2D(t, v + vec2( off,  off)).rgb * 0.7;
                     b += texture2D(t, v + vec2(-off, -off)).rgb * 0.7;
-                    b /= 4.4;
-                    b = max(b - 0.35, 0.0) * bloom * 4.0;
+                    b += texture2D(t, v + vec2( off*1.8, 0.0)).rgb * 0.5;
+                    b += texture2D(t, v + vec2(-off*1.8, 0.0)).rgb * 0.5;
+                    b /= 5.4;
+                    b = max(b - 0.32, 0.0) * bloom * (4.5 + pulse * 2.0);
                     vec3 col = c + b;
-                    col = mix(col, tint, 0.18);
+                    col = mix(col, tint, 0.22 + pulse * 0.08);
                     float lum = dot(col, vec3(0.299, 0.587, 0.114));
                     col = mix(vec3(lum), col, sat);
                     vec2 d = v - 0.5;
                     float vig = 1.0 - dot(d, d) * vignette;
                     col *= vig;
+                    float wave = sin(time * 0.7 + d.x * 4.0) * 0.04 * pulse;
+                    col += wave * tint;
                     col = col / (col + vec3(1.0));
                     col = pow(col, vec3(1.0/2.2));
                     gl_FragColor = vec4(col, 1.0);
@@ -624,8 +639,10 @@ const TitaniumQuantum = (() => {
             this.uTime = gl.getUniformLocation(this.program, 'time');
             this.uTint = gl.getUniformLocation(this.program, 'tint');
             this.uVignette = gl.getUniformLocation(this.program, 'vignette');
+            this.uPulse = gl.getUniformLocation(this.program, 'pulse');
         }
         setTint(r, g, b) { this.targetColor[0] = r/255; this.targetColor[1] = g/255; this.targetColor[2] = b/255; }
+        setPulse(energy) { this.pulseEnergy = Math.max(0, Math.min(1, energy)); }
         sleep() { this.state = 'sleep'; if (this.canvas) this.canvas.style.opacity = '0'; }
         warm() { this.state = 'warm'; this.minIntervalMs = 500; }
         active() { this.state = 'active'; this.minIntervalMs = 33; }
@@ -638,6 +655,7 @@ const TitaniumQuantum = (() => {
             if (now - this.lastDraw < interval) return;
             this.lastDraw = now;
             for (let i = 0; i < 3; i++) this.currentColor[i] += (this.targetColor[i] - this.currentColor[i]) * this.colorLerp;
+            this.pulseEnergy *= 0.92;
             if (this.fallback) { this._draw2D(); return; }
             const gl = this.gl;
             try {
@@ -647,21 +665,113 @@ const TitaniumQuantum = (() => {
                 gl.uniform1f(this.uSat, this.saturation);
                 gl.uniform1f(this.uTime, now / 1000);
                 gl.uniform3f(this.uTint, this.currentColor[0], this.currentColor[1], this.currentColor[2]);
-                gl.uniform1f(this.uVignette, 0.5);
+                gl.uniform1f(this.uVignette, 0.55);
+                gl.uniform1f(this.uPulse, this.pulseEnergy);
                 gl.viewport(0, 0, this.canvas.width, this.canvas.height);
                 gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
             } catch {}
-            this.canvas.style.opacity = profile.blur ? '0.8' : '0.45';
+            this.canvas.style.opacity = profile.blur ? '0.85' : '0.5';
         }
         _draw2D() {
             try { this.ctx2d.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height); } catch {}
-            this.canvas.style.opacity = '0.55';
+            this.canvas.style.opacity = '0.6';
         }
         destroy() {
             try { this.gl?.getExtension('WEBGL_lose_context')?.loseContext(); } catch {}
             this.canvas?.remove();
             this.mounted = false;
         }
+    }
+
+    class ParticleField {
+        constructor(container) {
+            this.container = container;
+            this.canvas = null;
+            this.ctx = null;
+            this.particles = [];
+            this.maxParticles = Capabilities.tier === 'apex' ? 80 : Capabilities.tier === 'high' ? 50 : 30;
+            this.active = false;
+            this.tint = { r: 14, g: 165, b: 233 };
+        }
+        mount() {
+            this.canvas = document.createElement('canvas');
+            this.canvas.className = 'tq-particles';
+            this.container.appendChild(this.canvas);
+            this.ctx = this.canvas.getContext('2d', { alpha: true, desynchronized: true });
+            this._resize();
+            Registry.observe(new ResizeObserver(() => this._resize())).observe(this.container);
+        }
+        _resize() {
+            if (!this.canvas) return;
+            const rect = this.container.getBoundingClientRect();
+            const dpr = Math.min(2, window.devicePixelRatio || 1);
+            this.canvas.width = rect.width * dpr;
+            this.canvas.height = rect.height * dpr;
+            this.canvas.style.width = rect.width + 'px';
+            this.canvas.style.height = rect.height + 'px';
+            this.ctx.scale(dpr, dpr);
+            this.w = rect.width; this.h = rect.height;
+        }
+        burst(x, y, count = 12, color = null) {
+            const c = color || this.tint;
+            for (let i = 0; i < count; i++) {
+                const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+                const speed = 1 + Math.random() * 4;
+                this.particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    decay: 0.012 + Math.random() * 0.015,
+                    size: 2 + Math.random() * 4,
+                    color: c,
+                });
+                if (this.particles.length > this.maxParticles) this.particles.shift();
+            }
+            this.active = true;
+        }
+        ambient() {
+            if (this.particles.length < this.maxParticles / 3 && Math.random() < 0.05) {
+                this.particles.push({
+                    x: Math.random() * this.w,
+                    y: this.h + 10,
+                    vx: (Math.random() - 0.5) * 0.4,
+                    vy: -0.3 - Math.random() * 0.6,
+                    life: 1,
+                    decay: 0.004,
+                    size: 1 + Math.random() * 2,
+                    color: this.tint,
+                    ambient: true,
+                });
+                this.active = true;
+            }
+        }
+        setTint(r, g, b) { this.tint = { r, g, b }; }
+        tick() {
+            if (!this.active || !this.ctx) return;
+            this.ctx.clearRect(0, 0, this.w, this.h);
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                const p = this.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                if (!p.ambient) p.vy += 0.05;
+                p.vx *= 0.98;
+                p.life -= p.decay;
+                if (p.life <= 0) { this.particles.splice(i, 1); continue; }
+                this.ctx.globalAlpha = p.life * (p.ambient ? 0.4 : 0.9);
+                this.ctx.fillStyle = `rgb(${p.color.r},${p.color.g},${p.color.b})`;
+                this.ctx.beginPath();
+                this.ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+                this.ctx.fill();
+                this.ctx.shadowBlur = p.size * 4;
+                this.ctx.shadowColor = `rgb(${p.color.r},${p.color.g},${p.color.b})`;
+                this.ctx.fill();
+                this.ctx.shadowBlur = 0;
+            }
+            this.ctx.globalAlpha = 1;
+            if (this.particles.length === 0) this.active = false;
+        }
+        clear() { this.particles.length = 0; if (this.ctx) this.ctx.clearRect(0, 0, this.w, this.h); }
     }
 
     class SubtitleEngine {
@@ -758,7 +868,7 @@ const TitaniumQuantum = (() => {
                 this._spans.push(span);
             }
             const shadow = this.shadowEnabled && !this.minimal ? 'text-shadow:0 2px 8px rgba(0,0,0,0.95),0 0 2px rgba(0,0,0,1);' : '';
-            const blur = this.minimal ? '' : 'backdrop-filter:blur(8px);';
+            const blur = this.minimal ? '' : 'backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);';
             for (let i = 0; i < this._spans.length; i++) {
                 const span = this._spans[i];
                 if (i < lines.length) {
@@ -886,9 +996,10 @@ const TitaniumQuantum = (() => {
             const lvl = this.thermalLevel;
             return {
                 ambient: lvl === 'normal' || lvl === 'warm',
-                ambientResolution: lvl === 'normal' ? 192 : lvl === 'warm' ? 128 : 64,
-                ambientFPS: lvl === 'normal' ? 24 : lvl === 'warm' ? 12 : 6,
+                ambientResolution: lvl === 'normal' ? 224 : lvl === 'warm' ? 144 : 80,
+                ambientFPS: lvl === 'normal' ? 30 : lvl === 'warm' ? 15 : 8,
                 blur: lvl !== 'critical',
+                particles: lvl === 'normal',
                 debugUpdateMs: lvl === 'critical' ? 2000 : 1000,
                 uiUpdateMs: lvl === 'critical' ? 500 : 200,
                 sceneDetection: this.cpuBudget > 0.5,
@@ -956,7 +1067,7 @@ const TitaniumQuantum = (() => {
             this.subBass = null; this.harmonic = null;
             this.active = false; this.targetLUFS = -16;
             this.dialogueMode = false; this.spatialMode = false;
-            this.peakLevel = 0;
+            this.peakLevel = 0; this.bassEnergy = 0; this.midEnergy = 0; this.trebleEnergy = 0;
             this._lazyConvolverConnected = false;
             this._lazyAnalyserConnected = false;
             this._loudnessMonitorActive = false;
@@ -1111,6 +1222,14 @@ const TitaniumQuantum = (() => {
             if (!this.analyser) return null;
             const data = new Uint8Array(this.analyser.frequencyBinCount);
             this.analyser.getByteFrequencyData(data);
+            const third = Math.floor(data.length / 3);
+            let bass = 0, mid = 0, treble = 0;
+            for (let i = 0; i < third; i++) bass += data[i];
+            for (let i = third; i < third * 2; i++) mid += data[i];
+            for (let i = third * 2; i < data.length; i++) treble += data[i];
+            this.bassEnergy = bass / third / 255;
+            this.midEnergy = mid / third / 255;
+            this.trebleEnergy = treble / (data.length - third * 2) / 255;
             return data;
         }
         destroy() { try { this.ctx?.close(); } catch {} this.ctx = null; this.active = false; }
@@ -1134,6 +1253,7 @@ const TitaniumQuantum = (() => {
         hyperion:    [9, 7, 4, 1, 0, 2, 4, 6, 8, 9],
         studio:      [0, 1, 2, 1, 0, -1, 0, 1, 2, 1],
         cinemaMax:   [7, 6, 4, 1, 0, 1, 3, 5, 7, 8],
+        nebula:      [5, 6, 4, 2, 1, 3, 5, 7, 8, 9],
     });
 
     const MODE_PROFILES = Object.freeze({
@@ -1152,6 +1272,7 @@ const TitaniumQuantum = (() => {
         hyperion:     { ambient: true,  blur: true,  bufferGoal: 90,  eq: 'hyperion',   brightness: 1.15, dialogue: true,  spatial: true,  lufs: -16, subBass: 6, harmonic: 0.25 },
         studio:       { ambient: false, blur: false, bufferGoal: 60,  eq: 'studio',     brightness: 1.0, dialogue: false, spatial: false, lufs: -23, subBass: 0, harmonic: 0 },
         cinemaMax:    { ambient: true,  blur: true,  bufferGoal: 120, eq: 'cinemaMax',  brightness: 1.1, dialogue: true,  spatial: true,  lufs: -16, subBass: 5, harmonic: 0.2 },
+        nebula:       { ambient: true,  blur: true,  bufferGoal: 80,  eq: 'nebula',     brightness: 1.12, dialogue: false, spatial: true,  lufs: -15, subBass: 5, harmonic: 0.22 },
     });
 
     class GesturePhysics {
@@ -1246,12 +1367,12 @@ const TitaniumQuantum = (() => {
         constructor(container, video) {
             this.container = container; this.video = video;
             this.spriteUrl = null; this.spriteCols = 10; this.spriteRows = 10;
-            this.thumbW = 160; this.thumbH = 90; this.interval = 10;
+            this.thumbW = 180; this.thumbH = 102; this.interval = 10;
             this.preview = null; this.bitmap = null;
         }
         configure({ url, cols, rows, w, h, interval }) {
             this.spriteUrl = url; this.spriteCols = cols || 10; this.spriteRows = rows || 10;
-            this.thumbW = w || 160; this.thumbH = h || 90; this.interval = interval || 10;
+            this.thumbW = w || 180; this.thumbH = h || 102; this.interval = interval || 10;
             if (this.spriteUrl) {
                 fetch(this.spriteUrl).then(r => r.blob()).then(createImageBitmap).then(b => { this.bitmap = b; Registry.addBitmap(b); }).catch(() => {});
             }
@@ -1480,6 +1601,44 @@ const TitaniumQuantum = (() => {
         }
     }
 
+    class IdleController {
+        constructor(container, callbacks) {
+            this.container = container;
+            this.cb = callbacks || {};
+            this.idleTimeout = 2800;
+            this.lastActivity = performance.now();
+            this.isIdle = false;
+            this.timer = null;
+            this.locked = false;
+        }
+        start() {
+            const events = ['mousemove', 'mousedown', 'touchstart', 'touchmove', 'keydown', 'wheel', 'pointermove'];
+            const activity = () => this.poke();
+            events.forEach(ev => Registry.listen(this.container, ev, activity, { passive: true }));
+            Registry.listen(this.container, 'mouseleave', () => { if (!this.locked) this._setIdle(true); });
+            Registry.listen(this.container, 'pointerleave', () => { if (!this.locked) this._setIdle(true); });
+            this.poke();
+        }
+        poke() {
+            this.lastActivity = performance.now();
+            if (this.isIdle) this._setIdle(false);
+            clearTimeout(this.timer);
+            if (!this.locked) {
+                this.timer = setTimeout(() => this._setIdle(true), this.idleTimeout);
+            }
+        }
+        forceShow() { this.locked = true; this.poke(); this._setIdle(false); }
+        release() { this.locked = false; this.poke(); }
+        setTimeout(ms) { this.idleTimeout = ms; this.poke(); }
+        _setIdle(idle) {
+            if (this.isIdle === idle) return;
+            this.isIdle = idle;
+            this.container.classList.toggle('is-idle', idle);
+            this.cb.onChange?.(idle);
+        }
+        destroy() { clearTimeout(this.timer); }
+    }
+
     class TitaniumQuantumPlayer {
         constructor() {
             this.dom = {}; this.audio = null; this.ambient = null;
@@ -1493,6 +1652,8 @@ const TitaniumQuantum = (() => {
             this.fsm = new SystemStateMachine();
             this.recorder = new PerformanceRecorder();
             this.brightnessSmoother = new TemporalSmoother(1, 0.12);
+            this.particles = null;
+            this.idleCtrl = null;
             this.network = { stallCount: 0, retryCount: 0, lastSave: 0, lastTime: 0, hlsObj: null, dashObj: null, wakelock: null };
             this.prefs = { volume: 1, muted: false, speed: 1, quality: 'auto', ambient: true, eqPreset: 'flat', mode: 'standard', spatial: false, dialogue: false, subFontSize: 22, autoMode: false };
             this.chapters = []; this.heatmap = null;
@@ -1506,7 +1667,7 @@ const TitaniumQuantum = (() => {
             this._telemetryBuffer = [];
             this._telemetryFlushTimer = null;
             this._raw = {
-                storageKey: 'TitaniumQuantum_Hyperion_v16',
+                storageKey: 'TitaniumQuantum_Hyperion_v17',
                 playing: false, seeking: false, buffering: false, idle: false,
                 fullscreen: false, pip: false, isOnline: navigator.onLine,
                 gestureLock: null, hasInteracted: false, debugMode: false,
@@ -1556,17 +1717,25 @@ const TitaniumQuantum = (() => {
             this.intel = new IntelligenceEngine(this.dom.video, this.governor);
             this.predictiveBuffer = new PredictiveBuffer(this.dom.video, this.governor);
             this.classifier = new ContentClassifier(this.intel, this.audio);
+            this.particles = new ParticleField(this.dom.container);
+            this.particles.mount();
+            this.idleCtrl = new IdleController(this.dom.container, {
+                onChange: (idle) => {
+                    this.state.idle = idle;
+                    Bus.emit(idle ? 'ui:hide' : 'ui:show');
+                }
+            });
             this._registerSubsystems();
             this.gesture = new GesturePhysics(this.dom.container, this.dom.video, {
                 getVolume: () => this.prefs.volume,
                 getBrightness: () => this.state.brightness,
                 onSeek: (t) => this._showOverlay('seek', t),
-                onSeekCommit: (t) => { this.predictiveBuffer.recordSeek(this.dom.video.currentTime, t); this.dom.video.currentTime = t; this._reportHeatmap(t, 'seek'); },
+                onSeekCommit: (t) => { this.predictiveBuffer.recordSeek(this.dom.video.currentTime, t); this.dom.video.currentTime = t; this._reportHeatmap(t, 'seek'); this._burstAt(window.innerWidth / 2, window.innerHeight / 2, 18); },
                 onVolume: (v) => { this.setVolume(v); this._showOverlay('volume', v / 3); },
                 onBrightness: (b) => { this.state.brightness = b; this.brightnessSmoother.setTarget(b); this._showOverlay('brightness', b / 2); },
                 onPinch: (scale) => { this.setZoom(this.state.zoom * scale); },
-                onLongPress: () => { this.dom.video.playbackRate = Math.min(3, this.prefs.speed * 2); this.toast('⚡ 2× سرعة فائقة'); },
-                onLongPressEnd: () => { this.dom.video.playbackRate = this.prefs.speed; },
+                onLongPress: () => { this.dom.video.playbackRate = Math.min(3, this.prefs.speed * 2); this.toast('⚡ 2× سرعة فائقة'); this._showSpeedRing(true); },
+                onLongPressEnd: () => { this.dom.video.playbackRate = this.prefs.speed; this._showSpeedRing(false); },
                 onLockAcquired: (lock) => { if (lock === 'seek') this.fsm.transition('scrub'); },
                 onEnd: () => { this._hideOverlays(); if (this.fsm.is('scrub')) this._scheduleScrubExit(); },
             });
@@ -1576,12 +1745,15 @@ const TitaniumQuantum = (() => {
             this.thumbnails.mount();
             this._createDebugHUD(); this._createBoostBadge(); this._createHeatmapBar();
             this._createSpectrumVisualizer(); this._createLoadingRing();
+            this._createSpeedRing(); this._createFlashLayer(); this._createWaveform();
+            this._createCornerGlow(); this._createScanLine();
             this._registerEngineTasks();
+            this.idleCtrl.start();
             Engine.start();
             this._startBackgroundEngines(); this._applyPrefs();
             this._loadUserProfile();
             this._scheduleProgressiveEnhancement();
-            console.log('%c⚡ TitaniumQuantum v16 Hyperion-Optimized', 'color:#0ea5e9;font-weight:900;font-size:18px;text-shadow:0 0 10px #0ea5e9;');
+            console.log('%c⚡ TitaniumQuantum v17 Hyperion-Optimized', 'color:#0ea5e9;font-weight:900;font-size:18px;text-shadow:0 0 10px #0ea5e9;');
             console.log('%cTier:', 'color:#fbbf24;font-weight:700', Capabilities.tier, '| Cores:', Capabilities.hardwareConcurrency, '| Memory:', (Capabilities.deviceMemory || '?') + 'GB', '| WebGL2:', Capabilities.webGL2);
             Bus.emit('player:ready');
         }
@@ -1612,6 +1784,12 @@ const TitaniumQuantum = (() => {
                 warm: () => {},
                 active: () => {},
             });
+            this.subsystems.register('particles', {
+                priority: 95,
+                sleep: () => { this.particles?.clear(); if (this.particles?.canvas) this.particles.canvas.style.opacity = '0'; },
+                warm: () => { if (this.particles?.canvas) this.particles.canvas.style.opacity = '0.5'; },
+                active: () => { if (this.particles?.canvas) this.particles.canvas.style.opacity = '1'; },
+            });
             this.subsystems.register('telemetry', {
                 priority: 80,
                 sleep: () => { Engine.pause('telemetry-sample'); },
@@ -1634,7 +1812,20 @@ const TitaniumQuantum = (() => {
                     this.dom.video.style.filter = `brightness(${b.toFixed(2)}) saturate(${sat})`;
                 }
             }, { priority: 'low', budget: 0.2 });
-            Engine.register('spectrum', () => this._updateSpectrum(), { priority: 'idle', budget: 0.4, interval: 80, condition: () => this.state.playing && this.dom.spectrum && this.dom.spectrum.style.opacity !== '0' && !this._scrubActive });
+            Engine.register('spectrum', () => this._updateSpectrum(), { priority: 'idle', budget: 0.4, interval: 60, condition: () => this.state.playing && this.dom.spectrum && this.dom.spectrum.style.opacity !== '0' && !this._scrubActive });
+            Engine.register('particles', () => { this.particles?.ambient(); this.particles?.tick(); }, { priority: 'idle', budget: 1.0, condition: () => !this._scrubActive && this.particles && this.subsystems.get('particles')?.state !== 'sleep' });
+            Engine.register('audio-pulse', () => {
+                if (!this.audio.active) return;
+                this.audio.getSpectrum();
+                const energy = (this.audio.bassEnergy + this.audio.midEnergy * 0.5) * 0.7;
+                if (this.ambient) this.ambient.setPulse(energy);
+                if (this.dom.glowL) {
+                    const intensity = this.audio.bassEnergy;
+                    this.dom.glowL.style.opacity = intensity.toFixed(2);
+                    this.dom.glowR.style.opacity = intensity.toFixed(2);
+                }
+                if (this.dom.waveformBars && this.dom.waveformBars.length) this._updateWaveform();
+            }, { priority: 'idle', budget: 0.3, interval: 50, condition: () => this.state.playing && this.audio?.active && !this._scrubActive }),
             Engine.register('telemetry-sample', () => { this.governor.sample(this.dom.video); this.recorder.record({ fps: this.governor.fps, dropRate: this.governor.dropRate, motion: this.intel.currentMotion, thermal: this.governor.thermalLevel }); }, { priority: 'idle', budget: 0.4, interval: 1000, condition: () => this.state.playing });
             Engine.register('debug-hud', () => this._updateDebugHUD(), { priority: 'idle', budget: 0.6, interval: 1000, condition: () => this.state.debugMode });
             Engine.register('stability-check', () => this._checkStability(), { priority: 'idle', budget: 0.2, interval: 2000 });
@@ -1647,6 +1838,7 @@ const TitaniumQuantum = (() => {
                 if (this.prefs.ambient && !Capabilities.lowPower) this.subsystems.setState('ambient', 'warm');
                 this.subsystems.setState('intel', 'warm');
                 this.subsystems.setState('telemetry', 'warm');
+                this.subsystems.setState('particles', 'warm');
             }, 2000);
             Registry.setTimeout('enhance-cinematic', async () => {
                 if (!this.governor.canEnableHeavyFeatures()) return;
@@ -1654,6 +1846,7 @@ const TitaniumQuantum = (() => {
                 if (this.prefs.ambient && !Capabilities.lowPower) this.subsystems.setState('ambient', 'active');
                 this.subsystems.setState('intel', 'active');
                 this.subsystems.setState('audio-advanced', 'active');
+                if (this.governor.getProfile().particles) this.subsystems.setState('particles', 'active');
             }, 5000);
         }
 
@@ -1711,7 +1904,7 @@ const TitaniumQuantum = (() => {
                 if (this.network.hlsObj) this.predictiveBuffer.adjustHlsConfig(this.network.hlsObj);
                 this.recorder.logEvent('thermal', { level });
             });
-            Bus.on('intel:color', (c) => { this.ambient?.setTint(c.r, c.g, c.b); });
+            Bus.on('intel:color', (c) => { this.ambient?.setTint(c.r, c.g, c.b); this.particles?.setTint(c.r, c.g, c.b); this._updateAccentColor(c); });
             Bus.on('memory:high', () => { this.toast('🧹 تنظيف الذاكرة...', 'warning'); Registry.partialCleanup(); if (this.thumbWorker) this.thumbWorker.postMessage({ type: 'CLEAR' }); });
             Bus.on('scene:detected', ({ time }) => {
                 if (!this.chapters?.length) {
@@ -1721,6 +1914,7 @@ const TitaniumQuantum = (() => {
                         this._autoChapters.push({ start: time, end: time + 60, title: `مشهد ${this._autoChapters.length + 1}`, auto: true });
                     }
                 }
+                this._flashScene();
             });
             Bus.on('error', (taxonomy, raw) => {
                 this.recorder.logEvent('error', { code: taxonomy.code });
@@ -1735,6 +1929,7 @@ const TitaniumQuantum = (() => {
             this.subsystems.setState('ambient', 'sleep');
             this.subsystems.setState('intel', 'sleep');
             this.subsystems.setState('spectrum', 'sleep');
+            this.subsystems.setState('particles', 'sleep');
             this.subtitles?.setMinimal(true);
             this.dom.container.classList.add('is-scrubbing');
             this._stableSince = 0;
@@ -1747,6 +1942,7 @@ const TitaniumQuantum = (() => {
             if (this.prefs.ambient && !Capabilities.lowPower) this.subsystems.setState('ambient', target);
             this.subsystems.setState('intel', target);
             this.subsystems.setState('spectrum', target);
+            if (this.governor.getProfile().particles) this.subsystems.setState('particles', target);
         }
         _scheduleScrubExit() {
             clearTimeout(this._scrubTimer);
@@ -1769,6 +1965,7 @@ const TitaniumQuantum = (() => {
             this.subsystems.setState('ambient', 'sleep');
             this.subsystems.setState('intel', 'sleep');
             this.subsystems.setState('spectrum', 'sleep');
+            this.subsystems.setState('particles', 'sleep');
             this.subsystems.setState('audio-advanced', 'sleep');
             Engine.setBudget(20);
         }
@@ -1795,13 +1992,14 @@ const TitaniumQuantum = (() => {
                 case 'playing':
                     if (this.dom.playBtn) this.dom.playBtn.classList.toggle('is-visible', !val);
                     if (Capabilities.mediaSession) navigator.mediaSession.playbackState = val ? 'playing' : 'paused';
-                    this._resetIdle();
+                    if (val) { this.idleCtrl.poke(); } else { this.idleCtrl.forceShow(); }
                     val ? this._acquireWakeLock() : this._releaseWakeLock();
                     this.recorder.logEvent(val ? 'play' : 'pause', { time: this.dom.video?.currentTime });
+                    if (val) this._flashLayer('play');
                     break;
                 case 'buffering':
                     this.dom.container.classList.toggle('is-buffering', val);
-                    if (val) { Registry.clearTimeout('idleTimer'); this.recorder.logEvent('buffer-start', {}); }
+                    if (val) { this.recorder.logEvent('buffer-start', {}); }
                     else this.recorder.logEvent('buffer-end', {});
                     break;
                 case 'idle': this.dom.container.classList.toggle('is-idle', val); break;
@@ -2031,6 +2229,26 @@ const TitaniumQuantum = (() => {
             }
         }
 
+        _updateWaveform() {
+            const data = this.audio.getSpectrum();
+            if (!data || !this.dom.waveformBars) return;
+            const step = Math.floor(data.length / this.dom.waveformBars.length);
+            for (let i = 0; i < this.dom.waveformBars.length; i++) {
+                const v = data[i * step] / 255;
+                this.dom.waveformBars[i].style.height = `${(v * 100).toFixed(0)}%`;
+            }
+        }
+
+        _updateAccentColor(c) {
+            const bright = (c.r + c.g + c.b) / 3;
+            const factor = bright < 80 ? 1.8 : bright < 150 ? 1.3 : 1;
+            const r = Math.min(255, Math.round(c.r * factor));
+            const g = Math.min(255, Math.round(c.g * factor));
+            const b = Math.min(255, Math.round(c.b * factor));
+            document.documentElement.style.setProperty('--tq-accent', `rgb(${r},${g},${b})`);
+            document.documentElement.style.setProperty('--tq-accent-soft', `rgba(${r},${g},${b},0.4)`);
+        }
+
         _attachListeners() {
             const v = this.dom.video;
             const l = Registry.listen.bind(Registry);
@@ -2043,7 +2261,7 @@ const TitaniumQuantum = (() => {
             l(v, 'ended', () => { this.state.playing = false; this._flushTelemetry(); this._saveResume(); Bus.emit('media:ended'); });
             l(v, 'error', e => { Bus.emit('error', ErrorTaxonomy.MEDIA_DECODE_ERROR, e); this._recoverStream(); });
             l(v, 'loadedmetadata', () => { Bus.emit('media:metadata', { duration: v.duration }); this._renderHeatmap(); this._renderChapterMarkers(); });
-            l(v, 'click', () => this.togglePlay());
+            l(v, 'click', (e) => { this.togglePlay(); this._burstAt(e.clientX, e.clientY, 12); });
             l(v, 'enterpictureinpicture', () => this.state.pip = true);
             l(v, 'leavepictureinpicture', () => this.state.pip = false);
             l(v, 'touchstart', e => this.gesture.start(e), { passive: true });
@@ -2078,10 +2296,8 @@ const TitaniumQuantum = (() => {
             }
             l(window, 'pagehide', () => { this._flushTelemetry(); this._saveResume(); this._saveSession(); this._saveUserProfile(); });
             l(window, 'beforeunload', () => { this._flushTelemetry(); this._saveResume(); this._saveSession(); this._saveUserProfile(); });
-            l(this.dom.container, 'pointermove', () => this._resetIdle(), { passive: true });
-            l(this.dom.container, 'pointerleave', () => { Registry.setTimeout('idleTimer', () => { if (this.state.playing) this.state.idle = true; }, 1500); });
-            if (this.dom.tapLeft) l(this.dom.tapLeft, 'dblclick', () => this.skip(-10));
-            if (this.dom.tapRight) l(this.dom.tapRight, 'dblclick', () => this.skip(10));
+            if (this.dom.tapLeft) l(this.dom.tapLeft, 'dblclick', (e) => { this.skip(-10); this._burstAt(e.clientX, e.clientY, 16, { r: 239, g: 68, b: 68 }); });
+            if (this.dom.tapRight) l(this.dom.tapRight, 'dblclick', (e) => { this.skip(10); this._burstAt(e.clientX, e.clientY, 16, { r: 34, g: 197, b: 94 }); });
         }
 
         _handleKeys(e) {
@@ -2238,7 +2454,7 @@ const TitaniumQuantum = (() => {
             this.dom.video.currentTime = to;
             this._showOverlay('seek', this.dom.video.currentTime);
             Registry.setTimeout('hideSeek', () => this._hideOverlays(), 500);
-            this._resetIdle();
+            this.idleCtrl?.poke();
         }
         jumpToNextScene() {
             const scenes = this.intel.getScenes();
@@ -2369,6 +2585,7 @@ const TitaniumQuantum = (() => {
             try { this.network.dashObj?.reset(); } catch {}
             this.audio?.destroy(); this.ambient?.destroy();
             this.subtitles?.clear(); this.thumbnails?.destroy();
+            this.idleCtrl?.destroy();
             if (this.dom.video) {
                 this.dom.video.pause();
                 this.dom.video.removeAttribute('src');
@@ -2380,12 +2597,6 @@ const TitaniumQuantum = (() => {
             console.log('%c🛑 TitaniumQuantum Destroyed', 'color:#ef4444;font-weight:700');
         }
 
-        _resetIdle() {
-            this.state.idle = false;
-            Registry.setTimeout('idleTimer', () => {
-                if (this.state.playing && !this.state.seeking && !this.state.buffering) this.state.idle = true;
-            }, 3000);
-        }
         _formatTime(s) {
             if (!isFinite(s)) return '0:00';
             const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60).toString().padStart(2, '0');
@@ -2428,6 +2639,27 @@ const TitaniumQuantum = (() => {
             q.appendChild(t);
             Registry.setTimeout(`toast_${Date.now()}_${Math.random()}`, () => { t.style.opacity = 0; setTimeout(() => t.remove(), 300); }, 3000);
         }
+        _burstAt(x, y, count = 12, color = null) {
+            if (!this.particles) return;
+            const rect = this.dom.container.getBoundingClientRect();
+            this.particles.burst(x - rect.left, y - rect.top, count, color);
+        }
+        _flashLayer(type) {
+            if (!this.dom.flashLayer) return;
+            this.dom.flashLayer.className = 'tq-flash-layer';
+            void this.dom.flashLayer.offsetWidth;
+            this.dom.flashLayer.classList.add(`tq-flash-${type}`);
+        }
+        _flashScene() {
+            if (!this.dom.scanLine) return;
+            this.dom.scanLine.classList.remove('tq-scan-active');
+            void this.dom.scanLine.offsetWidth;
+            this.dom.scanLine.classList.add('tq-scan-active');
+        }
+        _showSpeedRing(show) {
+            if (!this.dom.speedRing) return;
+            this.dom.speedRing.classList.toggle('is-visible', show);
+        }
         _createDebugHUD() {
             this.dom.debugHud = document.createElement('div');
             this.dom.debugHud.id = 'tq-debug';
@@ -2449,18 +2681,60 @@ const TitaniumQuantum = (() => {
         _createSpectrumVisualizer() {
             this.dom.spectrum = document.createElement('div');
             this.dom.spectrum.className = 'tq-spectrum';
-            for (let i = 0; i < 24; i++) {
+            for (let i = 0; i < 32; i++) {
                 const bar = document.createElement('div');
                 bar.className = 'tq-spec-bar';
                 this.dom.spectrum.appendChild(bar);
             }
             this.dom.container.appendChild(this.dom.spectrum);
         }
+        _createWaveform() {
+            const wave = document.createElement('div');
+            wave.className = 'tq-waveform';
+            this.dom.waveformBars = [];
+            for (let i = 0; i < 48; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'tq-wave-bar';
+                wave.appendChild(bar);
+                this.dom.waveformBars.push(bar);
+            }
+            this.dom.container.appendChild(wave);
+            this.dom.waveform = wave;
+        }
         _createLoadingRing() {
             const ring = document.createElement('div');
             ring.className = 'tq-loading-ring';
-            ring.innerHTML = '<div></div><div></div><div></div><div></div>';
+            const inner = '<div></div><div></div><div></div><div></div><div class="tq-loading-core"></div>';
+            ring.insertAdjacentHTML('beforeend', inner);
             this.dom.container.appendChild(ring);
+        }
+        _createSpeedRing() {
+            const ring = document.createElement('div');
+            ring.className = 'tq-speed-ring';
+            ring.textContent = '2×';
+            this.dom.container.appendChild(ring);
+            this.dom.speedRing = ring;
+        }
+        _createFlashLayer() {
+            const f = document.createElement('div');
+            f.className = 'tq-flash-layer';
+            this.dom.container.appendChild(f);
+            this.dom.flashLayer = f;
+        }
+        _createCornerGlow() {
+            const l = document.createElement('div');
+            l.className = 'tq-corner-glow tq-glow-l';
+            const r = document.createElement('div');
+            r.className = 'tq-corner-glow tq-glow-r';
+            this.dom.container.appendChild(l);
+            this.dom.container.appendChild(r);
+            this.dom.glowL = l; this.dom.glowR = r;
+        }
+        _createScanLine() {
+            const s = document.createElement('div');
+            s.className = 'tq-scan-line';
+            this.dom.container.appendChild(s);
+            this.dom.scanLine = s;
         }
         _updateDebugHUD() {
             if (!this.dom.debugHud || !this.dom.video) return;
@@ -2474,12 +2748,13 @@ const TitaniumQuantum = (() => {
             const subStates = this.subsystems.getStates();
             const subSummary = Object.entries(subStates).map(([k,v]) => `${k}:${v[0]}`).join(' ');
             const lines = [
-                `▸ TitaniumQuantum v16 — ${Capabilities.tier.toUpperCase()} — FSM:${this.fsm.current}`,
+                `▸ TitaniumQuantum v17 — ${Capabilities.tier.toUpperCase()} — FSM:${this.fsm.current}`,
                 `RES ${res}  |  FPS ${this.governor.fps}  |  DROP ${(this.governor.dropRate * 100).toFixed(1)}%`,
                 `VOL ${vol}%  |  EQ ${this.prefs.eqPreset}  |  MODE ${this.prefs.mode}`,
                 `BUF ${buf}  |  THERMAL ${this.governor.thermalLevel}  |  SCENES ${scenes}`,
                 `CPU ${(this.governor.cpuBudget*100).toFixed(0)}% GPU ${(this.governor.gpuBudget*100).toFixed(0)}% MEM ${(this.governor.memBudget*100).toFixed(0)}% PRESSURE ${(this.governor.memoryPressure*100).toFixed(0)}%`,
                 `CONTENT ${this.classifier.classification} (${(this.classifier.confidence*100).toFixed(0)}%)  |  MOTION ${(this.intel.motionAverage*100).toFixed(1)}%`,
+                `AUDIO BASS ${(this.audio.bassEnergy*100).toFixed(0)}% MID ${(this.audio.midEnergy*100).toFixed(0)}% TREBLE ${(this.audio.trebleEnergy*100).toFixed(0)}%`,
                 `HLS ${!!this.network.hlsObj}  |  DASH ${!!this.network.dashObj}  |  AUDIO ${this.audio.active}`,
                 `WebGL2 ${Capabilities.webGL2}  |  Spatial ${this.prefs.spatial}  |  Dialogue ${this.prefs.dialogue}`,
                 `BAT ${(this.governor.batteryLevel * 100).toFixed(0)}%${this.governor.charging ? '⚡' : ''}  |  NET ${this.state.isOnline ? '✓' : '✗'} ${this.governor.effectiveType}`,
@@ -2487,6 +2762,7 @@ const TitaniumQuantum = (() => {
                 `SUBSYSTEMS ${subSummary}`,
                 `LEAKS L:${leaks.listeners} T:${leaks.timers} R:${leaks.rafs} W:${leaks.workers} A:${leaks.audioNodes} B:${leaks.bitmaps}`,
                 `SCRUB ${this._scrubActive ? 'ACTIVE' : 'idle'}  |  LOCKED ${this.state.locked}  |  STAGE ${this._bootStage}`,
+                `IDLE ${this.idleCtrl?.isIdle ? 'YES' : 'NO'}  |  PARTICLES ${this.particles?.particles.length || 0}`,
             ];
             while (this.dom.debugHud.firstChild) this.dom.debugHud.removeChild(this.dom.debugHud.firstChild);
             const frag = document.createDocumentFragment();
@@ -2526,203 +2802,142 @@ const TitaniumQuantum = (() => {
             const style = document.createElement('style');
             style.id = 'titanium-quantum-styles';
             style.textContent = `
+                :root {
+                    --tq-accent: #0ea5e9;
+                    --tq-accent-soft: rgba(14,165,233,0.4);
+                    --tq-bg: rgba(8,10,16,0.96);
+                    --tq-glass: rgba(15,15,20,0.78);
+                    --tq-border: rgba(255,255,255,0.14);
+                    --tq-text: #fff;
+                    --tq-text-dim: rgba(255,255,255,0.7);
+                }
+
                 .tq-ambient {
-                    position:absolute; inset:0; width:100%; height:100%;
-                    filter:blur(80px) saturate(240%);
-                    transform:scale(1.25); opacity:0.8; pointer-events:none;
-                    z-index:-1; transition:opacity 0.6s ease, filter 0.4s ease;
-                    will-change:opacity; mix-blend-mode:screen;
+                    position:absolute; inset:-8%; width:116%; height:116%;
+                    filter:blur(90px) saturate(280%);
+                    transform:scale(1.3); opacity:0.85; pointer-events:none;
+                    z-index:-1; transition:opacity 0.7s cubic-bezier(0.4,0,0.2,1), filter 0.5s ease;
+                    will-change:opacity,filter; mix-blend-mode:screen;
                 }
                 .is-fullscreen video { width:100% !important; height:100% !important; object-fit:cover !important; }
-                .is-locked .controls, .is-locked [data-controls], .is-locked #progressContainer { pointer-events:none !important; opacity:0.3; }
+                .is-locked .controls, .is-locked [data-controls], .is-locked #progressContainer { pointer-events:none !important; opacity:0.25; filter:grayscale(0.7); }
                 .is-scrubbing video { filter:brightness(1) !important; }
                 .is-scrubbing .tq-ambient { transition:none !important; opacity:0 !important; }
-                .is-scrubbing .tq-spectrum { opacity:0 !important; }
+                .is-scrubbing .tq-spectrum, .is-scrubbing .tq-waveform { opacity:0 !important; }
                 #progressBar, #bufferedBar { transform-origin:left center; transform:scaleX(0); will-change:transform; pointer-events:none; }
-                #bufferedBar { opacity:0.3; background:#fff; }
+                #bufferedBar { opacity:0.35; background:rgba(255,255,255,0.5); }
+                #progressBar { background:linear-gradient(90deg, var(--tq-accent), #ec4899, #f59e0b); box-shadow:0 0 20px var(--tq-accent-soft); }
                 .is-seeking * { user-select:none !important; cursor:ew-resize !important; }
+
+                .tq-particles {
+                    position:absolute; inset:0; pointer-events:none;
+                    z-index:5; opacity:1; transition:opacity 0.5s;
+                    mix-blend-mode:screen;
+                }
+
+                .tq-corner-glow {
+                    position:absolute; bottom:0; width:280px; height:280px;
+                    pointer-events:none; z-index:1;
+                    background:radial-gradient(circle at center, var(--tq-accent-soft) 0%, transparent 60%);
+                    opacity:0; transition:opacity 0.18s ease;
+                    mix-blend-mode:screen;
+                    will-change:opacity;
+                }
+                .tq-glow-l { left:-100px; }
+                .tq-glow-r { right:-100px; }
+
+                .tq-scan-line {
+                    position:absolute; left:0; right:0; height:2px;
+                    background:linear-gradient(90deg, transparent, var(--tq-accent), transparent);
+                    box-shadow:0 0 20px var(--tq-accent), 0 0 40px var(--tq-accent-soft);
+                    opacity:0; pointer-events:none; z-index:50;
+                    top:-2px;
+                }
+                .tq-scan-line.tq-scan-active {
+                    animation:tqScan 0.9s cubic-bezier(0.4,0,0.2,1) forwards;
+                }
+                @keyframes tqScan {
+                    0% { top:0%; opacity:0; }
+                    20% { opacity:1; }
+                    80% { opacity:1; }
+                    100% { top:100%; opacity:0; }
+                }
+
+                .tq-flash-layer {
+                    position:absolute; inset:0; pointer-events:none; z-index:60;
+                    opacity:0;
+                }
+                .tq-flash-layer.tq-flash-play {
+                    animation:tqFlashPlay 0.45s ease-out;
+                    background:radial-gradient(circle at center, var(--tq-accent-soft) 0%, transparent 70%);
+                }
+                @keyframes tqFlashPlay {
+                    0% { opacity:0; transform:scale(0.85); }
+                    50% { opacity:0.6; }
+                    100% { opacity:0; transform:scale(1.15); }
+                }
 
                 .tq-loading-ring {
                     position:absolute; top:50%; left:50%;
-                    width:64px; height:64px; margin:-32px 0 0 -32px;
+                    width:80px; height:80px; margin:-40px 0 0 -40px;
                     pointer-events:none; z-index:1000;
-                    opacity:0; transition:opacity 0.25s;
+                    opacity:0; transition:opacity 0.3s cubic-bezier(0.4,0,0.2,1);
+                    transform:scale(0.85);
                 }
-                .is-buffering .tq-loading-ring { opacity:1; }
-                .tq-loading-ring div {
+                .is-buffering .tq-loading-ring { opacity:1; transform:scale(1); }
+                .tq-loading-ring div:not(.tq-loading-core) {
                     position:absolute; inset:0; border:3px solid transparent; border-radius:50%;
-                    animation:tqRing 1.4s cubic-bezier(0.5,0,0.5,1) infinite;
+                    animation:tqRing 1.6s cubic-bezier(0.5,0,0.5,1) infinite;
+                    filter:drop-shadow(0 0 8px currentColor);
                 }
-                .tq-loading-ring div:nth-child(1) { border-top-color:#0ea5e9; animation-delay:-0.45s; }
-                .tq-loading-ring div:nth-child(2) { border-top-color:#8b5cf6; animation-delay:-0.3s; }
-                .tq-loading-ring div:nth-child(3) { border-top-color:#ec4899; animation-delay:-0.15s; }
-                .tq-loading-ring div:nth-child(4) { border-top-color:#f59e0b; }
-                @keyframes tqRing { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }
+                .tq-loading-ring div:nth-child(1) { border-top-color:var(--tq-accent); animation-delay:-0.45s; }
+                .tq-loading-ring div:nth-child(2) { border-top-color:#8b5cf6; animation-delay:-0.3s; transform:scale(0.85); }
+                .tq-loading-ring div:nth-child(3) { border-top-color:#ec4899; animation-delay:-0.15s; transform:scale(0.7); }
+                .tq-loading-ring div:nth-child(4) { border-top-color:#f59e0b; transform:scale(0.55); }
+                .tq-loading-core {
+                    position:absolute; top:50%; left:50%; width:8px; height:8px;
+                    margin:-4px 0 0 -4px; background:#fff; border-radius:50%;
+                    box-shadow:0 0 16px var(--tq-accent), 0 0 32px var(--tq-accent-soft);
+                    animation:tqPulseCore 1.4s ease-in-out infinite;
+                }
+                @keyframes tqRing { 0% { transform:rotate(0deg) scale(var(--s,1)); } 100% { transform:rotate(360deg) scale(var(--s,1)); } }
+                @keyframes tqPulseCore { 0%,100% { transform:scale(1); opacity:0.9; } 50% { transform:scale(1.4); opacity:1; } }
+
+                .tq-speed-ring {
+                    position:absolute; top:50%; left:50%;
+                    transform:translate(-50%,-50%) scale(0.7);
+                    padding:16px 32px;
+                    background:linear-gradient(135deg, rgba(239,68,68,0.95), rgba(251,146,60,0.95));
+                    color:#fff; font-weight:900; font-size:20px;
+                    border-radius:18px;
+                    border:2px solid rgba(255,255,255,0.3);
+                    box-shadow:0 12px 50px rgba(239,68,68,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
+                    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+                    opacity:0; pointer-events:none; z-index:500;
+                    transition:opacity 0.25s, transform 0.25s cubic-bezier(0.34,1.56,0.64,1);
+                    font-family:system-ui, sans-serif;
+                    letter-spacing:1px;
+                }
+                .tq-speed-ring.is-visible {
+                    opacity:1;
+                    transform:translate(-50%,-50%) scale(1);
+                    animation:tqSpeedPulse 0.6s ease-in-out infinite;
+                }
+                @keyframes tqSpeedPulse {
+                    0%,100% { box-shadow:0 12px 50px rgba(239,68,68,0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
+                    50% { box-shadow:0 16px 70px rgba(239,68,68,0.85), inset 0 1px 0 rgba(255,255,255,0.3); }
+                }
 
                 .tq-captions {
-                    position:absolute; bottom:80px; left:0; width:100%;
+                    position:absolute; bottom:90px; left:0; width:100%;
                     text-align:center; pointer-events:none; opacity:0;
-                    transition:opacity 0.25s; z-index:100;
+                    transition:opacity 0.3s cubic-bezier(0.4,0,0.2,1); z-index:100;
                 }
                 .tq-cue-wrap { display:inline-block; max-width:90%; }
                 .tq-captions span {
-                    display:inline-block; background:rgba(0,0,0,0.85);
-                    color:#fff; padding:6px 14px; font-weight:700;
-                    border-radius:6px; text-shadow:0 2px 6px rgba(0,0,0,0.9);
-                    backdrop-filter:blur(8px); line-height:1.4;
-                    font-family:system-ui, -apple-system, 'Segoe UI', sans-serif;
-                    box-shadow:0 6px 24px rgba(0,0,0,0.5);
-                    border:1px solid rgba(255,255,255,0.05);
-                }
-
-                #tq-debug {
-                    position:absolute; top:10px; left:10px;
-                    background:rgba(0,0,0,0.92); color:#0fffa0;
-                    font-family:'SF Mono', Menlo, monospace; font-size:11px;
-                    padding:14px 16px; border-radius:12px; z-index:9999;
-                    pointer-events:none; backdrop-filter:blur(20px);
-                    border:1px solid rgba(15,255,160,0.4);
-                    box-shadow:0 0 60px rgba(15,255,160,0.3), inset 0 0 30px rgba(15,255,160,0.06);
-                    line-height:1.7; white-space:pre; max-width:480px;
-                }
-                #tq-debug div:first-child { color:#0ea5e9; font-weight:800; margin-bottom:6px; font-size:12px; text-shadow:0 0 8px rgba(14,165,233,0.6); }
-
-                .tq-toasts {
-                    position:absolute; top:20px; left:50%;
-                    transform:translateX(-50%); display:flex;
-                    flex-direction:column; gap:10px; z-index:9999; pointer-events:none;
-                }
-                .tq-toast {
-                    background:rgba(15,15,20,0.95); color:#fff;
-                    padding:12px 24px; border-radius:14px; font-weight:700;
-                    backdrop-filter:blur(28px); border:1px solid rgba(255,255,255,0.12);
-                    box-shadow:0 14px 60px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.08);
-                    animation:tqIn 0.4s cubic-bezier(0.2,0.8,0.2,1) forwards;
-                    transition:opacity 0.3s; font-family:system-ui, sans-serif;
-                }
-                .tq-error { border-color:rgba(239,68,68,0.5); color:#fca5a5; box-shadow:0 14px 60px rgba(239,68,68,0.3); }
-                .tq-warning { border-color:rgba(234,179,8,0.5); color:#fde047; }
-                .tq-info { border-color:rgba(14,165,233,0.4); }
-                @keyframes tqIn {
-                    from { opacity:0; transform:translateY(-28px) scale(0.9); }
-                    to { opacity:1; transform:translateY(0) scale(1); }
-                }
-
-                .tq-overlay { position:absolute; pointer-events:none; z-index:200; opacity:0; transition:opacity 0.25s; }
-                .tq-overlay.is-visible { opacity:1; }
-                .tq-seek { top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; }
-                .tq-seek span {
-                    background:rgba(0,0,0,0.9); backdrop-filter:blur(22px);
-                    padding:22px 44px; border-radius:18px; font-size:42px;
-                    font-weight:900; color:#fff;
-                    box-shadow:0 16px 60px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.12);
-                    border:1px solid rgba(255,255,255,0.16); font-family:system-ui, sans-serif;
-                    letter-spacing:1.5px; text-shadow:0 0 20px rgba(14,165,233,0.4);
-                }
-                .tq-volume, .tq-brightness {
-                    top:50%; transform:translateY(-50%); width:6px; height:180px;
-                    background:rgba(255,255,255,0.12); border-radius:3px;
-                    overflow:hidden; backdrop-filter:blur(12px);
-                    box-shadow:0 0 24px rgba(0,0,0,0.45);
-                }
-                .tq-volume { right:36px; }
-                .tq-brightness { left:36px; }
-                .tq-bar-fill { position:absolute; bottom:0; left:0; width:100%; transition:height 0.1s linear; }
-                .tq-volume .tq-bar-fill { background:linear-gradient(to top, #3b82f6 0%, #8b5cf6 50%, #ec4899 80%, #ef4444 100%); box-shadow:0 0 20px rgba(139,92,246,0.75); }
-                .tq-brightness .tq-bar-fill { background:linear-gradient(to top, #f59e0b, #fde047, #fff7d6); box-shadow:0 0 20px rgba(253,224,71,0.75); }
-
-                #tq-boost {
-                    position:absolute; top:20px; right:20px;
-                    background:linear-gradient(135deg, #ef4444, #f97316, #fbbf24);
-                    color:#fff; padding:6px 14px; border-radius:12px;
-                    font-size:12px; font-weight:900; opacity:0;
-                    transition:opacity 0.3s; z-index:50;
-                    box-shadow:0 8px 30px rgba(239,68,68,0.55);
-                    font-family:system-ui, sans-serif;
-                    border:1px solid rgba(255,255,255,0.15);
-                }
-                #tq-boost.is-visible { opacity:1; animation:tqPulse 1.6s ease-in-out infinite; }
-                @keyframes tqPulse { 0%,100% { transform:scale(1); box-shadow:0 8px 30px rgba(239,68,68,0.55); } 50% { transform:scale(1.07); box-shadow:0 10px 42px rgba(239,68,68,0.8); } }
-
-                .is-idle .controls, .is-idle [data-controls] { opacity:0; transition:opacity 0.5s; }
-
-                .tq-thumb-preview {
-                    position:absolute; bottom:60px; transform:translateX(-50%);
-                    background:rgba(0,0,0,0.96); backdrop-filter:blur(20px);
-                    border:1px solid rgba(255,255,255,0.16); border-radius:14px;
-                    padding:6px; opacity:0; transition:opacity 0.25s; pointer-events:none;
-                    box-shadow:0 18px 60px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.08);
-                    z-index:300;
-                }
-                .tq-thumb-preview canvas { display:block; border-radius:10px; }
-                .tq-thumb-time {
-                    text-align:center; color:#fff; font-size:12px; font-weight:800;
-                    margin-top:6px; font-family:'SF Mono', Menlo, monospace;
-                    text-shadow:0 1px 4px rgba(0,0,0,0.9);
-                }
-                .tq-thumb-chapter {
-                    text-align:center; color:#0ea5e9; font-size:10px; font-weight:700;
-                    margin-top:2px; font-family:system-ui, sans-serif;
-                    text-shadow:0 1px 4px rgba(0,0,0,0.9); max-width:160px;
-                    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-                }
-
-                .tq-heatmap {
-                    position:absolute; bottom:100%; left:0; width:100%; height:28px;
-                    display:flex; align-items:flex-end; gap:1px;
-                    pointer-events:none; opacity:0.7;
-                }
-                .tq-heat-seg {
-                    flex:1; background:linear-gradient(to top, rgba(239,68,68,0.75), rgba(251,191,36,0.95), rgba(254,240,138,1));
-                    min-height:1px; border-radius:2px 2px 0 0;
-                    transition:height 0.4s ease;
-                    box-shadow:0 0 5px rgba(251,191,36,0.4);
-                }
-
-                .tq-chapter-markers {
-                    position:absolute; bottom:0; left:0; width:100%; height:100%;
-                    pointer-events:none;
-                }
-                .tq-chapter-marker {
-                    position:absolute; top:0; width:2px; height:100%;
-                    background:rgba(255,255,255,0.75);
-                    box-shadow:0 0 8px rgba(14,165,233,0.85);
-                }
-
-                .tq-spectrum {
-                    position:absolute; bottom:50px; left:50%;
-                    transform:translateX(-50%);
-                    display:flex; align-items:flex-end; gap:2px;
-                    width:220px; height:24px;
-                    opacity:0; transition:opacity 0.4s;
-                    pointer-events:none;
-                }
-                .is-fullscreen .tq-spectrum { opacity:0.4; }
-                .tq-spec-bar {
-                    flex:1; background:linear-gradient(to top, #3b82f6, #8b5cf6, #ec4899);
-                    transform-origin:bottom; transform:scaleY(0);
-                    transition:transform 0.07s linear;
-                    border-radius:1px;
-                    box-shadow:0 0 5px rgba(139,92,246,0.55);
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-
-    const instance = new TitaniumQuantumPlayer();
-    instance.Bus = Bus;
-    instance.Engine = Engine;
-    instance.Capabilities = Capabilities;
-    instance.ErrorTaxonomy = ErrorTaxonomy;
-    instance.EQ_PRESETS = EQ_PRESETS;
-    instance.MODE_PROFILES = MODE_PROFILES;
-    instance.Scheduler = Scheduler;
-    instance.RingBuffer = RingBuffer;
-    instance.ObjectPool = ObjectPool;
-    instance.WeakCache = WeakCache;
-    return instance;
-})();
-
-window.playerEngine = TitaniumQuantum;
-window.TitaniumQuantum = TitaniumQuantum;
+                    display:inline-block; background:rgba(0,0,0,0.86);
+                    color:#fff; padding:7px 16px; font-weight:700;
+                    border-radius:8px; text-shadow:0 2px 8px rgba(0,0,0,0.95);
+                    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+                    line-height:1.45;
+                    font-family:system-ui, -apple-system, 'Segoe UI', sans
