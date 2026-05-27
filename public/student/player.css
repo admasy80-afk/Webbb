@@ -17,13 +17,19 @@
        accessibility,
        utilities;
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   APPLE TV — MEDIA PLAYER OVERLAY
+   Pixel-faithful recreation of the native tvOS / iOS Apple TV player chrome.
+   Cinematic. Calm. Expensive. Nothing flashy.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @layer houdini {
     @property --glow-angle              { syntax: '<angle>';      initial-value: 0deg;   inherits: false; }
     @property --glow-angle-2            { syntax: '<angle>';      initial-value: 180deg; inherits: false; }
     @property --ambient-hue             { syntax: '<angle>';      initial-value: 340deg; inherits: false; }
     @property --ambient-intensity       { syntax: '<number>';     initial-value: 1;      inherits: true;  }
     @property --ambient-spread          { syntax: '<percentage>'; initial-value: 100%;   inherits: false; }
-    @property --ambient-blur            { syntax: '<length>';     initial-value: 120px;  inherits: false; }
+    @property --ambient-blur            { syntax: '<length>';     initial-value: 140px;  inherits: false; }
     @property --progress-pct            { syntax: '<percentage>'; initial-value: 0%;     inherits: true;  }
     @property --buffered-pct            { syntax: '<percentage>'; initial-value: 0%;     inherits: true;  }
     @property --hover-pct               { syntax: '<percentage>'; initial-value: 0%;     inherits: true;  }
@@ -44,11 +50,14 @@
     @property --ripple-scale            { syntax: '<number>';     initial-value: 0;      inherits: false; }
     @property --glass-saturation        { syntax: '<number>';     initial-value: 1.8;    inherits: false; }
     @property --glass-brightness        { syntax: '<number>';     initial-value: 1;      inherits: false; }
-    @property --glass-noise-opacity     { syntax: '<number>';     initial-value: 0.025;  inherits: false; }
+    @property --glass-noise-opacity     { syntax: '<number>';     initial-value: 0.018;  inherits: false; }
     @property --reveal-progress         { syntax: '<number>';     initial-value: 0;      inherits: false; }
     @property --thumb-scale             { syntax: '<number>';     initial-value: 1;      inherits: false; }
     @property --thumb-halo              { syntax: '<length>';     initial-value: 0px;    inherits: false; }
     @property --controls-bottom-fade    { syntax: '<percentage>'; initial-value: 0%;     inherits: false; }
+    @property --chrome-opacity          { syntax: '<number>';     initial-value: 0;      inherits: false; }
+    @property --scrub-position          { syntax: '<percentage>'; initial-value: 0%;     inherits: true;  }
+    @property --apple-grain             { syntax: '<number>';     initial-value: 0.012;  inherits: false; }
 }
 
 @layer foundation {
@@ -72,7 +81,7 @@
         -moz-osx-font-smoothing: grayscale;
         font-synthesis: none;
         forced-color-adjust: none;
-        font-feature-settings: "ss01", "ss02", "cv11", "kern", "liga";
+        font-feature-settings: "ss01", "ss02", "cv11", "kern", "liga", "tnum";
         font-optical-sizing: auto;
     }
 
@@ -82,11 +91,13 @@
         background: none;
         border: none;
         letter-spacing: inherit;
+        cursor: pointer;
     }
 
     .video-container svg {
         display: block;
         flex-shrink: 0;
+        pointer-events: none;
     }
 }
 
@@ -108,7 +119,7 @@
         --c-ink-12:       #e5e5ea;
         --c-snow:         #ffffff;
 
-        /* Apple white-on-black alpha system (matches iOS / tvOS) */
+        /* Apple white-on-black alpha system */
         --a-w-04: rgb(255 255 255 / 0.04);
         --a-w-06: rgb(255 255 255 / 0.06);
         --a-w-08: rgb(255 255 255 / 0.08);
@@ -116,16 +127,20 @@
         --a-w-12: rgb(255 255 255 / 0.12);
         --a-w-14: rgb(255 255 255 / 0.14);
         --a-w-16: rgb(255 255 255 / 0.16);
+        --a-w-17: rgb(255 255 255 / 0.17);
         --a-w-18: rgb(255 255 255 / 0.18);
         --a-w-22: rgb(255 255 255 / 0.22);
         --a-w-28: rgb(255 255 255 / 0.28);
         --a-w-36: rgb(255 255 255 / 0.36);
         --a-w-45: rgb(255 255 255 / 0.45);
         --a-w-55: rgb(255 255 255 / 0.55);
+        --a-w-62: rgb(255 255 255 / 0.62);
         --a-w-65: rgb(255 255 255 / 0.65);
         --a-w-75: rgb(255 255 255 / 0.75);
+        --a-w-82: rgb(255 255 255 / 0.82);
         --a-w-85: rgb(255 255 255 / 0.85);
         --a-w-92: rgb(255 255 255 / 0.92);
+        --a-w-95: rgb(255 255 255 / 0.95);
 
         --a-k-08: rgb(0 0 0 / 0.08);
         --a-k-12: rgb(0 0 0 / 0.12);
@@ -136,30 +151,31 @@
         --a-k-75: rgb(0 0 0 / 0.75);
         --a-k-90: rgb(0 0 0 / 0.90);
 
-        /* ── BACKGROUND LAYERS ──────────────────────────── */
-        --p-bg-base:    #000;
-        --p-bg-elev:    #0a0a0a;
+        /* ── BACKGROUND ─────────────────────────────────── */
+        --p-bg-base:    #000000;
+        --p-bg-elev:    #050505;
 
-        /* Apple Vibrancy materials (UIKit / SwiftUI .ultraThinMaterial-like) */
-        --p-mat-ultrathin:  rgb(28 28 30 / 0.32);
-        --p-mat-thin:       rgb(28 28 30 / 0.52);
-        --p-mat-regular:    rgb(28 28 30 / 0.68);
-        --p-mat-thick:      rgb(20 20 22 / 0.82);
-        --p-mat-chrome:     rgb(255 255 255 / 0.18);
+        /* Apple Vibrancy materials */
+        --p-mat-ultrathin:  rgb(255 255 255 / 0.08);
+        --p-mat-thin:       rgb(255 255 255 / 0.12);
+        --p-mat-regular:    rgb(255 255 255 / 0.17);
+        --p-mat-thick:      rgb(28 28 30 / 0.78);
+        --p-mat-chrome:     rgb(20 20 22 / 0.86);
 
         /* ── TEXT ────────────────────────────────────────── */
-        --p-text-main:    var(--c-snow);
-        --p-text-primary: rgb(255 255 255 / 1);
-        --p-text-secondary: rgb(235 235 245 / 0.6);
-        --p-text-tertiary:  rgb(235 235 245 / 0.3);
-        --p-text-quaternary:rgb(235 235 245 / 0.18);
+        --p-text-main:      var(--c-snow);
+        --p-text-primary:   rgb(255 255 255 / 1);
+        --p-text-secondary: rgb(255 255 255 / 0.62);
+        --p-text-tertiary:  rgb(255 255 255 / 0.38);
+        --p-text-quaternary:rgb(255 255 255 / 0.20);
+        --p-text-eyebrow:   rgb(255 255 255 / 0.82);
 
-        /* ── STROKES (Apple separator / quaternary fill) ── */
-        --p-stroke:         rgb(255 255 255 / 0.08);
-        --p-stroke-strong:  rgb(255 255 255 / 0.14);
+        /* ── STROKES ────────────────────────────────────── */
+        --p-stroke:         rgb(255 255 255 / 0.06);
+        --p-stroke-strong:  rgb(255 255 255 / 0.12);
         --p-stroke-vibrant: rgb(255 255 255 / 0.22);
 
-        /* ── ACCENT (Apple system tint, defaults to white) ─ */
+        /* ── ACCENT ─────────────────────────────────────── */
         --p-accent:         var(--c-snow);
         --p-accent-soft:    rgb(255 255 255 / 0.12);
         --p-accent-glow:    rgb(255 255 255 / 0.22);
@@ -168,7 +184,7 @@
         --p-tint-mint:      #66d4cf;
         --p-tint-rose:      #ff375f;
 
-        /* ── RADIUS (Apple continuous curvature) ─────────── */
+        /* ── RADIUS ─────────────────────────────────────── */
         --p-radius-2xs:  4px;
         --p-radius-xs:   8px;
         --p-radius-sm:   14px;
@@ -176,21 +192,24 @@
         --p-radius-lg:   28px;
         --p-radius-xl:   36px;
         --p-radius-2xl:  44px;
-        --p-radius-pill: 9999px;
+        --p-radius-pill: 999px;
 
-        /* ── CONTROL SIZING ──────────────────────────────── */
+        /* ── APPLE TV CONTROL SIZING (exact spec) ───────── */
         --p-ctrl-icon-xs:   16px;
         --p-ctrl-icon-sm:   20px;
         --p-ctrl-icon-md:   24px;
-        --p-ctrl-icon-lg:   30px;
-        --p-ctrl-icon-xl:   38px;
+        --p-ctrl-icon-lg:   28px;
+        --p-ctrl-icon-xl:   34px;
+        --p-ctrl-icon-2xl:  56px;
         --p-ctrl-tap:       44px;
 
-        --p-btn-circle-sm:  clamp(40px, 7cqi, 48px);
-        --p-btn-circle-md:  clamp(52px, 9cqi, 60px);
-        --p-btn-circle-lg:  clamp(78px, 14cqi, 96px);
+        /* Apple TV exact button proportions */
+        --p-btn-circle-sm:  56px;   /* close, airplay, volume, audio, sub */
+        --p-btn-circle-md:  64px;   /* skip 10s */
+        --p-btn-circle-lg:  172px;  /* hero play */
+        --p-btn-pill-h:     44px;
 
-        /* ── SPACING (8-pt grid, Apple HIG) ─────────────── */
+        /* ── SPACING (Apple 8pt grid) ───────────────────── */
         --sp-1: 4px;
         --sp-2: 8px;
         --sp-3: 12px;
@@ -201,23 +220,33 @@
         --sp-8: 40px;
         --sp-9: 48px;
         --sp-10: 64px;
+        --sp-11: 96px;
 
-        /* ── TYPOGRAPHY ──────────────────────────────────── */
-        --p-font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
-        --p-font-text:    "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", system-ui, sans-serif;
+        /* Apple TV safe paddings */
+        --pad-edge:        48px;
+        --pad-title-left:  64px;
+        --pad-progress:    48px;
+        --rail-gap:        96px;
+
+        /* ── TYPOGRAPHY ─────────────────────────────────── */
+        --p-font-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, "Helvetica Neue", sans-serif;
+        --p-font-text:    "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
         --p-font-mono:    ui-monospace, "SF Mono", "SFMono-Regular", Menlo, monospace;
         --p-font-rounded: "SF Pro Rounded", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 
-        --p-fs-caption:  clamp(0.72rem, 1.6cqi, 0.78rem);
-        --p-fs-footnote: clamp(0.78rem, 1.8cqi, 0.85rem);
-        --p-fs-sub:      clamp(0.85rem, 2cqi,   0.95rem);
-        --p-fs-body:     clamp(0.95rem, 2.2cqi, 1.05rem);
-        --p-fs-callout:  clamp(1.05rem, 2.5cqi, 1.2rem);
-        --p-fs-title-3:  clamp(1.2rem,  2.8cqi, 1.45rem);
-        --p-fs-title-2:  clamp(1.5rem,  3.4cqi, 1.85rem);
-        --p-fs-title-1:  clamp(1.9rem,  4.2cqi, 2.4rem);
-        --p-fs-large:    clamp(2.4rem,  5.2cqi, 3.1rem);
-        --p-fs-hero:     clamp(2.8rem,  6.4cqi, 3.8rem);
+        /* Apple TV exact type scale */
+        --p-fs-caption:    12px;
+        --p-fs-footnote:   13px;
+        --p-fs-sub-label:  18px;   /* time labels */
+        --p-fs-eyebrow:    22px;   /* small label above title */
+        --p-fs-body:       17px;
+        --p-fs-callout:    20px;
+        --p-fs-title-3:    28px;
+        --p-fs-title-2:    36px;
+        --p-fs-title-1:    48px;
+        --p-fs-large:      56px;
+        --p-fs-hero:       64px;   /* main title */
+        --p-fs-display:    80px;
 
         --p-fw-regular:  400;
         --p-fw-medium:   500;
@@ -225,52 +254,52 @@
         --p-fw-bold:     700;
         --p-fw-heavy:    800;
 
-        --p-tracking-tight:   -0.022em;
-        --p-tracking-tighter: -0.035em;
-        --p-tracking-normal:   0;
-        --p-tracking-wide:     0.01em;
+        --p-tracking-tight:    -0.022em;
+        --p-tracking-tighter:  -0.035em;
+        --p-tracking-tightest: -0.045em;
+        --p-tracking-normal:    0;
+        --p-tracking-wide:      0.01em;
 
-        /* ── EASING (Apple-tuned curves) ─────────────────── */
+        /* ── EASING (Apple cinematic) ───────────────────── */
         --ease-apple-standard:  cubic-bezier(0.4, 0, 0.2, 1);
         --ease-apple-out:       cubic-bezier(0.16, 1, 0.3, 1);
         --ease-apple-in:        cubic-bezier(0.4, 0, 1, 1);
         --ease-apple-inout:     cubic-bezier(0.65, 0, 0.35, 1);
-        --ease-apple-spring:    cubic-bezier(0.34, 1.56, 0.64, 1);
         --ease-apple-soft:      cubic-bezier(0.25, 0.46, 0.45, 0.94);
         --ease-apple-cinematic: cubic-bezier(0.22, 1, 0.36, 1);
-        --ease-apple-bounce:    linear(0, 0.245 7%, 0.464 13.5%, 0.626 18.6%, 0.747 23.7%, 0.834 28.8%, 0.892 33.5%, 0.93 38.6%, 0.955 44.1%, 0.97 49.6%, 0.98 56%, 0.987 62.8%, 0.992 70%, 0.998 100%);
+        --ease-apple-tv:        cubic-bezier(0.22, 1, 0.36, 1);
 
-        --t-quick:      120ms var(--ease-apple-standard);
-        --t-fast:       220ms var(--ease-apple-out);
-        --t-base:       320ms var(--ease-apple-out);
-        --t-medium:     480ms var(--ease-apple-cinematic);
-        --t-slow:       700ms var(--ease-apple-cinematic);
+        --t-instant:    80ms  var(--ease-apple-standard);
+        --t-quick:      140ms var(--ease-apple-standard);
+        --t-fast:       220ms var(--ease-apple-cinematic);
+        --t-base:       280ms var(--ease-apple-cinematic);
+        --t-medium:     420ms var(--ease-apple-cinematic);
+        --t-slow:       620ms var(--ease-apple-cinematic);
         --t-cinematic:  900ms var(--ease-apple-cinematic);
 
-        /* ── SHADOWS (soft, layered, Apple-style) ───────── */
-        --shadow-flat:    0 0 0 0.5px rgb(255 255 255 / 0.06);
+        /* ── SHADOWS (soft, ambient) ────────────────────── */
+        --shadow-flat:    0 0 0 0.5px rgb(255 255 255 / 0.04);
         --shadow-card:    0 1px 2px rgb(0 0 0 / 0.18),
                           0 8px 24px rgb(0 0 0 / 0.32);
         --shadow-float:   0 2px 6px rgb(0 0 0 / 0.18),
-                          0 16px 48px rgb(0 0 0 / 0.36),
-                          0 0 0 0.5px rgb(255 255 255 / 0.08) inset;
+                          0 16px 48px rgb(0 0 0 / 0.36);
         --shadow-elevated:0 4px 12px rgb(0 0 0 / 0.22),
-                          0 24px 64px rgb(0 0 0 / 0.45),
-                          0 0 0 0.5px rgb(255 255 255 / 0.10) inset;
+                          0 24px 64px rgb(0 0 0 / 0.45);
         --shadow-cinema:  0 8px 24px rgb(0 0 0 / 0.32),
-                          0 48px 120px rgb(0 0 0 / 0.58),
-                          0 0 0 0.5px rgb(255 255 255 / 0.08) inset;
+                          0 48px 120px rgb(0 0 0 / 0.58);
         --shadow-thumb:   0 1px 3px rgb(0 0 0 / 0.4),
-                          0 4px 14px rgb(0 0 0 / 0.55);
+                          0 4px 14px rgb(0 0 0 / 0.45);
+        --shadow-ambient: 0 20px 60px rgb(0 0 0 / 0.55);
 
-        /* ── BLUR (matches Apple materials) ──────────────── */
-        --blur-ultrathin: 20px;
-        --blur-thin:      30px;
-        --blur-regular:   45px;
-        --blur-thick:     60px;
-        --blur-chrome:    80px;
+        /* ── BLUR (Apple materials) ─────────────────────── */
+        --blur-ultrathin: 14px;
+        --blur-thin:      18px;
+        --blur-regular:   22px;
+        --blur-thick:     30px;
+        --blur-chrome:    40px;
+        --blur-vibrant:   60px;
 
-        /* ── Z-INDEX ─────────────────────────────────────── */
+        /* ── Z-INDEX ────────────────────────────────────── */
         --z-media:     1;
         --z-gradient:  2;
         --z-noise:     3;
@@ -317,14 +346,14 @@
 
 @layer motion {
     @keyframes ambientDrift {
-        0%   { --ambient-hue: 0deg;   transform: scale(1)    rotate(0); }
-        50%  { --ambient-hue: 180deg; transform: scale(1.04) rotate(2deg); }
-        100% { --ambient-hue: 360deg; transform: scale(1)    rotate(0); }
+        0%   { transform: translate3d(0, 0, 0) scale(1)    rotate(0); }
+        50%  { transform: translate3d(2%, -1%, 0) scale(1.04) rotate(1.5deg); }
+        100% { transform: translate3d(0, 0, 0) scale(1)    rotate(0); }
     }
 
     @keyframes ambientBreathe {
-        0%, 100% { opacity: 0.45; }
-        50%      { opacity: 0.65; }
+        0%, 100% { opacity: 0.42; }
+        50%      { opacity: 0.62; }
     }
 
     @keyframes posterRevealApple {
@@ -338,38 +367,33 @@
     }
 
     @keyframes appleFadeIn {
-        from { opacity: 0; transform: translateY(8px); filter: blur(4px); }
-        to   { opacity: 1; transform: translateY(0);   filter: blur(0); }
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
     }
 
     @keyframes appleFadeUp {
-        from { opacity: 0; transform: translateY(16px); }
+        from { opacity: 0; transform: translateY(12px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes appleFadeDown {
+        from { opacity: 0; transform: translateY(-8px); }
         to   { opacity: 1; transform: translateY(0); }
     }
 
     @keyframes appleScaleIn {
-        from { opacity: 0; transform: scale(0.92); filter: blur(4px); }
-        to   { opacity: 1; transform: scale(1);    filter: blur(0); }
-    }
-
-    @keyframes appleSlideDown {
-        from { opacity: 0; transform: translateY(-12px); }
-        to   { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes appleSlideRight {
-        from { opacity: 0; transform: translateX(-12px); }
-        to   { opacity: 1; transform: translateX(0); }
+        from { opacity: 0; transform: scale(0.94); }
+        to   { opacity: 1; transform: scale(1); }
     }
 
     @keyframes appleTitleReveal {
-        0%   { opacity: 0; transform: translateY(20px); filter: blur(8px); letter-spacing: 0.02em; }
+        0%   { opacity: 0; transform: translateY(16px); filter: blur(6px); letter-spacing: 0; }
         100% { opacity: 1; transform: translateY(0);    filter: blur(0);   letter-spacing: var(--p-tracking-tighter); }
     }
 
     @keyframes appleBreathe {
         0%, 100% { transform: scale(1); }
-        50%      { transform: scale(1.014); }
+        50%      { transform: scale(1.012); }
     }
 
     @keyframes spinnerArc {
@@ -384,32 +408,32 @@
     }
 
     @keyframes skipArcApple {
-        0%   { opacity: 0; transform: translateY(-50%) scale(0.7); filter: blur(6px); }
-        25%  { opacity: 1; transform: translateY(-50%) scale(1.08); filter: blur(0); }
-        75%  { opacity: 1; transform: translateY(-50%) scale(1);   filter: blur(0); }
-        100% { opacity: 0; transform: translateY(-50%) scale(0.9); filter: blur(3px); }
+        0%   { opacity: 0; transform: translateY(-50%) scale(0.85); }
+        20%  { opacity: 1; transform: translateY(-50%) scale(1.04); }
+        80%  { opacity: 1; transform: translateY(-50%) scale(1); }
+        100% { opacity: 0; transform: translateY(-50%) scale(0.94); }
     }
 
     @keyframes skipIconRotate {
         0%   { transform: rotate(0); }
-        50%  { transform: rotate(-30deg); }
+        50%  { transform: rotate(-28deg); }
         100% { transform: rotate(0); }
     }
 
     @keyframes skipIconRotateFwd {
         0%   { transform: rotate(0); }
-        50%  { transform: rotate(30deg); }
+        50%  { transform: rotate(28deg); }
         100% { transform: rotate(0); }
     }
 
     @keyframes rippleSoft {
-        0%   { transform: scale(0);   opacity: 0.45; }
-        100% { transform: scale(2.6); opacity: 0; }
+        0%   { transform: scale(0);   opacity: 0.32; }
+        100% { transform: scale(2.4); opacity: 0; }
     }
 
     @keyframes thumbPulseApple {
         0%, 100% { box-shadow: var(--shadow-thumb), 0 0 0 0   rgb(255 255 255 / 0.16); }
-        50%      { box-shadow: var(--shadow-thumb), 0 0 0 10px transparent; }
+        50%      { box-shadow: var(--shadow-thumb), 0 0 0 8px transparent; }
     }
 
     @keyframes eqBarApple {
@@ -419,68 +443,47 @@
 
     @keyframes livePulseDot {
         0%, 100% { opacity: 1;   transform: scale(1); }
-        50%      { opacity: 0.5; transform: scale(0.85); }
+        50%      { opacity: 0.55; transform: scale(0.85); }
     }
 
     @keyframes liveDotRing {
-        0%   { box-shadow: 0 0 0 0   rgb(255 48 48 / 0.6); }
+        0%   { box-shadow: 0 0 0 0   rgb(255 48 48 / 0.55); }
         100% { box-shadow: 0 0 0 10px transparent; }
     }
 
     @keyframes toastInApple {
-        from { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.94); filter: blur(6px); }
-        to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1);    filter: blur(0); }
+        from { opacity: 0; transform: translateX(-50%) translateY(12px) scale(0.96); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0)    scale(1); }
     }
 
     @keyframes toastOutApple {
-        to { opacity: 0; transform: translateX(-50%) translateY(-6px) scale(0.96); filter: blur(4px); }
-    }
-
-    @keyframes glowPulseSubtle {
-        0%, 100% { box-shadow: 0 0 0 0 rgb(255 255 255 / 0); }
-        50%      { box-shadow: 0 0 28px 4px rgb(255 255 255 / 0.10); }
-    }
-
-    @keyframes spinElegant {
-        from { transform: rotate(0); }
-        to   { transform: rotate(360deg); }
-    }
-
-    @keyframes shineSweep {
-        0%   { background-position: -200% 50%; }
-        100% { background-position: 200% 50%; }
-    }
-
-    @keyframes chapterPing {
-        0%   { transform: scale(1);   opacity: 0.8; }
-        100% { transform: scale(2.4); opacity: 0; }
-    }
-
-    @keyframes appleSpring {
-        0%   { transform: scale(1); }
-        40%  { transform: scale(0.94); }
-        100% { transform: scale(1); }
+        to { opacity: 0; transform: translateX(-50%) translateY(-4px) scale(0.97); }
     }
 
     @keyframes iconMorph {
         0%   { transform: scale(1)    rotate(0); opacity: 1; }
-        45%  { transform: scale(0.7)  rotate(90deg); opacity: 0.4; }
+        45%  { transform: scale(0.78) rotate(0); opacity: 0.55; }
         100% { transform: scale(1)    rotate(0); opacity: 1; }
     }
 
     @keyframes vignetteEbb {
-        0%, 100% { opacity: 0.45; }
-        50%      { opacity: 0.6; }
-    }
-
-    @keyframes hudShine {
-        0%   { transform: translateX(-150%) skewX(-12deg); }
-        100% { transform: translateX(250%)  skewX(-12deg); }
+        0%, 100% { opacity: 0.42; }
+        50%      { opacity: 0.55; }
     }
 
     @keyframes breathingHalo {
-        0%, 100% { opacity: 0.35; transform: scale(1); }
-        50%      { opacity: 0.55; transform: scale(1.06); }
+        0%, 100% { opacity: 0.32; transform: scale(1); }
+        50%      { opacity: 0.5;  transform: scale(1.04); }
+    }
+
+    @keyframes haloIdle {
+        0%, 100% { box-shadow: 0 0 0 0 rgb(255 255 255 / 0); }
+        50%      { box-shadow: 0 0 32px 2px rgb(255 255 255 / 0.06); }
+    }
+
+    @keyframes apple-emerge {
+        0%   { opacity: 0; transform: translateY(8px) scale(0.98); filter: blur(3px); }
+        100% { opacity: 1; transform: translateY(0)   scale(1);    filter: blur(0); }
     }
 }
 
@@ -521,7 +524,7 @@
         .video-container:hover {
             box-shadow:
                 var(--shadow-cinema),
-                0 0 80px rgb(255 255 255 / 0.04);
+                0 0 80px rgb(255 255 255 / 0.03);
         }
     }
 
@@ -553,55 +556,57 @@
 }
 
 @layer cinematic-effects {
-    /* Subtle ambient drift — barely there, very Apple */
+    /* Almost imperceptible ambient drift — pure Apple atmosphere */
     .video-container::before {
         content: "";
         position: absolute;
         inset: -20%;
         background:
-            radial-gradient(ellipse 70% 50% at 25% 30%, rgb(255 255 255 / 0.04) 0%, transparent 60%),
-            radial-gradient(ellipse 65% 45% at 75% 70%, rgb(255 255 255 / 0.03) 0%, transparent 60%);
+            radial-gradient(ellipse 70% 50% at 25% 30%, rgb(255 255 255 / 0.025) 0%, transparent 60%),
+            radial-gradient(ellipse 65% 45% at 75% 70%, rgb(255 255 255 / 0.02) 0%, transparent 60%);
         filter: blur(var(--ambient-blur));
         opacity: 0;
         z-index: 0;
         pointer-events: none;
         transition: opacity var(--t-cinematic);
-        animation: ambientDrift 40s linear infinite;
+        animation: ambientDrift 60s linear infinite;
     }
 
     .video-container.is-paused::before,
-    .video-container.is-idle::before { opacity: 1; animation: ambientDrift 40s linear infinite, ambientBreathe 8s ease-in-out infinite; }
-    .video-container.is-buffering::before { opacity: 0.9; }
+    .video-container.is-idle::before { opacity: 1; animation: ambientDrift 60s linear infinite, ambientBreathe 10s ease-in-out infinite; }
+    .video-container.is-buffering::before { opacity: 0.85; }
 
-    /* Top fade for top-bar legibility */
+    /* Top fade — subtle legibility wash */
     .top-fade {
         position: absolute;
         top: 0; left: 0; right: 0;
-        height: 28%;
+        height: 24%;
         z-index: var(--z-gradient);
         pointer-events: none;
         background:
             linear-gradient(180deg,
                 rgb(0 0 0 / 0.55) 0%,
-                rgb(0 0 0 / 0.32) 40%,
+                rgb(0 0 0 / 0.32) 35%,
+                rgb(0 0 0 / 0.10) 75%,
                 rgb(0 0 0 / 0)    100%);
         opacity: 0;
         transition: opacity var(--t-medium);
     }
 
-    /* Bottom fade for controls + title */
+    /* Bottom fade — Apple TV's signature title/timeline scrim */
     .bottom-fade {
         position: absolute;
         bottom: 0; left: 0; right: 0;
-        height: 52%;
+        height: 58%;
         z-index: var(--z-gradient);
         pointer-events: none;
         background:
             linear-gradient(0deg,
-                rgb(0 0 0 / 0.75) 0%,
-                rgb(0 0 0 / 0.55) 18%,
-                rgb(0 0 0 / 0.30) 45%,
-                rgb(0 0 0 / 0.10) 70%,
+                rgb(0 0 0 / 0.82) 0%,
+                rgb(0 0 0 / 0.62) 14%,
+                rgb(0 0 0 / 0.38) 32%,
+                rgb(0 0 0 / 0.18) 56%,
+                rgb(0 0 0 / 0.06) 80%,
                 rgb(0 0 0 / 0)   100%);
         opacity: 0;
         transition: opacity var(--t-medium);
@@ -614,13 +619,13 @@
     .video-container:hover:not(.is-idle) .top-fade,
     .video-container:hover:not(.is-idle) .bottom-fade { opacity: 1; }
 
-    /* Soft vignette to ground the image */
+    /* Soft cinematic vignette */
     .cinema-vignette {
         position: absolute;
         inset: 0;
         z-index: var(--z-vignette);
         pointer-events: none;
-        background: radial-gradient(ellipse at center, transparent 58%, rgb(0 0 0 / 0.35) 100%);
+        background: radial-gradient(ellipse at center, transparent 60%, rgb(0 0 0 / 0.32) 100%);
         opacity: 0;
         transition: opacity var(--t-medium);
         mix-blend-mode: multiply;
@@ -630,15 +635,15 @@
     .video-container.is-buffering   .cinema-vignette,
     .video-container.is-seeking     .cinema-vignette { opacity: 1; }
 
-    .video-container.is-playing .cinema-vignette { opacity: 0.45; animation: vignetteEbb 12s ease-in-out infinite; }
+    .video-container.is-playing .cinema-vignette { opacity: 0.4; animation: vignetteEbb 14s ease-in-out infinite; }
 
-    /* Ultra-subtle film noise (matches Apple cinematic feel without overdoing it) */
+    /* Whisper-thin film grain (Apple TV+ signature) */
     .video-container::after {
         content: "";
         position: absolute;
         inset: 0;
         pointer-events: none;
-        opacity: var(--glass-noise-opacity, 0.025);
+        opacity: var(--apple-grain, 0.012);
         background-image:
             radial-gradient(rgb(255 255 255 / 0.5) 1px, transparent 1px),
             radial-gradient(rgb(255 255 255 / 0.3) 1px, transparent 1px);
@@ -648,10 +653,10 @@
         z-index: var(--z-noise);
     }
 
-    /* Pause dimming, very subtle, very Apple */
-    .video-container.is-paused #dahihPlayer { filter: brightness(0.72) saturate(1.05); }
-    .video-container.is-buffering #dahihPlayer { filter: brightness(0.6) blur(2px); }
-    .video-container.is-seeking #dahihPlayer { filter: brightness(0.7); }
+    /* Pause / buffer dimming — restrained, Apple-correct */
+    .video-container.is-paused #dahihPlayer { filter: brightness(0.78) saturate(1.04); }
+    .video-container.is-buffering #dahihPlayer { filter: brightness(0.62) blur(2px); }
+    .video-container.is-seeking #dahihPlayer { filter: brightness(0.74); }
 }
 
 @layer overlays {
@@ -688,7 +693,6 @@
 
     .video-poster > * { position: relative; z-index: 2; }
 
-    /* Apple-style centered TV+ poster meta */
     .poster-meta {
         display: flex;
         flex-direction: column;
@@ -704,7 +708,7 @@
         font-size: var(--p-fs-hero);
         font-weight: var(--p-fw-bold);
         letter-spacing: var(--p-tracking-tighter);
-        line-height: 1.02;
+        line-height: 0.95;
         text-wrap: balance;
         color: #fff;
         text-shadow: 0 4px 32px rgb(0 0 0 / 0.5);
@@ -733,14 +737,14 @@
         background: rgb(255 255 255 / 0.16);
         backdrop-filter: blur(var(--blur-thin)) saturate(180%);
         -webkit-backdrop-filter: blur(var(--blur-thin)) saturate(180%);
-        border: 0.5px solid rgb(255 255 255 / 0.22);
+        border: 0.5px solid rgb(255 255 255 / 0.18);
         font-size: var(--p-fs-caption);
         font-weight: var(--p-fw-semibold);
         letter-spacing: 0.04em;
         text-transform: uppercase;
     }
 
-    /* Apple-style SwiftUI progress spinner */
+    /* Apple-style spinner */
     .buffering-spinner {
         position: absolute;
         top: 50%; left: 50%;
@@ -767,11 +771,10 @@
 
     .buffering-spinner circle {
         fill: none;
-        stroke: rgb(255 255 255 / 0.9);
+        stroke: rgb(255 255 255 / 0.92);
         stroke-width: 3;
         stroke-linecap: round;
         animation: spinnerDash 1.4s ease-in-out infinite;
-        filter: drop-shadow(0 0 12px rgb(255 255 255 / 0.3));
     }
 
     .buffering-spinner__label {
@@ -786,7 +789,7 @@
         white-space: nowrap;
     }
 
-    /* Toast (HUD style, like AirPods connect / volume HUD) */
+    /* Toast (HUD style) */
     .player-toast {
         position: absolute;
         top: calc(var(--safe-top) + var(--sp-5));
@@ -794,9 +797,9 @@
         transform: translateX(-50%);
         z-index: var(--z-toast);
         padding: 10px 18px;
-        background: var(--p-mat-thick);
-        backdrop-filter: blur(var(--blur-thick)) saturate(220%);
-        -webkit-backdrop-filter: blur(var(--blur-thick)) saturate(220%);
+        background: var(--p-mat-chrome);
+        backdrop-filter: blur(var(--blur-chrome)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(200%);
         border: 0.5px solid var(--p-stroke-strong);
         border-radius: var(--p-radius-pill);
         font-size: var(--p-fs-footnote);
@@ -804,7 +807,7 @@
         letter-spacing: var(--p-tracking-tight);
         color: var(--p-text-primary);
         box-shadow: var(--shadow-elevated);
-        animation: toastInApple var(--t-base) var(--ease-apple-spring) both;
+        animation: toastInApple var(--t-base) var(--ease-apple-cinematic) both;
         pointer-events: none;
         display: inline-flex;
         align-items: center;
@@ -855,7 +858,7 @@
 
     .player-error__icon { width: 56px; height: 56px; color: var(--p-tint-rose); }
     .player-error__title { font-size: var(--p-fs-title-2); font-weight: var(--p-fw-semibold); letter-spacing: var(--p-tracking-tighter); }
-    .player-error__message { font-size: var(--p-fs-sub); color: var(--p-text-secondary); text-align: center; max-width: 62%; }
+    .player-error__message { font-size: var(--p-fs-sub-label); color: var(--p-text-secondary); text-align: center; max-width: 62%; }
 
     .end-card {
         position: absolute;
@@ -865,8 +868,8 @@
         align-items: center;
         justify-content: center;
         background: rgb(0 0 0 / 0.78);
-        backdrop-filter: blur(var(--blur-chrome));
-        -webkit-backdrop-filter: blur(var(--blur-chrome));
+        backdrop-filter: blur(var(--blur-vibrant));
+        -webkit-backdrop-filter: blur(var(--blur-vibrant));
     }
 
     .video-container.is-ended .end-card { display: flex; animation: appleScaleIn var(--t-medium) both; }
@@ -879,17 +882,16 @@
     .video-container.is-idle .top-bar,
     .video-container.is-idle .side-rail,
     .video-container.is-idle .meta-block,
+    .video-container.is-idle .bottom-pills,
     .video-container.is-idle .center-stack {
         opacity: 0 !important;
         visibility: hidden !important;
-        transform: translateY(12px) !important;
+        transform: translateY(8px) !important;
         pointer-events: none !important;
-        filter: blur(4px);
         transition:
             opacity var(--t-medium) var(--ease-apple-cinematic),
             transform var(--t-medium) var(--ease-apple-cinematic),
-            visibility var(--t-medium),
-            filter var(--t-medium) !important;
+            visibility var(--t-medium) !important;
     }
 
     .video-container.is-buffering .center-stack { opacity: 0; pointer-events: none; }
@@ -914,12 +916,12 @@
 }
 
 @layer controls {
-    /* ═══════════════════ TOP BAR (AirPlay + Volume) ═══════════════════ */
+    /* ═══════════════════ TOP BAR ═══════════════════ */
     .top-bar {
         position: absolute;
-        top: clamp(14px, 3cqi, 24px);
-        right: clamp(14px, 3cqi, 24px);
-        left: clamp(14px, 3cqi, 24px);
+        top: clamp(20px, 4cqi, var(--pad-edge));
+        right: clamp(20px, 4cqi, var(--pad-edge));
+        left: clamp(20px, 4cqi, var(--pad-edge));
         z-index: var(--z-top);
         display: flex;
         align-items: center;
@@ -930,8 +932,8 @@
         transform: translateY(-8px);
         pointer-events: none;
         transition:
-            opacity var(--t-base) var(--ease-apple-out),
-            transform var(--t-base) var(--ease-apple-out),
+            opacity var(--t-base) var(--ease-apple-cinematic),
+            transform var(--t-base) var(--ease-apple-cinematic),
             visibility var(--t-base);
     }
 
@@ -949,22 +951,22 @@
     .top-bar__right {
         display: flex;
         align-items: center;
-        gap: var(--sp-2);
+        gap: var(--sp-3);
     }
 
-    /* ═══════════════════ META BLOCK (Bottom-left title) ═══════════════════ */
+    /* ═══════════════════ META BLOCK (bottom-left title) ═══════════════════ */
     .meta-block {
         position: absolute;
-        bottom: clamp(120px, 22cqi, 168px);
-        left: clamp(20px, 4cqi, 36px);
+        bottom: clamp(140px, 24cqi, 196px);
+        left: clamp(24px, 5cqi, var(--pad-title-left));
         z-index: var(--z-meta);
-        max-width: min(58%, 720px);
+        max-width: min(58%, 760px);
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 10px;
         opacity: 0;
         visibility: hidden;
-        transform: translateY(10px);
+        transform: translateY(8px);
         pointer-events: none;
         transition:
             opacity var(--t-medium) var(--ease-apple-cinematic),
@@ -980,58 +982,50 @@
         transform: translateY(0);
     }
 
+    /* small label — Apple TV exact */
     .meta-block__eyebrow {
-        font-family: var(--p-font-text);
-        font-size: var(--p-fs-caption);
+        font-family: var(--p-font-display);
+        font-size: var(--p-fs-eyebrow);
         font-weight: var(--p-fw-semibold);
-        letter-spacing: 0.12em;
-        text-transform: uppercase;
-        color: var(--p-text-secondary);
-        display: inline-flex;
-        align-items: center;
-        gap: var(--sp-2);
-        margin-bottom: 2px;
-    }
-
-    .meta-block__eyebrow::before {
-        content: "";
-        width: 18px;
-        height: 1px;
-        background: currentColor;
-        opacity: 0.5;
+        letter-spacing: var(--p-tracking-tight);
+        color: rgb(255 255 255 / 0.82);
+        line-height: 1.2;
+        text-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
     }
 
     .meta-block__subtitle {
         font-family: var(--p-font-text);
-        font-size: var(--p-fs-sub);
+        font-size: var(--p-fs-sub-label);
         font-weight: var(--p-fw-medium);
-        color: var(--p-text-secondary);
+        color: rgb(255 255 255 / 0.7);
         letter-spacing: var(--p-tracking-tight);
         text-shadow: 0 2px 8px rgb(0 0 0 / 0.5);
     }
 
+    /* main title — 64px / 700 / -0.035em / 0.95 */
     .meta-block__title {
         font-family: var(--p-font-display);
-        font-size: var(--p-fs-title-1);
+        font-size: var(--p-fs-hero);
         font-weight: var(--p-fw-bold);
         letter-spacing: var(--p-tracking-tighter);
-        line-height: 1.04;
+        line-height: 0.95;
         color: #fff;
         text-shadow:
-            0 2px 16px rgb(0 0 0 / 0.6),
-            0 1px 0 rgb(0 0 0 / 0.4);
+            0 2px 24px rgb(0 0 0 / 0.55),
+            0 1px 2px rgb(0 0 0 / 0.4);
         text-wrap: balance;
+        margin-top: 2px;
     }
 
     .meta-block__chips {
         display: inline-flex;
         gap: var(--sp-2);
-        margin-top: 6px;
+        margin-top: 8px;
         flex-wrap: wrap;
     }
 
     .meta-chip {
-        padding: 3px 8px;
+        padding: 4px 10px;
         border-radius: var(--p-radius-2xs);
         background: rgb(255 255 255 / 0.14);
         backdrop-filter: blur(var(--blur-thin));
@@ -1040,7 +1034,7 @@
         font-size: var(--p-fs-caption);
         font-weight: var(--p-fw-semibold);
         letter-spacing: 0.04em;
-        color: rgb(255 255 255 / 0.9);
+        color: rgb(255 255 255 / 0.92);
     }
 
     .meta-chip.is-hdr {
@@ -1048,22 +1042,22 @@
         font-weight: var(--p-fw-bold);
     }
 
-    /* ═══════════════════ SIDE RAIL (Audio + Subtitles) ═══════════════════ */
+    /* ═══════════════════ SIDE RAIL ═══════════════════ */
     .side-rail {
         position: absolute;
         top: 50%;
-        right: clamp(14px, 3cqi, 24px);
+        right: clamp(20px, 4cqi, var(--pad-edge));
         transform: translateY(-50%);
         z-index: var(--z-side);
         display: flex;
         flex-direction: column;
-        gap: var(--sp-2);
+        gap: var(--sp-3);
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
         transition:
-            opacity var(--t-base) var(--ease-apple-out),
-            transform var(--t-base) var(--ease-apple-out),
+            opacity var(--t-base) var(--ease-apple-cinematic),
+            transform var(--t-base) var(--ease-apple-cinematic),
             visibility var(--t-base);
     }
 
@@ -1079,7 +1073,7 @@
 
     .video-container:not(.is-active):not(.is-paused) .side-rail { transform: translateY(-50%) translateX(8px); }
 
-    /* ═══════════════════ CENTER STACK (Rewind / Play / Forward) ═══════════════════ */
+    /* ═══════════════════ CENTER STACK ═══════════════════ */
     .center-stack {
         position: absolute;
         inset: 0;
@@ -1087,7 +1081,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: clamp(40px, 9cqi, 88px);
+        gap: clamp(56px, 11cqi, 112px);
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
@@ -1106,26 +1100,24 @@
 
     .center-stack > * {
         opacity: 0;
-        transform: scale(0.86) translateY(8px);
+        transform: translateY(8px);
         transition:
-            opacity 380ms var(--ease-apple-out) var(--stagger, 0s),
-            transform 380ms var(--ease-apple-spring) var(--stagger, 0s);
+            opacity 360ms var(--ease-apple-cinematic) var(--stagger, 0s),
+            transform 360ms var(--ease-apple-cinematic) var(--stagger, 0s);
     }
 
     .video-container.is-active .center-stack > *,
     .video-container:hover:not(.is-idle) .center-stack > *,
     .video-container.is-paused .center-stack > * {
         opacity: 1;
-        transform: scale(1) translateY(0);
+        transform: translateY(0);
     }
 
     .center-stack > *:nth-child(1) { --stagger: 0s;    }
     .center-stack > *:nth-child(2) { --stagger: 60ms;  }
     .center-stack > *:nth-child(3) { --stagger: 120ms; }
 
-    /* ═══════════════════ APPLE GLASS BUTTONS ═══════════════════ */
-
-    /* Base glass button — Apple TV's signature circular control */
+    /* ═══════════════════ APPLE GLASS BUTTON ═══════════════════ */
     .glass-btn {
         position: relative;
         display: inline-flex;
@@ -1136,29 +1128,28 @@
         min-width: var(--p-ctrl-tap);
         min-height: var(--p-ctrl-tap);
         padding: 0;
-        background: var(--p-mat-thin);
-        backdrop-filter: blur(var(--blur-regular)) saturate(200%);
-        -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(200%);
-        border: 0.5px solid var(--p-stroke-strong);
-        border-radius: 50%;
-        color: var(--p-text-primary);
+        background: rgb(255 255 255 / 0.12);
+        backdrop-filter: blur(22px) saturate(180%);
+        -webkit-backdrop-filter: blur(22px) saturate(180%);
+        border: none;
+        border-radius: 999px;
+        color: #fff;
         cursor: pointer;
         outline: none;
         overflow: hidden;
         box-shadow:
-            0 4px 14px rgb(0 0 0 / 0.32),
             0 0 0 0.5px rgb(255 255 255 / 0.06) inset,
-            0 1px 0 rgb(255 255 255 / 0.14) inset;
-        will-change: transform, background, box-shadow;
+            0 1px 0 rgb(255 255 255 / 0.10) inset;
+        will-change: transform, background;
         transition:
-            transform 240ms var(--ease-apple-out),
-            background 200ms var(--ease-apple-out),
-            border-color 200ms var(--ease-apple-out),
-            box-shadow 240ms var(--ease-apple-out),
-            color 200ms var(--ease-apple-out),
-            opacity 200ms;
+            transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+            background 240ms cubic-bezier(0.22, 1, 0.36, 1),
+            box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1),
+            color 200ms cubic-bezier(0.22, 1, 0.36, 1),
+            opacity 220ms;
     }
 
+    /* whisper-thin top inner highlight, no gradient bling */
     .glass-btn::before {
         content: "";
         position: absolute;
@@ -1166,24 +1157,11 @@
         border-radius: inherit;
         background: linear-gradient(
             180deg,
-            rgb(255 255 255 / 0.12) 0%,
-            rgb(255 255 255 / 0) 45%,
-            rgb(255 255 255 / 0) 60%,
-            rgb(0 0 0 / 0.12) 100%
+            rgb(255 255 255 / 0.08) 0%,
+            rgb(255 255 255 / 0)    50%
         );
         pointer-events: none;
-        opacity: 0.8;
-    }
-
-    .glass-btn::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: inherit;
-        background: radial-gradient(circle at 50% 30%, rgb(255 255 255 / 0.22), transparent 60%);
-        opacity: 0;
-        transition: opacity var(--t-fast);
-        pointer-events: none;
+        opacity: 0.85;
     }
 
     .glass-btn svg {
@@ -1192,60 +1170,47 @@
         width: var(--p-ctrl-icon-md);
         height: var(--p-ctrl-icon-md);
         fill: currentColor;
-        stroke: currentColor;
-        stroke-width: 0;
-        transition: transform 220ms var(--ease-apple-out);
-        filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.4));
+        stroke: none;
+        transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     @media (hover: hover) {
         .glass-btn:hover {
-            background: var(--p-mat-regular);
-            border-color: rgb(255 255 255 / 0.28);
-            transform: scale(1.08);
-            box-shadow:
-                0 6px 20px rgb(0 0 0 / 0.4),
-                0 0 0 0.5px rgb(255 255 255 / 0.18) inset,
-                0 1px 0 rgb(255 255 255 / 0.22) inset;
+            background: rgb(255 255 255 / 0.17);
+            transform: scale(1.055);
         }
-        .glass-btn:hover::after { opacity: 1; }
-        .glass-btn:hover svg { transform: scale(1.05); }
     }
 
     .glass-btn:active {
-        transform: scale(0.94);
-        background: var(--p-mat-thick);
-        transition-duration: 80ms;
+        transform: scale(0.96);
+        background: rgb(255 255 255 / 0.20);
+        transition-duration: 90ms;
     }
 
     .glass-btn:focus-visible {
         outline: none;
         box-shadow:
             0 0 0 2px var(--p-bg-base),
-            0 0 0 4px rgb(255 255 255 / 0.85),
-            var(--shadow-card);
+            0 0 0 4px rgb(255 255 255 / 0.85);
     }
 
     .glass-btn.is-active {
         background: rgb(255 255 255 / 0.92);
         color: #000;
-        border-color: transparent;
     }
-
-    .glass-btn.is-active svg { filter: none; }
 
     .glass-btn[disabled] {
         opacity: 0.32;
         pointer-events: none;
     }
 
-    /* Skip buttons */
+    /* Skip 10s buttons */
     .glass-btn.skip-btn {
         width: var(--p-btn-circle-md);
         height: var(--p-btn-circle-md);
     }
 
-    .glass-btn.skip-btn svg { width: var(--p-ctrl-icon-lg); height: var(--p-ctrl-icon-lg); }
+    .glass-btn.skip-btn svg { width: var(--p-ctrl-icon-xl); height: var(--p-ctrl-icon-xl); }
 
     .glass-btn.skip-btn .skip-num {
         position: absolute;
@@ -1257,96 +1222,129 @@
         line-height: 1;
         top: 50%;
         left: 50%;
-        transform: translate(-50%, -42%);
+        transform: translate(-50%, -38%);
         pointer-events: none;
     }
 
-    .glass-btn.skip-btn:active svg { animation: skipIconRotate 400ms var(--ease-apple-out); }
-    .glass-btn.skip-btn.forward:active svg { animation: skipIconRotateFwd 400ms var(--ease-apple-out); }
+    .glass-btn.skip-btn:active svg { animation: skipIconRotate 420ms var(--ease-apple-cinematic); }
+    .glass-btn.skip-btn.forward:active svg { animation: skipIconRotateFwd 420ms var(--ease-apple-cinematic); }
 
-    /* Hero play button — the centerpiece */
+    /* ── HERO PLAY BUTTON — 172×172, Apple's centerpiece ───────────── */
     .glass-btn.play-btn {
         width: var(--p-btn-circle-lg);
         height: var(--p-btn-circle-lg);
-        background: rgb(255 255 255 / 0.18);
-        backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
-        -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
-        border: 0.5px solid rgb(255 255 255 / 0.32);
+        background: rgb(255 255 255 / 0.12);
+        backdrop-filter: blur(22px) saturate(180%);
+        -webkit-backdrop-filter: blur(22px) saturate(180%);
         box-shadow:
-            0 8px 32px rgb(0 0 0 / 0.45),
-            0 2px 8px rgb(0 0 0 / 0.3),
-            0 0 0 0.5px rgb(255 255 255 / 0.18) inset,
-            0 1px 0 rgb(255 255 255 / 0.28) inset,
-            0 -1px 0 rgb(0 0 0 / 0.2) inset;
-        animation: appleBreathe 4.5s ease-in-out infinite;
+            0 0 0 0.5px rgb(255 255 255 / 0.10) inset,
+            0 1px 0 rgb(255 255 255 / 0.16) inset;
+        animation: appleBreathe 5s ease-in-out infinite;
+    }
+
+    .glass-btn.play-btn::before {
+        background: linear-gradient(
+            180deg,
+            rgb(255 255 255 / 0.10) 0%,
+            rgb(255 255 255 / 0)    55%
+        );
     }
 
     .glass-btn.play-btn svg {
-        width: clamp(34px, 7cqi, 44px);
-        height: clamp(34px, 7cqi, 44px);
-        margin-left: 4px;
-        filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.45));
+        width: 64px;
+        height: 64px;
+        margin-left: 6px;
+        filter: drop-shadow(0 2px 6px rgb(0 0 0 / 0.3));
     }
 
     .glass-btn.play-btn.is-playing svg { margin-left: 0; }
-    .glass-btn.play-btn.is-pressed svg { animation: iconMorph 360ms var(--ease-apple-spring); }
+    .glass-btn.play-btn.is-pressed svg { animation: iconMorph 360ms var(--ease-apple-cinematic); }
 
     @media (hover: hover) {
         .glass-btn.play-btn:hover {
-            background: rgb(255 255 255 / 0.26);
-            transform: scale(1.06);
-            box-shadow:
-                0 12px 40px rgb(0 0 0 / 0.5),
-                0 4px 12px rgb(0 0 0 / 0.32),
-                0 0 0 0.5px rgb(255 255 255 / 0.32) inset,
-                0 1px 0 rgb(255 255 255 / 0.42) inset;
+            background: rgb(255 255 255 / 0.17);
+            transform: scale(1.055);
             animation-play-state: paused;
         }
     }
 
-    .glass-btn.play-btn:active { transform: scale(0.95); }
+    .glass-btn.play-btn:active { transform: scale(0.97); }
 
-    /* Halo effect around hero play */
+    /* very faint ambient halo around hero play */
     .glass-btn.play-btn .halo {
         position: absolute;
-        inset: -14px;
+        inset: -16px;
         border-radius: 50%;
         pointer-events: none;
-        background: radial-gradient(circle, rgb(255 255 255 / 0.12), transparent 65%);
+        background: radial-gradient(circle, rgb(255 255 255 / 0.07), transparent 65%);
         opacity: 0;
         z-index: -1;
-        transition: opacity 400ms var(--ease-apple-out);
+        transition: opacity 480ms var(--ease-apple-cinematic);
     }
 
     .glass-btn.play-btn:hover .halo,
-    .video-container.is-paused .glass-btn.play-btn .halo { opacity: 1; animation: breathingHalo 4s ease-in-out infinite; }
+    .video-container.is-paused .glass-btn.play-btn .halo { opacity: 1; animation: breathingHalo 5s ease-in-out infinite; }
 
-    /* Pill button (e.g., speed indicator, audio language pill) */
+    /* Pill button — bottom action pills (Info, Continue Watching) */
     .glass-btn.pill-btn {
         width: auto;
-        height: 36px;
-        padding: 0 14px;
-        border-radius: var(--p-radius-pill);
-        font-size: var(--p-fs-footnote);
+        height: var(--p-btn-pill-h);
+        padding: 0 18px;
+        border-radius: 999px;
+        font-family: var(--p-font-text);
+        font-size: 15px;
         font-weight: var(--p-fw-semibold);
         letter-spacing: var(--p-tracking-tight);
-        gap: 6px;
+        gap: 8px;
         font-variant-numeric: tabular-nums;
+        color: #fff;
     }
 
-    /* ═══════════════════ CONTROLS BAR (Bottom progress + time) ═══════════════════ */
+    .glass-btn.pill-btn svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Bottom pills container */
+    .bottom-pills {
+        position: absolute;
+        left: clamp(24px, 5cqi, var(--pad-title-left));
+        bottom: clamp(120px, 22cqi, 168px);
+        display: flex;
+        gap: var(--sp-3);
+        z-index: var(--z-controls);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(8px);
+        pointer-events: none;
+        transition:
+            opacity var(--t-base) var(--ease-apple-cinematic),
+            transform var(--t-base) var(--ease-apple-cinematic),
+            visibility var(--t-base);
+    }
+
+    .video-container.is-active .bottom-pills,
+    .video-container:hover:not(.is-idle) .bottom-pills,
+    .video-container.is-paused .bottom-pills {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    /* ═══════════════════ CONTROLS BAR (timeline + time) ═══════════════════ */
     .controls {
         position: absolute;
-        bottom: clamp(18px, 4cqi, 32px);
-        left: clamp(20px, 4cqi, 36px);
-        right: clamp(20px, 4cqi, 36px);
+        bottom: clamp(28px, 5cqi, var(--pad-edge));
+        left: clamp(24px, 5cqi, var(--pad-edge));
+        right: clamp(24px, 5cqi, var(--pad-edge));
         z-index: var(--z-controls);
         display: flex;
         flex-direction: column;
-        gap: var(--sp-2);
+        gap: var(--sp-3);
         opacity: 0;
         visibility: hidden;
-        transform: translateY(12px);
+        transform: translateY(8px);
         pointer-events: none;
         will-change: opacity, transform;
         transition:
@@ -1368,35 +1366,35 @@
     .controls-row {
         display: flex;
         align-items: center;
-        justify-content: space-between;
         gap: var(--sp-4);
         font-family: var(--p-font-text);
     }
 
+    /* time labels — 18px / 600 / opacity .62 */
     .time-display {
         font-family: var(--p-font-text);
-        font-size: var(--p-fs-footnote);
+        font-size: var(--p-fs-sub-label);
         font-weight: var(--p-fw-semibold);
         font-variant-numeric: tabular-nums;
         letter-spacing: var(--p-tracking-tight);
-        color: var(--p-text-primary);
-        text-shadow: 0 1px 4px rgb(0 0 0 / 0.6);
-        min-width: 48px;
+        color: rgb(255 255 255 / 0.62);
+        text-shadow: 0 1px 4px rgb(0 0 0 / 0.55);
+        min-width: 64px;
     }
 
-    .time-display.right { text-align: right; color: var(--p-text-secondary); }
-    .time-display.right.is-remaining::before { content: "−"; margin-right: 1px; }
+    .time-display.right { text-align: right; }
+    .time-display.right.is-remaining::before { content: "−"; margin-right: 2px; }
 
-    /* Settings menu — Apple sheet style */
+    /* Settings menu — Apple sheet */
     .settings-menu {
         position: absolute;
         bottom: calc(100% + 16px);
         right: 0;
         min-width: clamp(220px, 30cqi, 280px);
         padding: var(--sp-2);
-        background: var(--p-mat-thick);
-        backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
-        -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
+        background: var(--p-mat-chrome);
+        backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
         border: 0.5px solid var(--p-stroke-strong);
         border-radius: var(--p-radius-md);
         box-shadow: var(--shadow-elevated);
@@ -1415,7 +1413,7 @@
         opacity: 1;
         visibility: visible;
         transform: translateY(0) scale(1);
-        animation: appleScaleIn 360ms var(--ease-apple-spring) both;
+        animation: appleScaleIn 320ms var(--ease-apple-cinematic) both;
     }
 
     .settings-menu__header {
@@ -1434,7 +1432,7 @@
         gap: var(--sp-4);
         padding: 10px 14px;
         border-radius: var(--p-radius-xs);
-        font-size: var(--p-fs-sub);
+        font-size: 15px;
         font-weight: var(--p-fw-medium);
         color: var(--p-text-primary);
         cursor: pointer;
@@ -1448,22 +1446,22 @@
         content: "";
         width: 14px;
         height: 14px;
-        background-image: url("data:image/svg+xml;utf8,<svg xmlns='[w3.org](http://www.w3.org/2000/svg)' viewBox='0 0 16 16' fill='white'><path d='M6.173 12L1.7 7.527l1.413-1.414L6.173 9.18l6.713-6.713L14.3 3.88z'/></svg>");
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='white'><path d='M6.173 12L1.7 7.527l1.413-1.414L6.173 9.18l6.713-6.713L14.3 3.88z'/></svg>");
         background-size: contain;
         background-repeat: no-repeat;
     }
     .settings-menu__item .value { color: var(--p-text-secondary); font-weight: var(--p-fw-regular); }
 
-    /* Tooltip — Apple HIG style */
+    /* Tooltip */
     .tooltip {
         position: absolute;
         bottom: calc(100% + 10px);
         left: 50%;
         transform: translateX(-50%) translateY(4px);
         padding: 6px 10px;
-        background: var(--p-mat-thick);
-        backdrop-filter: blur(var(--blur-regular)) saturate(200%);
-        -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(200%);
+        background: var(--p-mat-chrome);
+        backdrop-filter: blur(var(--blur-thick)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--blur-thick)) saturate(200%);
         border: 0.5px solid var(--p-stroke);
         border-radius: var(--p-radius-xs);
         font-size: var(--p-fs-caption);
@@ -1487,13 +1485,13 @@
             opacity: 1;
             visibility: visible;
             transform: translateX(-50%) translateY(0);
-            transition-delay: 400ms;
+            transition-delay: 380ms;
         }
     }
 }
 
 @layer progress {
-    /* Apple TV-style thin elegant timeline */
+    /* Apple's thin elegant timeline — 10px tap area, 4px track until interaction */
     .progress-wrapper {
         position: relative;
         width: 100%;
@@ -1509,17 +1507,17 @@
         width: 100%;
         height: 4px;
         background: rgb(255 255 255 / 0.22);
-        border-radius: var(--p-radius-pill);
+        border-radius: 999px;
         position: relative;
         overflow: visible;
-        transition: height 220ms var(--ease-apple-out);
+        transition: height 280ms cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     @media (hover: hover) {
-        .progress-wrapper:hover .progress { height: 7px; }
+        .progress-wrapper:hover .progress { height: 10px; }
     }
     .progress-wrapper:active .progress,
-    .video-container.is-seeking .progress { height: 7px; }
+    .video-container.is-seeking .progress { height: 10px; }
 
     .progress-loaded {
         position: absolute;
@@ -1529,7 +1527,7 @@
         border-radius: inherit;
         width: var(--buffered-pct, 0%);
         pointer-events: none;
-        transition: width 280ms var(--ease-apple-out);
+        transition: width 280ms var(--ease-apple-cinematic);
     }
 
     .progress-fill {
@@ -1537,15 +1535,14 @@
         top: 0; left: 0;
         height: 100%;
         width: var(--progress-pct, 0%);
-        background: linear-gradient(90deg, rgb(255 255 255 / 0.94), #fff);
+        background: rgb(255 255 255 / 0.95);
         border-radius: inherit;
         pointer-events: none;
         will-change: width;
-        box-shadow: 0 0 1px rgb(0 0 0 / 0.1) inset;
         overflow: visible;
     }
 
-    /* The thumb (scrubber knob) — pure Apple */
+    /* scrubber thumb — hidden until interaction */
     .progress-fill::after {
         content: "";
         position: absolute;
@@ -1558,8 +1555,8 @@
         background: #fff;
         box-shadow: var(--shadow-thumb);
         transition:
-            transform 220ms var(--ease-apple-spring),
-            box-shadow 220ms var(--ease-apple-out);
+            transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+            box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1);
         pointer-events: none;
     }
 
@@ -1571,11 +1568,10 @@
 
     .progress-wrapper:active .progress-fill::after,
     .video-container.is-seeking .progress-fill::after {
-        transform: translateY(-50%) scale(1.25);
-        box-shadow: var(--shadow-thumb), 0 0 0 7px rgb(255 255 255 / 0.18);
+        transform: translateY(-50%) scale(1.2);
+        box-shadow: var(--shadow-thumb), 0 0 0 6px rgb(255 255 255 / 0.16);
     }
 
-    /* Hover position indicator */
     .progress-hover-fill {
         position: absolute;
         top: 0;
@@ -1586,22 +1582,21 @@
         border-radius: inherit;
         pointer-events: none;
         opacity: 0;
-        transition: opacity 200ms var(--ease-apple-out);
+        transition: opacity 220ms var(--ease-apple-cinematic);
     }
 
     @media (hover: hover) {
         .progress-wrapper:hover .progress-hover-fill { opacity: 1; }
     }
 
-    /* Hover tooltip (thumbnail + timestamp) */
     .progress-hover-tooltip {
         position: absolute;
         bottom: 100%;
         left: 0;
-        transform: translateX(-50%) translateY(-12px) scale(0.94);
-        background: var(--p-mat-thick);
-        backdrop-filter: blur(var(--blur-thick)) saturate(200%);
-        -webkit-backdrop-filter: blur(var(--blur-thick)) saturate(200%);
+        transform: translateX(-50%) translateY(-12px) scale(0.96);
+        background: var(--p-mat-chrome);
+        backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
         border: 0.5px solid var(--p-stroke-strong);
         border-radius: var(--p-radius-sm);
         padding: 8px;
@@ -1615,8 +1610,8 @@
         z-index: var(--z-tooltips);
         box-shadow: var(--shadow-float);
         transition:
-            opacity 220ms var(--ease-apple-out),
-            transform 220ms var(--ease-apple-out),
+            opacity 220ms var(--ease-apple-cinematic),
+            transform 220ms var(--ease-apple-cinematic),
             visibility 220ms;
     }
 
@@ -1649,7 +1644,6 @@
         overflow: hidden;
     }
 
-    /* Chapter markers */
     .chapter-marker {
         position: absolute;
         top: 0;
@@ -1659,32 +1653,18 @@
         z-index: 3;
         pointer-events: none;
     }
-
-    .chapter-marker.is-active::after {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #fff;
-        transform: translate(-50%, -50%);
-        animation: chapterPing 1.4s ease-out infinite;
-    }
 }
 
 @layer audio-ui {
-    /* Volume popover — invokes from the volume button */
     .volume-popover {
         position: absolute;
         top: calc(100% + 12px);
         right: 0;
-        min-width: 180px;
-        padding: 14px 16px;
-        background: var(--p-mat-thick);
-        backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
-        -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
+        min-width: 200px;
+        padding: 14px 18px;
+        background: var(--p-mat-chrome);
+        backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
         border: 0.5px solid var(--p-stroke-strong);
         border-radius: var(--p-radius-md);
         box-shadow: var(--shadow-elevated);
@@ -1703,7 +1683,7 @@
         opacity: 1;
         visibility: visible;
         transform: translateY(0) scale(1);
-        animation: appleScaleIn 320ms var(--ease-apple-spring) both;
+        animation: appleScaleIn 280ms var(--ease-apple-cinematic) both;
     }
 
     .volume-popover__row {
@@ -1728,9 +1708,9 @@
             linear-gradient(90deg,
                 #fff 0%,
                 #fff var(--volume-pct, 70%),
-                rgb(255 255 255 / 0.2) var(--volume-pct, 70%),
-                rgb(255 255 255 / 0.2) 100%);
-        border-radius: var(--p-radius-pill);
+                rgb(255 255 255 / 0.22) var(--volume-pct, 70%),
+                rgb(255 255 255 / 0.22) 100%);
+        border-radius: 999px;
         cursor: pointer;
         outline: none;
     }
@@ -1743,11 +1723,11 @@
         border-radius: 50%;
         background: #fff;
         box-shadow: var(--shadow-thumb);
-        transition: transform 200ms var(--ease-apple-spring);
+        transition: transform 220ms var(--ease-apple-cinematic);
     }
 
-    .volume-slider:hover::-webkit-slider-thumb { transform: scale(1.15); }
-    .volume-slider:active::-webkit-slider-thumb { transform: scale(1.25); box-shadow: var(--shadow-thumb), 0 0 0 7px rgb(255 255 255 / 0.16); }
+    .volume-slider:hover::-webkit-slider-thumb { transform: scale(1.12); }
+    .volume-slider:active::-webkit-slider-thumb { transform: scale(1.2); box-shadow: var(--shadow-thumb), 0 0 0 6px rgb(255 255 255 / 0.16); }
 
     .volume-slider::-moz-range-thumb {
         width: 14px;
@@ -1758,13 +1738,10 @@
         box-shadow: var(--shadow-thumb);
     }
 
-    /* AirPlay glow when active */
     .glass-btn.airplay-btn.is-streaming {
         color: var(--p-tint-blue);
-        animation: glowPulseSubtle 2.4s ease-in-out infinite;
     }
 
-    /* Audio EQ */
     .eq-visualizer {
         display: inline-flex;
         align-items: end;
@@ -1777,7 +1754,7 @@
         width: 2px;
         height: 100%;
         background: currentColor;
-        border-radius: var(--p-radius-pill);
+        border-radius: 999px;
         transform-origin: bottom;
         animation: eqBarApple 1.1s ease-in-out infinite;
     }
@@ -1816,18 +1793,18 @@
         color: var(--p-text-primary);
         font-family: var(--p-font-rounded);
         font-weight: var(--p-fw-semibold);
-        font-size: var(--p-fs-sub);
+        font-size: var(--p-fs-sub-label);
         letter-spacing: var(--p-tracking-tight);
-        background: var(--p-mat-thick);
+        background: var(--p-mat-chrome);
         padding: 18px 24px;
-        border-radius: var(--p-radius-pill);
+        border-radius: 999px;
         border: 0.5px solid var(--p-stroke-strong);
-        backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
-        -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
+        backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
         box-shadow: var(--shadow-elevated);
         opacity: 0;
         pointer-events: none;
-        will-change: transform, opacity, filter;
+        will-change: transform, opacity;
     }
 
     .skip-indicator.left  { left: 8%; }
@@ -1845,17 +1822,17 @@
         width: 24px;
         height: 24px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgb(255 255 255 / 0.5), transparent 70%);
+        background: radial-gradient(circle, rgb(255 255 255 / 0.4), transparent 70%);
         pointer-events: none;
-        animation: rippleSoft 700ms var(--ease-apple-out) forwards;
+        animation: rippleSoft 700ms var(--ease-apple-cinematic) forwards;
     }
 
     .edge-swipe-indicator {
         position: absolute;
         z-index: var(--z-osd);
         padding: 10px 16px;
-        background: var(--p-mat-thick);
-        border-radius: var(--p-radius-pill);
+        background: var(--p-mat-chrome);
+        border-radius: 999px;
         backdrop-filter: blur(var(--blur-thick)) saturate(200%);
         -webkit-backdrop-filter: blur(var(--blur-thick)) saturate(200%);
         border: 0.5px solid var(--p-stroke-strong);
@@ -1905,48 +1882,66 @@
     }
 
     #fs-wrapper:fullscreen .controls {
-        bottom: max(var(--safe-bottom), 36px);
-        left:   max(var(--safe-left), 48px);
-        right:  max(var(--safe-right), 48px);
-        max-width: 1440px;
+        bottom: max(var(--safe-bottom), var(--pad-edge));
+        left:   max(var(--safe-left), var(--pad-edge));
+        right:  max(var(--safe-right), var(--pad-edge));
+        max-width: 1600px;
         margin: 0 auto;
     }
 
     #fs-wrapper:fullscreen .meta-block {
-        left: max(var(--safe-left), 48px);
-        bottom: clamp(150px, 22cqi, 200px);
+        left: max(var(--safe-left), var(--pad-title-left));
+        bottom: clamp(160px, 22cqi, 220px);
+    }
+
+    #fs-wrapper:fullscreen .bottom-pills {
+        left: max(var(--safe-left), var(--pad-title-left));
+        bottom: clamp(140px, 22cqi, 192px);
     }
 
     #fs-wrapper:fullscreen .top-bar {
-        top: max(var(--safe-top), 28px);
-        left: max(var(--safe-left), 48px);
-        right: max(var(--safe-right), 48px);
+        top: max(var(--safe-top), var(--pad-edge));
+        left: max(var(--safe-left), var(--pad-edge));
+        right: max(var(--safe-right), var(--pad-edge));
     }
 
     #fs-wrapper:fullscreen .side-rail {
-        right: max(var(--safe-right), 28px);
+        right: max(var(--safe-right), var(--pad-edge));
+        gap: var(--rail-gap);
     }
 }
 
 @layer mobile {
+    @container player (max-width: 720px) {
+        .meta-block__title { font-size: 44px; }
+        .meta-block__eyebrow { font-size: 18px; }
+        .glass-btn.play-btn { width: 132px; height: 132px; }
+        .glass-btn.play-btn svg { width: 50px; height: 50px; }
+    }
+
     @container player (max-width: 560px) {
         .meta-block {
             bottom: clamp(110px, 22cqi, 150px);
-            left: 16px;
+            left: 20px;
             max-width: 70%;
         }
-        .meta-block__title { font-size: var(--p-fs-title-2); }
-        .controls { bottom: 14px; left: 14px; right: 14px; }
-        .top-bar { top: 14px; left: 14px; right: 14px; }
-        .side-rail { right: 12px; }
+        .meta-block__title { font-size: 34px; }
+        .meta-block__eyebrow { font-size: 15px; }
+        .controls { bottom: 18px; left: 18px; right: 18px; }
+        .top-bar { top: 18px; left: 18px; right: 18px; }
+        .side-rail { right: 14px; gap: var(--sp-2); }
+        .bottom-pills { left: 20px; bottom: clamp(96px, 22cqi, 130px); }
+        .glass-btn.play-btn { width: 108px; height: 108px; }
+        .glass-btn.play-btn svg { width: 40px; height: 40px; }
+        .glass-btn.skip-btn { width: 56px; height: 56px; }
     }
 
     @container player (max-width: 420px) {
-        .center-stack { gap: 32px; }
-        .glass-btn.play-btn { width: 72px; height: 72px; }
+        .center-stack { gap: 36px; }
+        .glass-btn.play-btn { width: 88px; height: 88px; }
+        .glass-btn.play-btn svg { width: 32px; height: 32px; }
         .glass-btn.skip-btn { width: 48px; height: 48px; }
-        .meta-block__subtitle,
-        .meta-block__eyebrow { display: none; }
+        .meta-block__subtitle { display: none; }
         .meta-block__chips { display: none; }
     }
 
@@ -1963,7 +1958,9 @@
     .side-rail,
     .progress-fill,
     .video-poster,
-    .buffering-spinner {
+    .buffering-spinner,
+    .meta-block,
+    .bottom-pills {
         will-change: transform, opacity;
         transform: translateZ(0);
     }
@@ -2032,20 +2029,18 @@
     .u-invisible     { visibility: hidden !important; }
     .u-no-pointer    { pointer-events: none !important; }
     .u-pointer       { pointer-events: auto !important; }
-    .u-fade-in       { animation: appleFadeIn var(--t-base) var(--ease-apple-out) both; }
-    .u-float-up      { animation: appleFadeUp var(--t-base) var(--ease-apple-out) both; }
-    .u-scale-in      { animation: appleScaleIn var(--t-base) var(--ease-apple-spring) both; }
+    .u-fade-in       { animation: appleFadeIn var(--t-base) var(--ease-apple-cinematic) both; }
+    .u-float-up      { animation: appleFadeUp var(--t-base) var(--ease-apple-cinematic) both; }
+    .u-scale-in      { animation: appleScaleIn var(--t-base) var(--ease-apple-cinematic) both; }
     .u-glass {
-        background: var(--p-mat-regular);
-        backdrop-filter: blur(var(--blur-regular)) saturate(200%);
-        -webkit-backdrop-filter: blur(var(--blur-regular)) saturate(200%);
-        border: 0.5px solid var(--p-stroke-strong);
+        background: rgb(255 255 255 / 0.12);
+        backdrop-filter: blur(22px) saturate(180%);
+        -webkit-backdrop-filter: blur(22px) saturate(180%);
     }
     .u-glass-chrome {
-        background: var(--p-mat-thick);
-        backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
-        -webkit-backdrop-filter: blur(var(--blur-chrome)) saturate(220%);
-        border: 0.5px solid var(--p-stroke-strong);
+        background: var(--p-mat-chrome);
+        backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
+        -webkit-backdrop-filter: blur(var(--blur-vibrant)) saturate(200%);
     }
 }
 
@@ -2057,15 +2052,16 @@
 .video-container.is-idle .top-bar,
 .video-container.is-idle .side-rail,
 .video-container.is-idle .meta-block,
+.video-container.is-idle .bottom-pills,
 .video-container.is-idle .center-stack {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
-    transform: translateY(12px) !important;
+    transform: translateY(8px) !important;
     transition:
-        opacity 480ms var(--ease-apple-cinematic),
-        transform 480ms var(--ease-apple-cinematic),
-        visibility 480ms !important;
+        opacity 420ms var(--ease-apple-cinematic),
+        transform 420ms var(--ease-apple-cinematic),
+        visibility 420ms !important;
 }
 
 .video-container.is-idle { cursor: none !important; }
