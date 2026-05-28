@@ -200,6 +200,10 @@
         centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
+        
+        // 🚀 [تحسين]: متغيرات إدارة ونظام الخمول الذكي لرفع الأداء
+        idleTimer: null,
+        idleTimeout: 3000, 
 
         init() {
             this.video         = $('dahihPlayer');
@@ -220,6 +224,26 @@
 
             if (!this.video) return;
 
+            // 🚀 [تحسين الجرافيكس]: حقن كود ستايل ديناميكي لإلغاء العمليات الرسومية المعقدة أثناء الخمول تماماً وتفعيل تسريع الهاردوير للفيديو
+            const styleId = 'dahih-player-perf-boost';
+            if (!$(styleId)) {
+                const style = document.createElement('style');
+                style.id = styleId;
+                style.textContent = `
+                    #dahihPlayer {
+                        will-change: transform;
+                        transform: translateZ(0);
+                    }
+                    /* تعطيل عمليات الفلاتر والبلور المجهدة للمعالج وكارت الشاشة عندما يختفي شريط التحكم */
+                    #videoContainer.is-idle * {
+                        backdrop-filter: none !important;
+                        -webkit-backdrop-filter: none !important;
+                        pointer-events: none !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
             this.video.preload = 'metadata';
             this.video.crossOrigin = 'anonymous';
             this.video.playsInline = true;
@@ -235,6 +259,21 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
+            // 🚀 [تحسين]: رصد الحركة واللمس لتصفير عداد الخمول فوراً وإعادة إظهار الشريط بسلاسة
+            if (this.container) {
+                const triggerActivity = () => this.resetIdleTimer();
+                this.container.addEventListener('mousemove', triggerActivity);
+                this.container.addEventListener('pointermove', triggerActivity);
+                this.container.addEventListener('touchmove', triggerActivity, { passive: true });
+                this.container.addEventListener('touchstart', triggerActivity, { passive: true });
+
+                this.container.addEventListener('mouseleave', () => {
+                    if (this.video && !this.video.paused) {
+                        this.container.classList.add('is-idle');
+                    }
+                });
+            }
+
             this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, '+10 ثواني'); });
             this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, '-10 ثواني'); });
 
@@ -243,12 +282,14 @@
                 state.speedIndex = (state.speedIndex + 1) % state.speeds.length;
                 this.video.playbackRate = state.speeds[state.speedIndex];
                 this.speedBtn.textContent = state.speeds[state.speedIndex] + 'x';
+                this.resetIdleTimer();
             });
 
             this.muteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 this.video.muted = !this.video.muted;
                 this.updateMuteIcon();
+                this.resetIdleTimer();
             });
 
             this.progress.addEventListener('click', (e) => {
@@ -259,7 +300,32 @@
                 if (isFinite(this.video.duration)) {
                     this.video.currentTime = pos * this.video.duration;
                 }
+                this.resetIdleTimer();
             });
+        },
+
+        // 🚀 [تحسين أداء]: دالة تصفير مؤقت الخمول الذكية مع مزامنة فجائية للـ DOM عند الاستيقاظ
+        resetIdleTimer() {
+            if (!this.container) return;
+
+            if (this.container.classList.contains('is-idle')) {
+                this.container.classList.remove('is-idle');
+                
+                // تحديث خاطف وفوري لشريط التقدم والنصوص بمجرد ظهور الواجهة لضمان دقة العرض دون تعليق مسبق
+                if (this.video && isFinite(this.video.duration)) {
+                    const pct = (this.video.currentTime / this.video.duration) * 100;
+                    if (this.progressBar) this.progressBar.style.width = pct + '%';
+                    if (this.currentTimeEl) this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+                }
+            }
+            
+            clearTimeout(this.idleTimer);
+
+            if (this.video && !this.video.paused) {
+                this.idleTimer = setTimeout(() => {
+                    this.container.classList.add('is-idle');
+                }, this.idleTimeout);
+            }
         },
 
         async load(msgId, title) {
@@ -285,29 +351,24 @@
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
 
-            // 🚀 [تحسين]: إيقاف الفيديو الحالي دون تفريغ الـ src والتسبب في Flashing
             this.video.pause();
             
             try {
-                const access = await fetchWithTimeout('/api/student/video/access', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${state.token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ msgId }),
+                const videoUrl = `/api/student/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
+
+                const response = await fetchWithTimeout(videoUrl, { 
+                    headers: { 'Range': 'bytes=0-100' },
                     signal: state.videoAbortController.signal
                 }, 15000);
 
-                if (!access.ok) throw new Error('Failed to fetch signed URL');
-                
-                const data = await access.json();
+                if (!response.ok) {
+                    throw new Error('فشل الوصول إلى مسار الفيديو');
+                }
 
                 if (currentReqId !== state.videoRequestId) return;
 
-                // 🚀 [تحسين]: تعيين الـ src فقط إذا كان مختلفاً (تجنب إعادة تحميل الفيديو بلا داعٍ)
-                if (this.video.src !== data.signedUrl) {
-                    this.video.src = data.signedUrl;
+                if (this.video.src !== videoUrl) {
+                    this.video.src = videoUrl;
                     this.video.load();
                 }
 
@@ -323,6 +384,8 @@
 
                 updateActiveCourseCard(msgId);
                 this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
+                
+                this.resetIdleTimer();
 
             } catch (err) {
                 if (err.name === 'AbortError') return; 
@@ -342,6 +405,7 @@
             this.centerPlay.style.opacity = "0";
             this.centerPlay.style.transform = "scale(1.5)";
             this.centerPlay.style.pointerEvents = "none";
+            this.resetIdleTimer();
         },
 
         onPause() {
@@ -349,13 +413,21 @@
             this.centerPlay.style.opacity = "1";
             this.centerPlay.style.transform = "scale(1)";
             this.centerPlay.style.pointerEvents = "auto";
+            
+            if (this.container) this.container.classList.remove('is-idle');
+            clearTimeout(this.idleTimer);
         },
 
         onTimeUpdate() {
             if (!isFinite(this.video.duration)) return;
-            const pct = (this.video.currentTime / this.video.duration) * 100;
-            this.progressBar.style.width = pct + '%';
-            this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+
+            // 🚀 [تحسين فائق للأداء]: منع تعديل الـ DOM للـ Progress Bar نهائياً إذا كان الشريط مخفياً لتفادي الـ Reflows العشوائية
+            const isIdle = this.container && this.container.classList.contains('is-idle');
+            if (!isIdle) {
+                const pct = (this.video.currentTime / this.video.duration) * 100;
+                if (this.progressBar) this.progressBar.style.width = pct + '%';
+                if (this.currentTimeEl) this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+            }
 
             const currentSec = Math.floor(this.video.currentTime);
             if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
@@ -399,6 +471,7 @@
             void this.skipIndicator.offsetWidth;
             this.skipIndicator.classList.add('is-active');
             haptic(35);
+            this.resetIdleTimer();
         },
 
         updateMuteIcon() {
@@ -440,7 +513,7 @@
     }
 
     async function fetchData(initial = false) {
-        if (state.isTesting) return; // منع الجلب تماماً أثناء أداء الاختبار
+        if (state.isTesting) return; 
 
         if (state.dashboardAbortController) {
             state.dashboardAbortController.abort();
@@ -480,10 +553,9 @@
 
             const data = await res.json();
 
-            // 🚀 [تحسين]: فحص الـ Hash الكلي للبيانات لمنع تدمير وإعادة بناء الـ DOM إذا لم يتغير شيء
             const newDataHash = JSON.stringify(data.content || data);
             if (!initial && state.lastDataHash === newDataHash) {
-                return; // لم تتغير البيانات، لا داعي لتحديث الواجهة
+                return; 
             }
             state.lastDataHash = newDataHash;
 
@@ -548,7 +620,6 @@
 
         container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
         
-        // 🚀 [تحسين]: استبدال الـ background-image المكلفة برمجياً بـ <img> مع loading="lazy"
         container.innerHTML = list.map((course, idx) => {
             const id = course.telegramMsgId;
             const num = idx + 1;
@@ -680,17 +751,11 @@
         }
     };
 
-    // 🚀 [تحسين]: دوال الـ Polling الجديدة اللي تعتمد على setInterval بدل الـ while loop
     function startDashboardPolling() {
-        if (poller.timer) {
-            console.warn('Polling already exists');
-            return;
-        }
-        if (state.isTesting) return; // لا تعمل إذا كان يختبر
+        if (poller.timer) return;
 
-        // طلب جلب البيانات كل 30 ثانية لتخفيف الضغط
         poller.timer = setInterval(async () => {
-            if (document.hidden || state.isTesting) return;
+            if (state.isTesting) return;
             await fetchData(false);
         }, 30000); 
     }
@@ -703,6 +768,8 @@
     }
 
     function setupGlobalListeners() {
+        let lastVisibilityFetch = 0;
+
         document.addEventListener('click', (e) => {
             const filterBtn = e.target.closest('.filter-btn');
             if (filterBtn) {
@@ -751,13 +818,21 @@
             }
         });
 
-        document.addEventListener('visibilitychange', () => {
+        document.addEventListener('visibilitychange', async () => {
             if (document.hidden) {
+                stopDashboardPolling();
                 if (player.video && !player.video.paused) {
                     player.saveProgressBackground(true);
                 }
-            } else {
-                fetchData(false);
+                return;
+            }
+
+            startDashboardPolling();
+
+            const now = Date.now();
+            if (now - lastVisibilityFetch > 15000) {
+                lastVisibilityFetch = now;
+                await fetchData(false);
             }
         });
 
@@ -785,7 +860,6 @@
         });
     }
 
-    // 🚀 [تحسين]: تصدير الدوال اللازمة للـ quiz.js عشان يوقف الـ polling ويرجعه
     Object.freeze(window.DahihApp = {
         logout, 
         toggleFullscreen, 
@@ -793,8 +867,8 @@
         getState: () => state,
         fetchWithTimeout: fetchWithTimeout,
         toast: showToast,
-        startDashboardPolling, // تم إتاحتها
-        stopDashboardPolling,  // تم إتاحتها
+        startDashboardPolling,
+        stopDashboardPolling,
         setQuizState: (isTesting) => { 
             state.isTesting = isTesting; 
             if (isTesting) {
