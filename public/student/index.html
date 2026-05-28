@@ -15,6 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="player.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
@@ -304,6 +305,9 @@
                     
                     <div class="p-2 md:p-5 bg-black/50 aspect-video flex items-center justify-center relative group" id="fs-wrapper">
                         <div id="videoContainer" class="video-container group w-full h-full">
+                            
+                            <div class="aurora-layer"></div>
+
                             <div id="videoPoster" class="video-poster">
                                 <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-soft-bounce">
                                     <svg class="w-8 h-8 md:w-10 md:h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -314,11 +318,14 @@
 
                             <div class="buffering-spinner"></div>
                             <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full"></video>
+                            
                             <div class="tap-zone left" id="tapLeft"></div>
                             <div class="tap-zone right" id="tapRight"></div>
+                            
                             <div class="skip-indicator left" id="skipIndicatorLeft" aria-hidden="true"><span id="skipTextLeft">-10</span></div>
                             <div class="skip-indicator right" id="skipIndicatorRight" aria-hidden="true"><span id="skipTextRight">+10</span></div>
-                            <div class="center-play" id="centerPlay">
+                            
+                            <div class="center-play is-visible" id="centerPlay">
                                 <div><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
                             </div>
 
@@ -336,18 +343,24 @@
                                         <button class="icon-btn" id="playPauseBtn" aria-label="Play">
                                             <svg viewBox="0 0 24 24" class="w-5 h-5"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
                                         </button>
+                                        
                                         <div class="volume-container flex items-center" id="volumeContainer">
                                             <button class="icon-btn" id="muteBtn" aria-label="Mute">
                                                 <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
                                             </button>
-                                            <div class="volume-slider-wrapper">
-                                                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
+                                            
+                                            <div class="volume-slider-wrapper pl-1 flex items-center">
+                                                <div id="volumeBar" class="vol-bar" style="width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; position: relative; cursor: pointer;">
+                                                    <div id="volumeBarFill" style="height: 100%; width: 100%; background: var(--p-accent, #eab308); border-radius: 3px; transform-origin: left; transform: scaleX(1);"></div>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="time-display text-xs text-white">
-                                            <span id="currentTimeDisplay">00:00</span>
+                                        
+                                        <div class="time-display text-xs text-white flex items-center gap-1">
+                                            <span id="currentTimeDisplay" class="current">00:00</span>
                                             <span class="separator">/</span>
                                             <span class="duration" id="durationDisplay">00:00</span>
+                                            <span id="chapterDisplay" class="chapter-name ml-2 text-yellow-500 font-medium"></span>
                                         </div>
                                     </div>
 
@@ -356,7 +369,7 @@
                                         <button class="icon-btn hidden md:flex" id="pipBtn" title="Picture in Picture">
                                             <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                                         </button>
-                                        <button class="icon-btn fullscreen-btn" onclick="DahihApp.toggleFullscreen()" title="Fullscreen">
+                                        <button id="fullscreenBtn" class="icon-btn fullscreen-btn" title="Fullscreen">
                                             <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
                                         </button>
                                     </div>
@@ -475,6 +488,49 @@
             }
         };
 
+        // سكربت التهيئة الذكي لمشغل الميديا TitaniumQuantumPlayer عند تحميل الصفحة بالكامل
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // التأكد من جلب كلاس المحرك سواء كان معرّفاً كـ TitaniumQuantumPlayer أو بداخل موديول TitaniumQuantum
+                const TargetPlayer = typeof TitaniumQuantumPlayer !== 'undefined' ? TitaniumQuantumPlayer : (typeof TitaniumQuantum !== 'undefined' ? TitaniumQuantum.Player : null);
+                
+                if (TargetPlayer) {
+                    // 1. إنشاء غرض فريد للمشغل وحفظه برمجياً بالنافذة
+                    window.quantumPlayer = new TargetPlayer();
+                    
+                    // 2. ربط المحرك بمعرف الفيديو المعين ومعرف الحاوية الكبرى
+                    await window.quantumPlayer.init('dahihPlayer', 'videoContainer');
+                    console.log("%c[TitaniumQuantum] تم ربط وتهيئة محرك الفيديو العبقري باللوحة التعليمية بنجاح!", "color: #22c55e; font-weight: bold;");
+
+                    // 3. دالة مساعدة لتشغيل أي محاضرة يتم الضغط عليها داخل منصة الطالب ديناميكياً
+                    window.loadAndPlayCourseVideo = function(videoUrl, title, chaptersArray = []) {
+                        // تحديث عنوان الفيديو العلوي
+                        const titleEl = document.getElementById('playingVideoTitle');
+                        if (titleEl) titleEl.textContent = title;
+                        
+                        // إخفاء بوستر البداية الثابت لإظهار الفيديو
+                        const poster = document.getElementById('videoPoster');
+                        if (poster) poster.style.display = 'none';
+
+                        // استنتاج الصيغة تلقائياً
+                        let videoType = 'video/mp4';
+                        if (videoUrl.includes('.m3u8')) {
+                            videoType = 'application/x-mpegURL';
+                        } else if (videoUrl.includes('.mpd')) {
+                            videoType = 'application/dash+xml';
+                        }
+
+                        // تزويد المحرك برابط المحاضرة، الفصول، ومعرف الجلسة
+                        window.quantumPlayer.loadMedia(videoUrl, videoType, 'course_vid_' + Date.now(), chaptersArray);
+                    };
+                } else {
+                    console.warn("[TitaniumQuantum] كود المشغل غير معرّف، تأكد من سلامة كود player.js أو تصدير الكلاس عالمياً.");
+                }
+            } catch (err) {
+                console.error("[TitaniumQuantum] حدث خطأ غير متوقع أثناء حقن وتأمين المشغل:", err);
+            }
+        });
+
         window.switchTab = function(tabId) {
             const activeTab = localStorage.getItem('activeTab');
             if (activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
@@ -510,7 +566,7 @@
             const emptyState = document.getElementById('empty-state');
             let quizzesData = [];
             let currentFilter = 'all';
-            let listenersInitialized = false; // ← إضافة المتغير لمنع تكرار الـ listeners
+            let listenersInitialized = false;
 
             const renderSkeleton = () => {
                 let html = '';
@@ -648,7 +704,6 @@
                 });
             };
 
-            // الدالة الجديدة مع إضافة حماية التكرار !listenersInitialized
             const init = async (dataSource) => {
                 renderSkeleton();
 
@@ -664,7 +719,6 @@
                 }
             };
 
-            // الدالة الجديدة بديلة للقديمة وتم حذف الكود العشوائي
             const reload = (quizId, result = null) => {
                 if (!quizId) {
                     updateStats(quizzesData);
