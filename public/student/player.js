@@ -2953,3 +2953,11 @@ const TitaniumQuantum = (() => {
     line-height:1.45;
     font-family:system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
+    // تصدير المحرك ليكون متاحاً للواجهة
+    return {
+        Player: TitaniumQuantumPlayer
+    };
+})();
+
+// إتاحة المحرك عالمياً لكي يلتقطه ملف الواجهة والمدير
+window.TitaniumQuantum = TitaniumQuantum;
