@@ -531,6 +531,31 @@
             }
         });
 
+        document.addEventListener('DOMContentLoaded', () => {
+            // انتظر تهيئة المشغل
+            const waitForPlayer = setInterval(() => {
+                if (window.quantumPlayer?.idleCtrl) {
+                    clearInterval(waitForPlayer);
+                    
+                    const container = document.getElementById('videoContainer');
+                    
+                    // أي حركة على الكونتينر تعيد تشغيل العداد
+                    ['mousemove','mousedown','touchstart','touchmove','keydown'].forEach(ev => {
+                        container.addEventListener(ev, () => {
+                            window.quantumPlayer.idleCtrl.poke();
+                        }, { passive: true });
+                    });
+
+                    // عند مغادرة الماوس يختفي فوراً
+                    container.addEventListener('mouseleave', () => {
+                        window.quantumPlayer.idleCtrl._setIdle(true);
+                    });
+
+                    console.log('%c[IdleController] تم الربط بنجاح', 'color:#22c55e');
+                }
+            }, 200);
+        });
+
         window.switchTab = function(tabId) {
             const activeTab = localStorage.getItem('activeTab');
             if (activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
