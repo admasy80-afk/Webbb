@@ -2936,28 +2936,32 @@ const TitaniumQuantum = (() => {
 }
 
 .tq-cue-wrap {
-    display:inline-block;
-    max-width:90%;
-}
+                    display:inline-block;
+                    max-width:90%;
+                }
 
-.tq-captions span {
-    display:inline-block;
-    background:rgba(0,0,0,0.86);
-    color:#fff;
-    padding:7px 16px;
-    font-weight:700;
-    border-radius:8px;
-    text-shadow:0 2px 8px rgba(0,0,0,0.95);
-    backdrop-filter:blur(14px);
-    -webkit-backdrop-filter:blur(14px);
-    line-height:1.45;
-    font-family:system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
-    // تصدير المحرك ليكون متاحاً للواجهة
+                .tq-captions span {
+                    display:inline-block;
+                    background:rgba(0,0,0,0.86);
+                    color:#fff;
+                    padding:7px 16px;
+                    font-weight:700;
+                    border-radius:8px;
+                    text-shadow:0 2px 8px rgba(0,0,0,0.95);
+                    backdrop-filter:blur(14px);
+                    -webkit-backdrop-filter:blur(14px);
+                    line-height:1.45;
+                    font-family:system-ui, -apple-system, 'Segoe UI', sans-serif;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+
     return {
         Player: TitaniumQuantumPlayer
     };
+
 })();
 
-// إتاحة المحرك عالمياً لكي يلتقطه ملف الواجهة والمدير
 window.TitaniumQuantum = TitaniumQuantum;
