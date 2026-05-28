@@ -14,14 +14,20 @@
         quizzesHash: '',
         pointsHash: '',
         questionsHash: '',
-        lastDataHash: null,
+        lastDataHash: null, // 🚀 [تحسين]: تخزين بصمة البيانات كاملة لمنع الـ Re-render الوهمي
         availableQuizzes: [],
-        isTesting: false,
+        speedIndex: 0,
+        speeds: [1, 1.25, 1.5, 2],
+        isTesting: false, // 🚀 [تحسين]: حالة الاختبار لمنع جلب البيانات أثناء حل الكويز
         dashboardAbortController: null,
+        videoAbortController: null, 
+        videoRequestId: 0, 
         reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
 
+    // 🚀 [تحسين]: نظام Polling آمن لا يتكرر ولا يتراكم
     const poller = { timer: null };
+
     const $ = (id) => document.getElementById(id);
 
     const showToast = (message, type = 'info') => {
@@ -79,12 +85,31 @@
     const getSafeImageUrl = (url) => {
         const defaultImg = 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
         if (!url || typeof url !== 'string') return defaultImg;
+        
         try {
             const parsed = new URL(url.trim(), location.origin);
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href;
-            if (parsed.origin === location.origin) return parsed.pathname;
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return parsed.href;
+            }
+            if (parsed.origin === location.origin) {
+                return parsed.pathname;
+            }
             return defaultImg;
-        } catch { return defaultImg; }
+        } catch {
+            return defaultImg;
+        }
+    };
+
+    const formatTime = (t) => {
+        if (!isFinite(t)) return '00:00';
+        const m = Math.floor(t / 60);
+        const s = Math.floor(t % 60);
+        return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+    };
+
+    const haptic = (ms = 30) => {
+        if (state.reduceMotion) return;
+        if ('vibrate' in navigator) { try { navigator.vibrate(ms); } catch (e) {} }
     };
 
     function authGate() {
@@ -105,13 +130,14 @@
     }
 
     function logout() {
-        const videoEl = $('dahihPlayer');
-        if (videoEl) {
+        if (player && player.video) {
             try {
-                videoEl.pause();
-                videoEl.removeAttribute('src');
-                videoEl.load();
-            } catch (e) {}
+                player.video.pause();
+                player.video.removeAttribute('src');
+                player.video.load();
+            } catch (e) {
+                console.error("Error clearing video on logout:", e);
+            }
         }
         localStorage.removeItem('dahih_user');
         localStorage.removeItem('dahih_token');
@@ -124,15 +150,24 @@
         const abortHandler = () => controller.abort();
 
         if (options.signal) {
-            if (options.signal.aborted) controller.abort();
-            else options.signal.addEventListener('abort', abortHandler, { once: true });
+            if (options.signal.aborted) {
+                controller.abort();
+            } else {
+                options.signal.addEventListener('abort', abortHandler, { once: true });
+            }
         }
 
         try {
-            return await fetch(url, { ...options, signal: controller.signal, credentials: 'omit' });
+            return await fetch(url, {
+                ...options,
+                signal: controller.signal,
+                credentials: 'omit'
+            });
         } finally {
             clearTimeout(timeoutId);
-            if (options.signal) options.signal.removeEventListener('abort', abortHandler);
+            if (options.signal) {
+                options.signal.removeEventListener('abort', abortHandler);
+            }
         }
     }
 
@@ -159,39 +194,183 @@
         }
     }
 
-    // مدير الفيديو: جسر تواصل بين المنصة والمحرك الخارجي
-    const videoManager = {
+    const player = {
+        video: null, poster: null, container: null, progress: null, progressBar: null,
+        currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
+        centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
+        tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
-        lastSentTime: -1,
 
-        load(msgId, title) {
-            if (String(state.currentMsgId) === String(msgId)) return;
+        init() {
+            this.video         = $('dahihPlayer');
+            this.poster        = $('videoPoster');
+            this.container     = $('videoContainer');
+            this.progress      = $('progressContainer');
+            this.progressBar   = $('progressBar');
+            this.currentTimeEl = $('currentTimeDisplay');
+            this.durationEl    = $('durationDisplay');
+            this.speedBtn      = $('speedBtn');
+            this.muteBtn       = $('muteBtn');
+            this.centerPlay    = $('centerPlay');
+            this.skipIndicator = $('skipIndicator');
+            this.skipText      = $('skipText');
+            this.titleEl       = $('playingVideoTitle');
+            this.tapLeft       = $('tapLeft');
+            this.tapRight      = $('tapRight');
 
-            state.currentMsgId = String(msgId);
-            const videoUrl = `/api/student/video/stream/${encodeURIComponent(msgId)}?token=${encodeURIComponent(state.token)}`;
+            if (!this.video) return;
 
-            updateActiveCourseCard(msgId);
+            this.video.preload = 'metadata';
+            this.video.crossOrigin = 'anonymous';
+            this.video.playsInline = true;
+            this.video.disablePictureInPicture = true;
 
-            // تمرير الأوامر للمحرك الخارجي المتقدم
-            if (window.TitaniumQuantumPlayer && typeof window.TitaniumQuantumPlayer.load === 'function') {
-                window.TitaniumQuantumPlayer.load(videoUrl, title);
-            } else {
-                // حل بديل في حال تأخر تحميل المحرك
-                const videoEl = $('dahihPlayer');
-                if (videoEl) {
-                    videoEl.src = videoUrl;
-                    videoEl.play().catch(() => {});
+            this.video.addEventListener('click', () => this.togglePlay());
+            this.centerPlay.addEventListener('click', () => this.togglePlay());
+            this.video.addEventListener('play',  () => this.onPlay());
+            this.video.addEventListener('pause', () => { this.onPause(); this.forceSaveProgress(); });
+            this.video.addEventListener('timeupdate', () => this.onTimeUpdate());
+            this.video.addEventListener('loadedmetadata', () => {
+                this.durationEl.textContent = formatTime(this.video.duration);
+            });
+            this.video.addEventListener('error', () => this.onError());
+
+            this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, '+10 ثواني'); });
+            this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, '-10 ثواني'); });
+
+            this.speedBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                state.speedIndex = (state.speedIndex + 1) % state.speeds.length;
+                this.video.playbackRate = state.speeds[state.speedIndex];
+                this.speedBtn.textContent = state.speeds[state.speedIndex] + 'x';
+            });
+
+            this.muteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.video.muted = !this.video.muted;
+                this.updateMuteIcon();
+            });
+
+            this.progress.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!this.video.src) return;
+                const r = this.progress.getBoundingClientRect();
+                const pos = (e.clientX - r.left) / r.width;
+                if (isFinite(this.video.duration)) {
+                    this.video.currentTime = pos * this.video.duration;
                 }
+            });
+        },
+
+        async load(msgId, title) {
+            if (!this.video) return;
+            if (String(state.currentMsgId) === String(msgId)) {
+                this.togglePlay();
+                return;
             }
 
-            const container = $('videoContainer');
-            if (container) {
-                container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
+            state.currentMsgId = String(msgId);
+            this.titleEl.textContent = title || 'جاري التحميل...';
+            this.lastSentTime = -1;
+
+            if (state.videoAbortController) {
+                state.videoAbortController.abort();
+            }
+            state.videoAbortController = new AbortController();
+
+            const currentReqId = ++state.videoRequestId;
+
+            this.poster.classList.add('hidden', 'is-hidden'); 
+            this.video.classList.remove('hidden');
+            this.video.style.display = 'block';
+            this.container.classList.add('is-active');
+
+            // 🚀 [تحسين]: إيقاف الفيديو الحالي دون تفريغ الـ src والتسبب في Flashing
+            this.video.pause();
+            
+            try {
+                const access = await fetchWithTimeout('/api/student/video/access', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${state.token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ msgId }),
+                    signal: state.videoAbortController.signal
+                }, 15000);
+
+                if (!access.ok) throw new Error('Failed to fetch signed URL');
+                
+                const data = await access.json();
+
+                if (currentReqId !== state.videoRequestId) return;
+
+                // 🚀 [تحسين]: تعيين الـ src فقط إذا كان مختلفاً (تجنب إعادة تحميل الفيديو بلا داعٍ)
+                if (this.video.src !== data.signedUrl) {
+                    this.video.src = data.signedUrl;
+                    this.video.load();
+                }
+
+                const playPromise = this.video.play();
+                if (playPromise && playPromise.catch) {
+                    playPromise.catch(() => {
+                        this.centerPlay.classList.add('is-visible');
+                        this.centerPlay.style.opacity = "1";
+                        this.centerPlay.style.transform = "scale(1)";
+                        this.centerPlay.style.pointerEvents = "auto";
+                    });
+                }
+
+                updateActiveCourseCard(msgId);
+                this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
+
+            } catch (err) {
+                if (err.name === 'AbortError') return; 
+                if (currentReqId !== state.videoRequestId) return; 
+                console.error("Video Access Error:", err);
+                showToast("🚨 تعذر جلب رابط الفيديو. يرجى المحاولة لاحقاً.", "error");
             }
         },
 
-        saveProgressBackground(currentTime, force = false) {
-            if (!state.currentMsgId || currentTime <= 0) return;
+        togglePlay() {
+            if (!this.video.src) return;
+            if (this.video.paused) { this.video.play().catch(() => {}); } else { this.video.pause(); }
+        },
+
+        onPlay() {
+            this.centerPlay.classList.remove('is-visible');
+            this.centerPlay.style.opacity = "0";
+            this.centerPlay.style.transform = "scale(1.5)";
+            this.centerPlay.style.pointerEvents = "none";
+        },
+
+        onPause() {
+            this.centerPlay.classList.add('is-visible');
+            this.centerPlay.style.opacity = "1";
+            this.centerPlay.style.transform = "scale(1)";
+            this.centerPlay.style.pointerEvents = "auto";
+        },
+
+        onTimeUpdate() {
+            if (!isFinite(this.video.duration)) return;
+            const pct = (this.video.currentTime / this.video.duration) * 100;
+            this.progressBar.style.width = pct + '%';
+            this.currentTimeEl.textContent = formatTime(this.video.currentTime);
+
+            const currentSec = Math.floor(this.video.currentTime);
+            if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
+                this.lastSentTime = currentSec;
+                this.saveProgressBackground();
+            }
+        },
+
+        forceSaveProgress() {
+            if (this.video && this.video.currentTime > 0) {
+                this.saveProgressBackground(true);
+            }
+        },
+
+        saveProgressBackground(force = false) {
             const now = Date.now();
             if (!force && now - this.lastProgressSave < 5000) return;
             this.lastProgressSave = now;
@@ -199,34 +378,33 @@
             fetch('/api/student/save-progress', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
-                body: JSON.stringify({ msgId: state.currentMsgId, currentTime: currentTime }),
+                body: JSON.stringify({ msgId: state.currentMsgId, currentTime: this.video.currentTime }),
                 keepalive: true 
             }).catch(() => {});
         },
 
-        initTracking() {
-            const videoEl = $('dahihPlayer');
-            if (!videoEl) return;
-
-            // الاستماع للوقت لحفظ التقدم بصمت في الخلفية
-            videoEl.addEventListener('timeupdate', () => {
-                const currentSec = Math.floor(videoEl.currentTime);
-                if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
-                    this.lastSentTime = currentSec;
-                    this.saveProgressBackground(videoEl.currentTime);
-                }
-            });
-
-            videoEl.addEventListener('pause', () => {
-                this.saveProgressBackground(videoEl.currentTime, true);
-            });
+        onError() {
+            const err = this.video.error;
+            if(err) {
+                console.error(`Video Error: ${err.code} - ${err.message}`);
+                showToast("🚨 تعذر تشغيل الفيديو. يرجى التحقق من اتصالك بالإنترنت.", "error");
+            }
         },
 
-        forceSaveProgress() {
-             const videoEl = $('dahihPlayer');
-             if(videoEl && videoEl.currentTime > 0) {
-                 this.saveProgressBackground(videoEl.currentTime, true);
-             }
+        skip(seconds, label) {
+            if (!this.video.src || !isFinite(this.video.duration)) return;
+            this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
+            this.skipText.textContent = label;
+            this.skipIndicator.classList.remove('is-active');
+            void this.skipIndicator.offsetWidth;
+            this.skipIndicator.classList.add('is-active');
+            haptic(35);
+        },
+
+        updateMuteIcon() {
+            this.muteBtn.innerHTML = this.video.muted
+                ? '<svg style="width:1.4rem;height:1.4rem;color:#f87171;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l4-4m0 4l-4-4"/></svg>'
+                : '<svg style="width:1.4rem;height:1.4rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>';
         }
     };
 
@@ -262,7 +440,7 @@
     }
 
     async function fetchData(initial = false) {
-        if (state.isTesting) return; 
+        if (state.isTesting) return; // منع الجلب تماماً أثناء أداء الاختبار
 
         if (state.dashboardAbortController) {
             state.dashboardAbortController.abort();
@@ -302,9 +480,10 @@
 
             const data = await res.json();
 
+            // 🚀 [تحسين]: فحص الـ Hash الكلي للبيانات لمنع تدمير وإعادة بناء الـ DOM إذا لم يتغير شيء
             const newDataHash = JSON.stringify(data.content || data);
             if (!initial && state.lastDataHash === newDataHash) {
-                return; 
+                return; // لم تتغير البيانات، لا داعي لتحديث الواجهة
             }
             state.lastDataHash = newDataHash;
 
@@ -369,6 +548,7 @@
 
         container.className = "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5";
         
+        // 🚀 [تحسين]: استبدال الـ background-image المكلفة برمجياً بـ <img> مع loading="lazy"
         container.innerHTML = list.map((course, idx) => {
             const id = course.telegramMsgId;
             const num = idx + 1;
@@ -500,11 +680,17 @@
         }
     };
 
+    // 🚀 [تحسين]: دوال الـ Polling الجديدة اللي تعتمد على setInterval بدل الـ while loop
     function startDashboardPolling() {
-        if (poller.timer) return;
+        if (poller.timer) {
+            console.warn('Polling already exists');
+            return;
+        }
+        if (state.isTesting) return; // لا تعمل إذا كان يختبر
 
+        // طلب جلب البيانات كل 30 ثانية لتخفيف الضغط
         poller.timer = setInterval(async () => {
-            if (state.isTesting) return;
+            if (document.hidden || state.isTesting) return;
             await fetchData(false);
         }, 30000); 
     }
@@ -517,8 +703,6 @@
     }
 
     function setupGlobalListeners() {
-        let lastVisibilityFetch = 0;
-
         document.addEventListener('click', (e) => {
             const filterBtn = e.target.closest('.filter-btn');
             if (filterBtn) {
@@ -550,8 +734,7 @@
             const coursePlay = e.target.closest('.course-play');
             if (coursePlay) {
                 if (typeof window.switchTab === 'function') window.switchTab('dashboard');
-                // استدعاء مدير الفيديو بدلاً من الكائن القديم
-                videoManager.load(coursePlay.dataset.msgid, coursePlay.dataset.title);
+                player.load(coursePlay.dataset.msgid, coursePlay.dataset.title);
             }
         });
 
@@ -568,25 +751,20 @@
             }
         });
 
-        document.addEventListener('visibilitychange', async () => {
+        document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                stopDashboardPolling();
-                videoManager.forceSaveProgress();
-                return;
-            }
-
-            startDashboardPolling();
-
-            const now = Date.now();
-            if (now - lastVisibilityFetch > 15000) {
-                lastVisibilityFetch = now;
-                await fetchData(false);
+                if (player.video && !player.video.paused) {
+                    player.saveProgressBackground(true);
+                }
+            } else {
+                fetchData(false);
             }
         });
 
         window.addEventListener('beforeunload', () => {
             if (state.dashboardAbortController) state.dashboardAbortController.abort();
-            videoManager.forceSaveProgress();
+            if (state.videoAbortController) state.videoAbortController.abort();
+            player.forceSaveProgress();
         });
     }
 
@@ -597,8 +775,7 @@
         $('studentName').textContent = firstName;
         $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
 
-        // تفعيل نظام تتبع تقدم الفيديو المدمج مع المحرك الجديد
-        videoManager.initTracking();
+        player.init();
         setupGlobalListeners();
         
         fetchData(true).then(() => {
@@ -608,6 +785,7 @@
         });
     }
 
+    // 🚀 [تحسين]: تصدير الدوال اللازمة للـ quiz.js عشان يوقف الـ polling ويرجعه
     Object.freeze(window.DahihApp = {
         logout, 
         toggleFullscreen, 
@@ -615,8 +793,8 @@
         getState: () => state,
         fetchWithTimeout: fetchWithTimeout,
         toast: showToast,
-        startDashboardPolling,
-        stopDashboardPolling,
+        startDashboardPolling, // تم إتاحتها
+        stopDashboardPolling,  // تم إتاحتها
         setQuizState: (isTesting) => { 
             state.isTesting = isTesting; 
             if (isTesting) {
