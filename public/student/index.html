@@ -15,7 +15,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="player.css">
-    
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
@@ -251,6 +250,118 @@
         @media (prefers-reduced-motion: reduce) {
             * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
         }
+        
+        /* Custom styles to match the required Minimalist layout */
+        .simple-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 24px;
+            background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 70%, transparent 100%);
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s;
+        }
+
+        .video-container:hover .simple-controls,
+        .video-container.is-active .simple-controls,
+        .video-container.is-paused .simple-controls {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .controls-row-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .controls-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-icon-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 4px;
+            cursor: pointer;
+            opacity: 0.85;
+            transition: opacity 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-icon-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .control-icon-btn svg {
+            width: 24px;
+            height: 24px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+        }
+
+        .time-text {
+            color: rgba(255,255,255,0.9);
+            font-size: 15px;
+            font-variant-numeric: tabular-nums;
+            font-weight: 500;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        
+        .speed-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .speed-badge:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* Styling matching the streaming design exactly as in 1000256478.jpg */
+        .video-container * {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        }
+
+        .center-stack .control-icon-btn {
+            background: rgba(255, 255, 255, 0.12) !important;
+            border-radius: 50% !important;
+            width: 52px !important;
+            height: 52px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transform: none !important;
+            transition: background 0.2s, transform 0.1s !important;
+        }
+
+        .center-stack .control-icon-btn:hover {
+            background: rgba(255, 255, 255, 0.22) !important;
+            transform: scale(1.08) !important;
+        }
+
+        .center-stack .play-btn {
+            width: 76px !important;
+            height: 76px !important;
+            background: rgba(255, 255, 255, 0.18) !important;
+        }
+
     </style>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
@@ -304,9 +415,12 @@
                     </div>
                     
                     <div class="p-2 md:p-5 bg-black/50 aspect-video flex items-center justify-center relative group" id="fs-wrapper">
-                        <div id="videoContainer" class="video-container group w-full h-full">
+                        
+                        <div id="videoContainer" class="video-container group w-full h-full is-active" dir="rtl">
                             
-                            <div class="aurora-layer"></div>
+                            <div class="top-fade"></div>
+                            <div class="bottom-fade"></div>
+                            <div class="cinema-vignette"></div>
 
                             <div id="videoPoster" class="video-poster">
                                 <div class="bg-yellow-500 p-4 md:p-5 rounded-full mb-4 md:mb-6 text-black shadow-[0_0_30px_rgba(234,179,8,0.3)] animate-soft-bounce">
@@ -316,74 +430,82 @@
                                 <p class="text-gray-400 text-xs md:text-sm max-w-sm leading-relaxed">اختر محاضرتك من الأسفل للبدء في المذاكرة</p>
                             </div>
 
-                            <div class="buffering-spinner"></div>
+                            <div class="buffering-spinner">
+                                <svg viewBox="0 0 50 50"><circle cx="25" cy="25" r="20"></circle></svg>
+                            </div>
+                            
                             <video id="dahihPlayer" playsinline preload="metadata" class="w-full h-full"></video>
                             
-                            <div class="tap-zone left" id="tapLeft"></div>
-                            <div class="tap-zone right" id="tapRight"></div>
-                            
-                            <div class="skip-indicator left" id="skipIndicatorLeft" aria-hidden="true"><span id="skipTextLeft">-10</span></div>
-                            <div class="skip-indicator right" id="skipIndicatorRight" aria-hidden="true"><span id="skipTextRight">+10</span></div>
-                            
-                            <div class="center-play is-visible" id="centerPlay">
-                                <div><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                            <div class="tap-zone left" id="tapLeft" style="left:0; right:auto; width: 30%; height: 100%;"></div>
+                            <div class="tap-zone right" id="tapRight" style="right:0; left:auto; width: 30%; height: 100%;"></div>
+
+                            <div class="top-bar" dir="ltr" style="justify-content: flex-end; padding: 20px;">
                             </div>
 
-                            <div class="controls" dir="ltr">
+                            <div class="center-stack" id="centerPlay" style="display: flex; gap: 24px; align-items: center; justify-content: center;">
+                                 <button class="control-icon-btn" aria-label="Skip backward 10s">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px;">
+                                        <path d="M2.5 12a9.5 9.5 0 1 0 9.5-9.5V1" />
+                                        <path d="M1 4h3V1" />
+                                        <text x="12" y="15.5" font-size="8.5" font-weight="800" text-anchor="middle" fill="currentColor" stroke="none">10</text>
+                                    </svg>
+                                 </button>
+                                 
+                                 <button class="control-icon-btn play-btn" aria-label="Play/Pause" id="heroPlayBtn">
+                                     <svg viewBox="0 0 24 24" fill="currentColor" style="width:30px; height:30px;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                                 </button>
+                                 
+                                 <button class="control-icon-btn forward" aria-label="Skip forward 10s">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:24px; height:24px;">
+                                        <path d="M21.5 12a9.5 9.5 0 1 1-9.5-9.5V1" />
+                                        <path d="M23 4h-3V1" />
+                                        <text x="12" y="15.5" font-size="8.5" font-weight="800" text-anchor="middle" fill="currentColor" stroke="none">10</text>
+                                    </svg>
+                                 </button>
+                            </div>
+
+                            <div class="simple-controls">
                                 <div class="progress-wrapper" id="progressContainer" role="slider" tabindex="0">
-                                    <div class="progress">
-                                        <div class="progress-loaded" id="bufferedBar"></div>
-                                        <div class="progress-fill" id="progressBar"></div>
+                                    <div class="progress" style="height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px; position: relative; width: 100%;">
+                                        <div class="progress-loaded" id="bufferedBar" style="height: 100%; background: rgba(255,255,255,0.5); border-radius: 4px; position: absolute; left: 0; top: 0;"></div>
+                                        <div class="progress-fill" id="progressBar" style="height: 100%; background: #eab308; border-radius: 4px; position: absolute; left: 0; top: 0;"></div>
                                     </div>
-                                    <div class="progress-hover-tooltip" id="progressTooltip"><span>00:00</span></div>
                                 </div>
 
-                                <div class="controls-bar">
-                                    <div class="group flex items-center gap-2">
-                                        <button class="icon-btn" id="playPauseBtn" aria-label="Play">
-                                            <svg viewBox="0 0 24 24" class="w-5 h-5"><path fill="currentColor" d="M8 5v14l11-7z"/></svg>
-                                        </button>
-                                        
-                                        <div class="volume-container flex items-center" id="volumeContainer">
-                                            <button class="icon-btn" id="muteBtn" aria-label="Mute">
-                                                <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5 10v4a2 2 0 002 2h2l4 4V4L9 8H7a2 2 0 00-2 2z"/></svg>
-                                            </button>
-                                            
-                                            <div class="volume-slider-wrapper pl-1 flex items-center">
-                                                <div id="volumeBar" class="vol-bar" style="width: 80px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; position: relative; cursor: pointer;">
-                                                    <div id="volumeBarFill" style="height: 100%; width: 100%; background: var(--p-accent, #eab308); border-radius: 3px; transform-origin: left; transform: scaleX(1);"></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="time-display text-xs text-white flex items-center gap-1">
-                                            <span id="currentTimeDisplay" class="current">00:00</span>
-                                            <span class="separator">/</span>
-                                            <span class="duration" id="durationDisplay">00:00</span>
-                                            <span id="chapterDisplay" class="chapter-name ml-2 text-yellow-500 font-medium"></span>
-                                        </div>
+                                <div class="controls-row-bottom" dir="ltr">
+                                    
+                                    <div class="controls-group">
+                                        <span class="time-text speed-badge" id="speedBtn">1x</span>
+                                        <span class="time-text" id="currentTimeDisplay">00:00</span>
+                                        <span class="time-text" style="opacity: 0.5;">/</span>
+                                        <span class="time-text" id="durationDisplay">00:00</span>
                                     </div>
 
-                                    <div class="group flex items-center gap-2">
-                                        <button class="icon-btn text-xs font-bold w-auto px-2" id="speedBtn">1x</button>
-                                        <button class="icon-btn hidden md:flex" id="pipBtn" title="Picture in Picture">
-                                            <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                                    <div class="controls-group" style="gap: 16px;">
+                                        <button class="control-icon-btn" id="muteBtn" aria-label="Mute">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px; height:22px;">
+                                                <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+                                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                                            </svg>
                                         </button>
-                                        <button id="fullscreenBtn" class="icon-btn fullscreen-btn" title="Fullscreen">
-                                            <svg viewBox="0 0 24 24" class="w-5 h-5" stroke="currentColor" fill="none" stroke-width="2"><path d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/></svg>
+
+                                        <button class="control-icon-btn" onclick="DahihApp.toggleFullscreen()" aria-label="Fullscreen">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:22px; height:22px;">
+                                                <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                                            </svg>
                                         </button>
                                     </div>
                                 </div>
                             </div>
-                            <div id="tt-boost"></div>
+                            </div>
                         </div>
-                    </div>
                 </div>
 
                 <div class="w-full lg:w-1/3 flex flex-col" id="sideCol">
                     <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 text-center flex-1 flex flex-col justify-center animate-fade-in-up bg-gradient-to-b from-white/5 to-transparent">
                         <h2 class="text-base font-bold mb-6 text-white flex items-center justify-center gap-2">
-                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/></svg>
                             مؤشر الأداء العام
                         </h2>
                         <div class="relative w-36 h-36 mx-auto bg-[#070b19] rounded-full border-[8px] border-yellow-500/10 flex items-center justify-center shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] mb-6">
@@ -487,74 +609,6 @@
                 if (typeof QuizApp !== 'undefined' && QuizApp.reload) { QuizApp.reload(); }
             }
         };
-
-        // سكربت التهيئة الذكي لمشغل الميديا TitaniumQuantumPlayer عند تحميل الصفحة بالكامل
-        document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // التأكد من جلب كلاس المحرك سواء كان معرّفاً كـ TitaniumQuantumPlayer أو بداخل موديول TitaniumQuantum
-                const TargetPlayer = typeof TitaniumQuantumPlayer !== 'undefined' ? TitaniumQuantumPlayer : (typeof TitaniumQuantum !== 'undefined' ? TitaniumQuantum.Player : null);
-                
-                if (TargetPlayer) {
-                    // 1. إنشاء غرض فريد للمشغل وحفظه برمجياً بالنافذة
-                    window.quantumPlayer = new TargetPlayer();
-                    
-                    // 2. ربط المحرك بمعرف الفيديو المعين ومعرف الحاوية الكبرى
-                    await window.quantumPlayer.init('dahihPlayer', 'videoContainer');
-                    console.log("%c[TitaniumQuantum] تم ربط وتهيئة محرك الفيديو العبقري باللوحة التعليمية بنجاح!", "color: #22c55e; font-weight: bold;");
-
-                    // 3. دالة مساعدة لتشغيل أي محاضرة يتم الضغط عليها داخل منصة الطالب ديناميكياً
-                    window.loadAndPlayCourseVideo = function(videoUrl, title, chaptersArray = []) {
-                        // تحديث عنوان الفيديو العلوي
-                        const titleEl = document.getElementById('playingVideoTitle');
-                        if (titleEl) titleEl.textContent = title;
-                        
-                        // إخفاء بوستر البداية الثابت لإظهار الفيديو
-                        const poster = document.getElementById('videoPoster');
-                        if (poster) poster.style.display = 'none';
-
-                        // استنتاج الصيغة تلقائياً
-                        let videoType = 'video/mp4';
-                        if (videoUrl.includes('.m3u8')) {
-                            videoType = 'application/x-mpegURL';
-                        } else if (videoUrl.includes('.mpd')) {
-                            videoType = 'application/dash+xml';
-                        }
-
-                        // تزويد المحرك برابط المحاضرة، الفصول، ومعرف الجلسة
-                        window.quantumPlayer.loadMedia(videoUrl, videoType, 'course_vid_' + Date.now(), chaptersArray);
-                    };
-                } else {
-                    console.warn("[TitaniumQuantum] كود المشغل غير معرّف، تأكد من سلامة كود player.js أو تصدير الكلاس عالمياً.");
-                }
-            } catch (err) {
-                console.error("[TitaniumQuantum] حدث خطأ غير متوقع أثناء حقن وتأمين المشغل:", err);
-            }
-        });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // انتظر تهيئة المشغل
-            const waitForPlayer = setInterval(() => {
-                if (window.quantumPlayer?.idleCtrl) {
-                    clearInterval(waitForPlayer);
-                    
-                    const container = document.getElementById('videoContainer');
-                    
-                    // أي حركة على الكونتينر تعيد تشغيل العداد
-                    ['mousemove','mousedown','touchstart','touchmove','keydown'].forEach(ev => {
-                        container.addEventListener(ev, () => {
-                            window.quantumPlayer.idleCtrl.poke();
-                        }, { passive: true });
-                    });
-
-                    // عند مغادرة الماوس يختفي فوراً
-                    container.addEventListener('mouseleave', () => {
-                        window.quantumPlayer.idleCtrl._setIdle(true);
-                    });
-
-                    console.log('%c[IdleController] تم الربط بنجاح', 'color:#22c55e');
-                }
-            }, 200);
-        });
 
         window.switchTab = function(tabId) {
             const activeTab = localStorage.getItem('activeTab');
