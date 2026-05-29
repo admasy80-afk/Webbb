@@ -6,109 +6,150 @@
     <title>اختبار إلكتروني | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://openfpcdn.io/fingerprintjs/v4/iife.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; overflow-x: hidden; }
+        body { font-family: 'Readex Pro', sans-serif; background-color: #050814; color: white; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
         
         .bg-animated-gradient {
-            background: linear-gradient(135deg, #070b19 0%, #0f172a 50%, #070b19 100%);
-            background-size: 200% 200%;
-            animation: gradientMove 20s ease-in-out infinite;
+            background: linear-gradient(135deg, #050814 0%, #0b1120 40%, #0f172a 70%, #050814 100%);
+            background-size: 300% 300%;
+            animation: gradientMove 15s ease infinite;
         }
         @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
+        .glass-panel { 
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%); 
+            border: 1px solid rgba(255, 255, 255, 0.06); 
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            will-change: transform, opacity;
+        }
         
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
+        }
         
-        @keyframes popIn { 0% { opacity: 0; transform: scale(0.5); } 100% { opacity: 1; transform: scale(1); } }
-        .animate-pop-in { animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in-up { animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        @keyframes softFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-        .animate-float { animation: softFloat 4s ease-in-out infinite; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.92); } 100% { opacity: 1; transform: scale(1); } }
+        .animate-pop-in { animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        
+        @keyframes softFloat { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-6px) scale(1.02); } }
+        .animate-float { animation: softFloat 5s ease-in-out infinite; }
 
-        .quiz-option input:checked + div { border-color: #eab308; background-color: rgba(234, 179, 8, 0.1); }
-        .quiz-option input:checked + div > div { background-color: #eab308; color: black; border-color: #eab308; }
+        .quiz-option input:checked + div { 
+            border-color: #eab308; 
+            background: linear-gradient(90deg, rgba(234, 179, 8, 0.08) 0%, rgba(234, 179, 8, 0.02) 100%);
+            box-shadow: 0 0 20px -5px rgba(234, 179, 8, 0.15);
+        }
+        .quiz-option input:checked + div > .badge-container { background-color: #eab308; color: #050814; border-color: #eab308; transform: scale(1.05); }
 
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #070b19; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        .focus-ring:focus-within {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050814; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        
+        .progress-bar-sync { transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="bg-animated-gradient min-h-screen selection:bg-yellow-500 selection:text-black relative pb-20">
+<body class="bg-animated-gradient min-h-screen selection:bg-yellow-500 selection:text-black relative pb-24 antialiased">
     
-    <div class="fixed top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-    <div class="fixed bottom-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-600/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+    <div class="fixed top-0 right-0 w-80 h-80 md:w-[32rem] md:h-[32rem] bg-blue-600/[0.04] rounded-full blur-[80px] pointer-events-none -z-10 will-change-transform"></div>
+    <div class="fixed bottom-0 left-0 w-80 h-80 md:w-[32rem] md:h-[32rem] bg-yellow-600/[0.03] rounded-full blur-[80px] pointer-events-none -z-10 will-change-transform"></div>
 
-    <header class="py-8 text-center animate-fade-in-up">
-        <h1 class="text-3xl md:text-4xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></h1>
-        <p id="quizMainTitle" class="text-gray-400 mt-3 text-lg font-semibold">جاري التجهيز...</p>
+    <div id="stickyProgressContainer" class="fixed top-0 left-0 right-0 h-1.5 bg-white/5 z-50 opacity-0 transition-opacity duration-300">
+        <div id="stickyProgressBar" class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-yellow-500 w-0 progress-bar-sync"></div>
+    </div>
+
+    <header class="py-10 text-center animate-fade-in-up">
+        <div class="inline-block relative">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-yellow-500 tracking-tight drop-shadow-[0_0_15px_rgba(234,179,8,0.2)]">الدحيح<span class="text-white">.</span></h1>
+            <div class="absolute -bottom-2 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-yellow-500/40 to-transparent"></div>
+        </div>
+        <p id="quizMainTitle" class="text-gray-400 mt-5 text-lg md:text-xl font-medium tracking-wide">جاري التجهيز...</p>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 w-full">
-        <div id="loadingState" class="text-center py-20">
-            <div class="inline-block w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mb-4 shadow-[0_0_15px_rgba(234,179,8,0.3)]"></div>
-            <p id="loadingText" class="text-gray-400 font-bold animate-pulse">جاري التحقق من هوية الجهاز وتجهيز الأسئلة...</p>
+    <main class="max-w-4xl mx-auto px-4 w-full relative">
+        
+        <div id="loadingState" class="text-center py-28 glass-panel rounded-3xl max-w-xl mx-auto animate-pop-in">
+            <div class="relative inline-block mb-6">
+                <div class="w-14 h-14 border-[3.5px] border-yellow-500/20 border-t-yellow-500 rounded-full animate-spin"></div>
+                <div class="absolute inset-0 w-14 h-14 border-[3.5px] border-transparent border-b-blue-500/60 rounded-full animate-spin [animation-duration:1.5s]"></div>
+            </div>
+            <p id="loadingText" class="text-gray-300 font-medium tracking-wide animate-pulse">جاري التحقق من هوية الجهاز وتجهيز الأسئلة...</p>
         </div>
 
-        <div id="errorState" class="hidden text-center py-20 bg-red-500/10 border border-red-500/20 rounded-2xl animate-pop-in">
-            <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-            <h2 class="text-xl font-bold text-white mb-2">عذراً، تم حظر الوصول</h2>
-            <p id="errorText" class="text-gray-400 text-sm">تأكد من الرابط، أو أنك لم تقم بحل هذا الاختبار من قبل.</p>
+        <div id="errorState" class="hidden text-center p-8 md:p-12 bg-red-950/20 border border-red-500/20 rounded-3xl max-w-xl mx-auto animate-pop-in shadow-2xl">
+            <div class="w-16 h-16 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-3">عذراً، تم حظر الوصول</h2>
+            <p id="errorText" class="text-gray-400 text-sm leading-relaxed">تأكد من الرابط، أو أنك لم تقم بحل هذا الاختبار من قبل.</p>
         </div>
 
-        <form id="publicQuizForm" class="hidden space-y-6">
-            <div class="glass-panel p-5 md:p-8 rounded-2xl border-t-[3px] border-t-blue-500 animate-fade-in-up" style="animation-delay: 0.1s;">
-                <h2 class="text-xl font-bold text-white mb-6 border-b border-white/10 pb-4">بياناتك الأساسية</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label class="block text-sm font-bold text-gray-300 mb-2">الاسم الرباعي <span class="text-red-500">*</span></label>
-                        <input type="text" id="studentName" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors" placeholder="اكتب اسمك بالكامل...">
+        <form id="publicQuizForm" class="hidden space-y-8" novalidate>
+            <div class="glass-panel p-6 md:p-8 rounded-3xl border-t-4 border-t-blue-500 shadow-xl relative overflow-hidden animate-fade-in-up">
+                <div class="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                    <span class="w-2 h-5 bg-blue-500 rounded-sm inline-block"></span>
+                    بياناتك الأساسية
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="focus-ring rounded-2xl border border-white/5 bg-black/30 p-1 transition-all">
+                        <label for="studentName" class="block text-xs font-bold text-gray-400 mb-1 px-3 pt-1">الاسم الرباعي <span class="text-red-500">*</span></label>
+                        <input type="text" id="studentName" required class="w-full bg-transparent px-3 pb-2 text-white outline-none font-medium text-sm md:text-base placeholder:text-white/20" placeholder="اكتب اسمك بالكامل...">
                     </div>
-                    <div>
-                        <label class="block text-sm font-bold text-gray-300 mb-2">البريد الإلكتروني <span class="text-red-500">*</span></label>
-                        <input type="email" id="studentEmail" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-blue-500 transition-colors" dir="ltr" placeholder="student@example.com">
+                    <div class="focus-ring rounded-2xl border border-white/5 bg-black/30 p-1 transition-all">
+                        <label for="studentEmail" class="block text-xs font-bold text-gray-400 mb-1 px-3 pt-1">البريد الإلكتروني <span class="text-red-500">*</span></label>
+                        <input type="email" id="studentEmail" required class="w-full bg-transparent px-3 pb-2 text-white outline-none font-medium text-sm md:text-base placeholder:text-white/20" dir="ltr" placeholder="student@example.com">
                     </div>
                 </div>
             </div>
 
-            <div id="questionsContainer" class="space-y-6"></div>
+            <div id="questionsContainer" class="space-y-8"></div>
 
-            <div class="pt-6 animate-fade-in-up" style="animation-delay: 0.5s;">
-                <button type="submit" id="submitQuizBtn" class="w-full bg-yellow-500 text-black font-black text-lg py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-[0_0_20px_rgba(234,179,8,0.2)] flex items-center justify-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div class="pt-4 animate-fade-in-up">
+                <button type="submit" id="submitQuizBtn" class="w-full bg-yellow-500 text-black font-black text-lg py-4.5 rounded-2xl hover:bg-yellow-400 active:scale-[0.99] transition-all shadow-[0_12px_30px_rgba(234,179,8,0.15)] flex items-center justify-center gap-3 group">
+                    <svg class="w-5 h-5 transition-transform group-hover:scale-110 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     تسليم الإجابات واعتماد النتيجة
                 </button>
             </div>
         </form>
 
-        <div id="resultState" class="hidden mt-6 space-y-6">
-            <div class="glass-panel rounded-[2rem] p-8 md:p-12 text-center relative overflow-hidden animate-pop-in">
-                <div id="resultGlow" class="absolute inset-0 pointer-events-none opacity-20"></div>
-                <div id="resultIconBox" class="w-24 h-24 mx-auto mb-6 rounded-full border flex items-center justify-center relative z-10 animate-float"></div>
+        <div id="resultState" class="hidden space-y-10 mt-4">
+            <div class="glass-panel rounded-[2.5rem] p-8 md:p-14 text-center relative overflow-hidden animate-pop-in shadow-2xl border border-white/10">
+                <div id="resultGlow" class="absolute inset-0 pointer-events-none opacity-25 mix-blend-screen transition-all duration-700"></div>
+                <div id="resultIconBox" class="w-24 h-24 mx-auto mb-6 rounded-3xl border flex items-center justify-center relative z-10 animate-float backdrop-blur-md transition-all duration-500"></div>
                 
-                <h2 class="text-3xl font-bold text-white mb-2 relative z-10">تم تسجيل إجاباتك بنجاح</h2>
-                <p id="resultName" class="text-gray-400 mb-8 text-lg relative z-10"></p>
+                <h2 class="text-3xl md:text-4xl font-extrabold text-white mb-2 relative z-10 tracking-tight">تم تسجيل إجاباتك بنجاح</h2>
+                <p id="resultName" class="text-gray-400 mb-10 text-lg font-medium relative z-10"></p>
                 
-                <div class="inline-block mb-8 relative z-10">
-                    <div class="text-sm text-gray-500 mb-2 font-bold uppercase tracking-wider">النتيجة النهائية</div>
-                    <div id="resultPercentage" class="text-7xl md:text-8xl font-black" dir="ltr">0%</div>
+                <div class="inline-block mb-10 relative z-10 group">
+                    <div class="text-xs text-gray-500 mb-2 font-extrabold uppercase tracking-widest">النتيجة النهائية</div>
+                    <div id="resultPercentage" class="text-8xl font-black tracking-tighter" dir="ltr">0%</div>
                 </div>
                 
-                <div class="bg-black/40 border border-white/5 rounded-2xl p-5 text-gray-300 w-full max-w-sm mx-auto flex justify-between items-center px-8 relative z-10">
-                    <span class="font-medium text-gray-400">الإجابات الصحيحة</span>
-                    <span id="resultScore" class="font-bold text-white text-xl md:text-2xl" dir="ltr">0 / 0</span>
+                <div class="bg-black/40 border border-white/5 rounded-2xl p-4.5 text-gray-300 w-full max-w-sm mx-auto flex justify-between items-center px-8 relative z-10 backdrop-blur-sm">
+                    <span class="font-medium text-sm text-gray-400">الإجابات الصحيحة</span>
+                    <span id="resultScore" class="font-bold text-white text-2xl tracking-tight" dir="ltr">0 / 0</span>
                 </div>
             </div>
 
-            <div class="mt-10 animate-fade-in-up" style="animation-delay: 0.3s;">
-                <h3 class="text-2xl font-bold text-white mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
-                    <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            <div class="mt-12 animate-fade-in-up">
+                <h3 class="text-2xl font-bold text-white mb-8 flex items-center gap-3 border-b border-white/5 pb-5">
+                    <div class="w-10 h-10 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-center justify-center">
+                        <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    </div>
                     مراجعة الإجابات
                 </h3>
-                <div id="answersReviewContainer" class="space-y-4"></div>
+                <div id="answersReviewContainer" class="space-y-6"></div>
             </div>
         </div>
     </main>
@@ -121,6 +162,18 @@
 
         const letters = ['أ', 'ب', 'ج', 'د'];
 
+        // Strict XSS Prevention Sanitizer
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // Global Initialization Routing
         document.addEventListener('DOMContentLoaded', async () => {
             if (!quizId) {
                 showError("الرابط غير صحيح أو مفقود منه معرف الاختبار.");
@@ -144,13 +197,17 @@
             }
         });
 
+        // Protected Network Fetch Context (With Security Interceptors & 15s Timeout Execution)
         async function fetchQuizData() {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
             try {
-                const res = await fetch(`/api/public/quiz?id=${quizId}&device=${deviceFingerprint}`, {
-                    headers: {
-                        'x-public-access': 'eld7e7-web-client'
-                    }
+                const res = await fetch(`/api/public/quiz?id=${encodeURIComponent(quizId)}&device=${encodeURIComponent(deviceFingerprint)}`, {
+                    headers: { 'x-public-access': 'eld7e7-web-client' },
+                    signal: controller.signal
                 }); 
+                clearTimeout(timeoutId);
                 
                 if (res.ok) {
                     currentQuizData = await res.json();
@@ -160,58 +217,125 @@
                     showError(errorData.message || "لا يوجد اختبار بهذا الرابط، أو تم حذفه.");
                 }
             } catch (err) {
-                showError("حدث خطأ أثناء جلب الاختبار. تأكد من الإنترنت.");
+                clearTimeout(timeoutId);
+                if (err.name === 'AbortError') {
+                    showError("انتهت مهلة الاتصال بالخادم. أعد تحميل الصفحة والمحاولة مجدداً.");
+                } else {
+                    showError("حدث خطأ أثناء جلب الاختبار. تأكد من الإنترنت.");
+                }
             }
         }
 
+        // Virtual DOM Fragment Delivery Engine
         function renderQuiz() {
             document.getElementById('loadingState').classList.add('hidden');
-            document.getElementById('publicQuizForm').classList.remove('hidden');
-            document.getElementById('quizMainTitle').innerText = currentQuizData.title;
+            
+            const formElement = document.getElementById('publicQuizForm');
+            const mainTitleElement = document.getElementById('quizMainTitle');
+            const stickyProgress = document.getElementById('stickyProgressContainer');
+            
+            formElement.classList.remove('hidden');
+            stickyProgress.classList.remove('opacity-0');
+            mainTitleElement.textContent = currentQuizData.title;
 
             const container = document.getElementById('questionsContainer');
-            let html = '';
-            let delay = 0.2;
-
+            const fragment = document.createDocumentFragment();
+            
             currentQuizData.questions.forEach((q, qIndex) => {
-                // التحقق مما إذا كان السؤال "صح أو خطأ" (يحتوي على اختيارين فقط) لضبط التنسيق البصري للحروف البديلة إذا لزم الأمر
                 const isTrueFalse = q.options.length === 2;
-
-                html += `
-                <div class="glass-panel p-5 md:p-8 rounded-2xl border-t-[3px] border-t-yellow-500 animate-fade-in-up" style="animation-delay: ${delay}s;">
-                    <h4 class="font-bold text-lg md:text-xl mb-6 text-white leading-relaxed">
-                        <span class="text-yellow-500 mr-1">${qIndex + 1}.</span> ${q.questionText}
-                    </h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">`;
+                const card = document.createElement('div');
+                card.className = "glass-panel p-6 md:p-8 rounded-3xl border-t-4 border-t-yellow-500/80 shadow-xl relative overflow-hidden animate-fade-in-up";
+                card.style.animationDelay = `${0.15 + (qIndex * 0.05)}s`;
                 
+                // Question Header Node Setup
+                const header = document.createElement('h4');
+                header.className = "font-bold text-lg md:text-xl mb-6 text-white leading-relaxed flex items-start gap-2.5";
+                
+                const indexBadge = document.createElement('span');
+                indexBadge.className = "text-yellow-500 font-extrabold select-none";
+                indexBadge.textContent = `${qIndex + 1}.`;
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = q.questionText;
+                
+                header.appendChild(indexBadge);
+                header.appendChild(textSpan);
+                card.appendChild(header);
+
+                // Option Matrix Context Grid Setup
+                const grid = document.createElement('div');
+                grid.className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+
                 q.options.forEach((opt, optIndex) => {
-                    // إذا كان صح وخطأ، يمكننا عرض علامة مميزة أو الإبقاء على أ / ب بشكل منسق
-                    const badgeText = isTrueFalse ? (optIndex === 0 ? '✓' : '✕') : letters[optIndex];
+                    const label = document.createElement('label');
+                    label.className = "quiz-option cursor-pointer group focus-within:outline-none";
+                    
+                    const input = document.createElement('input');
+                    input.type = "radio";
+                    input.name = `q_${qIndex}`;
+                    input.value = optIndex;
+                    input.required = true;
+                    input.className = "hidden";
+                    input.setAttribute('aria-label', `الخيار ${letters[optIndex]}: ${opt}`);
 
-                    html += `
-                        <label class="quiz-option cursor-pointer group h-full">
-                            <input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden">
-                            <div class="flex items-center gap-4 p-4 rounded-xl bg-black/40 border border-white/10 transition-all h-full hover:border-yellow-500/50 hover:bg-white/5">
-                                <div class="w-8 h-8 rounded-lg bg-black/60 border border-white/20 flex items-center justify-center text-sm font-bold text-gray-400 shrink-0 transition-colors group-hover:text-white">
-                                    ${badgeText}
-                                </div>
-                                <span class="text-gray-200 text-sm md:text-base leading-relaxed group-hover:text-white">${opt}</span>
-                            </div>
-                        </label>`;
+                    // Interactive Custom Container View Control
+                    const customDiv = document.createElement('div');
+                    customDiv.className = "flex items-center gap-4 p-4 rounded-2xl bg-black/30 border border-white/5 transition-all duration-300 hover:border-yellow-500/40 hover:bg-white/[0.02]";
+                    
+                    const badge = document.createElement('div');
+                    badge.className = "badge-container w-9 h-9 rounded-xl bg-black/50 border border-white/10 flex items-center justify-center text-sm font-bold text-gray-400 shrink-0 transition-all duration-300 group-hover:text-white group-hover:border-white/20 select-none";
+                    badge.textContent = isTrueFalse ? (optIndex === 0 ? '✓' : '✕') : letters[optIndex];
+                    
+                    const optionText = document.createElement('span');
+                    optionText.className = "text-gray-300 text-sm md:text-base leading-relaxed transition-colors duration-300 group-hover:text-white font-medium";
+                    optionText.textContent = opt;
+
+                    customDiv.appendChild(badge);
+                    customDiv.appendChild(optionText);
+                    label.appendChild(input);
+                    label.appendChild(customDiv);
+                    grid.appendChild(label);
                 });
-                
-                html += `</div></div>`;
-                delay += 0.1;
+
+                card.appendChild(grid);
+                fragment.appendChild(card);
             });
 
-            container.innerHTML = html;
+            container.appendChild(fragment);
+            trackLiveQuizProgress();
         }
 
+        // Live UX Progress Watcher
+        function trackLiveQuizProgress() {
+            const form = document.getElementById('publicQuizForm');
+            const stickyBar = document.getElementById('stickyProgressBar');
+            
+            form.addEventListener('change', () => {
+                const totalQuestions = currentQuizData.questions.length;
+                if (!totalQuestions) return;
+                
+                const formData = new FormData(form);
+                let answeredCount = 0;
+                
+                for (let i = 0; i < totalQuestions; i++) {
+                    if (formData.has(`q_${i}`)) answeredCount++;
+                }
+                
+                const pct = (answeredCount / totalQuestions) * 100;
+                stickyBar.style.width = `${pct}%`;
+            });
+        }
+
+        // Execution Core System Post
         document.getElementById('publicQuizForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitQuizBtn');
-            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري إرسال وتصحيح الإجابات...`;
+            
+            if (btn.disabled) return;
             btn.disabled = true;
+
+            const initialBtnHtml = btn.innerHTML;
+            btn.innerHTML = `<div class="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div> جاري إرسال وتصحيح الإجابات...`;
 
             const form = e.target;
             const studentName = document.getElementById('studentName').value;
@@ -221,12 +345,19 @@
             let userAnswers = []; 
 
             currentQuizData.questions.forEach((q, qIndex) => {
-                const selected = parseInt(form.elements[`q_${qIndex}`].value);
-                userAnswers.push(selected);
-                if (selected === q.correctAnswer) score++;
+                const radioGroup = form.elements[`q_${qIndex}`];
+                const selected = radioGroup ? parseInt(radioGroup.value) : NaN;
+                userAnswers.push(isNaN(selected) ? null : selected);
+                
+                if (!isNaN(selected) && selected === Number(q.correctAnswer)) {
+                    score++;
+                }
             });
 
             const percentage = Math.round((score / currentQuizData.questions.length) * 100);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
 
             try {
                 const res = await fetch('/api/student/submit-quiz', {
@@ -244,11 +375,14 @@
                         score: score, 
                         percentage: percentage,
                         userAnswers: userAnswers
-                    })
+                    }),
+                    signal: controller.signal
                 });
+                clearTimeout(timeoutId);
 
                 if (res.ok) {
                     localStorage.setItem(`dahih_quiz_done_${quizId}`, "true");
+                    document.getElementById('stickyProgressContainer').classList.add('opacity-0');
                     showDetailedResults(studentName, score, currentQuizData.questions.length, percentage, userAnswers);
                 } else {
                     const errData = await res.json();
@@ -256,94 +390,130 @@
                 }
 
             } catch (err) {
-                alert(err.message || "حدث خطأ في الإرسال، تأكد من الإنترنت وحاول مجدداً.");
-                btn.innerHTML = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> تسليم الإجابات واعتماد النتيجة`;
+                clearTimeout(timeoutId);
+                alert(err.name === 'AbortError' ? "انتهت مهلة الاتصال بالخادم. يرجى إعادة المحاولة." : (err.message || "حدث خطأ في الإرسال، تأكد من الإنترنت وحاول مجدداً."));
+                btn.innerHTML = initialBtnHtml;
                 btn.disabled = false;
             }
         });
 
+        // Advanced Metrics Renderer Block
         function showDetailedResults(name, score, total, percentage, userAnswers) {
             document.getElementById('publicQuizForm').classList.add('hidden');
             document.getElementById('resultState').classList.remove('hidden');
-            window.scrollTo(0, 0); 
+            window.scrollTo({ top: 0, behavior: 'smooth' }); 
             
-            document.getElementById('resultName').innerText = `شكراً لجهدك يا، ${name}`;
-            document.getElementById('resultScore').innerText = `${score} / ${total}`;
+            document.getElementById('resultName').textContent = `شكراً لجهدك يا، ${name}`;
+            document.getElementById('resultScore').textContent = `${score} / ${total}`;
             
             const percEl = document.getElementById('resultPercentage');
             const iconBox = document.getElementById('resultIconBox');
             const glow = document.getElementById('resultGlow');
-            percEl.innerText = `${percentage}%`;
+            percEl.textContent = `${percentage}%`;
 
-            let colorClass = percentage >= 85 ? 'text-green-400' : (percentage >= 50 ? 'text-blue-400' : 'text-red-400');
-            let shadowColor = percentage >= 85 ? 'rgba(74, 222, 128, 0.4)' : (percentage >= 50 ? 'rgba(96, 165, 250, 0.4)' : 'rgba(248, 113, 113, 0.4)');
-            let bgClass = percentage >= 85 ? 'bg-green-500/10 border-green-500/30' : (percentage >= 50 ? 'bg-blue-500/10 border-blue-500/30' : 'bg-red-500/10 border-red-500/30');
-            let gradClass = percentage >= 85 ? 'from-green-500/20' : (percentage >= 50 ? 'from-blue-500/20' : 'from-red-500/20');
+            let isPassed = percentage >= 50;
+            let isExcellent = percentage >= 85;
+
+            let colorClass = isExcellent ? 'text-green-400' : (isPassed ? 'text-blue-400' : 'text-red-400');
+            let shadowColor = isExcellent ? 'rgba(74, 222, 128, 0.3)' : (isPassed ? 'rgba(96, 165, 250, 0.3)' : 'rgba(248, 113, 113, 0.3)');
+            let bgClass = isExcellent ? 'bg-green-500/5 border-green-500/20' : (isPassed ? 'bg-blue-500/5 border-blue-500/20' : 'bg-red-500/5 border-red-500/20');
+            let gradClass = isExcellent ? 'from-green-500/10' : (isPassed ? 'from-blue-500/10' : 'from-red-500/10');
             
-            let iconSvg = percentage >= 50 
-                ? `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`
-                : `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            let iconSvg = isPassed 
+                ? `<svg class="w-10 h-10 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`
+                : `<svg class="w-10 h-10 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
 
-            percEl.className = `text-7xl md:text-8xl font-black ${colorClass}`;
-            percEl.style.textShadow = `0 0 30px ${shadowColor}`;
-            iconBox.className = `w-24 h-24 mx-auto mb-6 rounded-full border flex items-center justify-center relative z-10 animate-float ${bgClass}`;
-            iconBox.style.boxShadow = `0 0 40px ${shadowColor}`;
+            percEl.className = `text-7xl md:text-8xl font-black tracking-tight transition-all duration-500 ${colorClass}`;
+            percEl.style.textShadow = `0 0 40px ${shadowColor}`;
+            iconBox.className = `w-24 h-24 mx-auto mb-6 rounded-2xl border flex items-center justify-center relative z-10 animate-float ${bgClass}`;
+            iconBox.style.boxShadow = `0 10px 30px -5px ${shadowColor}`;
             iconBox.innerHTML = iconSvg;
-            glow.className = `absolute inset-0 pointer-events-none opacity-30 bg-gradient-to-b ${gradClass} to-transparent`;
+            glow.className = `absolute inset-0 pointer-events-none opacity-25 bg-gradient-to-b ${gradClass} to-transparent`;
 
             const reviewContainer = document.getElementById('answersReviewContainer');
-            let reviewHTML = '';
+            const reviewFragment = document.createDocumentFragment();
 
             currentQuizData.questions.forEach((q, idx) => {
                 const studentAnsIndex = userAnswers[idx];
-                const isCorrect = studentAnsIndex === q.correctAnswer;
+                const isCorrect = studentAnsIndex === Number(q.correctAnswer);
                 const isTrueFalse = q.options.length === 2;
                 
-                let borderClass = isCorrect ? 'border-green-500/50' : 'border-red-500/50';
-                let badge = isCorrect 
-                    ? `<span class="bg-green-500/20 text-green-400 text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> إجابة صحيحة</span>` 
-                    : `<span class="bg-red-500/20 text-red-400 text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> إجابة خاطئة</span>`;
+                const reviewCard = document.createElement('div');
+                let borderClass = isCorrect ? 'border-r-green-500/60' : 'border-r-red-500/60';
+                reviewCard.className = `glass-panel p-5 md:p-6 rounded-2xl border border-white/5 border-r-4 ${borderClass} bg-black/10 transition-all duration-300`;
+                
+                const metaRow = document.createElement('div');
+                metaRow.className = "flex justify-between items-start gap-4 mb-5";
+                
+                const qTitle = document.createElement('h4');
+                qTitle.className = "font-bold text-base md:text-lg text-white leading-relaxed flex gap-2";
+                
+                const numSpan = document.createElement('span');
+                numSpan.className = "text-white/40 select-none";
+                numSpan.textContent = `${idx + 1}.`;
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = q.questionText;
+                
+                qTitle.appendChild(numSpan);
+                qTitle.appendChild(textSpan);
+                metaRow.appendChild(qTitle);
 
-                reviewHTML += `
-                <div class="glass-panel p-5 md:p-6 rounded-2xl border-r-4 ${borderClass} mb-4 bg-black/20">
-                    <div class="flex justify-between items-start mb-4">
-                        <h4 class="font-bold text-base md:text-lg text-white leading-relaxed pr-2">
-                            ${idx + 1}. ${q.questionText}
-                        </h4>
-                        ${badge}
-                    </div>
-                    <div class="space-y-3 mt-4">`;
+                const badge = document.createElement('span');
+                if (isCorrect) {
+                    badge.className = "bg-green-500/10 text-green-400 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shrink-0 select-none border border-green-500/10";
+                    badge.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg> إجابة صحيحة`;
+                } else {
+                    badge.className = "bg-red-500/10 text-red-400 text-xs px-3 py-1.5 rounded-xl font-bold flex items-center gap-1.5 shrink-0 select-none border border-red-500/10";
+                    badge.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg> إجابة خاطئة`;
+                }
+                metaRow.appendChild(badge);
+                reviewCard.appendChild(metaRow);
+
+                const optionsWrapper = document.createElement('div');
+                optionsWrapper.className = "space-y-3";
 
                 q.options.forEach((opt, optIdx) => {
-                    let optClass = "bg-black/40 border border-white/5 text-gray-400";
+                    const optBox = document.createElement('div');
+                    let optClass = "bg-black/20 border border-white/[0.03] text-gray-400";
+                    
                     const badgeIconText = isTrueFalse ? (optIdx === 0 ? '✓' : '✕') : letters[optIdx];
-                    let optIcon = `<div class="w-6 h-6 rounded bg-black/60 border border-white/10 flex items-center justify-center text-xs font-bold shrink-0">${badgeIconText}</div>`;
+                    let iconInner = `<div class="w-6 h-6 rounded-lg bg-black/40 border border-white/10 flex items-center justify-center text-xs font-bold shrink-0 select-none">${badgeIconText}</div>`;
                     
                     if (optIdx === studentAnsIndex && !isCorrect) {
-                        optClass = "bg-red-500/10 border border-red-500/30 text-red-300";
-                        optIcon = `<div class="w-6 h-6 rounded bg-red-500/20 border border-red-500/50 flex items-center justify-center text-xs font-bold text-red-400 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></div>`;
-                    } else if (optIdx === q.correctAnswer) {
-                        optClass = "bg-green-500/10 border border-green-500/50 text-green-300 font-bold";
-                        optIcon = `<div class="w-6 h-6 rounded bg-green-500/20 border border-green-500/50 flex items-center justify-center text-xs font-bold text-green-400 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
+                        optClass = "bg-red-500/[0.06] border border-red-500/20 text-red-300 font-medium";
+                        iconInner = `<div class="w-6 h-6 rounded-lg bg-red-500/20 border border-red-500/40 flex items-center justify-center text-xs font-bold text-red-400 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg></div>`;
+                    } else if (optIdx === Number(q.correctAnswer)) {
+                        optClass = "bg-green-500/[0.06] border border-green-500/30 text-green-300 font-bold shadow-[0_0_15px_rgba(34,197,94,0.05)]";
+                        iconInner = `<div class="w-6 h-6 rounded-lg bg-green-500/20 border border-green-500/40 flex items-center justify-center text-xs font-bold text-green-400 shrink-0"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg></div>`;
                     }
 
-                    reviewHTML += `
-                        <div class="flex items-center gap-3 p-3 rounded-xl transition-all ${optClass}">
-                            ${optIcon}
-                            <span class="text-sm md:text-base">${opt}</span>
-                        </div>`;
+                    optBox.className = `flex items-center gap-3.5 p-3.5 rounded-xl transition-all duration-200 ${optClass}`;
+                    optBox.innerHTML = iconInner;
+                    
+                    const optTextSpan = document.createElement('span');
+                    optTextSpan.className = "text-sm md:text-base leading-relaxed";
+                    optTextSpan.textContent = opt;
+                    
+                    optBox.appendChild(optTextSpan);
+                    optionsWrapper.appendChild(optBox);
                 });
 
-                reviewHTML += `</div></div>`;
+                reviewCard.appendChild(optionsWrapper);
+                reviewFragment.appendChild(reviewCard);
             });
 
-            reviewContainer.innerHTML = reviewHTML;
+            reviewContainer.appendChild(reviewFragment);
         }
 
+        // Error Interface Pipeline
         function showError(msg) {
             document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('publicQuizForm').classList.add('hidden');
             document.getElementById('errorState').classList.remove('hidden');
-            if(msg) document.getElementById('errorText').innerText = msg;
+            if (msg) {
+                document.getElementById('errorText').textContent = msg;
+            }
         }
     </script>
 </body>
