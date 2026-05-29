@@ -556,7 +556,7 @@ export function triggerCopyAnimation(inputElement) {
     `;
     btn.className = 'w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 sm:py-0 rounded-2xl font-black transition-all shadow-[0_0_25px_rgba(16,185,129,0.5)] whitespace-nowrap scale-105';
     
-    SysUI.toast('success', "📋 تم نسخ الرابط، أرسله الآن!");
+    SysUI.toast('success', " تم نسخ الرابط بنجاح!");
     SysUI.confetti();
     
     setTimeout(() => {
@@ -579,7 +579,7 @@ export const SmartImportSystem = {
             importBtn.innerHTML = `
                 <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
                 <svg class="w-5 h-5 animate-pulse relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                <span class="relative z-10">لصق سحري (Smart Paste)</span>
+                <span class="relative z-10">لصق  (Smart Paste)</span>
             `;
             importBtn.onclick = () => this.showImportModal();
             
@@ -603,14 +603,14 @@ export const SmartImportSystem = {
                                 <div class="p-2 bg-green-500/10 rounded-xl">
                                     <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                                 </div>
-                                المستورد الخارق المحسّن
+                                المستورد 
                             </h3>
                             <button id="smart-modal-close" class="text-gray-500 hover:text-white bg-white/5 hover:bg-red-500/80 p-2 rounded-xl transition-all duration-300">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
                         <p class="text-sm text-gray-400 mb-5 leading-relaxed relative z-10 font-medium">
-                            ألصق بنك الأسئلة بالكامل هنا. المستورد الذكي يطبق صرامة في استخراج <span class="text-green-400 font-bold">خيارين (صح/خطأ) أو 4 خيارات</span> فقط ويتجاهل الخيارات الوهمية!
+                        ألصق بنك الأسئلة بالكامل هنا<span class="text-green-400 font-bold">خيارين (صح/خطأ) أو 4 خيارات</span> !
                         </p>
                         
                         <div class="relative flex-grow mb-6 z-10 group/textarea">
@@ -621,7 +621,7 @@ export const SmartImportSystem = {
                         <button id="smart-import-execute" class="relative z-10 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 px-6 py-4 rounded-2xl transition-all duration-300 text-base font-black shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.5)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden group">
                             <div class="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
                             <svg class="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                            <span class="relative z-10">تحليل وإدراج الأسئلة بذكاء اصطناعي</span>
+                            <span class="relative z-10">تحليل وإدراج الأسئلة </span>
                         </button>
                     </div>
                 </div>
