@@ -38,7 +38,12 @@
     </style>
 
     <script>
-        // 🌟 نظام الإشعارات الجديد (Toast) بدل الـ Alert العقيم 🌟
+        // الحماية الوقائية لمنع الـ Refresh اللانهائي في حال عدم وجود توكن
+        if (!localStorage.getItem('dahih_token') && !window.location.href.includes('login.html')) {
+            window.location.href = 'login.html'; 
+        }
+
+        // 🌟 نظام الإشعارات الجديد (Toast) 🌟
         window.showToast = function(msg, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -68,6 +73,12 @@
         window.addEventListener('unhandledrejection', function(e) {
             window.showToast("خطأ في الاتصال بالسيرفر", 'error');
         });
+
+        // دالة تسجيل الخروج الآمنة بدون تكرار ريفريش
+        window.logout = function() {
+            localStorage.removeItem('dahih_token');
+            window.location.href = 'login.html'; 
+        };
 
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
@@ -121,6 +132,138 @@
                 </button>
             `;
             container.appendChild(row);
+        };
+
+        // 🌟 نظام توليد الأسئلة الذكي والديناميكي (خيارين أو 4 خيارات) 🌟
+        let platformQuizCounter = 0;
+        window.addMCQBlock = function() {
+            platformQuizCounter++;
+            const container = document.getElementById('dynamicQuestionsContainer');
+            const block = document.createElement('div');
+            block.className = 'quiz-question-block bg-black/40 border border-white/10 p-5 rounded-2xl space-y-4 relative animate-fade-in-up';
+            block.innerHTML = `
+                <div class="flex justify-between items-center border-b border-white/5 pb-3">
+                    <span class="text-sm font-bold text-yellow-500">سؤال منصة رقم #${platformQuizCounter}</span>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-500 bg-red-500/10 p-2 rounded-xl transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2">نص السؤال الإلكتروني</label>
+                    <input type="text" required class="question-text-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="اكتب السؤال هنا...">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">نوع الخيارات</label>
+                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="4">4 خيارات (اختيار من متعدد)</option>
+                            <option value="2">خيارين فقط (صح / خطأ)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">الإجابة الصحيحة</label>
+                        <select class="question-correct-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="1">الخيار الأول</option>
+                            <option value="2">الخيار الثاني</option>
+                            <option value="3" class="extra-opt-target">الخيار الثالث</option>
+                            <option value="4" class="extra-opt-target">الخيار الرابع</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول (مثال: صح)">
+                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني (مثال: خطأ)">
+                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الثالث">
+                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الرابع">
+                </div>
+            `;
+            container.appendChild(block);
+        };
+
+        let publicQuizCounter = 0;
+        window.addPublicMCQBlock = function() {
+            publicQuizCounter++;
+            const container = document.getElementById('dynamicPublicQuestionsContainer');
+            const block = document.createElement('div');
+            block.className = 'quiz-question-block bg-black/40 border border-white/10 p-5 rounded-2xl space-y-4 relative animate-fade-in-up';
+            block.innerHTML = `
+                <div class="flex justify-between items-center border-b border-white/5 pb-3">
+                    <span class="text-sm font-bold text-yellow-500">سؤال عام رقم #${publicQuizCounter}</span>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-500 bg-red-500/10 p-2 rounded-xl transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2">نص السؤال العام</label>
+                    <input type="text" required class="question-text-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="اكتب السؤال هنا...">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">نوع الخيارات</label>
+                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="4">4 خيارات (اختيار من متعدد)</option>
+                            <option value="2">خيارين فقط (صح / خطأ)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">الإجابة الصحيحة</label>
+                        <select class="question-correct-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="1">الخيار الأول</option>
+                            <option value="2">الخيار الثاني</option>
+                            <option value="3" class="extra-opt-target">الخيار الثالث</option>
+                            <option value="4" class="extra-opt-target">الخيار الرابع</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول (مثال: صح)">
+                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني (مثال: خطأ)">
+                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الثالث">
+                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الرابع">
+                </div>
+            `;
+            container.appendChild(block);
+        };
+
+        // دالة التحكم التلقائي بعدد الخيارات المخفية والمعروضة
+        window.adjustQuestionOptions = function(selectElement) {
+            const block = selectElement.closest('.quiz-question-block');
+            const mode = selectElement.value;
+            const extraFields = block.querySelectorAll('.extra-option-field');
+            const extraSelectOpts = block.querySelectorAll('.extra-opt-target');
+            const correctSelect = block.querySelector('.question-correct-select');
+
+            if (mode === "2") {
+                extraFields.forEach(f => {
+                    f.classList.add('hidden');
+                    f.removeAttribute('required');
+                });
+                extraSelectOpts.forEach(o => o.classList.add('hidden'));
+                if (correctSelect.value === "3" || correctSelect.value === "4") {
+                    correctSelect.value = "1";
+                }
+            } else {
+                extraFields.forEach(f => {
+                    f.classList.remove('hidden');
+                    f.setAttribute('required', 'true');
+                });
+                extraSelectOpts.forEach(o => o.classList.remove('hidden'));
+            }
+        };
+
+        // دالة نسخ رابط الاختبار العام
+        window.copyPublicLink = function() {
+            const input = document.getElementById('publicQuizLinkInput');
+            if(!input || !input.value) return;
+            input.select();
+            input.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(input.value);
+            window.showToast('تم نسخ رابط الاختبار بنجاح! 📋');
+        };
+
+        // دالة إغلاق مودال النتائج
+        window.closeResultsModal = function() {
+            document.getElementById('resultsModal').classList.add('hidden');
         };
     </script>
 </head>
@@ -558,7 +701,7 @@
         let calculatedDuration = "غير محدد"; 
         let courseImageBase64 = "";
 
-        // 1. نظام رفع وضغط صورة الغلاف من المتصفح مباشرة (لتخفيف الحمل عن السيرفر)
+        // 1. نظام رفع وضغط صورة الغلاف من المتصفح مباشرة
         document.getElementById('courseImageFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const container = document.getElementById('previewContainer');
@@ -575,7 +718,7 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; // تصغير الصورة بحد أقصى 800 بكسل
+                    const MAX_WIDTH = 800; 
                     const MAX_HEIGHT = 800;
                     let width = img.width;
                     let height = img.height;
@@ -592,7 +735,6 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    // تحويل الصورة إلى نص خفيف الجودة 70% لإرساله كحقل عادي
                     courseImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
                     
                     imgEl.src = courseImageBase64;
@@ -656,7 +798,7 @@
             formData.append('grade', grade);
             formData.append('description', description);
             formData.append('duration', calculatedDuration); 
-            formData.append('imageUrl', courseImageBase64); // نرسل الصورة كنص Base64
+            formData.append('imageUrl', courseImageBase64); 
             formData.append('video', file);
 
             btn.disabled = true;
