@@ -134,7 +134,7 @@
             container.appendChild(row);
         };
 
-        // 🌟 نظام توليد الأسئلة الذكي والديناميكي (خيارين أو 4 خيارات) 🌟
+        // 🌟 نظام توليد الأسئلة الثكي والديناميكي (4 حقول ثابتة دائماً مع فحص التحقق) 🌟
         let platformQuizCounter = 0;
         window.addMCQBlock = function() {
             platformQuizCounter++;
@@ -171,10 +171,10 @@
                     </div>
                 </div>
                 <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول (مثال: صح)">
-                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني (مثال: خطأ)">
-                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الثالث">
-                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الرابع">
+                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول">
+                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني">
+                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثالث">
+                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الرابع">
                 </div>
             `;
             container.appendChild(block);
@@ -216,40 +216,88 @@
                     </div>
                 </div>
                 <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول (مثال: صح)">
-                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني (مثال: خطأ)">
-                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الثالث">
-                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm extra-option-field" placeholder="الخيار الرابع">
+                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول">
+                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني">
+                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثالث">
+                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الرابع">
                 </div>
             `;
             container.appendChild(block);
         };
 
-        // دالة التحكم التلقائي بعدد الخيارات المخفية والمعروضة
+        // دالة التحكم المحسنة تماماً للكتابة السريعة وإدارة التحقق مع الحفاظ على الحقول الأربعة
         window.adjustQuestionOptions = function(selectElement) {
             const block = selectElement.closest('.quiz-question-block');
             const mode = selectElement.value;
-            const extraFields = block.querySelectorAll('.extra-option-field');
+            
+            const opt1 = block.querySelector('.opt-1-input');
+            const opt2 = block.querySelector('.opt-2-input');
+            const opt3 = block.querySelector('.opt-3-input');
+            const opt4 = block.querySelector('.opt-4-input');
+            
             const extraSelectOpts = block.querySelectorAll('.extra-opt-target');
             const correctSelect = block.querySelector('.question-correct-select');
 
             if (mode === "2") {
-                extraFields.forEach(f => {
-                    f.classList.add('hidden');
-                    f.removeAttribute('required');
-                });
+                // ميزة الكتابة السريعة التلقائية المحدثة
+                opt1.value = "صح";
+                opt2.value = "خطأ";
+                opt3.value = ""; 
+                opt4.value = "";
+                
+                // إلغاء تفعيل الـ required للحقلين الثالث والرابع لتجاوز الفحص البرمجي
+                opt3.removeAttribute('required');
+                opt4.removeAttribute('required');
+                
+                // إخفاء الخيار الثالث والرابع من قائمة تحديد الإجابة الصحيحة
                 extraSelectOpts.forEach(o => o.classList.add('hidden'));
                 if (correctSelect.value === "3" || correctSelect.value === "4") {
                     correctSelect.value = "1";
                 }
             } else {
-                extraFields.forEach(f => {
-                    f.classList.remove('hidden');
-                    f.setAttribute('required', 'true');
-                });
+                // إرجاع الوضع الافتراضي لـ 4 خيارات
+                if(opt1.value === "صح") opt1.value = "";
+                if(opt2.value === "خطأ") opt2.value = "";
+                
+                opt3.setAttribute('required', 'true');
+                opt4.setAttribute('required', 'true');
                 extraSelectOpts.forEach(o => o.classList.remove('hidden'));
             }
         };
+
+        // دالة فحص والتحقق من عدد الحقول المعبأة بدقة تامة (السماح بـ 2 أو 4 فقط، ورفض 1 أو 3)
+        function validateQuizInputs(containerId) {
+            const container = document.getElementById(containerId);
+            const blocks = container.querySelectorAll('.quiz-question-block');
+            
+            for (let block of blocks) {
+                const mode = block.querySelector('.question-type-select').value;
+                const v1 = block.querySelector('.opt-1-input').value.trim();
+                const v2 = block.querySelector('.opt-2-input').value.trim();
+                const v3 = block.querySelector('.opt-3-input').value.trim();
+                const v4 = block.querySelector('.opt-4-input').value.trim();
+                
+                // حساب عدد الحقول المكتوبة فعلياً
+                let filledCount = 0;
+                if(v1 !== "") filledCount++;
+                if(v2 !== "") filledCount++;
+                if(v3 !== "") filledCount++;
+                if(v4 !== "") filledCount++;
+                
+                if (mode === "2") {
+                    if (filledCount !== 2) {
+                        window.showToast("خطأ: يرجى إدخال خيارين فقط (تم اكتشاف حقول زائدة أو ناقصة)!", "error");
+                        return false;
+                    }
+                } else {
+                    if (filledCount !== 4) {
+                        window.showToast("خطأ: يرجى ملء الحقول الأربعة كاملة أو تحويل نوع السؤال لخيارين فقط!", "error");
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
 
         // دالة نسخ رابط الاختبار العام
         window.copyPublicLink = function() {
@@ -554,7 +602,7 @@
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إنشاء اختبار إلكتروني</h1>
             <p class="text-gray-400 mb-6">هذا الاختبار يظهر فقط للطلاب المسجلين بالمنصة فقط.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="quizForm" class="space-y-6">
+                <form id="quizForm" onsubmit="return validateQuizInputs('dynamicQuestionsContainer')" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
                         <select id="quizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
                             <option value="" disabled selected>الدفعة المستهدفة...</option>
@@ -590,7 +638,7 @@
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-yellow-500">إنشاء اختبار عام</h1>
             <p class="text-gray-400 mb-6">الاختبار العام يمكن لأي طالب حله من خلال رابط خارجي .</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="publicQuizForm" class="space-y-6">
+                <form id="publicQuizForm" onsubmit="return validateQuizInputs('dynamicPublicQuestionsContainer')" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
                         <select id="publicQuizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
                             <option value="" disabled selected>السنة الدراسية للتصنيف...</option>
