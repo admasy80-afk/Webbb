@@ -127,20 +127,17 @@
                 return;
             }
 
-            // 🔥 طبقة الحماية الأولى (فورية من المتصفح) 🔥
             if (localStorage.getItem(`dahih_quiz_done_${quizId}`)) {
                 showError("لقد قمت بحل هذا الاختبار مسبقاً من هذا المتصفح ولا يُسمح بالتكرار.");
                 return;
             }
 
             try {
-                // توليد البصمة
                 const fpPromise = FingerprintJS.load();
                 const fp = await fpPromise;
                 const result = await fp.get();
                 deviceFingerprint = result.visitorId;
                 
-                // جلب الاختبار
                 await fetchQuizData();
             } catch (err) {
                 showError("تعذر الاتصال بخوادم الحماية. تأكد من اتصالك بالإنترنت.");
@@ -177,6 +174,9 @@
             let delay = 0.2;
 
             currentQuizData.questions.forEach((q, qIndex) => {
+                // التحقق مما إذا كان السؤال "صح أو خطأ" (يحتوي على اختيارين فقط) لضبط التنسيق البصري للحروف البديلة إذا لزم الأمر
+                const isTrueFalse = q.options.length === 2;
+
                 html += `
                 <div class="glass-panel p-5 md:p-8 rounded-2xl border-t-[3px] border-t-yellow-500 animate-fade-in-up" style="animation-delay: ${delay}s;">
                     <h4 class="font-bold text-lg md:text-xl mb-6 text-white leading-relaxed">
@@ -185,12 +185,15 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">`;
                 
                 q.options.forEach((opt, optIndex) => {
+                    // إذا كان صح وخطأ، يمكننا عرض علامة مميزة أو الإبقاء على أ / ب بشكل منسق
+                    const badgeText = isTrueFalse ? (optIndex === 0 ? '✓' : '✕') : letters[optIndex];
+
                     html += `
                         <label class="quiz-option cursor-pointer group h-full">
                             <input type="radio" name="q_${qIndex}" value="${optIndex}" required class="hidden">
                             <div class="flex items-center gap-4 p-4 rounded-xl bg-black/40 border border-white/10 transition-all h-full hover:border-yellow-500/50 hover:bg-white/5">
                                 <div class="w-8 h-8 rounded-lg bg-black/60 border border-white/20 flex items-center justify-center text-sm font-bold text-gray-400 shrink-0 transition-colors group-hover:text-white">
-                                    ${letters[optIndex]}
+                                    ${badgeText}
                                 </div>
                                 <span class="text-gray-200 text-sm md:text-base leading-relaxed group-hover:text-white">${opt}</span>
                             </div>
@@ -226,7 +229,6 @@
             const percentage = Math.round((score / currentQuizData.questions.length) * 100);
 
             try {
-                // تـم إضـافـة الـ هـيـدر هـنـا لـطـلـب الـتـسـلـيـم
                 const res = await fetch('/api/student/submit-quiz', {
                     method: 'POST', 
                     headers: { 
@@ -295,6 +297,7 @@
             currentQuizData.questions.forEach((q, idx) => {
                 const studentAnsIndex = userAnswers[idx];
                 const isCorrect = studentAnsIndex === q.correctAnswer;
+                const isTrueFalse = q.options.length === 2;
                 
                 let borderClass = isCorrect ? 'border-green-500/50' : 'border-red-500/50';
                 let badge = isCorrect 
@@ -313,7 +316,8 @@
 
                 q.options.forEach((opt, optIdx) => {
                     let optClass = "bg-black/40 border border-white/5 text-gray-400";
-                    let optIcon = `<div class="w-6 h-6 rounded bg-black/60 border border-white/10 flex items-center justify-center text-xs font-bold shrink-0">${letters[optIdx]}</div>`;
+                    const badgeIconText = isTrueFalse ? (optIdx === 0 ? '✓' : '✕') : letters[optIdx];
+                    let optIcon = `<div class="w-6 h-6 rounded bg-black/60 border border-white/10 flex items-center justify-center text-xs font-bold shrink-0">${badgeIconText}</div>`;
                     
                     if (optIdx === studentAnsIndex && !isCorrect) {
                         optClass = "bg-red-500/10 border border-red-500/30 text-red-300";
