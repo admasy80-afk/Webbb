@@ -14,8 +14,6 @@
             --bg-base: #03050a;
             --card-bg: rgba(10, 15, 30, 0.4);
             --glass-border: rgba(255, 255, 255, 0.08);
-            --cursor-x: 50%;
-            --cursor-y: 50%;
         }
 
         * {
@@ -26,76 +24,36 @@
         body {
             font-family: 'Readex Pro', sans-serif;
             background-color: var(--bg-base);
+            /* Premium static background that replaces the heavy particle animation */
+            background-image: radial-gradient(circle at 15% 0%, rgba(37, 99, 235, 0.1) 0%, transparent 40%),
+                              radial-gradient(circle at 85% 100%, rgba(234, 179, 8, 0.08) 0%, transparent 40%);
             color: #fff;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
             margin: 0;
             min-height: 100vh;
+            background-attachment: fixed;
         }
 
-        /* Ambient Dynamic Background */
-        .ambient-bg {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: radial-gradient(circle at 15% 50%, rgba(37, 99, 235, 0.08), transparent 50%),
-                        radial-gradient(circle at 85% 30%, rgba(234, 179, 8, 0.06), transparent 50%);
-            z-index: -2;
-            pointer-events: none;
-        }
-
-        #particles-canvas {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        /* Mouse Glow Effect */
-        .cursor-glow {
-            position: fixed;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background: radial-gradient(600px circle at var(--cursor-x) var(--cursor-y), rgba(255, 255, 255, 0.03), transparent 40%);
-            z-index: 9999;
-            pointer-events: none;
-            mix-blend-mode: screen;
-        }
-
-        /* Ultra Premium Glassmorphism */
+        /* Ultra Premium Glassmorphism - Simplified for performance */
         .holo-card {
             background: var(--card-bg);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--glass-border);
-            box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.8),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            border-radius: 2rem;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            border-radius: 1.5rem;
             position: relative;
-            transform-style: preserve-3d;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-                        border-color 0.4s ease, box-shadow 0.4s ease;
-        }
-
-        .holo-card::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: inherit;
-            padding: 2px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%, rgba(234,179,8,0.2) 100%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-            opacity: 0.5;
-            transition: opacity 0.4s ease;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
         }
 
         .holo-card:hover {
             border-color: rgba(255, 255, 255, 0.15);
-            box-shadow: 0 40px 80px -15px rgba(0, 0, 0, 0.9),
-                        0 0 40px rgba(234, 179, 8, 0.1);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.9),
+                        0 0 30px rgba(234, 179, 8, 0.05);
+            transform: translateY(-2px);
         }
-        .holo-card:hover::before { opacity: 1; }
 
         /* Typography Enhancements */
         .text-glow {
@@ -111,30 +69,27 @@
         .option-container {
             position: relative;
             cursor: pointer;
-            perspective: 1000px;
         }
         
         .option-input:checked ~ .option-content {
             background: linear-gradient(135deg, rgba(234, 179, 8, 0.15), rgba(234, 179, 8, 0.05));
             border-color: var(--primary);
-            box-shadow: 0 10px 30px -10px var(--primary-glow),
-                        inset 0 0 20px rgba(234, 179, 8, 0.1);
-            transform: translateY(-2px) scale(1.01);
+            box-shadow: 0 5px 20px -10px var(--primary-glow);
+            transform: translateY(-2px);
         }
 
         .option-input:checked ~ .option-content .option-badge {
             background: var(--primary);
             color: #000;
             border-color: var(--primary);
-            transform: scale(1.1) rotateY(360deg);
-            box-shadow: 0 0 15px var(--primary-glow);
+            transform: scale(1.05);
+            box-shadow: 0 0 10px var(--primary-glow);
         }
 
         .option-content {
-            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transition: all 0.3s ease;
             border: 1px solid rgba(255,255,255,0.05);
             background: rgba(0,0,0,0.3);
-            transform-origin: center;
         }
 
         .option-content:hover {
@@ -143,31 +98,28 @@
         }
 
         .option-badge {
-            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-            transform-style: preserve-3d;
+            transition: all 0.3s ease;
         }
 
-        /* Next-Gen Inputs */
+        /* Inputs */
         .cyber-input {
             background: rgba(0, 0, 0, 0.4);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: #fff;
             transition: all 0.3s ease;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
         }
         .cyber-input:focus {
             border-color: #3b82f6;
             background: rgba(59, 130, 246, 0.05);
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15),
-                        inset 0 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
             outline: none;
         }
 
-        /* Epic Loader */
+        /* Epic Loader - Optimized */
         .epic-loader {
             position: relative;
-            width: 120px;
-            height: 120px;
+            width: 80px;
+            height: 80px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -176,167 +128,157 @@
         .ring {
             position: absolute;
             border-radius: 50%;
-            border: 2px solid transparent;
+            border: 3px solid transparent;
+            border-top-color: var(--primary);
+            width: 100%;
+            height: 100%;
+            animation: spin 1s linear infinite;
         }
-        .ring:nth-child(1) { width: 100%; height: 100%; border-top-color: var(--primary); animation: spin3D 2s linear infinite; }
-        .ring:nth-child(2) { width: 80%; height: 80%; border-right-color: #3b82f6; animation: spin3D 2.5s linear infinite reverse; }
-        .ring:nth-child(3) { width: 60%; height: 60%; border-bottom-color: #fff; animation: spin3D 1.5s linear infinite; }
+        .ring:nth-child(2) {
+            width: 70%;
+            height: 70%;
+            border-top-color: #3b82f6;
+            animation: spin 1.5s linear infinite reverse;
+        }
         
-        @keyframes spin3D {
-            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
-            100% { transform: rotateX(360deg) rotateY(360deg) rotateZ(360deg); }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         /* Animations */
         @keyframes revealUp {
-            0% { opacity: 0; transform: translateY(40px) scale(0.95); filter: blur(10px); }
-            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+            0% { opacity: 0; transform: translateY(20px); }
+            100% { opacity: 1; transform: translateY(0); }
         }
-        .reveal-up { animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; opacity: 0; }
+        .reveal-up { animation: revealUp 0.6s ease forwards; opacity: 0; }
         
         @keyframes bounceIn {
-            0% { opacity: 0; transform: scale(0.3); }
-            50% { opacity: 1; transform: scale(1.05); }
-            70% { transform: scale(0.9); }
-            100% { transform: scale(1); }
+            0% { opacity: 0; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1); }
         }
-        .bounce-in { animation: bounceIn 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .bounce-in { animation: bounceIn 0.5s ease forwards; }
 
         /* Progress Bar */
         .progress-glow {
-            box-shadow: 0 0 20px var(--primary-glow), 0 0 40px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 0 15px var(--primary-glow);
             position: relative;
-            overflow: hidden;
         }
-        .progress-glow::after {
-            content: '';
-            position: absolute;
-            top: 0; left: -100%; width: 50%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
-            animation: shine 2s infinite;
-        }
-        @keyframes shine { 100% { left: 200%; } }
 
         /* Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: var(--bg-base); }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 20px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(234, 179, 8, 0.5); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(234, 179, 8, 0.6); }
+
+        /* Responsive Text Utilities */
+        .responsive-percent {
+            font-size: 5rem;
+            line-height: 1;
+        }
+        @media (min-width: 768px) {
+            .responsive-percent { font-size: 8rem; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="ambient-bg"></div>
-    <canvas id="particles-canvas"></canvas>
-    <div class="cursor-glow"></div>
-
-    <div id="stickyProgressContainer" class="fixed top-0 left-0 right-0 h-2 z-50 opacity-0 transition-all duration-500 transform -translate-y-full">
-        <div class="h-full bg-white/10 w-full absolute inset-0 backdrop-blur-md"></div>
-        <div id="stickyProgressBar" class="h-full bg-gradient-to-r from-blue-600 via-purple-500 to-yellow-500 w-0 transition-all duration-700 ease-out progress-glow relative z-10"></div>
+    <div id="stickyProgressContainer" class="fixed top-0 left-0 right-0 h-1.5 z-50 opacity-0 transition-all duration-500 transform -translate-y-full">
+        <div class="h-full bg-white/5 w-full absolute inset-0 backdrop-blur-sm"></div>
+        <div id="stickyProgressBar" class="h-full bg-gradient-to-r from-blue-600 via-purple-500 to-yellow-500 w-0 transition-all duration-500 ease-out progress-glow relative z-10"></div>
     </div>
 
-    <header class="py-16 text-center reveal-up relative z-10" style="animation-delay: 0.1s;">
-        <div class="inline-block relative cursor-pointer group">
-            <h1 class="text-5xl md:text-7xl font-black text-yellow-500 tracking-tighter text-glow drop-shadow-2xl transition-transform duration-500 group-hover:scale-105">
+    <header class="py-12 md:py-16 text-center reveal-up relative z-10">
+        <div class="inline-block relative">
+            <h1 class="text-5xl md:text-6xl font-black text-yellow-500 tracking-tighter text-glow drop-shadow-lg">
                 الدحيح<span class="text-white">.</span>
             </h1>
-            <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-0 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent transition-all duration-500 group-hover:w-full"></div>
         </div>
-        <p id="quizMainTitle" class="text-gray-400 mt-8 text-xl md:text-2xl font-semibold tracking-wide text-gradient">جاري تهيئة النظام الكمي...</p>
+        <p id="quizMainTitle" class="text-gray-400 mt-6 text-lg md:text-xl font-medium tracking-wide text-gradient px-4">جاري تهيئة النظام الآمن...</p>
     </header>
 
-    <main class="max-w-5xl mx-auto px-4 w-full relative z-10 pb-24">
+    <main class="max-w-4xl mx-auto px-4 sm:px-6 w-full relative z-10 pb-20">
         
-        <div id="loadingState" class="text-center py-32 holo-card reveal-up max-w-2xl mx-auto">
-            <div class="epic-loader mb-10">
+        <div id="loadingState" class="text-center py-20 holo-card reveal-up max-w-lg mx-auto">
+            <div class="epic-loader mb-8">
                 <div class="ring"></div>
                 <div class="ring"></div>
-                <div class="ring"></div>
-                <div class="absolute inset-0 flex items-center justify-center font-bold text-xl text-white">
-                    <span class="animate-pulse">OS</span>
-                </div>
             </div>
-            <h3 class="text-2xl font-bold text-white mb-2 tracking-wide">جاري التحقق من هوية الجهاز وتجهيز الأسئلة...</h3>
-            <p id="loadingText" class="text-gray-500 text-sm">تشفير البيانات وإنشاء بيئة اختبار آمنة</p>
+            <h3 class="text-xl md:text-2xl font-bold text-white mb-2 tracking-wide px-4">جاري التحقق من هوية الجهاز...</h3>
+            <p id="loadingText" class="text-gray-500 text-sm px-4">تشفير البيانات وتجهيز الأسئلة لضمان استقرار الاختبار</p>
         </div>
 
-        <div id="errorState" class="hidden text-center p-10 md:p-16 holo-card border-red-500/30 max-w-2xl mx-auto bounce-in relative overflow-hidden">
-            <div class="absolute inset-0 bg-red-500/5 pointer-events-none"></div>
-            <div class="w-24 h-24 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(239,68,68,0.2)]">
-                <svg class="w-12 h-12 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div id="errorState" class="hidden text-center p-8 md:p-12 holo-card border-red-500/30 max-w-lg mx-auto bounce-in relative overflow-hidden">
+            <div class="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
                 </svg>
             </div>
-            <h2 class="text-3xl font-black text-white mb-4">عذراً، تم حظر الوصول</h2>
-            <p id="errorText" class="text-gray-400 text-lg leading-relaxed">تأكد من الرابط، أو أنك لم تقم بحل هذا الاختبار من قبل.</p>
+            <h2 class="text-2xl font-black text-white mb-3">عذراً، تم حظر الوصول</h2>
+            <p id="errorText" class="text-gray-400 text-base leading-relaxed">تأكد من الرابط، أو أنك لم تقم بحل هذا الاختبار من قبل.</p>
         </div>
 
-        <form id="publicQuizForm" class="hidden space-y-12" novalidate>
+        <form id="publicQuizForm" class="hidden space-y-8" novalidate>
             
-            <div class="holo-card p-8 md:p-10 reveal-up" style="animation-delay: 0.2s;">
-                <div class="flex items-center gap-4 mb-8 border-b border-white/5 pb-6">
-                    <div class="w-12 h-12 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.2)]">
-                        <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            <div class="holo-card p-6 md:p-8 reveal-up" style="animation-delay: 0.1s;">
+                <div class="flex items-center gap-4 mb-6 border-b border-white/5 pb-4">
+                    <div class="w-10 h-10 rounded-xl bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                     </div>
-                    <h2 class="text-2xl font-bold text-white tracking-wide">البيانات الأساسية</h2>
+                    <h2 class="text-xl md:text-2xl font-bold text-white tracking-wide">البيانات الأساسية</h2>
                 </div>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-2">
                         <label for="studentName" class="block text-sm font-bold text-gray-400 pl-2">الاسم الرباعي <span class="text-red-500">*</span></label>
-                        <input type="text" id="studentName" required class="cyber-input w-full rounded-2xl px-5 py-4 text-white text-lg placeholder:text-white/20" placeholder="اكتب اسمك بالكامل...">
+                        <input type="text" id="studentName" required class="cyber-input w-full rounded-xl px-4 py-3 text-white text-base placeholder:text-white/20" placeholder="اكتب اسمك بالكامل...">
                     </div>
                     <div class="space-y-2">
                         <label for="studentEmail" class="block text-sm font-bold text-gray-400 pl-2">البريد الإلكتروني <span class="text-red-500">*</span></label>
-                        <input type="email" id="studentEmail" required class="cyber-input w-full rounded-2xl px-5 py-4 text-white text-lg placeholder:text-white/20" dir="ltr" placeholder="student@example.com">
+                        <input type="email" id="studentEmail" required class="cyber-input w-full rounded-xl px-4 py-3 text-white text-base placeholder:text-white/20" dir="ltr" placeholder="student@example.com">
                     </div>
                 </div>
             </div>
 
-            <div id="questionsContainer" class="space-y-10"></div>
+            <div id="questionsContainer" class="space-y-8"></div>
 
-            <div class="pt-8 reveal-up" style="animation-delay: 0.5s;">
-                <button type="submit" id="submitQuizBtn" class="w-full relative group overflow-hidden bg-gradient-to-r from-yellow-600 to-yellow-400 text-black font-black text-2xl py-6 rounded-3xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] shadow-[0_20px_50px_rgba(234,179,8,0.3)]">
-                    <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
-                    <span class="relative flex items-center justify-center gap-4">
+            <div class="pt-6 reveal-up" style="animation-delay: 0.3s;">
+                <button type="submit" id="submitQuizBtn" class="w-full relative overflow-hidden bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-black text-xl py-5 rounded-2xl transition-all hover:opacity-90 active:scale-95 shadow-lg">
+                    <span class="relative flex items-center justify-center gap-3">
                         تسليم الإجابات واعتماد النتيجة
-                        <svg class="w-8 h-8 transition-transform group-hover:translate-x-2 duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M13 7l5 5m0 0l-5 5m5-5H6"></path></svg>
                     </span>
                 </button>
             </div>
         </form>
 
-        <div id="resultState" class="hidden space-y-16 mt-8">
-            <div class="holo-card p-12 md:p-20 text-center relative overflow-hidden bounce-in">
-                <canvas id="confetti-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-0"></canvas>
+        <div id="resultState" class="hidden space-y-12 mt-6">
+            <div class="holo-card p-8 md:p-16 text-center relative overflow-hidden bounce-in">
                 
-                <div id="resultGlow" class="absolute inset-0 pointer-events-none opacity-40 mix-blend-screen transition-all duration-1000"></div>
+                <div id="resultIconBox" class="w-24 h-24 mx-auto mb-6 rounded-full border-4 flex items-center justify-center relative z-10 bg-black/40"></div>
                 
-                <div id="resultIconBox" class="w-32 h-32 mx-auto mb-8 rounded-full border-4 flex items-center justify-center relative z-10 transition-all duration-700 bg-black/50 backdrop-blur-xl"></div>
+                <h2 class="text-3xl md:text-4xl font-black text-white mb-3 relative z-10 tracking-tight text-glow">تم تسجيل إجاباتك بنجاح</h2>
+                <p id="resultName" class="text-gray-300 mb-10 text-xl font-bold relative z-10"></p>
                 
-                <h2 class="text-4xl md:text-5xl font-black text-white mb-4 relative z-10 tracking-tight text-glow">تم تسجيل إجاباتك بنجاح</h2>
-                <p id="resultName" class="text-gray-300 mb-12 text-2xl font-bold relative z-10"></p>
-                
-                <div class="relative z-10 inline-block mb-12">
-                    <div class="absolute -inset-4 bg-gradient-to-r from-blue-500/20 via-yellow-500/20 to-purple-500/20 blur-2xl rounded-full"></div>
-                    <div class="text-sm text-gray-400 mb-3 font-black uppercase tracking-widest relative">النتيجة النهائية</div>
-                    <div id="resultPercentage" class="text-9xl md:text-[10rem] font-black tracking-tighter relative" dir="ltr">0%</div>
+                <div class="relative z-10 inline-block mb-10 w-full overflow-hidden">
+                    <div class="text-sm text-gray-400 mb-2 font-black uppercase tracking-widest relative">النتيجة النهائية</div>
+                    <div id="resultPercentage" class="responsive-percent font-black tracking-tighter relative" dir="ltr">0%</div>
                 </div>
                 
-                <div class="bg-black/60 border border-white/10 rounded-3xl p-6 text-gray-300 w-full max-w-lg mx-auto flex justify-between items-center px-10 relative z-10 backdrop-blur-md shadow-2xl">
-                    <span class="font-bold text-lg text-gray-400">الإجابات الصحيحة</span>
-                    <span id="resultScore" class="font-black text-white text-4xl tracking-tight text-glow" dir="ltr">0 / 0</span>
+                <div class="bg-black/40 border border-white/10 rounded-2xl p-5 text-gray-300 w-full max-w-sm mx-auto flex justify-between items-center px-8 relative z-10">
+                    <span class="font-bold text-base text-gray-400">الإجابات الصحيحة</span>
+                    <span id="resultScore" class="font-black text-white text-3xl tracking-tight" dir="ltr">0 / 0</span>
                 </div>
             </div>
 
-            <div class="reveal-up" style="animation-delay: 0.4s;">
-                <h3 class="text-3xl font-black text-white mb-10 flex items-center gap-5 border-b border-white/10 pb-6">
-                    <div class="w-14 h-14 bg-yellow-500/20 border border-yellow-500/40 rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(234,179,8,0.15)]">
-                        <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+            <div class="reveal-up" style="animation-delay: 0.2s;">
+                <h3 class="text-2xl font-black text-white mb-8 flex items-center gap-4 border-b border-white/10 pb-4">
+                    <div class="w-12 h-12 bg-yellow-500/10 border border-yellow-500/30 rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                     </div>
                     مراجعة التقرير التحليلي
                 </h3>
-                <div id="answersReviewContainer" class="space-y-8"></div>
+                <div id="answersReviewContainer" class="space-y-6"></div>
             </div>
         </div>
     </main>
@@ -349,127 +291,8 @@
         let deviceFingerprint = null; 
         const letters = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'];
 
-        // --- Visual Systems: Particles & Canvas ---
-        function initBackgroundParticles() {
-            const canvas = document.getElementById('particles-canvas');
-            const ctx = canvas.getContext('2d');
-            let width, height, particles;
-
-            function resize() {
-                width = canvas.width = window.innerWidth;
-                height = canvas.height = window.innerHeight;
-            }
-
-            class Particle {
-                constructor() {
-                    this.x = Math.random() * width;
-                    this.y = Math.random() * height;
-                    this.size = Math.random() * 2 + 0.1;
-                    this.speedX = Math.random() * 1 - 0.5;
-                    this.speedY = Math.random() * 1 - 0.5;
-                    this.opacity = Math.random() * 0.5;
-                }
-                update() {
-                    this.x += this.speedX;
-                    this.y += this.speedY;
-                    if (this.x < 0 || this.x > width) this.speedX *= -1;
-                    if (this.y < 0 || this.y > height) this.speedY *= -1;
-                }
-                draw() {
-                    ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
-                    ctx.beginPath();
-                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-
-            function init() {
-                resize();
-                particles = [];
-                for (let i = 0; i < 100; i++) particles.push(new Particle());
-                window.addEventListener('resize', resize);
-            }
-
-            function animate() {
-                ctx.clearRect(0, 0, width, height);
-                particles.forEach(p => { p.update(); p.draw(); });
-                requestAnimationFrame(animate);
-            }
-
-            init(); animate();
-        }
-
-        // --- Visual Systems: Confetti ---
-        function triggerConfetti() {
-            const canvas = document.getElementById('confetti-canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            const pieces = [];
-            const colors = ['#eab308', '#3b82f6', '#10b981', '#ef4444', '#ffffff'];
-
-            for(let i=0; i<150; i++) {
-                pieces.push({
-                    x: canvas.width / 2,
-                    y: canvas.height / 2 + 100,
-                    vx: (Math.random() - 0.5) * 20,
-                    vy: (Math.random() - 1) * 20 - 5,
-                    size: Math.random() * 10 + 5,
-                    color: colors[Math.floor(Math.random() * colors.length)],
-                    rot: Math.random() * 360,
-                    rotSpeed: (Math.random() - 0.5) * 10
-                });
-            }
-
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                let active = false;
-                pieces.forEach(p => {
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vy += 0.5; // gravity
-                    p.rot += p.rotSpeed;
-                    if(p.y < canvas.height) active = true;
-                    
-                    ctx.save();
-                    ctx.translate(p.x, p.y);
-                    ctx.rotate(p.rot * Math.PI / 180);
-                    ctx.fillStyle = p.color;
-                    ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-                    ctx.restore();
-                });
-                if(active) requestAnimationFrame(animate);
-            }
-            animate();
-        }
-
-        // --- Mouse Tracking & 3D Tilt ---
-        document.addEventListener('mousemove', (e) => {
-            document.documentElement.style.setProperty('--cursor-x', `${e.clientX}px`);
-            document.documentElement.style.setProperty('--cursor-y', `${e.clientY}px`);
-        });
-
-        function applyTiltEffect() {
-            document.querySelectorAll('.holo-card').forEach(card => {
-                card.addEventListener('mousemove', e => {
-                    const rect = card.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    const centerX = rect.width / 2;
-                    const centerY = rect.height / 2;
-                    const rotateX = ((y - centerY) / centerY) * -5; // Max 5 deg tilt
-                    const rotateY = ((x - centerX) / centerX) * 5;
-                    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-                });
-                card.addEventListener('mouseleave', () => {
-                    card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
-                });
-            });
-        }
-
         // --- Logic: Advanced Grading Helper Fix ---
         function getCorrectIndexes(q) {
-            // Handles both new 'correctAnswers' array and legacy 'correctAnswer' single string/number
             if (q.correctAnswers && Array.isArray(q.correctAnswers)) {
                 return q.correctAnswers.map(Number);
             }
@@ -491,8 +314,6 @@
 
         // --- Global Initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
-            initBackgroundParticles();
-            
             if (!quizId) {
                 showError("الرابط غير صحيح أو مفقود منه معرف الاختبار.");
                 return;
@@ -511,7 +332,9 @@
                 
                 await fetchQuizData();
             } catch (err) {
-                showError("تعذر الاتصال بخوادم الحماية. تأكد من اتصالك بالإنترنت.");
+                // Generate a fallback temporary ID if FP blocker is aggressive so UI doesn't break
+                deviceFingerprint = 'fallback-' + Math.random().toString(36).substring(2);
+                await fetchQuizData();
             }
         });
 
@@ -563,15 +386,15 @@
             currentQuizData.questions.forEach((q, qIndex) => {
                 const isTrueFalse = q.options.length === 2;
                 const card = document.createElement('div');
-                card.className = "holo-card p-8 md:p-10 reveal-up";
-                card.style.animationDelay = `${0.3 + (qIndex * 0.1)}s`;
+                card.className = "holo-card p-6 md:p-8 reveal-up";
+                card.style.animationDelay = `${0.1 + (qIndex * 0.05)}s`;
                 
                 // Question Header
                 const header = document.createElement('h4');
-                header.className = "font-black text-xl md:text-2xl mb-8 text-white leading-relaxed flex items-start gap-4";
+                header.className = "font-bold text-lg md:text-xl mb-6 text-white leading-relaxed flex items-start gap-3";
                 
                 const indexBadge = document.createElement('span');
-                indexBadge.className = "flex items-center justify-center w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-500 font-black border border-yellow-500/30 shrink-0 text-lg shadow-[0_0_15px_rgba(234,179,8,0.2)]";
+                indexBadge.className = "flex items-center justify-center w-8 h-8 rounded-lg bg-yellow-500/20 text-yellow-500 font-bold border border-yellow-500/30 shrink-0 text-base";
                 indexBadge.textContent = qIndex + 1;
                 
                 const textSpan = document.createElement('span');
@@ -584,7 +407,7 @@
 
                 // Options Grid
                 const grid = document.createElement('div');
-                grid.className = "grid grid-cols-1 md:grid-cols-2 gap-5";
+                grid.className = "grid grid-cols-1 md:grid-cols-2 gap-4";
 
                 q.options.forEach((opt, optIndex) => {
                     const label = document.createElement('label');
@@ -596,17 +419,16 @@
                     input.value = optIndex;
                     input.required = true;
                     input.className = "hidden option-input";
-                    input.setAttribute('aria-label', `الخيار ${letters[optIndex]}: ${opt}`);
 
                     const contentDiv = document.createElement('div');
-                    contentDiv.className = "option-content flex items-center gap-5 p-5 rounded-2xl w-full h-full";
+                    contentDiv.className = "option-content flex items-center gap-4 p-4 rounded-xl w-full h-full";
                     
                     const badge = document.createElement('div');
-                    badge.className = "option-badge w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-lg font-bold text-gray-400 shrink-0";
+                    badge.className = "option-badge w-8 h-8 rounded-lg bg-white/10 border border-white/20 flex items-center justify-center text-sm font-bold text-gray-300 shrink-0";
                     badge.textContent = isTrueFalse ? (optIndex === 0 ? '✓' : '✕') : letters[optIndex];
                     
                     const optionText = document.createElement('span');
-                    optionText.className = "text-gray-200 text-base md:text-lg font-medium leading-relaxed";
+                    optionText.className = "text-gray-200 text-sm md:text-base font-medium leading-relaxed";
                     optionText.textContent = opt;
 
                     contentDiv.appendChild(badge);
@@ -622,9 +444,6 @@
 
             container.appendChild(fragment);
             trackLiveQuizProgress();
-            
-            // Re-apply tilt effect to newly created cards
-            setTimeout(applyTiltEffect, 100);
         }
 
         // --- Progress Tracking ---
@@ -657,7 +476,7 @@
             btn.disabled = true;
 
             const initialBtnHtml = btn.innerHTML;
-            btn.innerHTML = `<div class="w-8 h-8 border-4 border-black border-t-transparent rounded-full animate-spin"></div>`;
+            btn.innerHTML = `<div class="w-6 h-6 border-4 border-black border-t-transparent rounded-full animate-spin"></div>`;
 
             const form = e.target;
             const studentName = document.getElementById('studentName').value;
@@ -671,7 +490,6 @@
                 const selected = radioGroup ? parseInt(radioGroup.value) : NaN;
                 userAnswers.push(isNaN(selected) ? null : selected);
                 
-                // --- FIXED GRADING LOGIC USING THE HELPER ---
                 const correctIndexes = getCorrectIndexes(q);
                 if (!isNaN(selected) && correctIndexes.includes(selected)) {
                     score++;
@@ -727,7 +545,6 @@
             const step = (timestamp) => {
                 if (!startTimestamp) startTimestamp = timestamp;
                 const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                // Ease out cubic
                 const easeProgress = 1 - Math.pow(1 - progress, 3);
                 obj.innerHTML = Math.floor(easeProgress * (end - start) + start) + '%';
                 if (progress < 1) {
@@ -748,33 +565,22 @@
             
             const percEl = document.getElementById('resultPercentage');
             const iconBox = document.getElementById('resultIconBox');
-            const glow = document.getElementById('resultGlow');
 
             let isPassed = percentage >= 50;
             let isExcellent = percentage >= 85;
 
-            // Trigger visual feast
-            if(isPassed) {
-                setTimeout(triggerConfetti, 500);
-            }
-
-            animateValue(percEl, 0, percentage, 2000);
+            animateValue(percEl, 0, percentage, 1500);
 
             let colorClass = isExcellent ? 'text-green-400' : (isPassed ? 'text-blue-400' : 'text-red-500');
             let borderColor = isExcellent ? 'border-green-500/50' : (isPassed ? 'border-blue-500/50' : 'border-red-500/50');
-            let shadowColor = isExcellent ? 'rgba(74, 222, 128, 0.4)' : (isPassed ? 'rgba(59, 130, 246, 0.4)' : 'rgba(239, 68, 68, 0.4)');
-            let gradClass = isExcellent ? 'from-green-500/20' : (isPassed ? 'from-blue-500/20' : 'from-red-500/20');
             
             let iconSvg = isPassed 
-                ? `<svg class="w-16 h-16 ${colorClass} drop-shadow-[0_0_15px_currentColor]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`
-                : `<svg class="w-16 h-16 ${colorClass} drop-shadow-[0_0_15px_currentColor]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>`;
+                ? `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>`
+                : `<svg class="w-12 h-12 ${colorClass}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg>`;
 
-            percEl.className = `text-[8rem] md:text-[10rem] font-black tracking-tighter transition-all duration-1000 ${colorClass}`;
-            percEl.style.textShadow = `0 0 60px ${shadowColor}`;
-            iconBox.className = `w-32 h-32 mx-auto mb-8 rounded-full border-4 flex items-center justify-center relative z-10 bg-black/60 backdrop-blur-xl ${borderColor}`;
-            iconBox.style.boxShadow = `0 0 50px ${shadowColor}, inset 0 0 30px ${shadowColor}`;
+            percEl.className = `responsive-percent font-black tracking-tighter transition-all ${colorClass}`;
+            iconBox.className = `w-24 h-24 mx-auto mb-6 rounded-full border-4 flex items-center justify-center relative z-10 bg-black/50 ${borderColor}`;
             iconBox.innerHTML = iconSvg;
-            glow.className = `absolute inset-0 pointer-events-none opacity-40 bg-gradient-to-b ${gradClass} to-transparent mix-blend-screen`;
 
             const reviewContainer = document.getElementById('answersReviewContainer');
             const reviewFragment = document.createDocumentFragment();
@@ -787,21 +593,20 @@
                 
                 const reviewCard = document.createElement('div');
                 let borderClass = isCorrect ? 'border-r-green-500' : 'border-r-red-500';
-                reviewCard.className = `holo-card p-6 md:p-8 border-r-8 ${borderClass} reveal-up`;
-                reviewCard.style.animationDelay = `${0.2 + (idx * 0.1)}s`;
+                reviewCard.className = `holo-card p-5 md:p-6 border-r-4 ${borderClass}`;
                 
                 const metaRow = document.createElement('div');
-                metaRow.className = "flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-6 border-b border-white/5";
+                metaRow.className = "flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-5 pb-5 border-b border-white/5";
                 
                 const qTitle = document.createElement('h4');
-                qTitle.className = "font-bold text-lg md:text-xl text-white leading-relaxed flex items-start gap-3";
+                qTitle.className = "font-bold text-base md:text-lg text-white leading-relaxed flex items-start gap-3";
                 
                 const numSpan = document.createElement('span');
-                numSpan.className = "flex items-center justify-center w-8 h-8 rounded-lg bg-white/10 text-white/60 text-sm font-black shrink-0";
+                numSpan.className = "flex items-center justify-center w-7 h-7 rounded bg-white/10 text-white/70 text-xs font-bold shrink-0";
                 numSpan.textContent = idx + 1;
                 
                 const textSpan = document.createElement('span');
-                textSpan.className = "pt-1";
+                textSpan.className = "pt-0.5";
                 textSpan.textContent = q.questionText;
                 
                 qTitle.appendChild(numSpan);
@@ -810,44 +615,44 @@
 
                 const badge = document.createElement('span');
                 if (isCorrect) {
-                    badge.className = "bg-green-500/10 text-green-400 text-sm px-4 py-2 rounded-xl font-black flex items-center gap-2 shrink-0 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.15)]";
-                    badge.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg> تطابق مثالي`;
+                    badge.className = "bg-green-500/10 text-green-400 text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 shrink-0 border border-green-500/20";
+                    badge.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> إجابة صحيحة`;
                 } else {
-                    badge.className = "bg-red-500/10 text-red-400 text-sm px-4 py-2 rounded-xl font-black flex items-center gap-2 shrink-0 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)]";
-                    badge.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg> خطأ تحليلي`;
+                    badge.className = "bg-red-500/10 text-red-400 text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 shrink-0 border border-red-500/20";
+                    badge.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> إجابة خاطئة`;
                 }
                 metaRow.appendChild(badge);
                 reviewCard.appendChild(metaRow);
 
                 const optionsWrapper = document.createElement('div');
-                optionsWrapper.className = "grid grid-cols-1 md:grid-cols-2 gap-4";
+                optionsWrapper.className = "grid grid-cols-1 md:grid-cols-2 gap-3";
 
                 q.options.forEach((opt, optIdx) => {
                     const optBox = document.createElement('div');
-                    let optClass = "bg-black/30 border border-white/5 text-gray-500";
+                    let optClass = "bg-black/20 border border-white/5 text-gray-400";
                     
                     const badgeIconText = isTrueFalse ? (optIdx === 0 ? '✓' : '✕') : letters[optIdx];
-                    let iconInner = `<div class="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold shrink-0 text-white/40">${badgeIconText}</div>`;
+                    let iconInner = `<div class="w-6 h-6 rounded bg-white/5 flex items-center justify-center text-xs font-bold shrink-0 text-white/50">${badgeIconText}</div>`;
                     
                     const isStudentChoice = optIdx === studentAnsIndex;
                     const isActuallyCorrect = correctIndexes.includes(optIdx);
 
                     if (isStudentChoice && !isCorrect) {
-                        optClass = "bg-red-500/10 border border-red-500/40 text-red-300 font-bold shadow-[0_0_20px_rgba(239,68,68,0.1)]";
-                        iconInner = `<div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/50 flex items-center justify-center text-sm font-black text-red-400 shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"></path></svg></div>`;
+                        optClass = "bg-red-500/10 border border-red-500/30 text-red-300 font-bold";
+                        iconInner = `<div class="w-6 h-6 rounded bg-red-500/20 flex items-center justify-center text-xs font-bold text-red-400 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></div>`;
                     } else if (isActuallyCorrect) {
-                        optClass = "bg-green-500/15 border border-green-500/50 text-green-300 font-black shadow-[0_0_25px_rgba(34,197,94,0.15)] transform scale-[1.02]";
-                        iconInner = `<div class="w-8 h-8 rounded-lg bg-green-500/30 border border-green-500/60 flex items-center justify-center text-sm font-black text-green-400 shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>`;
+                        optClass = "bg-green-500/10 border border-green-500/40 text-green-300 font-bold";
+                        iconInner = `<div class="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center text-xs font-bold text-green-400 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
                     } else if (isStudentChoice && isCorrect) {
-                        optClass = "bg-green-500/15 border border-green-500/50 text-green-300 font-black shadow-[0_0_25px_rgba(34,197,94,0.15)] transform scale-[1.02]";
-                        iconInner = `<div class="w-8 h-8 rounded-lg bg-green-500/30 border border-green-500/60 flex items-center justify-center text-sm font-black text-green-400 shrink-0"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg></div>`;
+                        optClass = "bg-green-500/10 border border-green-500/40 text-green-300 font-bold";
+                        iconInner = `<div class="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center text-xs font-bold text-green-400 shrink-0"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg></div>`;
                     }
 
-                    optBox.className = `flex items-center gap-4 p-4 rounded-xl transition-all duration-300 ${optClass}`;
+                    optBox.className = `flex items-center gap-3 p-3 rounded-lg ${optClass}`;
                     optBox.innerHTML = iconInner;
                     
                     const optTextSpan = document.createElement('span');
-                    optTextSpan.className = "text-base md:text-lg leading-relaxed";
+                    optTextSpan.className = "text-sm md:text-base leading-snug";
                     optTextSpan.textContent = opt;
                     
                     optBox.appendChild(optTextSpan);
@@ -859,7 +664,6 @@
             });
 
             reviewContainer.appendChild(reviewFragment);
-            setTimeout(applyTiltEffect, 500);
         }
 
         // --- Error Interface ---
