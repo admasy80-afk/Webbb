@@ -20,8 +20,8 @@ export const DraftSystem = {
         if(blocks.length === 0) return;
         
         const draftData = {
-            title: document.getElementById('quizTitle').value,
-            grade: document.getElementById('quizGrade').value,
+            title: document.getElementById('quizTitle')?.value || '',
+            grade: document.getElementById('quizGrade')?.value || '',
             questions: []
         };
         
@@ -60,8 +60,8 @@ export const DraftSystem = {
             if(data.questions.length > 0 && (data.questions[0].q !== '' || data.title !== '')) {
                 SysUI.confirm('يوجد امتحان تم العمل عليه سابقاً ولم يُنشر، هل تريد استعادة المسودة؟', (yes) => {
                     if(yes) {
-                        document.getElementById('quizTitle').value = data.title;
-                        document.getElementById('quizGrade').value = data.grade;
+                        if(document.getElementById('quizTitle')) document.getElementById('quizTitle').value = data.title;
+                        if(document.getElementById('quizGrade')) document.getElementById('quizGrade').value = data.grade;
                         document.getElementById('dynamicQuestionsContainer').innerHTML = ''; 
                         questionCounter = 0;
                         
@@ -88,6 +88,7 @@ export const DraftSystem = {
 export function addMCQBlock() {
     questionCounter++;
     const container = document.getElementById('dynamicQuestionsContainer');
+    if (!container) return;
     const block = document.createElement('div');
     block.className = 'mcq-block glass-panel p-4 sm:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
     block.draggable = window.innerWidth > 768; 
@@ -186,7 +187,7 @@ export function removeBlock(blockElement) {
     setTimeout(() => {
         const container = blockElement.parentElement;
         blockElement.remove();
-        updateQuestionNumbers(container);
+        if (container) updateQuestionNumbers(container);
     }, 400);
 }
 
@@ -194,6 +195,20 @@ const quizForm = document.getElementById('quizForm');
 if(quizForm) {
     quizForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // 🌟 فحص إضافي للتأكد من تعبئة العنوان والصف الدراسي ومنع الأخطاء المبهمة
+        const quizTitle = document.getElementById('quizTitle')?.value.trim();
+        const quizGrade = document.getElementById('quizGrade')?.value;
+        
+        if(!quizTitle) {
+            SysUI.toast('warning', "يرجى كتابة عنوان الاختبار أولاً!");
+            return;
+        }
+        if(!quizGrade) {
+            SysUI.toast('warning', "يرجى اختيار الصف الدراسي!");
+            return;
+        }
+
         const btn = document.getElementById('saveQuizBtn');
         const blocks = document.querySelectorAll('#dynamicQuestionsContainer .mcq-block');
         
@@ -207,6 +222,7 @@ if(quizForm) {
         
         const questions = [];
         blocks.forEach(block => {
+            const correctVal = block.querySelector('.mcq-correct').value;
             questions.push({
                 questionText: block.querySelector('.mcq-q-text').value,
                 options: [
@@ -215,20 +231,25 @@ if(quizForm) {
                     block.querySelector('.mcq-opt-2').value,
                     block.querySelector('.mcq-opt-3').value
                 ],
-                correctAnswer: parseInt(block.querySelector('.mcq-correct').value)
+                correctAnswer: isNaN(parseInt(correctVal)) ? 0 : parseInt(correctVal)
             });
         });
         
         try {
-            // ✅ تم التصليح: سحب وتمرير التوكن الصحيح للامتحان الداخلي
             const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
             const res = await fetch('/api/admin/add-mcq-quiz', {
                 method: 'POST', 
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}` // تمرير الهيدر لحارس الباك إند
+                    'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify({ role: user.role, sessionToken: sessionToken, grade: document.getElementById('quizGrade').value, quizTitle: document.getElementById('quizTitle').value, questionsArray: questions })
+                body: JSON.stringify({ 
+                    role: user.role, 
+                    sessionToken: sessionToken, 
+                    grade: quizGrade, 
+                    quizTitle: quizTitle, 
+                    questionsArray: questions 
+                })
             });
             if (res.ok) {
                 SysUI.toast('success', "تم نشر الاختبار الداخلي بنجاح!");
@@ -239,7 +260,7 @@ if(quizForm) {
                 localStorage.removeItem('dahih_quiz_draft'); 
             } else throw new Error();
         } catch (err) {
-            SysUI.toast('error', "فشل أساسي في حفظ الاختبار.");
+            SysUI.toast('error', "فشل أساسي في حفظ الاختبار. تأكد من اتصالك بالشبكة.");
         } finally {
             btn.innerText = "نشر الاختبار للطلاب"; 
             btn.disabled = false;
@@ -250,6 +271,7 @@ if(quizForm) {
 export function addPublicMCQBlock() {
     publicQuestionCounter++;
     const container = document.getElementById('dynamicPublicQuestionsContainer');
+    if (!container) return;
     const block = document.createElement('div');
     block.className = 'public-mcq-block glass-panel p-4 sm:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
     block.draggable = window.innerWidth > 768;
@@ -347,6 +369,14 @@ const publicQuizForm = document.getElementById('publicQuizForm');
 if(publicQuizForm) {
     publicQuizForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // 🌟 فحص إضافي للتأكد من تعبئة حقول الاختبار العام قبل الإرسال لمنع أخطاء السيرفر
+        const publicQuizTitle = document.getElementById('publicQuizTitle')?.value.trim();
+        if(!publicQuizTitle) {
+            SysUI.toast('warning', "يرجى كتابة عنوان الاختبار العام أولاً!");
+            return;
+        }
+
         const blocks = document.querySelectorAll('#dynamicPublicQuestionsContainer .public-mcq-block');
         if(blocks.length === 0) { 
             SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!"); 
@@ -355,6 +385,7 @@ if(publicQuizForm) {
         
         const questions = [];
         blocks.forEach(block => {
+            const correctVal = block.querySelector('.mcq-correct').value;
             questions.push({
                 questionText: block.querySelector('.mcq-q-text').value,
                 options: [
@@ -363,7 +394,7 @@ if(publicQuizForm) {
                     block.querySelector('.mcq-opt-2').value,
                     block.querySelector('.mcq-opt-3').value
                 ],
-                correctAnswer: parseInt(block.querySelector('.mcq-correct').value)
+                correctAnswer: isNaN(parseInt(correctVal)) ? 0 : parseInt(correctVal)
             });
         });
 
@@ -378,60 +409,69 @@ export async function submitPublicQuiz(questionsSourceArray, isForced = false) {
 
     if(questionsSourceArray.length === 0) {
         if(!isForced) SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!");
-        btn.disabled = false; btn.innerText = "حفظ وتوليد رابط الاختبار ";
+        if(btn) { btn.disabled = false; btn.innerText = "حفظ وتوليد رابط الاختبار "; }
         return; 
     }
     
-    btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2 align-middle"></span> جاري الحفظ...`;
-    btn.disabled = true;
+    if(btn) {
+        btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2 align-middle"></span> جاري الحفظ...`;
+        btn.disabled = true;
+    }
 
     try {
-        // ✅ تم التصليح: سحب وتمرير التوكن الصحيح للاختبار العام بالرابط
         const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
+        const quizGradeVal = document.getElementById('publicQuizGrade')?.value || "عام";
+        const quizTitleVal = document.getElementById('publicQuizTitle')?.value || "امتحان سريع";
+
         const res = await fetch('/api/admin/add-public-quiz', {
             method: 'POST', 
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}` // ربط تذكرة الدخول الرسمية بالأدمن
+                'Authorization': `Bearer ${token}` 
             },
             body: JSON.stringify({ 
-                role: user.role, sessionToken: sessionToken, 
-                grade: isForced ? "الصف الثاني الثانوي" : (document.getElementById('publicQuizGrade').value || "عام"), 
-                quizTitle: isForced ? "امتحان سريع" : document.getElementById('publicQuizTitle').value, 
+                role: user.role, 
+                sessionToken: sessionToken, 
+                grade: isForced ? "الصف الثاني الثانوي" : quizGradeVal, 
+                quizTitle: isForced ? "امتحان سريع" : quizTitleVal, 
                 questionsArray: questionsSourceArray 
             })
         });
         
         if (res.ok) {
             const data = await res.json();
-          const baseUrl = window.location.origin;
-const fullLink = `${baseUrl}/public-quiz.html?id=${data.quizId}`;
+            const baseUrl = window.location.origin;
+            const fullLink = `${baseUrl}/public-quiz.html?id=${data.quizId}`;
             
-            document.getElementById('publicQuizForm').reset();
+            if(document.getElementById('publicQuizForm')) document.getElementById('publicQuizForm').reset();
             document.getElementById('dynamicPublicQuestionsContainer').innerHTML = '';
             publicQuestionCounter = 0; 
             if(!isForced) addPublicMCQBlock(); 
 
-            linkInput.value = fullLink;
+            if(linkInput) linkInput.value = fullLink;
             
-            linkArea.classList.remove('hidden');
-            linkArea.classList.add('flex', 'flex-col', 'sm:flex-row');
-            linkArea.style.opacity = '0';
-            linkArea.style.transform = 'translateY(10px)';
-            setTimeout(() => {
-                linkArea.style.transition = 'all 0.5s ease';
-                linkArea.style.opacity = '1';
-                linkArea.style.transform = 'translateY(0)';
-            }, 50);
+            if(linkArea) {
+                linkArea.classList.remove('hidden');
+                linkArea.classList.add('flex', 'flex-col', 'sm:flex-row');
+                linkArea.style.opacity = '0';
+                linkArea.style.transform = 'translateY(10px)';
+                setTimeout(() => {
+                    linkArea.style.transition = 'all 0.5s ease';
+                    linkArea.style.opacity = '1';
+                    linkArea.style.transform = 'translateY(0)';
+                }, 50);
+            }
             
             SysUI.toast('success', "تم حفظ الاختبار بنجاح.");
             SysUI.confetti();
         } else throw new Error();
     } catch (err) {
-        SysUI.toast('error', "فشل في حفظ الاختبار.");
+        SysUI.toast('error', "فشل في حفظ الاختبار. يرجى مراجعة المدخلات.");
     } finally {
-        btn.innerText = "حفظ وتوليد رابط الاختبار العام "; 
-        btn.disabled = false;
+        if(btn) {
+            btn.innerText = "حفظ وتوليد رابط الاختبار العام "; 
+            btn.disabled = false;
+        }
     }
 }
 
@@ -534,16 +574,20 @@ export const SmartImportSystem = {
         const bg = document.getElementById('smart-modal-bg');
         const box = document.getElementById('smart-modal-box');
         
-        document.getElementById('smart-import-textarea').value = '';
+        if(document.getElementById('smart-import-textarea')) document.getElementById('smart-import-textarea').value = '';
         
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        if(modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
         
         requestAnimationFrame(() => {
-            bg.classList.remove('opacity-0');
-            box.classList.remove('scale-95', 'opacity-0');
-            box.classList.add('scale-100', 'opacity-100');
-            document.getElementById('smart-import-textarea').focus();
+            if(bg) bg.classList.remove('opacity-0');
+            if(box) {
+                box.classList.remove('scale-95', 'opacity-0');
+                box.classList.add('scale-100', 'opacity-100');
+            }
+            if(document.getElementById('smart-import-textarea')) document.getElementById('smart-import-textarea').focus();
         });
     },
 
@@ -552,18 +596,23 @@ export const SmartImportSystem = {
         const bg = document.getElementById('smart-modal-bg');
         const box = document.getElementById('smart-modal-box');
         
-        bg.classList.add('opacity-0');
-        box.classList.remove('scale-100', 'opacity-100');
-        box.classList.add('scale-95', 'opacity-0');
+        if(bg) bg.classList.add('opacity-0');
+        if(box) {
+            box.classList.remove('scale-100', 'opacity-100');
+            box.classList.add('scale-95', 'opacity-0');
+        }
         
         setTimeout(() => {
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
+            if(modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
         }, 300);
     },
 
     processImport() {
-        const rawText = document.getElementById('smart-import-textarea').value;
+        const textarea = document.getElementById('smart-import-textarea');
+        const rawText = textarea ? textarea.value : '';
         if (!rawText.trim()) {
             SysUI.toast('error', 'الحقل فارغ.');
             return;
@@ -621,14 +670,15 @@ export const SmartImportSystem = {
     },
 
     async animateInsertion(questions) {
-        SysUI.toast('success', `تم التعرف على ${questions.length}أسئلة! جاري الإدراج ...`);
+        SysUI.toast('success', `تم التعرف على ${questions.length} أسئلة! جاري الإدراج ...`);
         
         const container = document.getElementById('dynamicPublicQuestionsContainer');
+        if (!container) return;
         
         const existingBlocks = container.querySelectorAll('.public-mcq-block');
         if (existingBlocks.length === 1) {
             const firstQInput = existingBlocks[0].querySelector('.mcq-q-text');
-            if (!firstQInput.value.trim()) {
+            if (firstQInput && !firstQInput.value.trim()) {
                 existingBlocks[0].remove();
                 publicQuestionCounter = 0; 
             }
@@ -666,41 +716,48 @@ export const SmartImportSystem = {
             const correctSelect = targetBlock.querySelector('.mcq-correct');
 
             await sleep(250);
-            qInput.value = pq.q;
-            qInput.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'bg-green-500/10');
+            if(qInput) {
+                qInput.value = pq.q;
+                qInput.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'bg-green-500/10');
+            }
             
             for (let j = 0; j < 4; j++) {
                 await sleep(120);
-                optInputs[j].value = pq.opts[j];
-                optInputs[j].classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500');
-                if(j === pq.correct) {
-                     optInputs[j].classList.add('bg-green-500/20'); 
+                if(optInputs[j]) {
+                    optInputs[j].value = pq.opts[j];
+                    optInputs[j].classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500');
+                    if(j === pq.correct) {
+                         optInputs[j].classList.add('bg-green-500/20'); 
+                    }
+                    setTimeout(() => {
+                        if(optInputs[j]) optInputs[j].classList.remove('scale-[1.02]');
+                    }, 150);
                 }
-                setTimeout(() => {
-                    optInputs[j].classList.remove('scale-[1.02]');
-                }, 150);
             }
 
             await sleep(150);
-            qInput.classList.remove('scale-[1.02]');
-            correctSelect.value = pq.correct;
-            correctSelect.parentElement.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
-            
-            setTimeout(() => {
-                correctSelect.parentElement.classList.remove('scale-[1.02]');
-            }, 150);
+            if(qInput) qInput.classList.remove('scale-[1.02]');
+            if(correctSelect) {
+                correctSelect.value = pq.correct;
+                correctSelect.parentElement.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
+                setTimeout(() => {
+                    if(correctSelect.parentElement) correctSelect.parentElement.classList.remove('scale-[1.02]');
+                }, 150);
+            }
 
             await sleep(400);
             
             scanner.style.opacity = '0';
             setTimeout(() => scanner.remove(), 300);
             
-            qInput.classList.remove('ring-2', 'ring-green-500', 'bg-green-500/10');
+            if(qInput) qInput.classList.remove('ring-2', 'ring-green-500', 'bg-green-500/10');
             optInputs.forEach((inp, idx) => {
-                inp.classList.remove('ring-2', 'ring-green-500');
-                if(idx !== pq.correct) inp.classList.remove('bg-green-500/20');
+                if(inp) {
+                    inp.classList.remove('ring-2', 'ring-green-500');
+                    if(idx !== pq.correct) inp.classList.remove('bg-green-500/20');
+                }
             });
-            correctSelect.parentElement.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
+            if(correctSelect && correctSelect.parentElement) correctSelect.parentElement.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
             
             targetBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
