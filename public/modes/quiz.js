@@ -9,9 +9,18 @@ export function updateQuestionNumbers(container) {
     const blocks = container.querySelectorAll('.mcq-block .q-number, .public-mcq-block .q-number');
     blocks.forEach((span, index) => {
         span.innerText = index + 1;
-        span.parentElement.parentElement.parentElement.classList.add('animate-pulse');
-        setTimeout(() => span.parentElement.parentElement.parentElement.classList.remove('animate-pulse'), 500);
+        const blockEl = span.closest('.mcq-block, .public-mcq-block');
+        if (blockEl) {
+            blockEl.classList.add('animate-pulse', 'scale-[1.01]', 'shadow-[0_0_20px_rgba(234,179,8,0.2)]');
+            setTimeout(() => blockEl.classList.remove('animate-pulse', 'scale-[1.01]', 'shadow-[0_0_20px_rgba(234,179,8,0.2)]'), 500);
+        }
     });
+}
+
+// تعديل حجم مربع النص تلقائياً ليتناسب مع المحتوى (ميزة إضافية)
+function autoResizeTextarea(textarea) {
+    textarea.style.height = 'auto';
+    textarea.style.height = (textarea.scrollHeight) + 'px';
 }
 
 export const DraftSystem = {
@@ -26,6 +35,9 @@ export const DraftSystem = {
         };
         
         blocks.forEach(block => {
+            const correctCheckboxes = block.querySelectorAll('.mcq-correct-chk:checked');
+            const correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
+
             draftData.questions.push({
                 q: block.querySelector('.mcq-q-text').value,
                 opts: [
@@ -34,7 +46,7 @@ export const DraftSystem = {
                     block.querySelector('.mcq-opt-2').value,
                     block.querySelector('.mcq-opt-3').value
                 ],
-                correct: block.querySelector('.mcq-correct').value
+                correctAnswers: correctAnswers
             });
         });
         
@@ -44,13 +56,21 @@ export const DraftSystem = {
         if(!saveIndicator) {
             saveIndicator = document.createElement('div');
             saveIndicator.id = 'save-indicator';
-            saveIndicator.className = 'fixed bottom-5 left-1/2 sm:left-5 -translate-x-1/2 sm:-translate-x-0 text-gray-500 text-xs flex items-center gap-2 transition-opacity duration-500 opacity-0 bg-black/90 px-4 py-2 rounded-xl border border-white/10 backdrop-blur-md z-40 shadow-lg';
-            saveIndicator.innerHTML = `<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم الحفظ مسودة`;
+            saveIndicator.className = 'fixed bottom-5 left-1/2 sm:left-5 -translate-x-1/2 sm:-translate-x-0 text-gray-300 text-sm flex items-center gap-3 transition-all duration-500 opacity-0 bg-gray-900/95 px-5 py-2.5 rounded-2xl border border-green-500/30 backdrop-blur-xl z-50 shadow-[0_10px_40px_rgba(0,0,0,0.5)] font-medium';
+            saveIndicator.innerHTML = `
+                <div class="w-2 h-2 rounded-full bg-green-500 animate-ping"></div>
+                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 
+                <span>تم حفظ المسودة تلقائياً</span>
+            `;
             document.body.appendChild(saveIndicator);
         }
         saveIndicator.style.opacity = '1';
+        saveIndicator.style.transform = 'translateY(0) scale(1)';
         clearTimeout(this.indicatorTimeout);
-        this.indicatorTimeout = setTimeout(() => saveIndicator.style.opacity = '0', 2500);
+        this.indicatorTimeout = setTimeout(() => {
+            saveIndicator.style.opacity = '0';
+            saveIndicator.style.transform = 'translateY(10px) scale(0.95)';
+        }, 3000);
     },
     
     check() {
@@ -73,9 +93,15 @@ export const DraftSystem = {
                             lastBlock.querySelector('.mcq-opt-1').value = qData.opts[1];
                             lastBlock.querySelector('.mcq-opt-2').value = qData.opts[2];
                             lastBlock.querySelector('.mcq-opt-3').value = qData.opts[3];
-                            lastBlock.querySelector('.mcq-correct').value = qData.correct;
+                            
+                            // استعادة الإجابات المتعددة
+                            const correctArr = qData.correctAnswers || (qData.correct !== undefined ? [parseInt(qData.correct)] : []);
+                            correctArr.forEach(idx => {
+                                const chk = lastBlock.querySelector(`.mcq-correct-chk[value="${idx}"]`);
+                                if(chk) chk.checked = true;
+                            });
                         });
-                        SysUI.toast('success', 'تم استعادة المسودة بنجاح!');
+                        SysUI.toast('success', 'تم استعادة المسودة بنجاح! 🚀');
                     } else {
                         localStorage.removeItem('dahih_quiz_draft'); 
                     }
@@ -90,75 +116,106 @@ export function addMCQBlock() {
     const container = document.getElementById('dynamicQuestionsContainer');
     if (!container) return;
     const block = document.createElement('div');
-    block.className = 'mcq-block glass-panel p-4 sm:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 animate-fade-in-up transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
+    block.className = 'mcq-block glass-panel p-5 sm:p-7 rounded-3xl relative border border-white/5 border-l-4 border-l-yellow-500 animate-fade-in-up transition-all duration-300 hover:shadow-[0_15px_40px_rgba(234,179,8,0.08)] hover:border-white/10 group bg-gradient-to-b from-white/[0.02] to-transparent';
     block.draggable = window.innerWidth > 768; 
     
     block.style.opacity = "0";
-    block.style.transform = "translateY(10px)";
-    block.style.transition = "all 0.4s ease";
+    block.style.transform = "translateY(20px) scale(0.98)";
 
     block.innerHTML = `
-        <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-            <h3 class="text-base sm:text-lg font-bold text-yellow-500 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
-                السؤال رقم <span class="q-number">${questionCounter}</span>
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-white/10 group-hover:border-white/20 transition-colors">
+            <h3 class="text-base sm:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 flex items-center gap-3">
+                <div class="cursor-grab active:cursor-grabbing p-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors hidden md:flex items-center justify-center">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                </div>
+                السؤال رقم <span class="q-number bg-yellow-500/20 text-yellow-500 px-2.5 py-0.5 rounded-md">${questionCounter}</span>
             </h3>
-            <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-1 sm:p-0">${trashSVG}</div>
+            <button onclick="removeBlock(this.closest('.mcq-block'))" class="trash-icon text-gray-500 hover:text-white hover:bg-red-500/80 transition-all duration-300 cursor-pointer p-2.5 rounded-xl shadow-sm hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] flex items-center justify-center" title="حذف السؤال">
+                ${trashSVG}
+            </button>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 sm:py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال الأساسي هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-3 mb-4">
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثالث" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الرابع" required></div>
+        
+        <div class="relative mb-5 group/textarea">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/20 to-purple-500/20 rounded-2xl blur opacity-0 group-focus-within/textarea:opacity-100 transition duration-500"></div>
+            <textarea class="mcq-q-text relative w-full bg-black/60 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-yellow-500/50 transition-all text-sm sm:text-base resize-none overflow-hidden placeholder-gray-500 leading-relaxed custom-scrollbar shadow-inner" rows="2" placeholder="اكتب نص السؤال الأساسي هنا (أو الصق السؤال بالكامل ليتم توزيعه تلقائياً)..." required></textarea>
         </div>
-        <div class="bg-green-500/10 border border-green-500/20 p-3 sm:p-4 rounded-xl flex items-center gap-3">
-            <label class="text-sm font-bold text-green-400 whitespace-nowrap shrink-0">الإجابة الصحيحة:</label>
-            <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm py-1">
-                <option value="0" class="bg-gray-900">أ</option>
-                <option value="1" class="bg-gray-900">ب</option>
-                <option value="2" class="bg-gray-900">ج</option>
-                <option value="3" class="bg-gray-900">د</option>
-            </select>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            ${[0, 1, 2, 3].map((i) => `
+                <div class="relative flex items-center group/opt">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-white/10 to-transparent rounded-xl blur opacity-0 group-focus-within/opt:opacity-100 transition duration-300"></div>
+                    <span class="absolute right-4 text-gray-500 font-black text-sm group-focus-within/opt:text-yellow-500 transition-colors pointer-events-none">${['أ', 'ب', 'ج', 'د'][i]}</span>
+                    <input type="text" class="mcq-opt-${i} relative w-full bg-black/40 border border-white/5 rounded-xl pr-10 pl-4 py-3.5 text-white outline-none focus:border-yellow-500/50 focus:bg-black/60 transition-all text-sm placeholder-gray-600 shadow-inner" placeholder="الخيار ${['الأول', 'الثاني', 'الثالث', 'الرابع'][i]}" required>
+                </div>
+            `).join('')}
+        </div>
+        
+        <div class="bg-gradient-to-r from-emerald-900/30 to-black/30 border border-emerald-500/20 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner">
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-bold text-emerald-400 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    الإجابات الصحيحة
+                </label>
+                <span class="text-xs text-emerald-500/70">يمكنك تحديد أكثر من إجابة</span>
+            </div>
+            
+            <div class="flex flex-wrap gap-2 correct-answers-container w-full sm:w-auto justify-start sm:justify-end">
+                ${[0, 1, 2, 3].map(i => `
+                    <label class="cursor-pointer flex-1 sm:flex-none relative group/chk">
+                        <input type="checkbox" value="${i}" class="mcq-correct-chk peer hidden">
+                        <div class="flex items-center justify-center min-w-[3rem] px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-gray-400 font-bold text-sm transition-all duration-300 
+                                    peer-checked:bg-emerald-500/20 peer-checked:border-emerald-500 peer-checked:text-emerald-400 peer-checked:shadow-[0_0_15px_rgba(16,185,129,0.3)]
+                                    hover:border-emerald-500/50 hover:bg-white/5">
+                            ${['أ', 'ب', 'ج', 'د'][i]}
+                        </div>
+                    </label>
+                `).join('')}
+            </div>
         </div>
     `;
 
     const questionTextarea = block.querySelector('.mcq-q-text');
+    questionTextarea.addEventListener('input', () => autoResizeTextarea(questionTextarea));
+    
     questionTextarea.addEventListener('paste', function(e) {
         let pasteText = (e.clipboardData || window.clipboardData).getData('text');
         let lines = pasteText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
         if(lines.length >= 5) {
             e.preventDefault(); 
             this.value = lines[0]; 
+            autoResizeTextarea(this);
             const currentBlock = this.closest('.mcq-block, .public-mcq-block');
             currentBlock.querySelector('.mcq-opt-0').value = lines[1].replace(/^[أ-د][.-]\s*/, ''); 
             currentBlock.querySelector('.mcq-opt-1').value = lines[2].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
-            currentBlock.classList.add('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
-            setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'), 1000);
-            SysUI.toast('success', 'تم كتابة الاسئلة والخيارات');
+            
+            currentBlock.classList.add('ring-2', 'ring-emerald-500', 'shadow-[0_0_30px_rgba(16,185,129,0.3)]', 'scale-[1.01]');
+            setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-emerald-500', 'shadow-[0_0_30px_rgba(16,185,129,0.3)]', 'scale-[1.01]'), 1200);
+            SysUI.toast('success', '✨ تم استخراج السؤال والخيارات بذكاء!');
             SysUI.confetti();
         }
     });
 
     if (window.innerWidth > 768) {
         block.addEventListener('dragstart', function(e) {
-            this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
+            this.classList.add('opacity-40', 'border-dashed', 'border-yellow-500', 'scale-95');
             e.dataTransfer.effectAllowed = 'move';
             window.draggedBlock = this;
         });
         block.addEventListener('dragover', function(e) {
             e.preventDefault(); 
             e.dataTransfer.dropEffect = 'move';
-            if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
+            if(window.draggedBlock !== this) {
+                this.classList.add('border-yellow-500', 'bg-yellow-500/5', '-translate-y-2');
+            }
         });
         block.addEventListener('dragleave', function(e) {
-            this.classList.remove('border-yellow-500', 'bg-white/5');
+            this.classList.remove('border-yellow-500', 'bg-yellow-500/5', '-translate-y-2');
         });
         block.addEventListener('drop', function(e) {
             e.preventDefault();
-            this.classList.remove('border-yellow-500', 'bg-white/5');
+            this.classList.remove('border-yellow-500', 'bg-yellow-500/5', '-translate-y-2');
             if (window.draggedBlock && window.draggedBlock !== this) {
                 const allBlocks = [...container.querySelectorAll('.mcq-block')];
                 const draggedIndex = allBlocks.indexOf(window.draggedBlock);
@@ -169,21 +226,25 @@ export function addMCQBlock() {
             }
         });
         block.addEventListener('dragend', function(e) {
-            this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
+            this.classList.remove('opacity-40', 'border-dashed', 'border-yellow-500', 'scale-95');
             window.draggedBlock = null;
         });
     }
 
     container.appendChild(block);
-    setTimeout(() => {
+    
+    // Animation in
+    requestAnimationFrame(() => {
+        block.style.transition = "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)";
         block.style.opacity = "1";
-        block.style.transform = "translateY(0)";
-    }, 10);
+        block.style.transform = "translateY(0) scale(1)";
+    });
 }
 
 export function removeBlock(blockElement) {
+    blockElement.style.transition = "all 0.4s cubic-bezier(0.36, 0, 0.66, -0.56)";
     blockElement.style.opacity = "0";
-    blockElement.style.transform = "scale(0.95)";
+    blockElement.style.transform = "scale(0.9) translateY(20px)";
     setTimeout(() => {
         const container = blockElement.parentElement;
         blockElement.remove();
@@ -196,16 +257,15 @@ if(quizForm) {
     quizForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // 🌟 فحص إضافي للتأكد من تعبئة العنوان والصف الدراسي ومنع الأخطاء المبهمة
         const quizTitle = document.getElementById('quizTitle')?.value.trim();
         const quizGrade = document.getElementById('quizGrade')?.value;
         
         if(!quizTitle) {
-            SysUI.toast('warning', "يرجى كتابة عنوان الاختبار أولاً!");
+            SysUI.toast('warning', "⚠️ يرجى كتابة عنوان الاختبار أولاً!");
             return;
         }
         if(!quizGrade) {
-            SysUI.toast('warning', "يرجى اختيار الصف الدراسي!");
+            SysUI.toast('warning', "⚠️ يرجى اختيار الصف الدراسي!");
             return;
         }
 
@@ -213,16 +273,24 @@ if(quizForm) {
         const blocks = document.querySelectorAll('#dynamicQuestionsContainer .mcq-block');
         
         if(blocks.length === 0) { 
-            SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!"); 
+            SysUI.toast('warning', "⚠️ أضف سؤالاً واحداً على الأقل!"); 
             return; 
         }
         
-        btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2 align-middle"></span> جاري النشر...`; 
-        btn.disabled = true;
-        
         const questions = [];
-        blocks.forEach(block => {
-            const correctVal = block.querySelector('.mcq-correct').value;
+        let hasError = false;
+
+        blocks.forEach((block, index) => {
+            const correctCheckboxes = block.querySelectorAll('.mcq-correct-chk:checked');
+            const correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
+
+            if(correctAnswers.length === 0) {
+                hasError = true;
+                block.classList.add('ring-2', 'ring-red-500', 'animate-bounce');
+                setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'animate-bounce'), 1500);
+                SysUI.toast('error', `❌ يرجى تحديد إجابة صحيحة واحدة على الأقل في السؤال رقم ${index + 1}`);
+            }
+
             questions.push({
                 questionText: block.querySelector('.mcq-q-text').value,
                 options: [
@@ -231,9 +299,21 @@ if(quizForm) {
                     block.querySelector('.mcq-opt-2').value,
                     block.querySelector('.mcq-opt-3').value
                 ],
-                correctAnswer: isNaN(parseInt(correctVal)) ? 0 : parseInt(correctVal)
+                correctAnswers: correctAnswers
             });
         });
+        
+        if(hasError) return;
+
+        const originalBtnHTML = btn.innerHTML;
+        btn.innerHTML = `
+            <div class="flex items-center justify-center gap-2">
+                <span class="animate-spin inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></span> 
+                <span>جاري المعالجة والنشر...</span>
+            </div>
+        `; 
+        btn.disabled = true;
+        btn.classList.add('opacity-80', 'cursor-not-allowed', 'scale-95');
         
         try {
             const token = localStorage.getItem('userToken') || localStorage.getItem('dahih_token');
@@ -252,18 +332,20 @@ if(quizForm) {
                 })
             });
             if (res.ok) {
-                SysUI.toast('success', "تم نشر الاختبار الداخلي بنجاح!");
+                SysUI.toast('success', "🎉 تم نشر الاختبار الداخلي بنجاح!");
                 SysUI.confetti();
                 document.getElementById('quizForm').reset();
                 document.getElementById('dynamicQuestionsContainer').innerHTML = '';
-                questionCounter = 0; addMCQBlock();
+                questionCounter = 0; 
+                addMCQBlock();
                 localStorage.removeItem('dahih_quiz_draft'); 
             } else throw new Error();
         } catch (err) {
-            SysUI.toast('error', "فشل أساسي في حفظ الاختبار. تأكد من اتصالك بالشبكة.");
+            SysUI.toast('error', "🚨 فشل أساسي في حفظ الاختبار. تأكد من اتصالك بالشبكة.");
         } finally {
-            btn.innerText = "نشر الاختبار للطلاب"; 
+            btn.innerHTML = originalBtnHTML; 
             btn.disabled = false;
+            btn.classList.remove('opacity-80', 'cursor-not-allowed', 'scale-95');
         }
     });
 }
@@ -273,75 +355,106 @@ export function addPublicMCQBlock() {
     const container = document.getElementById('dynamicPublicQuestionsContainer');
     if (!container) return;
     const block = document.createElement('div');
-    block.className = 'public-mcq-block glass-panel p-4 sm:p-6 rounded-2xl relative border-l-4 border-l-yellow-500 transition-all hover:shadow-[0_0_15px_rgba(234,179,8,0.05)]';
+    block.className = 'public-mcq-block glass-panel p-5 sm:p-7 rounded-3xl relative border border-white/5 border-l-4 border-l-blue-500 animate-fade-in-up transition-all duration-300 hover:shadow-[0_15px_40px_rgba(59,130,246,0.08)] hover:border-white/10 group bg-gradient-to-b from-white/[0.02] to-transparent';
     block.draggable = window.innerWidth > 768;
     
     block.style.opacity = "0";
-    block.style.transform = "translateY(10px)";
-    block.style.transition = "all 0.4s ease";
+    block.style.transform = "translateY(20px) scale(0.98)";
 
     block.innerHTML = `
-        <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
-            <h3 class="text-base sm:text-lg font-bold text-yellow-500 flex items-center gap-2">
-                <svg class="w-5 h-5 text-gray-500 cursor-grab active:cursor-grabbing hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
-                السؤال رقم <span class="q-number">${publicQuestionCounter}</span>
+        <div class="flex justify-between items-center mb-5 pb-3 border-b border-white/10 group-hover:border-white/20 transition-colors">
+            <h3 class="text-base sm:text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500 flex items-center gap-3">
+                <div class="cursor-grab active:cursor-grabbing p-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors hidden md:flex items-center justify-center">
+                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                </div>
+                السؤال العام رقم <span class="q-number bg-blue-500/20 text-blue-400 px-2.5 py-0.5 rounded-md">${publicQuestionCounter}</span>
             </h3>
-            <div onclick="removeBlock(this.parentElement.parentElement)" class="trash-icon text-gray-500 hover:text-red-500 transition-colors cursor-pointer p-1 sm:p-0">${trashSVG}</div>
+            <button onclick="removeBlock(this.closest('.public-mcq-block'))" class="trash-icon text-gray-500 hover:text-white hover:bg-red-500/80 transition-all duration-300 cursor-pointer p-2.5 rounded-xl shadow-sm hover:shadow-[0_0_15px_rgba(239,68,68,0.5)] flex items-center justify-center" title="حذف السؤال">
+                ${trashSVG}
+            </button>
         </div>
-        <textarea class="mcq-q-text w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 sm:py-3 text-white outline-none focus:border-yellow-500 transition-colors text-sm mb-4" rows="2" placeholder="اكتب نص السؤال العام هنا (أو الصق السؤال بالاختيارات مباشرة)..." required></textarea>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-3 mb-4">
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">أ</span><input type="text" class="mcq-opt-0 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الأول العام" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ب</span><input type="text" class="mcq-opt-1 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثاني العام" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">ج</span><input type="text" class="mcq-opt-2 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الثالث العام" required></div>
-            <div class="flex items-center gap-2 group"><span class="text-gray-400 font-bold w-6 text-center group-focus-within:text-yellow-500 transition-colors shrink-0">د</span><input type="text" class="mcq-opt-3 w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 sm:py-2 text-white outline-none focus:border-yellow-500 transition-colors" placeholder="الخيار الرابع العام" required></div>
+        
+        <div class="relative mb-5 group/textarea">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-2xl blur opacity-0 group-focus-within/textarea:opacity-100 transition duration-500"></div>
+            <textarea class="mcq-q-text relative w-full bg-black/60 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-blue-500/50 transition-all text-sm sm:text-base resize-none overflow-hidden placeholder-gray-500 leading-relaxed custom-scrollbar shadow-inner" rows="2" placeholder="اكتب نص السؤال العام هنا (أو الصق بذكاء)..." required></textarea>
         </div>
-        <div class="bg-green-500/10 border border-green-500/20 p-3 sm:p-4 rounded-xl flex items-center gap-3">
-            <label class="text-sm font-bold text-green-400 whitespace-nowrap shrink-0">الإجابة الصحيحة العامة:</label>
-            <select class="mcq-correct w-full bg-transparent text-white font-bold outline-none cursor-pointer text-sm py-1">
-                <option value="0" class="bg-gray-900">أ</option>
-                <option value="1" class="bg-gray-900">ب</option>
-                <option value="2" class="bg-gray-900">ج</option>
-                <option value="3" class="bg-gray-900">د</option>
-            </select>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            ${[0, 1, 2, 3].map((i) => `
+                <div class="relative flex items-center group/opt">
+                    <div class="absolute -inset-0.5 bg-gradient-to-r from-white/10 to-transparent rounded-xl blur opacity-0 group-focus-within/opt:opacity-100 transition duration-300"></div>
+                    <span class="absolute right-4 text-gray-500 font-black text-sm group-focus-within/opt:text-blue-400 transition-colors pointer-events-none">${['أ', 'ب', 'ج', 'د'][i]}</span>
+                    <input type="text" class="mcq-opt-${i} relative w-full bg-black/40 border border-white/5 rounded-xl pr-10 pl-4 py-3.5 text-white outline-none focus:border-blue-500/50 focus:bg-black/60 transition-all text-sm placeholder-gray-600 shadow-inner" placeholder="الخيار ${['الأول', 'الثاني', 'الثالث', 'الرابع'][i]} العام" required>
+                </div>
+            `).join('')}
+        </div>
+        
+        <div class="bg-gradient-to-r from-indigo-900/30 to-black/30 border border-indigo-500/20 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-inner">
+            <div class="flex flex-col gap-1">
+                <label class="text-sm font-bold text-indigo-400 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    الإجابات الصحيحة (للعام)
+                </label>
+                <span class="text-xs text-indigo-500/70">متعدد الاختيارات مدعوم بالكامل</span>
+            </div>
+            
+            <div class="flex flex-wrap gap-2 correct-answers-container w-full sm:w-auto justify-start sm:justify-end">
+                ${[0, 1, 2, 3].map(i => `
+                    <label class="cursor-pointer flex-1 sm:flex-none relative group/chk">
+                        <input type="checkbox" value="${i}" class="mcq-correct-chk peer hidden">
+                        <div class="flex items-center justify-center min-w-[3rem] px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-gray-400 font-bold text-sm transition-all duration-300 
+                                    peer-checked:bg-indigo-500/20 peer-checked:border-indigo-500 peer-checked:text-indigo-400 peer-checked:shadow-[0_0_15px_rgba(99,102,241,0.3)]
+                                    hover:border-indigo-500/50 hover:bg-white/5">
+                            ${['أ', 'ب', 'ج', 'د'][i]}
+                        </div>
+                    </label>
+                `).join('')}
+            </div>
         </div>
     `;
 
     const questionTextarea = block.querySelector('.mcq-q-text');
+    questionTextarea.addEventListener('input', () => autoResizeTextarea(questionTextarea));
+    
     questionTextarea.addEventListener('paste', function(e) {
         let pasteText = (e.clipboardData || window.clipboardData).getData('text');
         let lines = pasteText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
         if(lines.length >= 5) {
             e.preventDefault(); 
             this.value = lines[0]; 
+            autoResizeTextarea(this);
             const currentBlock = this.closest('.mcq-block, .public-mcq-block');
             currentBlock.querySelector('.mcq-opt-0').value = lines[1].replace(/^[أ-د][.-]\s*/, ''); 
             currentBlock.querySelector('.mcq-opt-1').value = lines[2].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
             currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
-            currentBlock.classList.add('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
-            setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]'), 1000);
-            SysUI.toast('success', 'تم كتابة الاسئلة والخيارات');
+            
+            currentBlock.classList.add('ring-2', 'ring-blue-500', 'shadow-[0_0_30px_rgba(59,130,246,0.3)]', 'scale-[1.01]');
+            setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-blue-500', 'shadow-[0_0_30px_rgba(59,130,246,0.3)]', 'scale-[1.01]'), 1200);
+            SysUI.toast('success', '✨ تم إدراج السؤال العام ذكياً!');
             SysUI.confetti();
         }
     });
 
     if (window.innerWidth > 768) {
         block.addEventListener('dragstart', function(e) {
-            this.classList.add('opacity-40', 'border-dashed', 'scale-[0.98]');
+            this.classList.add('opacity-40', 'border-dashed', 'border-blue-500', 'scale-95');
             e.dataTransfer.effectAllowed = 'move';
             window.draggedBlock = this;
         });
         block.addEventListener('dragover', function(e) {
             e.preventDefault(); 
             e.dataTransfer.dropEffect = 'move';
-            if(window.draggedBlock !== this) this.classList.add('border-yellow-500', 'bg-white/5');
+            if(window.draggedBlock !== this) {
+                this.classList.add('border-blue-500', 'bg-blue-500/5', '-translate-y-2');
+            }
         });
         block.addEventListener('dragleave', function(e) {
-            this.classList.remove('border-yellow-500', 'bg-white/5');
+            this.classList.remove('border-blue-500', 'bg-blue-500/5', '-translate-y-2');
         });
         block.addEventListener('drop', function(e) {
             e.preventDefault();
-            this.classList.remove('border-yellow-500', 'bg-white/5');
+            this.classList.remove('border-blue-500', 'bg-blue-500/5', '-translate-y-2');
             if (window.draggedBlock && window.draggedBlock !== this) {
                 const allBlocks = [...container.querySelectorAll('.public-mcq-block')];
                 const draggedIndex = allBlocks.indexOf(window.draggedBlock);
@@ -352,17 +465,18 @@ export function addPublicMCQBlock() {
             }
         });
         block.addEventListener('dragend', function(e) {
-            this.classList.remove('opacity-40', 'border-dashed', 'scale-[0.98]');
+            this.classList.remove('opacity-40', 'border-dashed', 'border-blue-500', 'scale-95');
             window.draggedBlock = null;
         });
     }
 
     container.appendChild(block);
 
-    setTimeout(() => {
+    requestAnimationFrame(() => {
+        block.style.transition = "all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)";
         block.style.opacity = "1";
-        block.style.transform = "translateY(0)";
-    }, 10);
+        block.style.transform = "translateY(0) scale(1)";
+    });
 }
 
 const publicQuizForm = document.getElementById('publicQuizForm');
@@ -370,22 +484,32 @@ if(publicQuizForm) {
     publicQuizForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // 🌟 فحص إضافي للتأكد من تعبئة حقول الاختبار العام قبل الإرسال لمنع أخطاء السيرفر
         const publicQuizTitle = document.getElementById('publicQuizTitle')?.value.trim();
         if(!publicQuizTitle) {
-            SysUI.toast('warning', "يرجى كتابة عنوان الاختبار العام أولاً!");
+            SysUI.toast('warning', "⚠️ يرجى كتابة عنوان الاختبار العام أولاً!");
             return;
         }
 
         const blocks = document.querySelectorAll('#dynamicPublicQuestionsContainer .public-mcq-block');
         if(blocks.length === 0) { 
-            SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!"); 
+            SysUI.toast('warning', "⚠️ أضف سؤالاً واحداً على الأقل!"); 
             return; 
         }
         
         const questions = [];
-        blocks.forEach(block => {
-            const correctVal = block.querySelector('.mcq-correct').value;
+        let hasError = false;
+
+        blocks.forEach((block, index) => {
+            const correctCheckboxes = block.querySelectorAll('.mcq-correct-chk:checked');
+            const correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
+            
+            if(correctAnswers.length === 0) {
+                hasError = true;
+                block.classList.add('ring-2', 'ring-red-500', 'animate-bounce');
+                setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'animate-bounce'), 1500);
+                SysUI.toast('error', `❌ يرجى تحديد إجابة صحيحة واحدة على الأقل في السؤال رقم ${index + 1}`);
+            }
+
             questions.push({
                 questionText: block.querySelector('.mcq-q-text').value,
                 options: [
@@ -394,9 +518,11 @@ if(publicQuizForm) {
                     block.querySelector('.mcq-opt-2').value,
                     block.querySelector('.mcq-opt-3').value
                 ],
-                correctAnswer: isNaN(parseInt(correctVal)) ? 0 : parseInt(correctVal)
+                correctAnswers: correctAnswers
             });
         });
+
+        if(hasError) return;
 
         submitPublicQuiz(questions, false);
     });
@@ -409,13 +535,21 @@ export async function submitPublicQuiz(questionsSourceArray, isForced = false) {
 
     if(questionsSourceArray.length === 0) {
         if(!isForced) SysUI.toast('warning', "أضف سؤالاً واحداً على الأقل!");
-        if(btn) { btn.disabled = false; btn.innerText = "حفظ وتوليد رابط الاختبار "; }
+        if(btn) { btn.disabled = false; }
         return; 
     }
     
+    let originalBtnContent = '';
     if(btn) {
-        btn.innerHTML = `<span class="animate-spin inline-block w-4 h-4 border-2 border-black border-t-transparent rounded-full mr-2 align-middle"></span> جاري الحفظ...`;
+        originalBtnContent = btn.innerHTML;
+        btn.innerHTML = `
+            <div class="flex items-center justify-center gap-2">
+                <span class="animate-spin inline-block w-5 h-5 border-2 border-white/30 border-t-white rounded-full"></span> 
+                <span>جاري الحفظ والتوليد...</span>
+            </div>
+        `;
         btn.disabled = true;
+        btn.classList.add('opacity-80', 'cursor-not-allowed', 'scale-95');
     }
 
     try {
@@ -454,23 +588,24 @@ export async function submitPublicQuiz(questionsSourceArray, isForced = false) {
                 linkArea.classList.remove('hidden');
                 linkArea.classList.add('flex', 'flex-col', 'sm:flex-row');
                 linkArea.style.opacity = '0';
-                linkArea.style.transform = 'translateY(10px)';
+                linkArea.style.transform = 'translateY(20px) scale(0.95)';
                 setTimeout(() => {
-                    linkArea.style.transition = 'all 0.5s ease';
+                    linkArea.style.transition = 'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)';
                     linkArea.style.opacity = '1';
-                    linkArea.style.transform = 'translateY(0)';
+                    linkArea.style.transform = 'translateY(0) scale(1)';
                 }, 50);
             }
             
-            SysUI.toast('success', "تم حفظ الاختبار بنجاح.");
+            SysUI.toast('success', "🌐 تم حفظ الاختبار وإنشاء الرابط العبقري بنجاح!");
             SysUI.confetti();
         } else throw new Error();
     } catch (err) {
-        SysUI.toast('error', "فشل في حفظ الاختبار. يرجى مراجعة المدخلات.");
+        SysUI.toast('error', "🚨 فشل في حفظ الاختبار العام. راجع المدخلات والاتصال.");
     } finally {
         if(btn) {
-            btn.innerText = "حفظ وتوليد رابط الاختبار العام "; 
+            btn.innerHTML = originalBtnContent; 
             btn.disabled = false;
+            btn.classList.remove('opacity-80', 'cursor-not-allowed', 'scale-95');
         }
     }
 }
@@ -502,15 +637,21 @@ export function triggerCopyAnimation(inputElement) {
     const originalHTML = btn.innerHTML;
     const originalClasses = btn.className;
     
-    btn.innerHTML = `<span class="flex items-center justify-center gap-2"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم النسخ</span>`;
-    btn.className = 'w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-3 sm:py-0 rounded-xl font-bold transition-all shadow-[0_0_15px_rgba(22,163,74,0.4)] whitespace-nowrap';
+    btn.innerHTML = `
+        <span class="flex items-center justify-center gap-2">
+            <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 
+            تم النسخ للحافظة
+        </span>
+    `;
+    btn.className = 'w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-6 py-4 sm:py-0 rounded-2xl font-black transition-all shadow-[0_0_25px_rgba(16,185,129,0.5)] whitespace-nowrap scale-105';
     
-    SysUI.toast('success', "تم نسخ الرابط بنجاح.");
+    SysUI.toast('success', "📋 تم نسخ الرابط، أرسله الآن!");
+    SysUI.confetti();
     
     setTimeout(() => {
         btn.innerHTML = originalHTML;
         btn.className = originalClasses;
-    }, 2500);
+    }, 3000);
 }
 
 export const SmartImportSystem = {
@@ -522,10 +663,11 @@ export const SmartImportSystem = {
             const importBtn = document.createElement('button');
             importBtn.id = 'smart-import-btn';
             importBtn.type = 'button';
-            importBtn.className = 'w-full sm:w-auto bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white px-6 py-3.5 sm:py-2.5 rounded-xl text-sm font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2 hover:-translate-y-1';
+            importBtn.className = 'w-full sm:w-auto relative overflow-hidden bg-gradient-to-r from-green-600 via-emerald-500 to-teal-600 hover:from-green-500 hover:via-emerald-400 hover:to-teal-500 text-white px-6 py-3.5 sm:py-3 rounded-2xl text-sm font-black transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.4)] hover:shadow-[0_0_35px_rgba(16,185,129,0.6)] flex items-center justify-center gap-2 hover:-translate-y-1 group';
             importBtn.innerHTML = `
-                <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                كتابة سريع
+                <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+                <svg class="w-5 h-5 animate-pulse relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <span class="relative z-10">لصق سحري (Smart Paste)</span>
             `;
             importBtn.onclick = () => this.showImportModal();
             
@@ -539,24 +681,46 @@ export const SmartImportSystem = {
 
         if (!document.getElementById('smart-import-modal')) {
             const modalHTML = `
-                <div id="smart-import-modal" class="fixed inset-0 z-[10000] hidden items-center justify-center pointer-events-none px-4">
-                    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 opacity-0" id="smart-modal-bg"></div>
-                    <div class="relative bg-gradient-to-b from-gray-900 to-black border border-green-500/30 p-5 sm:p-6 rounded-3xl shadow-[0_20px_50px_rgba(16,185,129,0.2)] transform scale-95 opacity-0 transition-all duration-300 w-full max-w-2xl mx-auto pointer-events-auto flex flex-col max-h-[90vh]" id="smart-modal-box">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-white font-bold text-lg flex items-center gap-2">
-                                <svg class="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
-                                لصق الأسئلة  (Smart Paste)
+                <div id="smart-import-modal" class="fixed inset-0 z-[10000] hidden items-center justify-center pointer-events-none px-4 perspective-1000">
+                    <div class="absolute inset-0 bg-black/90 backdrop-blur-md transition-opacity duration-500 opacity-0" id="smart-modal-bg"></div>
+                    <div class="relative bg-gradient-to-br from-gray-900 via-black to-gray-900 border border-green-500/40 p-6 sm:p-8 rounded-[2rem] shadow-[0_30px_60px_rgba(16,185,129,0.3)] transform scale-90 rotate-X-12 opacity-0 transition-all duration-500 w-full max-w-3xl mx-auto pointer-events-auto flex flex-col max-h-[92vh] overflow-hidden" id="smart-modal-box">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-green-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+                        <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/3 pointer-events-none"></div>
+                        
+                        <div class="flex justify-between items-center mb-6 relative z-10">
+                            <h3 class="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300 font-black text-xl sm:text-2xl flex items-center gap-3">
+                                <div class="p-2 bg-green-500/10 rounded-xl">
+                                    <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                                </div>
+                                المستورد الخارق المحسّن
                             </h3>
-                            <button id="smart-modal-close" class="text-gray-500 hover:text-red-500 transition-colors">
+                            <button id="smart-modal-close" class="text-gray-500 hover:text-white bg-white/5 hover:bg-red-500/80 p-2 rounded-xl transition-all duration-300">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                             </button>
                         </div>
-                        <p class="text-xs text-gray-400 mb-3 leading-relaxed">
-                            قم بنسخ ولصق الأسئلة بالكامل هنا.
+                        <p class="text-sm text-gray-400 mb-5 leading-relaxed relative z-10 font-medium">
+                            ألصق بنك الأسئلة بالكامل هنا. المستورد الذكي سيدعم الآن <span class="text-green-400 font-bold">تحديد أكثر من إجابة صحيحة</span> بشكل تلقائي عند وجود علامات (✅ أو صح) متعددة!
                         </p>
-                        <textarea id="smart-import-textarea" class="w-full flex-grow min-h-[300px] bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500/50 transition-all mb-4 text-sm resize-none custom-scrollbar" placeholder=""></textarea>
-                        <button id="smart-import-execute" class="w-full bg-green-600/20 hover:bg-green-600/40 text-green-400 border border-green-500/30 px-5 py-3 rounded-xl transition-all text-sm font-bold shadow-[0_0_15px_rgba(22,163,74,0.2)] hover:shadow-[0_0_20px_rgba(22,163,74,0.4)]">
-                          تحليل وإدراج الأسئلة
+                        
+                        <div class="relative flex-grow mb-6 z-10 group/textarea">
+                            <div class="absolute -inset-1 bg-gradient-to-r from-green-500/30 to-blue-500/30 rounded-2xl blur opacity-20 group-focus-within/textarea:opacity-100 transition duration-500"></div>
+                            <textarea id="smart-import-textarea" class="relative w-full h-full min-h-[350px] bg-black/70 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-green-500/50 transition-all text-sm sm:text-base resize-none custom-scrollbar shadow-inner leading-loose" placeholder="س1: ما هي عاصمة مصر؟
+أ) الإسكندرية
+ب) القاهرة ✅
+ج) أسوان
+د) الأقصر
+
+س2: ألوان علم مصر تضم؟
+أ) أحمر ✅
+ب) أزرق
+ج) أبيض ✅
+د) أسود ✅"></textarea>
+                        </div>
+
+                        <button id="smart-import-execute" class="relative z-10 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 px-6 py-4 rounded-2xl transition-all duration-300 text-base font-black shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.5)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden group">
+                            <div class="absolute inset-0 bg-white/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out"></div>
+                            <svg class="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                            <span class="relative z-10">تحليل وإدراج الأسئلة بذكاء اصطناعي</span>
                         </button>
                     </div>
                 </div>
@@ -584,8 +748,8 @@ export const SmartImportSystem = {
         requestAnimationFrame(() => {
             if(bg) bg.classList.remove('opacity-0');
             if(box) {
-                box.classList.remove('scale-95', 'opacity-0');
-                box.classList.add('scale-100', 'opacity-100');
+                box.classList.remove('scale-90', 'rotate-X-12', 'opacity-0');
+                box.classList.add('scale-100', 'rotate-X-0', 'opacity-100');
             }
             if(document.getElementById('smart-import-textarea')) document.getElementById('smart-import-textarea').focus();
         });
@@ -598,8 +762,8 @@ export const SmartImportSystem = {
         
         if(bg) bg.classList.add('opacity-0');
         if(box) {
-            box.classList.remove('scale-100', 'opacity-100');
-            box.classList.add('scale-95', 'opacity-0');
+            box.classList.remove('scale-100', 'rotate-X-0', 'opacity-100');
+            box.classList.add('scale-90', 'rotate-X-12', 'opacity-0');
         }
         
         setTimeout(() => {
@@ -607,21 +771,21 @@ export const SmartImportSystem = {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }
-        }, 300);
+        }, 500);
     },
 
     processImport() {
         const textarea = document.getElementById('smart-import-textarea');
         const rawText = textarea ? textarea.value : '';
         if (!rawText.trim()) {
-            SysUI.toast('error', 'الحقل فارغ.');
+            SysUI.toast('error', '⚠️ الحقل فارغ تماماً.');
             return;
         }
 
         const parsedQuestions = this.parseText(rawText);
         
         if (parsedQuestions.length === 0) {
-            SysUI.toast('error', 'لم أتمكن من التعرف على أي أسئلة. تأكد من الصيغة.');
+            SysUI.toast('error', '❌ لم أتمكن من التعرف على أي أسئلة. تأكد من توافق الصيغة.');
             return;
         }
 
@@ -631,7 +795,7 @@ export const SmartImportSystem = {
 
     parseText(text) {
         let parsed = [];
-        let currentQ = { q: '', opts: [], correct: 0 };
+        let currentQ = { q: '', opts: [], correctAnswers: [] };
         
         let lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
         const optRegex = /^(\(?[أ-د]\)?|[أ-د][.-])\s*(.*)/;
@@ -645,7 +809,9 @@ export const SmartImportSystem = {
                 optText = optText.replace(/✅|صح/g, '').trim();
 
                 currentQ.opts.push(optText);
-                if (isCorrect) currentQ.correct = currentQ.opts.length - 1;
+                if (isCorrect) {
+                    currentQ.correctAnswers.push(currentQ.opts.length - 1);
+                }
             } else {
                 if (currentQ.opts.length > 0) {
                     if (currentQ.opts.length >= 2) {
@@ -653,7 +819,7 @@ export const SmartImportSystem = {
                         while(currentQ.opts.length < 4) currentQ.opts.push('');
                         parsed.push({...currentQ});
                     }
-                    currentQ = { q: line, opts: [], correct: 0 };
+                    currentQ = { q: line, opts: [], correctAnswers: [] };
                 } else {
                     currentQ.q = currentQ.q ? currentQ.q + '\n' + line : line;
                 }
@@ -670,7 +836,7 @@ export const SmartImportSystem = {
     },
 
     async animateInsertion(questions) {
-        SysUI.toast('success', `تم التعرف على ${questions.length} أسئلة! جاري الإدراج ...`);
+        SysUI.toast('success', `🚀 تم التعرف على ${questions.length} أسئلة! جاري الإدراج السحري...`);
         
         const container = document.getElementById('dynamicPublicQuestionsContainer');
         if (!container) return;
@@ -694,16 +860,16 @@ export const SmartImportSystem = {
             const blocks = container.querySelectorAll('.public-mcq-block');
             const targetBlock = blocks[blocks.length - 1];
             
-            await sleep(100);
+            await sleep(50);
 
             const scanner = document.createElement('div');
-            scanner.className = 'absolute top-0 right-0 h-full w-2 bg-green-500/50 shadow-[0_0_20px_rgba(34,197,94,1)] z-10 pointer-events-none rounded-r-xl';
+            scanner.className = 'absolute top-0 right-0 h-full w-2 bg-gradient-to-r from-transparent to-green-400 shadow-[0_0_30px_rgba(74,222,128,1)] z-20 pointer-events-none rounded-r-3xl mix-blend-screen';
             targetBlock.appendChild(scanner);
 
             requestAnimationFrame(() => {
-                scanner.style.transition = 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)';
+                scanner.style.transition = 'width 1.2s cubic-bezier(0.25, 1, 0.5, 1)';
                 scanner.style.width = '100%';
-                scanner.style.backgroundColor = 'rgba(34,197,94,0.05)'; 
+                scanner.style.backgroundColor = 'rgba(74,222,128,0.08)'; 
             });
 
             const qInput = targetBlock.querySelector('.mcq-q-text');
@@ -713,57 +879,62 @@ export const SmartImportSystem = {
                 targetBlock.querySelector('.mcq-opt-2'),
                 targetBlock.querySelector('.mcq-opt-3')
             ];
-            const correctSelect = targetBlock.querySelector('.mcq-correct');
-
-            await sleep(250);
+            
+            await sleep(200);
             if(qInput) {
                 qInput.value = pq.q;
-                qInput.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'bg-green-500/10');
+                autoResizeTextarea(qInput);
+                qInput.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'bg-green-500/10', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
             }
             
             for (let j = 0; j < 4; j++) {
-                await sleep(120);
+                await sleep(80);
                 if(optInputs[j]) {
                     optInputs[j].value = pq.opts[j];
-                    optInputs[j].classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500');
-                    if(j === pq.correct) {
-                         optInputs[j].classList.add('bg-green-500/20'); 
+                    optInputs[j].classList.add('transition-all', 'duration-300', 'scale-[1.03]', 'ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.3)]');
+                    
+                    if(pq.correctAnswers.includes(j)) {
+                         optInputs[j].classList.add('bg-green-500/20', 'text-green-300', 'font-bold'); 
                     }
                     setTimeout(() => {
-                        if(optInputs[j]) optInputs[j].classList.remove('scale-[1.02]');
-                    }, 150);
+                        if(optInputs[j]) optInputs[j].classList.remove('scale-[1.03]');
+                    }, 200);
                 }
             }
 
             await sleep(150);
             if(qInput) qInput.classList.remove('scale-[1.02]');
-            if(correctSelect) {
-                correctSelect.value = pq.correct;
-                correctSelect.parentElement.classList.add('transition-all', 'duration-300', 'scale-[1.02]', 'ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
-                setTimeout(() => {
-                    if(correctSelect.parentElement) correctSelect.parentElement.classList.remove('scale-[1.02]');
-                }, 150);
-            }
-
-            await sleep(400);
             
-            scanner.style.opacity = '0';
-            setTimeout(() => scanner.remove(), 300);
-            
-            if(qInput) qInput.classList.remove('ring-2', 'ring-green-500', 'bg-green-500/10');
-            optInputs.forEach((inp, idx) => {
-                if(inp) {
-                    inp.classList.remove('ring-2', 'ring-green-500');
-                    if(idx !== pq.correct) inp.classList.remove('bg-green-500/20');
+            // تحديد الإجابات الصحيحة المتعددة (Checkboxes)
+            pq.correctAnswers.forEach(correctIdx => {
+                const chk = targetBlock.querySelector(`.mcq-correct-chk[value="${correctIdx}"]`);
+                if(chk) {
+                    chk.checked = true;
+                    const labelDiv = chk.nextElementSibling;
+                    labelDiv.classList.add('scale-110', 'shadow-[0_0_25px_rgba(16,185,129,0.8)]');
+                    setTimeout(() => labelDiv.classList.remove('scale-110', 'shadow-[0_0_25px_rgba(16,185,129,0.8)]'), 300);
                 }
             });
-            if(correctSelect && correctSelect.parentElement) correctSelect.parentElement.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
+
+            await sleep(350);
+            
+            scanner.style.opacity = '0';
+            setTimeout(() => scanner.remove(), 400);
+            
+            if(qInput) qInput.classList.remove('ring-2', 'ring-green-500', 'bg-green-500/10', 'shadow-[0_0_20px_rgba(34,197,94,0.3)]');
+            optInputs.forEach((inp, idx) => {
+                if(inp) {
+                    inp.classList.remove('ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.3)]', 'text-green-300', 'font-bold');
+                    if(!pq.correctAnswers.includes(idx)) inp.classList.remove('bg-green-500/20');
+                }
+            });
             
             targetBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         SysUI.confetti();
-        SysUI.toast('success', 'تمت المهمة بنجاح');
+        SysUI.confetti();
+        SysUI.toast('success', 'اكتمل الاستيراد بنجاح!');
     }
 };
 
