@@ -47,13 +47,25 @@ export const Security = (() => {
             return 'q_' + (h >>> 0).toString(16);
         },
         getToken: () => localStorage.getItem('userToken') || localStorage.getItem('dahih_token') || '',
-        buildHeaders() {
-            return {
+        
+        // 👈 التعديل تم هنا
+        buildHeaders(isPublic = false) {
+            const headers = {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.getToken()}`,
                 'X-Requested-With': 'XMLHttpRequest'
             };
+            
+            // إضافة التوكن فقط إذا لم يكن الطلب عاماً
+            if (!isPublic) {
+                const token = this.getToken();
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+            }
+            
+            return headers;
         },
+        
         buildBody: (extra = {}) => JSON.stringify({ sessionToken, ...extra }),
         checkAuthError(res) {
             if (res.status === 401 || res.status === 403) { this.forceLogout(); return true; }
@@ -66,4 +78,3 @@ export const Security = (() => {
         },
     };
 })();
-
