@@ -129,7 +129,7 @@
 
             // 🔥 طبقة الحماية الأولى (فورية من المتصفح) 🔥
             if (localStorage.getItem(`dahih_quiz_done_${quizId}`)) {
-                showError("لقد قمت بحل هذا الاختبار مسبقاً ولا يُسمح بالتكرار.");
+                showError("لقد قمت بحل هذا الاختبار مسبقاً من هذا المتصفح ولا يُسمح بالتكرار.");
                 return;
             }
 
@@ -149,7 +149,6 @@
 
         async function fetchQuizData() {
             try {
-                // تـم تـعـديـل الـسـطـر هـنـا لإرسـال الـ هـيـدر الـمـطـلـوب إلـى الـسـيـرفـر
                 const res = await fetch(`/api/public/quiz?id=${quizId}&device=${deviceFingerprint}`, {
                     headers: {
                         'x-public-access': 'eld7e7-web-client'
@@ -227,9 +226,13 @@
             const percentage = Math.round((score / currentQuizData.questions.length) * 100);
 
             try {
+                // تـم إضـافـة الـ هـيـدر هـنـا لـطـلـب الـتـسـلـيـم
                 const res = await fetch('/api/student/submit-quiz', {
                     method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'x-public-access': 'eld7e7-web-client'
+                    },
                     body: JSON.stringify({ 
                         email: studentEmail, 
                         studentName: studentName, 
@@ -262,7 +265,7 @@
             document.getElementById('resultState').classList.remove('hidden');
             window.scrollTo(0, 0); 
             
-            document.getElementById('resultName').innerText = `شكراً لك يا، ${name}`;
+            document.getElementById('resultName').innerText = `شكراً لجهدك يا، ${name}`;
             document.getElementById('resultScore').innerText = `${score} / ${total}`;
             
             const percEl = document.getElementById('resultPercentage');
