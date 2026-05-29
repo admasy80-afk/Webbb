@@ -89,10 +89,10 @@ export const DraftSystem = {
                             addMCQBlock(); 
                             const lastBlock = document.getElementById('dynamicQuestionsContainer').lastElementChild;
                             lastBlock.querySelector('.mcq-q-text').value = qData.q;
-                            lastBlock.querySelector('.mcq-opt-0').value = qData.opts[0];
-                            lastBlock.querySelector('.mcq-opt-1').value = qData.opts[1];
-                            lastBlock.querySelector('.mcq-opt-2').value = qData.opts[2];
-                            lastBlock.querySelector('.mcq-opt-3').value = qData.opts[3];
+                            lastBlock.querySelector('.mcq-opt-0').value = qData.opts[0] || '';
+                            lastBlock.querySelector('.mcq-opt-1').value = qData.opts[1] || '';
+                            lastBlock.querySelector('.mcq-opt-2').value = qData.opts[2] || '';
+                            lastBlock.querySelector('.mcq-opt-3').value = qData.opts[3] || '';
                             
                             // استعادة الإجابات المتعددة
                             const correctArr = qData.correctAnswers || (qData.correct !== undefined ? [parseInt(qData.correct)] : []);
@@ -145,7 +145,7 @@ export function addMCQBlock() {
                 <div class="relative flex items-center group/opt">
                     <div class="absolute -inset-0.5 bg-gradient-to-r from-white/10 to-transparent rounded-xl blur opacity-0 group-focus-within/opt:opacity-100 transition duration-300"></div>
                     <span class="absolute right-4 text-gray-500 font-black text-sm group-focus-within/opt:text-yellow-500 transition-colors pointer-events-none">${['أ', 'ب', 'ج', 'د'][i]}</span>
-                    <input type="text" class="mcq-opt-${i} relative w-full bg-black/40 border border-white/5 rounded-xl pr-10 pl-4 py-3.5 text-white outline-none focus:border-yellow-500/50 focus:bg-black/60 transition-all text-sm placeholder-gray-600 shadow-inner" placeholder="الخيار ${['الأول', 'الثاني', 'الثالث', 'الرابع'][i]}" required>
+                    <input type="text" class="mcq-opt-${i} relative w-full bg-black/40 border border-white/5 rounded-xl pr-10 pl-4 py-3.5 text-white outline-none focus:border-yellow-500/50 focus:bg-black/60 transition-all text-sm placeholder-gray-600 shadow-inner" placeholder="الخيار ${['الأول', 'الثاني', 'الثالث', 'الرابع'][i]}" ${i < 2 ? 'required' : ''}>
                 </div>
             `).join('')}
         </div>
@@ -156,7 +156,7 @@ export function addMCQBlock() {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     الإجابات الصحيحة
                 </label>
-                <span class="text-xs text-emerald-500/70">يمكنك تحديد أكثر من إجابة</span>
+                <span class="text-xs text-emerald-500/70">يمكنك تحديد أكثر من إجابة (خيارين أو 4)</span>
             </div>
             
             <div class="flex flex-wrap gap-2 correct-answers-container w-full sm:w-auto justify-start sm:justify-end">
@@ -180,15 +180,21 @@ export function addMCQBlock() {
     questionTextarea.addEventListener('paste', function(e) {
         let pasteText = (e.clipboardData || window.clipboardData).getData('text');
         let lines = pasteText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-        if(lines.length >= 5) {
+        if(lines.length === 3 || lines.length >= 5) {
             e.preventDefault(); 
             this.value = lines[0]; 
             autoResizeTextarea(this);
             const currentBlock = this.closest('.mcq-block, .public-mcq-block');
             currentBlock.querySelector('.mcq-opt-0').value = lines[1].replace(/^[أ-د][.-]\s*/, ''); 
             currentBlock.querySelector('.mcq-opt-1').value = lines[2].replace(/^[أ-د][.-]\s*/, '');
-            currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
-            currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
+            
+            if (lines.length >= 5) {
+                currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
+                currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
+            } else {
+                currentBlock.querySelector('.mcq-opt-2').value = '';
+                currentBlock.querySelector('.mcq-opt-3').value = '';
+            }
             
             currentBlock.classList.add('ring-2', 'ring-emerald-500', 'shadow-[0_0_30px_rgba(16,185,129,0.3)]', 'scale-[1.01]');
             setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-emerald-500', 'shadow-[0_0_30px_rgba(16,185,129,0.3)]', 'scale-[1.01]'), 1200);
@@ -281,24 +287,42 @@ if(quizForm) {
         let hasError = false;
 
         blocks.forEach((block, index) => {
+            if(hasError) return;
+            
+            const opt0 = block.querySelector('.mcq-opt-0').value.trim();
+            const opt1 = block.querySelector('.mcq-opt-1').value.trim();
+            const opt2 = block.querySelector('.mcq-opt-2').value.trim();
+            const opt3 = block.querySelector('.mcq-opt-3').value.trim();
+
+            let validOptions = [];
+            if (opt0 && opt1 && !opt2 && !opt3) {
+                validOptions = [opt0, opt1];
+            } else if (opt0 && opt1 && opt2 && opt3) {
+                validOptions = [opt0, opt1, opt2, opt3];
+            } else {
+                hasError = true;
+                block.classList.add('ring-2', 'ring-red-500', 'animate-bounce');
+                setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'animate-bounce'), 1500);
+                SysUI.toast('error', `❌ يرجى إدخال خيارين فقط أو 4 خيارات بالكامل في السؤال رقم ${index + 1}`);
+                return;
+            }
+
             const correctCheckboxes = block.querySelectorAll('.mcq-correct-chk:checked');
-            const correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
+            let correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
+            
+            correctAnswers = correctAnswers.filter(ans => ans < validOptions.length);
 
             if(correctAnswers.length === 0) {
                 hasError = true;
                 block.classList.add('ring-2', 'ring-red-500', 'animate-bounce');
                 setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'animate-bounce'), 1500);
-                SysUI.toast('error', `❌ يرجى تحديد إجابة صحيحة واحدة على الأقل في السؤال رقم ${index + 1}`);
+                SysUI.toast('error', `❌ يرجى تحديد إجابة صحيحة (ضمن الخيارات المتاحة) في السؤال رقم ${index + 1}`);
+                return;
             }
 
             questions.push({
                 questionText: block.querySelector('.mcq-q-text').value,
-                options: [
-                    block.querySelector('.mcq-opt-0').value,
-                    block.querySelector('.mcq-opt-1').value,
-                    block.querySelector('.mcq-opt-2').value,
-                    block.querySelector('.mcq-opt-3').value
-                ],
+                options: validOptions,
                 correctAnswers: correctAnswers
             });
         });
@@ -384,7 +408,7 @@ export function addPublicMCQBlock() {
                 <div class="relative flex items-center group/opt">
                     <div class="absolute -inset-0.5 bg-gradient-to-r from-white/10 to-transparent rounded-xl blur opacity-0 group-focus-within/opt:opacity-100 transition duration-300"></div>
                     <span class="absolute right-4 text-gray-500 font-black text-sm group-focus-within/opt:text-blue-400 transition-colors pointer-events-none">${['أ', 'ب', 'ج', 'د'][i]}</span>
-                    <input type="text" class="mcq-opt-${i} relative w-full bg-black/40 border border-white/5 rounded-xl pr-10 pl-4 py-3.5 text-white outline-none focus:border-blue-500/50 focus:bg-black/60 transition-all text-sm placeholder-gray-600 shadow-inner" placeholder="الخيار ${['الأول', 'الثاني', 'الثالث', 'الرابع'][i]} العام" required>
+                    <input type="text" class="mcq-opt-${i} relative w-full bg-black/40 border border-white/5 rounded-xl pr-10 pl-4 py-3.5 text-white outline-none focus:border-blue-500/50 focus:bg-black/60 transition-all text-sm placeholder-gray-600 shadow-inner" placeholder="الخيار ${['الأول', 'الثاني', 'الثالث', 'الرابع'][i]} العام" ${i < 2 ? 'required' : ''}>
                 </div>
             `).join('')}
         </div>
@@ -395,7 +419,7 @@ export function addPublicMCQBlock() {
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     الإجابات الصحيحة (للعام)
                 </label>
-                <span class="text-xs text-indigo-500/70">متعدد الاختيارات مدعوم بالكامل</span>
+                <span class="text-xs text-indigo-500/70">يمكنك تحديد خيارين أو 4 خيارات</span>
             </div>
             
             <div class="flex flex-wrap gap-2 correct-answers-container w-full sm:w-auto justify-start sm:justify-end">
@@ -419,15 +443,21 @@ export function addPublicMCQBlock() {
     questionTextarea.addEventListener('paste', function(e) {
         let pasteText = (e.clipboardData || window.clipboardData).getData('text');
         let lines = pasteText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-        if(lines.length >= 5) {
+        if(lines.length === 3 || lines.length >= 5) {
             e.preventDefault(); 
             this.value = lines[0]; 
             autoResizeTextarea(this);
             const currentBlock = this.closest('.mcq-block, .public-mcq-block');
             currentBlock.querySelector('.mcq-opt-0').value = lines[1].replace(/^[أ-د][.-]\s*/, ''); 
             currentBlock.querySelector('.mcq-opt-1').value = lines[2].replace(/^[أ-د][.-]\s*/, '');
-            currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
-            currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
+            
+            if (lines.length >= 5) {
+                currentBlock.querySelector('.mcq-opt-2').value = lines[3].replace(/^[أ-د][.-]\s*/, '');
+                currentBlock.querySelector('.mcq-opt-3').value = lines[4].replace(/^[أ-د][.-]\s*/, '');
+            } else {
+                currentBlock.querySelector('.mcq-opt-2').value = '';
+                currentBlock.querySelector('.mcq-opt-3').value = '';
+            }
             
             currentBlock.classList.add('ring-2', 'ring-blue-500', 'shadow-[0_0_30px_rgba(59,130,246,0.3)]', 'scale-[1.01]');
             setTimeout(() => currentBlock.classList.remove('ring-2', 'ring-blue-500', 'shadow-[0_0_30px_rgba(59,130,246,0.3)]', 'scale-[1.01]'), 1200);
@@ -500,24 +530,42 @@ if(publicQuizForm) {
         let hasError = false;
 
         blocks.forEach((block, index) => {
+            if(hasError) return;
+
+            const opt0 = block.querySelector('.mcq-opt-0').value.trim();
+            const opt1 = block.querySelector('.mcq-opt-1').value.trim();
+            const opt2 = block.querySelector('.mcq-opt-2').value.trim();
+            const opt3 = block.querySelector('.mcq-opt-3').value.trim();
+
+            let validOptions = [];
+            if (opt0 && opt1 && !opt2 && !opt3) {
+                validOptions = [opt0, opt1];
+            } else if (opt0 && opt1 && opt2 && opt3) {
+                validOptions = [opt0, opt1, opt2, opt3];
+            } else {
+                hasError = true;
+                block.classList.add('ring-2', 'ring-red-500', 'animate-bounce');
+                setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'animate-bounce'), 1500);
+                SysUI.toast('error', `❌ يرجى إدخال خيارين فقط أو 4 خيارات بالكامل في السؤال رقم ${index + 1}`);
+                return;
+            }
+
             const correctCheckboxes = block.querySelectorAll('.mcq-correct-chk:checked');
-            const correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
+            let correctAnswers = Array.from(correctCheckboxes).map(cb => parseInt(cb.value));
             
+            correctAnswers = correctAnswers.filter(ans => ans < validOptions.length);
+
             if(correctAnswers.length === 0) {
                 hasError = true;
                 block.classList.add('ring-2', 'ring-red-500', 'animate-bounce');
                 setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'animate-bounce'), 1500);
-                SysUI.toast('error', `❌ يرجى تحديد إجابة صحيحة واحدة على الأقل في السؤال رقم ${index + 1}`);
+                SysUI.toast('error', `❌ يرجى تحديد إجابة صحيحة واحدة على الأقل (ضمن الخيارات) في السؤال رقم ${index + 1}`);
+                return;
             }
 
             questions.push({
                 questionText: block.querySelector('.mcq-q-text').value,
-                options: [
-                    block.querySelector('.mcq-opt-0').value,
-                    block.querySelector('.mcq-opt-1').value,
-                    block.querySelector('.mcq-opt-2').value,
-                    block.querySelector('.mcq-opt-3').value
-                ],
+                options: validOptions,
                 correctAnswers: correctAnswers
             });
         });
@@ -699,7 +747,7 @@ export const SmartImportSystem = {
                             </button>
                         </div>
                         <p class="text-sm text-gray-400 mb-5 leading-relaxed relative z-10 font-medium">
-                            ألصق بنك الأسئلة بالكامل هنا. المستورد الذكي سيدعم الآن <span class="text-green-400 font-bold">تحديد أكثر من إجابة صحيحة</span> بشكل تلقائي عند وجود علامات (✅ أو صح) متعددة!
+                            ألصق بنك الأسئلة بالكامل هنا. المستورد الذكي سيدعم الآن <span class="text-green-400 font-bold">خيارين (صح/خطأ) أو 4 خيارات</span> بشكل تلقائي عند وجود علامات (✅ أو صح) متعددة!
                         </p>
                         
                         <div class="relative flex-grow mb-6 z-10 group/textarea">
@@ -710,11 +758,9 @@ export const SmartImportSystem = {
 ج) أسوان
 د) الأقصر
 
-س2: ألوان علم مصر تضم؟
-أ) أحمر ✅
-ب) أزرق
-ج) أبيض ✅
-د) أسود ✅"></textarea>
+س2: هل السماء زرقاء؟
+أ) صح ✅
+ب) خطأ"></textarea>
                         </div>
 
                         <button id="smart-import-execute" class="relative z-10 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white border-0 px-6 py-4 rounded-2xl transition-all duration-300 text-base font-black shadow-[0_10px_30px_rgba(16,185,129,0.3)] hover:shadow-[0_15px_40px_rgba(16,185,129,0.5)] hover:-translate-y-1 flex items-center justify-center gap-3 overflow-hidden group">
@@ -816,7 +862,8 @@ export const SmartImportSystem = {
                 if (currentQ.opts.length > 0) {
                     if (currentQ.opts.length >= 2) {
                         currentQ.q = currentQ.q.replace(/^(س\d+[:.-]?|السؤال \d+[:.-]?)\s*/, '');
-                        while(currentQ.opts.length < 4) currentQ.opts.push('');
+                        if (currentQ.opts.length === 3) currentQ.opts.push('');
+                        else if (currentQ.opts.length > 4) currentQ.opts = currentQ.opts.slice(0, 4);
                         parsed.push({...currentQ});
                     }
                     currentQ = { q: line, opts: [], correctAnswers: [] };
@@ -828,7 +875,8 @@ export const SmartImportSystem = {
 
         if (currentQ.opts.length >= 2) {
             currentQ.q = currentQ.q.replace(/^(س\d+[:.-]?|السؤال \d+[:.-]?)\s*/, '');
-            while(currentQ.opts.length < 4) currentQ.opts.push('');
+            if (currentQ.opts.length === 3) currentQ.opts.push('');
+            else if (currentQ.opts.length > 4) currentQ.opts = currentQ.opts.slice(0, 4);
             parsed.push({...currentQ});
         }
 
@@ -889,7 +937,7 @@ export const SmartImportSystem = {
             
             for (let j = 0; j < 4; j++) {
                 await sleep(80);
-                if(optInputs[j]) {
+                if(optInputs[j] && pq.opts[j] !== undefined && pq.opts[j] !== '') {
                     optInputs[j].value = pq.opts[j];
                     optInputs[j].classList.add('transition-all', 'duration-300', 'scale-[1.03]', 'ring-2', 'ring-green-500', 'shadow-[0_0_15px_rgba(34,197,94,0.3)]');
                     
@@ -899,6 +947,8 @@ export const SmartImportSystem = {
                     setTimeout(() => {
                         if(optInputs[j]) optInputs[j].classList.remove('scale-[1.03]');
                     }, 200);
+                } else if(optInputs[j]) {
+                    optInputs[j].value = ''; 
                 }
             }
 
@@ -934,7 +984,7 @@ export const SmartImportSystem = {
 
         SysUI.confetti();
         SysUI.confetti();
-        SysUI.toast('success', 'اكتمل الاستيراد بنجاح!');
+        SysUI.toast('success', ' اكتمل الاستيراد بنجاح!');
     }
 };
 
