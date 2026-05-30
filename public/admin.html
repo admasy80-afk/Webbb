@@ -9,11 +9,9 @@
     <style>
         body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
         
-        /* ======== إصلاحات الجوال والوميض الأبيض ======== */
         html { background-color: #070b19; overscroll-behavior: none; }
         * { -webkit-tap-highlight-color: transparent; }
         *:focus, button:focus, input:focus, select:focus, textarea:focus { outline: none !important; box-shadow: none !important; }
-        /* =============================================== */
 
         .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
         .tab-btn { transition: all 0.3s ease; position: relative; }
@@ -35,21 +33,53 @@
         #videoContainer:fullscreen { background-color: #000; display: flex; align-items: center; justify-content: center; }
         #videoContainer:fullscreen video { height: 100vh; width: 100vw; object-fit: contain; border: none; border-radius: 0; }
         
-        /* تأثيرات لنتائج الطلاب المفصلة */
         .student-details { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
         .student-details.open { max-height: 2000px; padding-top: 1rem; opacity: 1; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
     </style>
 
     <script>
+        // الحماية الوقائية لمنع الـ Refresh اللانهائي في حال عدم وجود توكن
+        if (!localStorage.getItem('dahih_token') && !window.location.href.includes('login.html')) {
+            window.location.href = 'login.html'; 
+        }
+
+        // 🌟 نظام الإشعارات الجديد (Toast) 🌟
+        window.showToast = function(msg, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+            const icon = type === 'error' 
+                ? `<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                : `<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                
+            toast.className = `${bgColor} text-white px-4 md:px-6 py-3 rounded-xl shadow-2xl transform transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-3 font-bold text-sm z-50`;
+            toast.innerHTML = `${icon} <span>${msg}</span>`;
+            
+            container.appendChild(toast);
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+            
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
         window.addEventListener('error', function(e) {
-            alert("🚨 خطأ في السطر " + e.lineno + "\nالملف: " + e.filename + "\nالخطأ: " + e.message);
+            window.showToast("خطأ تقني: " + e.message, 'error');
         });
         window.addEventListener('unhandledrejection', function(e) {
-            alert("🚨 خطأ استيراد الملفات:\n" + (e.reason.message || e.reason));
+            window.showToast("خطأ في الاتصال بالسيرفر", 'error');
         });
-    </script>
 
-    <script>
+        // دالة تسجيل الخروج الآمنة بدون تكرار ريفريش
+        window.logout = function() {
+            localStorage.removeItem('dahih_token');
+            window.location.href = 'login.html'; 
+        };
+
         window.switchTab = function(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.remove('active');
@@ -71,7 +101,7 @@
 
                 if(tabId === 'requests' && typeof window.fetchPendingRequests === 'function') window.fetchPendingRequests();
                 if(tabId === 'dashboard' && typeof window.fetchStats === 'function') window.fetchStats();
-                if(tabId === 'videos' && typeof window.loadCourses === 'function') window.loadCourses();
+                if(tabId === 'videos') loadCoursesUI(); 
             }
         };
 
@@ -90,7 +120,6 @@
             }
         };
 
-        // دالة إضافة الدرجات الورقية أصبحت هنا لتعمل بسرعة وبدون أخطاء
         window.addScoreRow = function() {
             const container = document.getElementById('scoresContainer');
             const row = document.createElement('div');
@@ -104,9 +133,191 @@
             `;
             container.appendChild(row);
         };
+
+        // 🌟 نظام توليد الأسئلة الثكي والديناميكي (4 حقول ثابتة دائماً مع فحص التحقق) 🌟
+        let platformQuizCounter = 0;
+        window.addMCQBlock = function() {
+            platformQuizCounter++;
+            const container = document.getElementById('dynamicQuestionsContainer');
+            const block = document.createElement('div');
+            block.className = 'quiz-question-block bg-black/40 border border-white/10 p-5 rounded-2xl space-y-4 relative animate-fade-in-up';
+            block.innerHTML = `
+                <div class="flex justify-between items-center border-b border-white/5 pb-3">
+                    <span class="text-sm font-bold text-yellow-500">سؤال منصة رقم #${platformQuizCounter}</span>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-500 bg-red-500/10 p-2 rounded-xl transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2">نص السؤال الإلكتروني</label>
+                    <input type="text" required class="question-text-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="اكتب السؤال هنا...">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">نوع الخيارات</label>
+                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="4">4 خيارات (اختيار من متعدد)</option>
+                            <option value="2">خيارين فقط (صح / خطأ)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">الإجابة الصحيحة</label>
+                        <select class="question-correct-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="1">الخيار الأول</option>
+                            <option value="2">الخيار الثاني</option>
+                            <option value="3" class="extra-opt-target">الخيار الثالث</option>
+                            <option value="4" class="extra-opt-target">الخيار الرابع</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول">
+                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني">
+                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثالث">
+                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الرابع">
+                </div>
+            `;
+            container.appendChild(block);
+        };
+
+        let publicQuizCounter = 0;
+        window.addPublicMCQBlock = function() {
+            publicQuizCounter++;
+            const container = document.getElementById('dynamicPublicQuestionsContainer');
+            const block = document.createElement('div');
+            block.className = 'quiz-question-block bg-black/40 border border-white/10 p-5 rounded-2xl space-y-4 relative animate-fade-in-up';
+            block.innerHTML = `
+                <div class="flex justify-between items-center border-b border-white/5 pb-3">
+                    <span class="text-sm font-bold text-yellow-500">سؤال عام رقم #${publicQuizCounter}</span>
+                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-500 bg-red-500/10 p-2 rounded-xl transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-400 mb-2">نص السؤال العام</label>
+                    <input type="text" required class="question-text-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="اكتب السؤال هنا...">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">نوع الخيارات</label>
+                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="4">4 خيارات (اختيار من متعدد)</option>
+                            <option value="2">خيارين فقط (صح / خطأ)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-2">الإجابة الصحيحة</label>
+                        <select class="question-correct-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                            <option value="1">الخيار الأول</option>
+                            <option value="2">الخيار الثاني</option>
+                            <option value="3" class="extra-opt-target">الخيار الثالث</option>
+                            <option value="4" class="extra-opt-target">الخيار الرابع</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول">
+                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني">
+                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثالث">
+                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الرابع">
+                </div>
+            `;
+            container.appendChild(block);
+        };
+
+        // دالة التحكم المحسنة تماماً للكتابة السريعة وإدارة التحقق مع الحفاظ على الحقول الأربعة
+        window.adjustQuestionOptions = function(selectElement) {
+            const block = selectElement.closest('.quiz-question-block');
+            const mode = selectElement.value;
+            
+            const opt1 = block.querySelector('.opt-1-input');
+            const opt2 = block.querySelector('.opt-2-input');
+            const opt3 = block.querySelector('.opt-3-input');
+            const opt4 = block.querySelector('.opt-4-input');
+            
+            const extraSelectOpts = block.querySelectorAll('.extra-opt-target');
+            const correctSelect = block.querySelector('.question-correct-select');
+
+            if (mode === "2") {
+                // ميزة الكتابة السريعة التلقائية المحدثة
+                opt1.value = "صح";
+                opt2.value = "خطأ";
+                opt3.value = ""; 
+                opt4.value = "";
+                
+                // إلغاء تفعيل الـ required للحقلين الثالث والرابع لتجاوز الفحص البرمجي
+                opt3.removeAttribute('required');
+                opt4.removeAttribute('required');
+                
+                // إخفاء الخيار الثالث والرابع من قائمة تحديد الإجابة الصحيحة
+                extraSelectOpts.forEach(o => o.classList.add('hidden'));
+                if (correctSelect.value === "3" || correctSelect.value === "4") {
+                    correctSelect.value = "1";
+                }
+            } else {
+                // إرجاع الوضع الافتراضي لـ 4 خيارات
+                if(opt1.value === "صح") opt1.value = "";
+                if(opt2.value === "خطأ") opt2.value = "";
+                
+                opt3.setAttribute('required', 'true');
+                opt4.setAttribute('required', 'true');
+                extraSelectOpts.forEach(o => o.classList.remove('hidden'));
+            }
+        };
+
+        // دالة فحص والتحقق من عدد الحقول المعبأة بدقة تامة (السماح بـ 2 أو 4 فقط، ورفض 1 أو 3)
+        function validateQuizInputs(containerId) {
+            const container = document.getElementById(containerId);
+            const blocks = container.querySelectorAll('.quiz-question-block');
+            
+            for (let block of blocks) {
+                const mode = block.querySelector('.question-type-select').value;
+                const v1 = block.querySelector('.opt-1-input').value.trim();
+                const v2 = block.querySelector('.opt-2-input').value.trim();
+                const v3 = block.querySelector('.opt-3-input').value.trim();
+                const v4 = block.querySelector('.opt-4-input').value.trim();
+                
+                // حساب عدد الحقول المكتوبة فعلياً
+                let filledCount = 0;
+                if(v1 !== "") filledCount++;
+                if(v2 !== "") filledCount++;
+                if(v3 !== "") filledCount++;
+                if(v4 !== "") filledCount++;
+                
+                if (mode === "2") {
+                    if (filledCount !== 2) {
+                        window.showToast("خطأ: يرجى إدخال خيارين فقط (تم اكتشاف حقول زائدة أو ناقصة)!", "error");
+                        return false;
+                    }
+                } else {
+                    if (filledCount !== 4) {
+                        window.showToast("خطأ: يرجى ملء الحقول الأربعة كاملة أو تحويل نوع السؤال لخيارين فقط!", "error");
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // دالة نسخ رابط الاختبار العام
+        window.copyPublicLink = function() {
+            const input = document.getElementById('publicQuizLinkInput');
+            if(!input || !input.value) return;
+            input.select();
+            input.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(input.value);
+            window.showToast('تم نسخ رابط الاختبار بنجاح! 📋');
+        };
+
+        // دالة إغلاق مودال النتائج
+        window.closeResultsModal = function() {
+            document.getElementById('resultsModal').classList.add('hidden');
+        };
     </script>
 </head>
 <body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
+
+    <div id="toast-container" class="fixed bottom-5 left-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
 
     <aside class="w-full md:w-72 glass-panel h-auto md:h-full flex flex-col border-b md:border-b-0 md:border-l border-white/10 shrink-0 z-10 md:overflow-y-auto">
         <div class="p-4 md:p-6 border-b border-white/10 shrink-0 flex justify-between items-center">
@@ -123,13 +334,11 @@
             <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
             <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
             <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
-            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">محاضرات الفيديو 🎬</button>
+            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">كورسات</button>
             <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
             <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار المنصة</button>
-            
-            <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار عام (رابط)</button>
-            
-            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى والنتائج</button>
+            <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار عام</button>
+            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى</button>
             <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">البث المباشر</button>
         </nav>
 
@@ -238,7 +447,6 @@
                     <div><label class="block text-sm text-gray-400 mb-2">بريد الطالب</label><input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" dir="ltr"></div>
                     <div><label class="block text-sm text-gray-400 mb-2">النسبة المئوية (%)</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base"></div>
                     <button type="submit" id="savePointsBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors">تحديث التقييم</button>
-                    <p id="pointsMsg" class="text-sm text-center hidden mt-2"></p>
                 </form>
             </div>
         </div>
@@ -270,19 +478,18 @@
                     <div id="scoresContainer" class="space-y-3"></div>
                     <button type="button" onclick="addScoreRow()" class="w-full bg-white/5 border border-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base">+ إضافة اسم طالب ودرجته</button>
                     <button type="submit" id="saveTestBtn" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10">نشر النتائج للطلاب</button>
-                    <p id="testMsg" class="text-sm text-center hidden mt-2"></p>
                 </form>
             </div>
         </div>
 
         <div id="tab-videos" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة محاضرات الفيديو السحابية</h1>
-            <p class="text-gray-400 mb-6">ارفع ملفات الفيديو الكبيرة مباشرة إلى السيرفر المشفر الآمن حتى حده الأقصى 2GB.</p>
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة الكورسات</h1>
+            <p class="text-gray-400 mb-6">يرجي ملئ البيانات بالأسفل لرفع الكورس.</p>
             
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 h-fit animate-fade-in-up">
                     <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2">
-                        <span>🎬</span> رفع حصة جديدة
+                        <span>.</span> رفع كورس جديد
                     </h2>
                     
                     <form id="uploadVideoForm" class="space-y-5">
@@ -311,19 +518,35 @@
                         </div>
 
                         <div>
+                            <label class="block text-xs text-gray-400 mb-2">صورة غلاف الكورس (اختياري)</label>
+                            <label for="courseImageFile" class="w-full flex items-center justify-center gap-2 bg-black/30 border border-white/10 border-dashed rounded-xl px-4 py-4 text-gray-400 hover:text-white hover:border-yellow-500 cursor-pointer transition-colors text-sm">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <span>اضغط لاختيار صورة</span>
+                            </label>
+                            <input type="file" id="courseImageFile" accept="image/*" class="hidden">
+                            
+                            <div class="mt-3 rounded-xl overflow-hidden hidden relative" id="previewContainer">
+                                <img id="imagePreview" src="" alt="معاينة" class="w-full h-32 object-cover opacity-80 hover:opacity-100 transition-opacity border border-white/10 rounded-xl">
+                                <button type="button" id="removeImageBtn" class="absolute top-2 right-2 bg-black/70 hover:bg-red-500 text-white p-1 rounded-md transition-colors">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
                             <label class="block text-xs text-gray-400 mb-2">وصف أو محتوى الحصة (اختياري)</label>
                             <textarea id="videoDescription" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm transition-colors" placeholder="اكتب مخرجات التعلم أو ملفات الشرح المرفقة هنا..."></textarea>
                         </div>
 
                         <div>
-                            <label class="block text-xs text-gray-400 mb-2">اختر ملف الفيديو (MP4, MKV, MOV)</label>
+                            <label class="block text-xs text-gray-400 mb-2">اختر ملف الفيديو</label>
                             <input type="file" id="videoFile" accept="video/*" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 text-sm transition-colors">
-                        </div>
+                            </div>
 
                         <div id="videoProgressContainer" class="hidden bg-black/40 p-4 rounded-xl border border-white/5 space-y-2">
                             <div class="flex justify-between text-xs font-semibold">
-                                <span class="text-yellow-500">جاري البث والتشفير السحابي السري...</span>
-                                <span id="videoProgressText" class="text-yellow-500">0% • 0MB / 0MB</span>
+                                <span class="text-yellow-500">جاري الرفع ...</span>
+                                <span id="videoProgressText" class="text-yellow-500">0%</span>
                             </div>
                             <div class="w-full bg-white/5 rounded-full h-2">
                                 <div id="videoProgressBar" class="bg-yellow-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
@@ -331,19 +554,20 @@
                         </div>
 
                         <button type="submit" id="videoSubmitBtn" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/10 text-sm">
-                            🚀 ابدأ الرفع والمعالجة السحابية
+                             ابدأ الرفع
                         </button>
                     </form>
                 </div>
 
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 lg:col-span-2 h-fit">
-                    <h2 class="text-lg font-bold text-white mb-5">📚 أرشيف المحاضرات المنشورة بالفيديو</h2>
-                    <div id="coursesList" class="space-y-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-hide">
-                        <div class="text-center py-10 text-gray-500">جاري قراءة الملفات السحابية...</div>
+                    <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2"> أرشيف الكورسات المنشورة</h2>
+                    <div id="coursesList" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-hide">
+                        <div class="text-center py-10 text-gray-500 col-span-full">جاري قراءة الملفات ...</div>
                     </div>
                 </div>
             </div>
         </div>
+
         <div id="tab-content" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى والأسئلة المقالية</h1>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl border-t-4 border-yellow-500">
@@ -370,7 +594,6 @@
                     <div id="pointField"><textarea id="pointText" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="اكتب الملاحظة هنا..."></textarea></div>
                     <div id="questionFields" class="hidden space-y-5"><textarea id="questionText" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="نص السؤال المقالي..."></textarea><textarea id="questionHint" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="الإجابة النموذجية..."></textarea></div>
                     <button type="submit" id="saveContentBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all">نشر المحتوى</button>
-                    <p id="contentMsg" class="text-sm text-center hidden mt-2"></p>
                 </form>
             </div>
         </div>
@@ -379,7 +602,7 @@
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إنشاء اختبار إلكتروني</h1>
             <p class="text-gray-400 mb-6">هذا الاختبار يظهر فقط للطلاب المسجلين بالمنصة فقط.</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="quizForm" class="space-y-6">
+                <form id="quizForm" onsubmit="return validateQuizInputs('dynamicQuestionsContainer')" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
                         <select id="quizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
                             <option value="" disabled selected>الدفعة المستهدفة...</option>
@@ -407,7 +630,6 @@
                         </button>
                         <button type="submit" id="saveQuizBtn" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/10">نشر الاختبار للطلاب</button>
                     </div>
-                    <p id="quizMsg" class="text-sm text-center hidden mt-2 font-bold"></p>
                 </form>
             </div>
         </div>
@@ -416,7 +638,7 @@
             <h1 class="text-2xl md:text-3xl font-bold mb-2 text-yellow-500">إنشاء اختبار عام</h1>
             <p class="text-gray-400 mb-6">الاختبار العام يمكن لأي طالب حله من خلال رابط خارجي .</p>
             <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="publicQuizForm" class="space-y-6">
+                <form id="publicQuizForm" onsubmit="return validateQuizInputs('dynamicPublicQuestionsContainer')" class="space-y-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
                         <select id="publicQuizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
                             <option value="" disabled selected>السنة الدراسية للتصنيف...</option>
@@ -447,7 +669,6 @@
                         </button>
                         <button type="submit" id="savePublicQuizBtn" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/20">حفظ وتوليد رابط الاختبار</button>
                     </div>
-                    <p id="publicQuizMsg" class="text-sm text-center hidden mt-2 font-bold"></p>
 
                     <div id="publicQuizLinkArea" class="hidden mt-6 p-5 bg-green-500/10 border border-green-500/30 rounded-2xl text-center">
                         <p class="text-green-400 font-bold mb-3 text-lg">تم إنشاء الاختبار العام بنجاح!</p>
@@ -524,6 +745,242 @@
         </div>
     </div>
 
+    <script>
+        let calculatedDuration = "غير محدد"; 
+        let courseImageBase64 = "";
+
+        // 1. نظام رفع وضغط صورة الغلاف من المتصفح مباشرة
+        document.getElementById('courseImageFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const container = document.getElementById('previewContainer');
+            const imgEl = document.getElementById('imagePreview');
+            
+            if (!file) {
+                container.classList.add('hidden');
+                courseImageBase64 = "";
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; 
+                    const MAX_HEIGHT = 800;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height && width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    } else if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    courseImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    imgEl.src = courseImageBase64;
+                    container.classList.remove('hidden');
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        });
+
+        // زر مسح الصورة
+        document.getElementById('removeImageBtn').addEventListener('click', function() {
+            document.getElementById('courseImageFile').value = '';
+            document.getElementById('previewContainer').classList.add('hidden');
+            courseImageBase64 = "";
+        });
+
+        // 2. حساب مدة الفيديو بصمت في الخلفية
+        document.getElementById('videoFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) {
+                calculatedDuration = "غير محدد";
+                return;
+            }
+
+            const videoElement = document.createElement('video');
+            videoElement.preload = 'metadata';
+            
+            videoElement.onloadedmetadata = function() {
+                window.URL.revokeObjectURL(videoElement.src);
+                const totalSeconds = videoElement.duration;
+                if (isFinite(totalSeconds)) {
+                    const m = Math.floor(totalSeconds / 60);
+                    const s = Math.floor(totalSeconds % 60);
+                    calculatedDuration = `${m} دقيقة و ${s} ثانية`;
+                }
+            };
+            videoElement.src = URL.createObjectURL(file);
+        });
+
+        // 3. رفع الكورس (شريط تقدم حقيقي باستخدام XMLHttpRequest)
+        document.getElementById('uploadVideoForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('videoSubmitBtn');
+            const progressContainer = document.getElementById('videoProgressContainer');
+            const progressBar = document.getElementById('videoProgressBar');
+            const progressText = document.getElementById('videoProgressText');
+            const token = localStorage.getItem('dahih_token');
+
+            const courseName = document.getElementById('courseName').value;
+            const grade = document.getElementById('videoGrade').value;
+            const description = document.getElementById('videoDescription').value;
+            const fileInput = document.getElementById('videoFile');
+
+            if (!fileInput.files.length) return window.showToast('الرجاء اختيار ملف فيديو!', 'error');
+
+            const file = fileInput.files[0];
+            
+            const formData = new FormData();
+            formData.append('courseName', courseName);
+            formData.append('grade', grade);
+            formData.append('description', description);
+            formData.append('duration', calculatedDuration); 
+            formData.append('imageUrl', courseImageBase64); 
+            formData.append('video', file);
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            progressContainer.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressText.textContent = '0%';
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `/api/admin/upload-course`, true);
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressText.textContent = percentComplete + '%';
+                }
+            };
+
+            xhr.onload = function() {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                if (xhr.status === 200) {
+                    progressText.textContent = 'تم الرفع بنجاح! ✅';
+                    progressBar.style.backgroundColor = '#22c55e';
+                    window.showToast("تم رفع الدورة بنجاح السيرفر!");
+                    
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                        progressBar.style.backgroundColor = '#eab308';
+                        document.getElementById('uploadVideoForm').reset();
+                        document.getElementById('previewContainer').classList.add('hidden');
+                        courseImageBase64 = "";
+                        calculatedDuration = "غير محدد";
+                        loadCoursesUI(); 
+                    }, 2000);
+                } else {
+                    try {
+                        const res = JSON.parse(xhr.responseText);
+                        window.showToast("فشل الرفع: " + res.message, 'error');
+                    } catch(e) {
+                        window.showToast("حدث خطأ أثناء الرفع.", 'error');
+                    }
+                    progressContainer.classList.add('hidden');
+                }
+            };
+
+            xhr.onerror = function() {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                progressContainer.classList.add('hidden');
+                window.showToast("حدث خطأ في الاتصال بالشبكة.", 'error');
+            };
+
+            xhr.send(formData);
+        });
+
+        // 4. دالة جلب وتحديث قائمة الكورسات
+        async function loadCoursesUI() {
+            const listContainer = document.getElementById('coursesList');
+            const token = localStorage.getItem('dahih_token');
+            if(!token) return;
+
+            try {
+                listContainer.innerHTML = '<div class="text-center py-10 text-gray-500 col-span-full">جاري قراءة الملفات...</div>';
+                
+                const res = await fetch('/api/admin/get-all-courses?page=1&limit=50', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+
+                if (!res.ok) throw new Error(data.message || 'خطأ في جلب الكورسات');
+
+                if (!data.courses || data.courses.length === 0) {
+                    listContainer.innerHTML = '<div class="text-center py-10 text-gray-500 col-span-full">لم يتم رفع أي كورسات حتى الآن.</div>';
+                    return;
+                }
+
+                listContainer.innerHTML = data.courses.map(c => `
+                    <div class="bg-black/30 border border-white/5 rounded-xl overflow-hidden flex flex-col group relative">
+                        <div class="h-24 bg-gray-800 relative">
+                            ${c.image && c.image.length > 10 
+                                ? `<img src="${c.image}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">` 
+                                : `<div class="w-full h-full flex items-center justify-center text-gray-600 font-bold">بدون غلاف</div>`
+                            }
+                            <span class="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded border border-white/10">${c.grade}</span>
+                        </div>
+                        <div class="p-4 flex-grow flex flex-col">
+                            <h3 class="font-bold text-white mb-1 truncate">${c.courseName}</h3>
+                            <p class="text-xs text-gray-400 mb-3 truncate">${c.description || 'لا يوجد وصف'}</p>
+                            <div class="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
+                                <span class="text-xs text-yellow-500 font-bold">⏱ ${c.duration || 'غير محدد'}</span>
+                                <button onclick="deleteCourse('${c.id}')" class="text-red-400 hover:text-red-500 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">حذف الكورس</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+
+            } catch (error) {
+                listContainer.innerHTML = `<div class="text-center py-10 text-red-500 col-span-full">فشل جلب الكورسات: ${error.message}</div>`;
+            }
+        }
+
+        // 5. دالة حذف الكورس
+        window.deleteCourse = async function(id) {
+            if(!confirm('هل أنت متأكد من حذف هذه المحاضرة نهائياً من السيرفر؟')) return;
+            const token = localStorage.getItem('dahih_token');
+            
+            try {
+                const res = await fetch(`/api/admin/delete-course/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.ok) {
+                    window.showToast('تم مسح الكورس نهائياً من السيرفر');
+                    loadCoursesUI();
+                } else {
+                    const data = await res.json();
+                    window.showToast('فشل الحذف: ' + data.message, 'error');
+                }
+            } catch (err) {
+                window.showToast('خطأ في الاتصال بالشبكة', 'error');
+            }
+        }
+    </script>
+
+    <script src="https://sdk.videosdk.live/js-sdk/0.1.83/videosdk.js"></script>
+
+    <script type="module" src="./modes/ui.js"></script>
+    <script type="module" src="./modes/state.js"></script>
+    <script type="module" src="./modes/stream.js"></script>
     <script type="module" src="./modes/main.js"></script>
 </body>
 </html>
