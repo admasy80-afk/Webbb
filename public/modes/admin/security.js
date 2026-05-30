@@ -12,10 +12,22 @@ export const Security = (() => {
     const _sanitizeNode = (node) => {
         if (node.nodeType === 1) { 
             const attrs = node.attributes;
+            // القائمة البيضاء للدوال الموثوقة (بحروف صغيرة للمطابقة)
+            const trustedHandlers = ['viewresults', 'deletecontent', 'updatestudentstatus', 'rejectstudent', 'fetchgradecontent'];
+            
             for (let i = attrs.length - 1; i >= 0; i--) {
                 const attr = attrs[i];
-                if (attr.name.toLowerCase().startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
-                    node.removeAttribute(attr.name);
+                const attrName = attr.name.toLowerCase();
+                const attrValue = attr.value.trim().toLowerCase();
+                
+                if (attrName.startsWith('on')) {
+                    // التحقق مما إذا كان الحدث يستدعي دالة من القائمة الموثوقة
+                    const isTrusted = trustedHandlers.some(fn => attrValue.startsWith(fn));
+                    if (!isTrusted) {
+                        node.removeAttribute(attr.name); // حذف المعالجات غير الموثوقة
+                    }
+                } else if (attrValue.startsWith('javascript:')) {
+                    node.removeAttribute(attr.name); // منع روابط JavaScript XSS
                 }
             }
         }
