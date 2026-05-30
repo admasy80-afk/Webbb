@@ -1,17 +1,32 @@
 // ==================== الملف الرئيسي المجمع للمنصة ====================
 import { SysUI } from './ui.js';
 import './state.js'; 
-import { fetchStats, fetchPendingRequests, fetchGradeContent, fetchStudentsByGrade, logout } from './admin.js';
-import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink } from './quiz.js';
+import { 
+    fetchStats, 
+    fetchPendingRequests, 
+    updateStudentStatus,
+    rejectStudent,
+    fetchGradeContent, 
+    fetchStudentsByGrade, 
+    deleteContent,
+    viewResults,
+    logout 
+} from './admin.js';
+import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink, removeBlock } from './quiz.js';
 import './stream.js'; 
 import { VideoSystem } from './video.js'; 
 
 window.addMCQBlock = addMCQBlock;
 window.addPublicMCQBlock = addPublicMCQBlock;
+window.removeBlock = removeBlock;
 window.fetchGradeContent = fetchGradeContent;
 window.fetchStudentsByGrade = fetchStudentsByGrade;
 window.copyPublicLink = copyPublicLink;
 window.logout = logout;
+window.updateStudentStatus = updateStudentStatus;
+window.rejectStudent = rejectStudent;
+window.deleteContent = deleteContent;
+window.viewResults = viewResults;
 
 window.closeResultsModal = function() {
     const modal = document.getElementById('resultsModal');
