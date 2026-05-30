@@ -2267,5 +2267,20 @@ const SysUI = (() => {
                     });
                 });
                 const active = list.querySelector('.sys-active') || tabs[0];
-                if (active) requestAnimationFrame(() => update(active));
-                owner.listen(window, 'resize', $debounce
+
+if (active) {
+    requestAnimationFrame(() => update(active));
+}
+
+owner.listen(
+    window,
+    'resize',
+    $debounce(() => {
+        const current = list.querySelector('.sys-active') || tabs[0];
+        if (current) update(current);
+    }, 150)
+);
+
+            });
+        }
+    };
