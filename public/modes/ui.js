@@ -13,12 +13,30 @@ const SysUI = (() => {
     const $prm = matchMedia('(prefers-reduced-motion: reduce)');
     const $isTouch = matchMedia('(pointer: coarse)').matches;
     const $isHighRefresh = matchMedia('(min-resolution: 120dpi)').matches;
+    const $supportsVT = 'startViewTransition' in document;
+    const $supportsConstraint = CSS.supports?.('animation-timeline', 'view()') ?? false;
     let $reducedMotion = $prm.matches;
     $prm.addEventListener?.('change', e => { $reducedMotion = e.matches; });
 
+    const $velocity = (() => {
+        let lastX = 0, lastY = 0, lastT = performance.now(), vx = 0, vy = 0, speed = 0;
+        const track = (x, y) => {
+            const now = performance.now();
+            const dt = Math.max(1, now - lastT);
+            const nvx = (x - lastX) / dt;
+            const nvy = (y - lastY) / dt;
+            vx = vx * 0.7 + nvx * 0.3;
+            vy = vy * 0.7 + nvy * 0.3;
+            speed = Math.hypot(vx, vy);
+            lastX = x; lastY = y; lastT = now;
+        };
+        document.addEventListener('pointermove', (e) => track(e.clientX, e.clientY), { passive: true });
+        return { get: () => ({ vx, vy, speed }), track };
+    })();
+
     const Motion = (() => {
         const tokens = {
-            duration: { instant: 80, micro: 120, fast: 180, normal: 240, emphasized: 340, slow: 480, slower: 680, glacial: 920 },
+            duration: { instant: 60, micro: 110, fast: 170, normal: 230, emphasized: 320, slow: 460, slower: 640, glacial: 880 },
             ease: {
                 standard: 'cubic-bezier(0.2, 0, 0, 1)',
                 emphasized: 'cubic-bezier(0.3, 0, 0, 1)',
@@ -28,9 +46,15 @@ const SysUI = (() => {
                 springSoft: 'cubic-bezier(0.34, 1.26, 0.64, 1)',
                 springBounce: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
                 springSnappy: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                springPrecise: 'cubic-bezier(0.32, 0.72, 0, 1)',
                 elastic: 'cubic-bezier(0.68, -0.4, 0.265, 1.4)',
                 smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
-                anticipate: 'cubic-bezier(0.75, -0.5, 0.25, 1.5)'
+                anticipate: 'cubic-bezier(0.75, -0.5, 0.25, 1.5)',
+                appleStandard: 'cubic-bezier(0.4, 0, 0.6, 1)',
+                appleEmphasized: 'cubic-bezier(0.32, 0.72, 0, 1)',
+                materialEmphasized: 'cubic-bezier(0.2, 0, 0, 1)',
+                overshoot: 'cubic-bezier(0.34, 1.7, 0.64, 1)',
+                inertia: 'cubic-bezier(0.05, 0.7, 0.1, 1)'
             },
             spring: {
                 gentle: { stiffness: 120, damping: 14, mass: 1 },
@@ -38,28 +62,37 @@ const SysUI = (() => {
                 stiff: { stiffness: 300, damping: 22, mass: 1 },
                 slow: { stiffness: 80, damping: 20, mass: 1 },
                 snappy: { stiffness: 400, damping: 28, mass: 1 },
-                bouncy: { stiffness: 260, damping: 9, mass: 1.1 }
+                bouncy: { stiffness: 260, damping: 9, mass: 1.1 },
+                precise: { stiffness: 220, damping: 26, mass: 1 },
+                ios: { stiffness: 180, damping: 20, mass: 1 },
+                molasses: { stiffness: 60, damping: 30, mass: 1.4 }
             },
-            stagger: { tight: 22, normal: 38, relaxed: 60, dramatic: 90 }
+            stagger: { tight: 18, normal: 32, relaxed: 52, dramatic: 78 }
         };
 
-        const reduce = (ms) => $reducedMotion ? Math.min(ms, 80) : ms;
+        const reduce = (ms) => $reducedMotion ? Math.min(ms, 60) : ms;
 
-        const springCurve = (preset = 'gentle', steps = 40) => {
+        const springCurve = (preset = 'gentle', steps = 60) => {
             const { stiffness, damping, mass } = tokens.spring[preset] || tokens.spring.gentle;
             const w0 = Math.sqrt(stiffness / mass);
             const zeta = damping / (2 * Math.sqrt(stiffness * mass));
             const wd = zeta < 1 ? w0 * Math.sqrt(1 - zeta * zeta) : 0;
             const frames = [];
-            const dur = 1;
             for (let i = 0; i <= steps; i++) {
-                const t = (i / steps) * dur;
+                const t = i / steps;
                 let v;
                 if (zeta < 1) v = 1 - Math.exp(-zeta * w0 * t) * (Math.cos(wd * t) + ((zeta * w0) / wd) * Math.sin(wd * t));
                 else v = 1 - Math.exp(-w0 * t) * (1 + w0 * t);
                 frames.push(v);
             }
             return frames;
+        };
+
+        const springDuration = (preset = 'gentle') => {
+            const { stiffness, damping, mass } = tokens.spring[preset] || tokens.spring.gentle;
+            const w0 = Math.sqrt(stiffness / mass);
+            const zeta = damping / (2 * Math.sqrt(stiffness * mass));
+            return Math.min(1400, Math.max(180, (zeta < 1 ? 1000 / (zeta * w0) : 1000 / w0) * 0.85));
         };
 
         const animate = (el, keyframes, opts = {}) => {
@@ -72,12 +105,13 @@ const SysUI = (() => {
             } catch { return Promise.resolve(); }
         };
 
-        const spring = (el, props, preset = 'gentle') => {
-            if (!el || $reducedMotion) {
-                if (el && props) Object.entries(props).forEach(([k, v]) => { el.style[k] = Array.isArray(v) ? v[v.length - 1] : v; });
+        const spring = (el, props, preset = 'gentle', opts = {}) => {
+            if (!el) return Promise.resolve();
+            if ($reducedMotion) {
+                if (props) Object.entries(props).forEach(([k, v]) => { el.style[k] = Array.isArray(v) ? v[v.length - 1] : v; });
                 return Promise.resolve();
             }
-            const curve = springCurve(preset, 32);
+            const curve = springCurve(preset, 60);
             const keys = Object.keys(props);
             const frames = curve.map(t => {
                 const f = {};
@@ -86,12 +120,16 @@ const SysUI = (() => {
                     if (Array.isArray(val) && val.length === 2) {
                         const [from, to] = val;
                         if (typeof from === 'number') f[k] = $lerp(from, to, t);
-                        else f[k] = t < 1 ? from : to;
+                        else if (typeof from === 'string' && /^-?[\d.]+/.test(from)) {
+                            const fm = parseFloat(from), tm = parseFloat(to);
+                            const unit = from.replace(/^-?[\d.]+/, '');
+                            f[k] = $lerp(fm, tm, t) + unit;
+                        } else f[k] = t < 1 ? from : to;
                     } else f[k] = val;
                 }
                 return f;
             });
-            const dur = reduce(tokens.duration.emphasized);
+            const dur = reduce(opts.duration ?? springDuration(preset));
             try {
                 const anim = el.animate(frames, { duration: dur, easing: 'linear', fill: 'forwards' });
                 return anim.finished.catch(() => {});
@@ -100,54 +138,93 @@ const SysUI = (() => {
 
         const stagger = async (els, fn, gap = tokens.stagger.normal) => {
             const promises = [];
-            for (let i = 0; i < els.length; i++) {
-                promises.push(new Promise(r => setTimeout(() => { fn(els[i], i); r(); }, reduce(i * gap))));
+            const arr = Array.from(els);
+            const total = arr.length;
+            for (let i = 0; i < total; i++) {
+                const eased = Math.pow(i / Math.max(1, total - 1), 0.85) * (total - 1);
+                promises.push(new Promise(r => setTimeout(() => { fn(arr[i], i); r(); }, reduce(eased * gap))));
             }
             return Promise.all(promises);
         };
 
         const enter = {
             fade: (el, opts = {}) => animate(el, [{ opacity: 0 }, { opacity: 1 }], { duration: tokens.duration.normal, easing: tokens.ease.standard, ...opts }),
-            scale: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'scale(0.92)' }, { opacity: 1, transform: 'scale(1)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
-            slideUp: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
-            slideDown: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateY(-16px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
-            slideLeft: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateX(20px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
-            slideRight: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateX(-20px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
-            pop: (el, opts = {}) => spring(el, { transform: ['scale(0.85)', 'scale(1)'], opacity: [0, 1] }, 'bouncy'),
-            blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts })
+            scale: (el, opts = {}) => spring(el, { transform: ['scale(0.94)', 'scale(1)'], opacity: [0, 1] }, 'precise'),
+            slideUp: (el, opts = {}) => spring(el, { transform: ['translate3d(0,14px,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            slideDown: (el, opts = {}) => spring(el, { transform: ['translate3d(0,-14px,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            slideLeft: (el, opts = {}) => spring(el, { transform: ['translate3d(18px,0,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            slideRight: (el, opts = {}) => spring(el, { transform: ['translate3d(-18px,0,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            pop: (el) => spring(el, { transform: ['scale(0.82)', 'scale(1)'], opacity: [0, 1] }, 'bouncy'),
+            blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts }),
+            materialize: (el) => animate(el, [
+                { opacity: 0, filter: 'blur(12px) brightness(1.4)', transform: 'scale(1.04)' },
+                { opacity: 1, filter: 'blur(0) brightness(1)', transform: 'scale(1)' }
+            ], { duration: tokens.duration.emphasized, easing: tokens.ease.appleEmphasized })
         };
 
         const exit = {
             fade: (el, opts = {}) => animate(el, [{ opacity: 1 }, { opacity: 0 }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
-            scale: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.94)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
-            slideUp: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-12px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
-            slideDown: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(12px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
-            blur: (el, opts = {}) => animate(el, [{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(8px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts })
+            scale: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.96)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
+            slideUp: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translate3d(0,0,0)' }, { opacity: 0, transform: 'translate3d(0,-10px,0)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
+            slideDown: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translate3d(0,0,0)' }, { opacity: 0, transform: 'translate3d(0,10px,0)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
+            blur: (el, opts = {}) => animate(el, [{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(8px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
+            dematerialize: (el) => animate(el, [
+                { opacity: 1, filter: 'blur(0) brightness(1)', transform: 'scale(1)' },
+                { opacity: 0, filter: 'blur(6px) brightness(0.8)', transform: 'scale(0.97)' }
+            ], { duration: tokens.duration.fast, easing: tokens.ease.accelerate })
         };
 
-        const shake = (el, intensity = 8) => animate(el, [
-            { transform: 'translateX(0)' }, { transform: `translateX(-${intensity}px)` },
-            { transform: `translateX(${intensity}px)` }, { transform: `translateX(-${intensity * 0.6}px)` },
-            { transform: `translateX(${intensity * 0.6}px)` }, { transform: 'translateX(0)' }
-        ], { duration: 380, easing: tokens.ease.smooth });
+        const shake = (el, intensity = 6) => animate(el, [
+            { transform: 'translate3d(0,0,0)' },
+            { transform: `translate3d(-${intensity}px,0,0)` },
+            { transform: `translate3d(${intensity}px,0,0)` },
+            { transform: `translate3d(-${intensity * 0.6}px,0,0)` },
+            { transform: `translate3d(${intensity * 0.6}px,0,0)` },
+            { transform: `translate3d(-${intensity * 0.3}px,0,0)` },
+            { transform: 'translate3d(0,0,0)' }
+        ], { duration: 420, easing: tokens.ease.smooth });
 
         const pulse = (el) => animate(el, [
             { transform: 'scale(1)', filter: 'brightness(1)' },
-            { transform: 'scale(1.04)', filter: 'brightness(1.15)' },
+            { transform: 'scale(1.035)', filter: 'brightness(1.12)' },
             { transform: 'scale(1)', filter: 'brightness(1)' }
-        ], { duration: 420, easing: tokens.ease.springSoft });
+        ], { duration: 460, easing: tokens.ease.springSoft });
 
         const flip = (el, from, to) => {
             if ($reducedMotion) return Promise.resolve();
             const dx = from.left - to.left, dy = from.top - to.top;
             const sx = from.width / to.width, sy = from.height / to.height;
             return animate(el, [
-                { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
-                { transform: 'translate(0, 0) scale(1, 1)' }
-            ], { duration: tokens.duration.emphasized, easing: tokens.ease.spring });
+                { transform: `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})` },
+                { transform: 'translate3d(0, 0, 0) scale(1, 1)' }
+            ], { duration: tokens.duration.emphasized, easing: tokens.ease.appleEmphasized });
         };
 
-        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, reduce, springCurve };
+        const morphLayout = (el, mutator) => {
+            if ($reducedMotion || !el) { mutator(); return Promise.resolve(); }
+            const first = el.getBoundingClientRect();
+            mutator();
+            const last = el.getBoundingClientRect();
+            return flip(el, first, last);
+        };
+
+        const inertial = (el, velocity, friction = 0.92) => {
+            if ($reducedMotion || !el) return Promise.resolve();
+            return new Promise(resolve => {
+                let vx = velocity.vx * 16, vy = velocity.vy * 16;
+                let tx = 0, ty = 0;
+                const tick = () => {
+                    tx += vx; ty += vy;
+                    vx *= friction; vy *= friction;
+                    el.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+                    if (Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) requestAnimationFrame(tick);
+                    else resolve();
+                };
+                requestAnimationFrame(tick);
+            });
+        };
+
+        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, morphLayout, inertial, reduce, springCurve, springDuration };
     })();
 
     const Events = (() => {
@@ -222,9 +299,9 @@ const SysUI = (() => {
     })();
 
     const Audio = (() => {
-        let ctx = null, master = null, compressor = null, reverb = null;
+        let ctx = null, master = null, compressor = null, reverb = null, lowShelf = null;
         let muted = $safeJSON('sysui_audio_muted', false);
-        let volume = $safeJSON('sysui_audio_volume', 0.4);
+        let volume = $safeJSON('sysui_audio_volume', 0.32);
         const init = async () => {
             if (!ctx) {
                 try {
@@ -232,34 +309,39 @@ const SysUI = (() => {
                     if (!AC) return false;
                     ctx = new AC({ latencyHint: 'interactive' });
                     compressor = ctx.createDynamicsCompressor();
-                    compressor.threshold.value = -18;
-                    compressor.knee.value = 12;
-                    compressor.ratio.value = 6;
-                    compressor.attack.value = 0.003;
-                    compressor.release.value = 0.15;
+                    compressor.threshold.value = -16;
+                    compressor.knee.value = 14;
+                    compressor.ratio.value = 5;
+                    compressor.attack.value = 0.002;
+                    compressor.release.value = 0.18;
+                    lowShelf = ctx.createBiquadFilter();
+                    lowShelf.type = 'lowshelf';
+                    lowShelf.frequency.value = 240;
+                    lowShelf.gain.value = -3;
                     master = ctx.createGain();
                     master.gain.value = volume;
                     const wet = ctx.createGain();
-                    wet.gain.value = 0.08;
+                    wet.gain.value = 0.06;
                     try {
                         reverb = ctx.createConvolver();
-                        const len = ctx.sampleRate * 0.6;
+                        const len = ctx.sampleRate * 0.55;
                         const buf = ctx.createBuffer(2, len, ctx.sampleRate);
                         for (let ch = 0; ch < 2; ch++) {
                             const d = buf.getChannelData(ch);
-                            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);
+                            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
                         }
                         reverb.buffer = buf;
-                        master.connect(reverb); reverb.connect(wet); wet.connect(compressor);
+                        master.connect(reverb); reverb.connect(wet); wet.connect(lowShelf);
                     } catch {}
-                    master.connect(compressor);
+                    master.connect(lowShelf);
+                    lowShelf.connect(compressor);
                     compressor.connect(ctx.destination);
                 } catch { return false; }
             }
             if (ctx.state !== 'running') { try { await ctx.resume(); } catch {} }
             return ctx.state === 'running';
         };
-        const tone = async (freq, type, dur, vol, detune = 0, attack = 0.004, filterFreq = null) => {
+        const tone = async (freq, type, dur, vol, detune = 0, attack = 0.003, filterFreq = null) => {
             if (muted) return;
             if (!(await init())) return;
             try {
@@ -268,7 +350,7 @@ const SysUI = (() => {
                 const filter = ctx.createBiquadFilter();
                 filter.type = 'lowpass';
                 filter.frequency.value = filterFreq ?? freq * 5;
-                filter.Q.value = 1.2;
+                filter.Q.value = 1.1;
                 osc.type = type;
                 osc.frequency.setValueAtTime(freq, ctx.currentTime);
                 osc.detune.setValueAtTime(detune, ctx.currentTime);
@@ -288,7 +370,7 @@ const SysUI = (() => {
                 const gain = ctx.createGain();
                 osc.type = type;
                 osc.frequency.setValueAtTime(f1, ctx.currentTime);
-                if (curve === 'exp') osc.frequency.exponentialRampToValueAtTime(f2, ctx.currentTime + dur);
+                if (curve === 'exp') osc.frequency.exponentialRampToValueAtTime(Math.max(0.01, f2), ctx.currentTime + dur);
                 else osc.frequency.linearRampToValueAtTime(f2, ctx.currentTime + dur);
                 gain.gain.setValueAtTime(vol, ctx.currentTime);
                 gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
@@ -297,8 +379,8 @@ const SysUI = (() => {
                 osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch {} };
             } catch {}
         };
-        const chord = (freqs, type, dur, vol) => freqs.forEach((f, i) => setTimeout(() => tone(f, type, dur, vol), i * 30));
-        const noise = async (dur, vol, filterFreq = 2000) => {
+        const chord = (freqs, type, dur, vol) => freqs.forEach((f, i) => setTimeout(() => tone(f, type, dur, vol), i * 28));
+        const noise = async (dur, vol, filterFreq = 2000, type = 'bandpass') => {
             if (muted) return;
             if (!(await init())) return;
             try {
@@ -308,7 +390,7 @@ const SysUI = (() => {
                 const src = ctx.createBufferSource();
                 const gain = ctx.createGain();
                 const filter = ctx.createBiquadFilter();
-                filter.type = 'bandpass';
+                filter.type = type;
                 filter.frequency.value = filterFreq;
                 filter.Q.value = 2;
                 src.buffer = buf;
@@ -319,25 +401,29 @@ const SysUI = (() => {
             } catch {}
         };
         const presets = {
-            pop: () => tone(880, 'sine', 0.08, 0.08),
-            click: () => { tone(1600, 'triangle', 0.03, 0.05); tone(2400, 'sine', 0.02, 0.03, 0, 0.001); },
-            tap: () => tone(2200, 'sine', 0.018, 0.035),
-            success: () => chord([523.25, 659.25, 783.99, 1046.5], 'sine', 0.25, 0.09),
-            error: () => { tone(220, 'sawtooth', 0.18, 0.1, 0, 0.001, 800); setTimeout(() => tone(165, 'sawtooth', 0.22, 0.1, 0, 0.001, 600), 110); },
-            open: () => { sweep(280, 880, 'sine', 0.18, 0.07); tone(1760, 'sine', 0.15, 0.04, 0, 0.05); },
-            close: () => sweep(880, 280, 'sine', 0.14, 0.06),
-            hover: () => tone(2400, 'sine', 0.012, 0.018),
-            notify: () => chord([880, 1318.51], 'sine', 0.18, 0.08),
-            warn: () => { tone(520, 'triangle', 0.12, 0.09); setTimeout(() => tone(520, 'triangle', 0.12, 0.09), 160); },
-            tick: () => tone(2800, 'square', 0.008, 0.018),
-            magic: () => { for (let i = 0; i < 5; i++) setTimeout(() => tone(880 + i * 220, 'sine', 0.12, 0.05 - i * 0.008), i * 50); },
-            whoosh: () => noise(0.25, 0.06, 1200),
-            bell: () => { tone(1760, 'sine', 0.6, 0.08); tone(2640, 'sine', 0.5, 0.04); },
-            select: () => { tone(1200, 'sine', 0.04, 0.05); setTimeout(() => tone(1800, 'sine', 0.05, 0.04), 30); },
-            delete: () => { sweep(600, 200, 'sawtooth', 0.18, 0.07); noise(0.15, 0.04, 800); },
-            swoosh: () => { sweep(400, 1200, 'sine', 0.12, 0.05); noise(0.12, 0.04, 2400); },
-            crystal: () => { tone(2093, 'sine', 0.4, 0.05); tone(3136, 'sine', 0.35, 0.03); tone(4186, 'sine', 0.3, 0.02); },
-            morph: () => sweep(440, 880, 'triangle', 0.2, 0.05, 'lin')
+            pop: () => { tone(1200, 'sine', 0.05, 0.05, 0, 0.002); tone(1800, 'sine', 0.03, 0.02, 0, 0.001); },
+            click: () => { tone(2200, 'triangle', 0.018, 0.035, 0, 0.0005); tone(3200, 'sine', 0.012, 0.02, 0, 0.0003); },
+            tap: () => tone(2800, 'sine', 0.012, 0.025, 0, 0.0005),
+            success: () => chord([523.25, 659.25, 783.99, 1046.5], 'sine', 0.22, 0.07),
+            error: () => { tone(220, 'sawtooth', 0.16, 0.08, 0, 0.001, 700); setTimeout(() => tone(165, 'sawtooth', 0.2, 0.08, 0, 0.001, 550), 105); },
+            open: () => { sweep(320, 960, 'sine', 0.16, 0.05); tone(1920, 'sine', 0.14, 0.025, 0, 0.04); },
+            close: () => sweep(960, 320, 'sine', 0.13, 0.045),
+            hover: () => tone(3200, 'sine', 0.008, 0.012, 0, 0.001),
+            notify: () => chord([880, 1318.51], 'sine', 0.16, 0.06),
+            warn: () => { tone(520, 'triangle', 0.11, 0.07); setTimeout(() => tone(520, 'triangle', 0.11, 0.07), 150); },
+            tick: () => tone(3400, 'square', 0.006, 0.014),
+            magic: () => { for (let i = 0; i < 6; i++) setTimeout(() => tone(880 + i * 180, 'sine', 0.11, 0.04 - i * 0.005), i * 42); },
+            whoosh: () => noise(0.22, 0.045, 1400),
+            bell: () => { tone(1760, 'sine', 0.55, 0.06); tone(2640, 'sine', 0.45, 0.03); tone(3520, 'sine', 0.35, 0.018); },
+            select: () => { tone(1400, 'sine', 0.035, 0.04); setTimeout(() => tone(2100, 'sine', 0.045, 0.03), 28); },
+            delete: () => { sweep(700, 220, 'sawtooth', 0.16, 0.055); noise(0.13, 0.03, 900); },
+            swoosh: () => { sweep(420, 1240, 'sine', 0.11, 0.04); noise(0.11, 0.03, 2600); },
+            crystal: () => { tone(2093, 'sine', 0.38, 0.045); tone(3136, 'sine', 0.33, 0.025); tone(4186, 'sine', 0.28, 0.015); },
+            morph: () => sweep(440, 880, 'triangle', 0.18, 0.04, 'lin'),
+            focus: () => tone(1600, 'sine', 0.04, 0.022, 0, 0.002),
+            unfocus: () => tone(1100, 'sine', 0.035, 0.018, 0, 0.002),
+            slide: () => sweep(1800, 900, 'sine', 0.09, 0.025),
+            confirm: () => { tone(1318, 'sine', 0.06, 0.05); setTimeout(() => tone(1760, 'sine', 0.09, 0.045), 50); }
         };
         return {
             play: (name) => presets[name]?.(),
@@ -350,15 +436,15 @@ const SysUI = (() => {
     })();
 
     const Haptics = {
-        light: () => navigator.vibrate?.(8),
-        medium: () => navigator.vibrate?.(15),
-        heavy: () => navigator.vibrate?.(30),
-        success: () => navigator.vibrate?.([10, 30, 10]),
-        error: () => navigator.vibrate?.([30, 50, 30, 50, 30]),
-        warn: () => navigator.vibrate?.([20, 40, 20]),
-        select: () => navigator.vibrate?.(5),
-        soft: () => navigator.vibrate?.(3),
-        impact: () => navigator.vibrate?.([5, 10, 20])
+        light: () => navigator.vibrate?.(6),
+        medium: () => navigator.vibrate?.(12),
+        heavy: () => navigator.vibrate?.(24),
+        success: () => navigator.vibrate?.([8, 28, 8]),
+        error: () => navigator.vibrate?.([24, 48, 24, 48, 24]),
+        warn: () => navigator.vibrate?.([18, 36, 18]),
+        select: () => navigator.vibrate?.(4),
+        soft: () => navigator.vibrate?.(2),
+        impact: () => navigator.vibrate?.([4, 8, 16])
     };
 
     const Layers = Object.freeze({
@@ -401,9 +487,9 @@ const SysUI = (() => {
                     --sys-border-base: rgba(255, 255, 255, 0.08);
                     --sys-border-strong: rgba(255, 255, 255, 0.16);
                     --sys-border-glow: rgba(168, 85, 247, 0.3);
-                    --sys-text-primary: rgba(255, 255, 255, 0.94);
-                    --sys-text-secondary: rgba(255, 255, 255, 0.55);
-                    --sys-text-muted: rgba(255, 255, 255, 0.32);
+                    --sys-text-primary: rgba(255, 255, 255, 0.96);
+                    --sys-text-secondary: rgba(255, 255, 255, 0.58);
+                    --sys-text-muted: rgba(255, 255, 255, 0.34);
                     --sys-accent-base: #ffffff;
                     --sys-accent-primary: #a855f7;
                     --sys-accent-success: #22c55e;
@@ -419,13 +505,13 @@ const SysUI = (() => {
                     --sys-radius-lg: 16px;
                     --sys-radius-xl: 24px;
                     --sys-radius-2xl: 32px;
-                    --sys-dur-instant: 80ms;
-                    --sys-dur-micro: 120ms;
-                    --sys-dur-fast: 180ms;
-                    --sys-dur-normal: 240ms;
-                    --sys-dur-emphasized: 340ms;
-                    --sys-dur-slow: 480ms;
-                    --sys-dur-slower: 680ms;
+                    --sys-dur-instant: 60ms;
+                    --sys-dur-micro: 110ms;
+                    --sys-dur-fast: 170ms;
+                    --sys-dur-normal: 230ms;
+                    --sys-dur-emphasized: 320ms;
+                    --sys-dur-slow: 460ms;
+                    --sys-dur-slower: 640ms;
                     --sys-ease-standard: cubic-bezier(0.2, 0, 0, 1);
                     --sys-ease-emphasized: cubic-bezier(0.3, 0, 0, 1);
                     --sys-ease-decelerate: cubic-bezier(0, 0, 0, 1);
@@ -434,27 +520,33 @@ const SysUI = (() => {
                     --sys-ease-spring-soft: cubic-bezier(0.34, 1.26, 0.64, 1);
                     --sys-ease-spring-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
                     --sys-ease-spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);
+                    --sys-ease-spring-precise: cubic-bezier(0.32, 0.72, 0, 1);
                     --sys-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
                     --sys-ease-elastic: cubic-bezier(0.68, -0.4, 0.265, 1.4);
-                    --sys-motion-instant: 80ms;
-                    --sys-motion-fast: 180ms;
-                    --sys-motion-normal: 240ms;
-                    --sys-motion-slow: 480ms;
-                    --sys-motion-slower: 680ms;
+                    --sys-ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
+                    --sys-ease-inertia: cubic-bezier(0.05, 0.7, 0.1, 1);
+                    --sys-motion-instant: 60ms;
+                    --sys-motion-fast: 170ms;
+                    --sys-motion-normal: 230ms;
+                    --sys-motion-slow: 460ms;
+                    --sys-motion-slower: 640ms;
                     --sys-ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
                     --sys-ease-snap: cubic-bezier(0.22, 1, 0.36, 1);
                     --sys-glow-sm: 0 0 12px rgba(255, 255, 255, 0.1);
                     --sys-glow-md: 0 0 32px rgba(255, 255, 255, 0.15);
                     --sys-glow-lg: 0 0 64px rgba(255, 255, 255, 0.2);
                     --sys-glow-accent: 0 0 32px rgba(168, 85, 247, 0.35);
-                    --sys-shadow-xs: 0 1px 2px rgba(0,0,0,0.2);
-                    --sys-shadow-sm: 0 2px 8px rgba(0,0,0,0.35);
-                    --sys-shadow-md: 0 8px 24px rgba(0,0,0,0.45);
-                    --sys-shadow-lg: 0 24px 64px rgba(0,0,0,0.55);
-                    --sys-shadow-xl: 0 40px 96px rgba(0,0,0,0.7);
+                    --sys-shadow-xs: 0 1px 2px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.04);
+                    --sys-shadow-sm: 0 2px 6px -1px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.2), 0 0 0 0.5px rgba(255,255,255,0.05);
+                    --sys-shadow-md: 0 6px 20px -4px rgba(0,0,0,0.5), 0 4px 8px -2px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(255,255,255,0.06);
+                    --sys-shadow-lg: 0 20px 50px -12px rgba(0,0,0,0.65), 0 12px 24px -8px rgba(0,0,0,0.35), 0 0 0 0.5px rgba(255,255,255,0.07);
+                    --sys-shadow-xl: 0 36px 88px -16px rgba(0,0,0,0.75), 0 22px 44px -12px rgba(0,0,0,0.5), 0 0 0 0.5px rgba(255,255,255,0.08);
+                    --sys-shadow-2xl: 0 56px 128px -20px rgba(0,0,0,0.85), 0 32px 64px -16px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.09);
                     --sys-gradient-aurora: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #06b6d4 100%);
                     --sys-gradient-fire: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
                     --sys-gradient-mesh: radial-gradient(at 40% 20%, rgba(168,85,247,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(59,130,246,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(236,72,153,0.1) 0px, transparent 50%), radial-gradient(at 80% 50%, rgba(6,182,212,0.1) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(168,85,247,0.12) 0px, transparent 50%);
+                    --sys-mx: 50%;
+                    --sys-my: 50%;
                 }
                 @media (prefers-reduced-motion: reduce) {
                     *, *::before, *::after {
@@ -470,58 +562,66 @@ const SysUI = (() => {
                         @keyframes sysRevealScroll { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
                     }
                 }
-                ::selection { background: rgba(168, 85, 247, 0.35); color: #fff; }
-                ::-moz-selection { background: rgba(168, 85, 247, 0.35); color: #fff; }
+                ::selection { background: rgba(168, 85, 247, 0.4); color: #fff; text-shadow: 0 0 8px rgba(168,85,247,0.6); }
+                ::-moz-selection { background: rgba(168, 85, 247, 0.4); color: #fff; }
                 html { scroll-behavior: smooth; }
-                body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+                body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-feature-settings: 'ss01', 'ss02', 'cv01', 'cv11'; }
                 body::before {
                     content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
                     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='[w3.org](http://www.w3.org/2000/svg)'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
-                    opacity: 0.03;
+                    opacity: 0.025;
                 }
                 body::after {
                     content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
                     background: var(--sys-gradient-mesh);
-                    animation: sysMeshDrift 30s ease-in-out infinite alternate;
+                    animation: sysMeshDrift 36s ease-in-out infinite alternate;
                     will-change: transform;
                 }
-                @keyframes sysMeshDrift { 0% { transform: scale(1) rotate(0deg); } 100% { transform: scale(1.15) rotate(8deg); } }
+                @keyframes sysMeshDrift { 0% { transform: scale(1) rotate(0deg); } 100% { transform: scale(1.18) rotate(10deg); } }
                 .sys-glass {
-                    background: rgba(10, 10, 12, 0.72);
-                    backdrop-filter: blur(28px) saturate(190%);
-                    -webkit-backdrop-filter: blur(28px) saturate(190%);
-                    border: 1px solid var(--sys-border-base);
-                    box-shadow: var(--sys-shadow-md), inset 0 1px 0 rgba(255,255,255,0.07), inset 0 -1px 0 rgba(0,0,0,0.4);
+                    background: rgba(10, 10, 12, 0.62);
+                    backdrop-filter: blur(32px) saturate(200%) contrast(1.05);
+                    -webkit-backdrop-filter: blur(32px) saturate(200%) contrast(1.05);
+                    border: 0.5px solid var(--sys-border-base);
+                    box-shadow: var(--sys-shadow-md), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.5);
                     will-change: transform, opacity;
+                    position: relative;
                 }
                 .sys-glass-strong {
-                    background: rgba(14, 14, 18, 0.88);
-                    backdrop-filter: blur(48px) saturate(210%);
-                    -webkit-backdrop-filter: blur(48px) saturate(210%);
-                    border: 1px solid var(--sys-border-strong);
-                    box-shadow: var(--sys-shadow-xl), inset 0 1px 0 rgba(255,255,255,0.09), inset 0 -1px 0 rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02);
+                    background: rgba(14, 14, 18, 0.82);
+                    backdrop-filter: blur(56px) saturate(220%) contrast(1.08);
+                    -webkit-backdrop-filter: blur(56px) saturate(220%) contrast(1.08);
+                    border: 0.5px solid var(--sys-border-strong);
+                    box-shadow: var(--sys-shadow-xl), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.03);
                     will-change: transform, opacity;
+                    position: relative;
                 }
                 .sys-glass-glow {
-                    background: rgba(14, 14, 18, 0.85);
-                    backdrop-filter: blur(40px) saturate(200%);
-                    border: 1px solid rgba(168, 85, 247, 0.25);
-                    box-shadow: var(--sys-shadow-lg), 0 0 48px rgba(168, 85, 247, 0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+                    background: rgba(14, 14, 18, 0.78);
+                    backdrop-filter: blur(44px) saturate(210%);
+                    border: 0.5px solid rgba(168, 85, 247, 0.28);
+                    box-shadow: var(--sys-shadow-lg), 0 0 56px rgba(168, 85, 247, 0.22), inset 0 1px 0 rgba(255,255,255,0.09);
                 }
                 .sys-glass::before, .sys-glass-strong::before {
-                    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px;
-                    background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 40%, transparent 60%, rgba(255,255,255,0.05));
+                    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 0.5px;
+                    background: linear-gradient(135deg, rgba(255,255,255,0.14), transparent 35%, transparent 65%, rgba(255,255,255,0.06));
                     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
                     -webkit-mask-composite: xor; mask-composite: exclude;
                     pointer-events: none;
                 }
-                .sys-page-wrap { transition: opacity var(--sys-dur-normal) var(--sys-ease-smooth), transform var(--sys-dur-normal) var(--sys-ease-spring), filter var(--sys-dur-normal); will-change: opacity, transform, filter; transform-origin: center center; }
+                .sys-glass::after, .sys-glass-strong::after {
+                    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+                    background: radial-gradient(600px circle at var(--sys-mx) var(--sys-my), rgba(255,255,255,0.04), transparent 40%);
+                    opacity: 0; transition: opacity 400ms var(--sys-ease-smooth);
+                }
+                .sys-glass:hover::after, .sys-glass-strong:hover::after { opacity: 1; }
+                .sys-page-wrap { transition: opacity var(--sys-dur-normal) var(--sys-ease-smooth), transform var(--sys-dur-normal) var(--sys-ease-apple), filter var(--sys-dur-normal); will-change: opacity, transform, filter; transform-origin: center center; }
                 .sys-page-exit { opacity: 0; transform: scale(0.97) translateY(6px); filter: blur(6px) brightness(0.7); }
                 .sys-page-enter { opacity: 0; transform: scale(1.03) translateY(-6px); filter: blur(3px) brightness(1.1); }
                 .sys-page-active { opacity: 1; transform: scale(1) translateY(0); filter: blur(0) brightness(1); }
                 .sys-fade-in { animation: sysFadeIn var(--sys-dur-normal) var(--sys-ease-spring) forwards; }
-                .sys-slide-up { animation: sysSlideUp var(--sys-dur-emphasized) var(--sys-ease-spring) forwards; }
-                .sys-slide-down { animation: sysSlideDown var(--sys-dur-emphasized) var(--sys-ease-spring) forwards; }
+                .sys-slide-up { animation: sysSlideUp var(--sys-dur-emphasized) var(--sys-ease-apple) forwards; }
+                .sys-slide-down { animation: sysSlideDown var(--sys-dur-emphasized) var(--sys-ease-apple) forwards; }
                 .sys-scale-in { animation: sysScaleIn var(--sys-dur-emphasized) var(--sys-ease-spring-bounce) forwards; transform-origin: center; }
                 .sys-rotate-in { animation: sysRotateIn var(--sys-dur-slow) var(--sys-ease-elastic) forwards; }
                 .sys-blur-in { animation: sysBlurIn var(--sys-dur-slow) var(--sys-ease-smooth) forwards; }
@@ -530,53 +630,54 @@ const SysUI = (() => {
                 .sys-breathe { animation: sysBreathe 3s ease-in-out infinite; will-change: transform; }
                 .sys-shimmer-text { background: linear-gradient(90deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.4) 100%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: sysShimmerText 3s linear infinite; }
                 @keyframes sysFadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes sysSlideUp { from { transform: translate3d(0, 16px, 0); opacity: 0; } to { transform: translate3d(0, 0, 0); opacity: 1; } }
-                @keyframes sysSlideDown { from { transform: translate3d(0, -16px, 0); opacity: 0; } to { transform: translate3d(0, 0, 0); opacity: 1; } }
-                @keyframes sysScaleIn { from { transform: scale3d(0.92, 0.92, 1); opacity: 0; } to { transform: scale3d(1, 1, 1); opacity: 1; } }
+                @keyframes sysSlideUp { from { transform: translate3d(0, 14px, 0); opacity: 0; } to { transform: translate3d(0, 0, 0); opacity: 1; } }
+                @keyframes sysSlideDown { from { transform: translate3d(0, -14px, 0); opacity: 0; } to { transform: translate3d(0, 0, 0); opacity: 1; } }
+                @keyframes sysScaleIn { from { transform: scale3d(0.94, 0.94, 1); opacity: 0; } to { transform: scale3d(1, 1, 1); opacity: 1; } }
                 @keyframes sysRotateIn { from { transform: rotate(-12deg) scale(0.8); opacity: 0; } to { transform: rotate(0) scale(1); opacity: 1; } }
                 @keyframes sysBlurIn { from { filter: blur(12px); opacity: 0; } to { filter: blur(0); opacity: 1; } }
                 @keyframes sysPulseGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(168,85,247,0.0); } 50% { box-shadow: 0 0 32px 6px rgba(168,85,247,0.25); } }
                 @keyframes sysFloat { 0%,100% { transform: translate3d(0, 0, 0); } 50% { transform: translate3d(0, -6px, 0); } }
-                @keyframes sysBreathe { 0%,100% { transform: scale(1); opacity: 0.95; } 50% { transform: scale(1.04); opacity: 1; } }
+                @keyframes sysBreathe { 0%,100% { transform: scale(1); opacity: 0.95; } 50% { transform: scale(1.035); opacity: 1; } }
                 @keyframes sysShimmer { 0% { background-position: -1200px 0; } 100% { background-position: 1200px 0; } }
                 @keyframes sysShimmerText { to { background-position: 200% center; } }
                 @keyframes sysSpin { to { transform: rotate(360deg); } }
                 @keyframes sysOrbit { from { transform: rotate(0deg) translateX(20px) rotate(0deg); } to { transform: rotate(360deg) translateX(20px) rotate(-360deg); } }
                 @keyframes sysAuroraShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-                .sys-skeleton-bg { background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%); background-size: 1200px 100%; animation: sysShimmer 1.8s infinite linear; }
-                .sys-magnetic { transition: transform 220ms var(--sys-ease-spring), box-shadow 280ms var(--sys-ease-smooth); will-change: transform; transform-origin: center; }
+                .sys-skeleton-bg { background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.02) 75%); background-size: 1200px 100%; animation: sysShimmer 1.6s infinite linear; }
+                .sys-magnetic { transition: transform 380ms var(--sys-ease-apple), box-shadow 320ms var(--sys-ease-smooth); will-change: transform; transform-origin: center; }
                 .sys-progress { animation: sysProgress linear forwards; transform-origin: left; will-change: transform; }
                 @keyframes sysProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
-                .sys-ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: sysRipple 700ms var(--sys-ease-smooth); background: radial-gradient(circle, rgba(255,255,255,0.45), rgba(255,255,255,0.1) 60%, transparent); pointer-events: none; will-change: transform, opacity; }
-                @keyframes sysRipple { to { transform: scale(4.5); opacity: 0; } }
+                .sys-ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: sysRipple 800ms var(--sys-ease-inertia); background: radial-gradient(circle, rgba(255,255,255,0.5), rgba(255,255,255,0.12) 60%, transparent); pointer-events: none; will-change: transform, opacity; }
+                @keyframes sysRipple { to { transform: scale(5); opacity: 0; } }
                 .sys-no-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
                 .sys-no-scroll::-webkit-scrollbar-track { background: transparent; }
                 .sys-no-scroll::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(168,85,247,0.4), rgba(168,85,247,0.15)); border-radius: 6px; transition: background 200ms; }
                 .sys-no-scroll::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, rgba(168,85,247,0.7), rgba(168,85,247,0.35)); }
-                .sys-spotlight-cursor { position: fixed; top: 0; left: 0; width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.55), transparent 70%); pointer-events: none; mix-blend-mode: screen; transition: width 0.22s var(--sys-ease-spring), height 0.22s var(--sys-ease-spring), background 0.3s; will-change: transform; z-index: 10004; }
-                .sys-spotlight-cursor::after { content: ""; position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 70%); animation: sysBreathe 2.4s ease-in-out infinite; }
-                .sys-cursor-trail { position: fixed; width: 6px; height: 6px; border-radius: 50%; background: rgba(168,85,247,0.6); pointer-events: none; z-index: 10003; mix-blend-mode: screen; will-change: transform, opacity; }
-                .sys-tooltip { position: fixed; padding: 7px 11px; background: rgba(0,0,0,0.96); border: 1px solid rgba(168,85,247,0.28); border-radius: 8px; font-size: 11px; color: rgba(255,255,255,0.95); pointer-events: none; white-space: nowrap; z-index: 10005; opacity: 0; transform: translateY(6px) scale(0.94); transition: opacity 200ms var(--sys-ease-spring), transform 240ms var(--sys-ease-spring-bounce); box-shadow: var(--sys-shadow-md), 0 0 20px rgba(168,85,247,0.22); font-weight: 500; letter-spacing: 0.01em; will-change: transform, opacity; }
+                .sys-spotlight-cursor { position: fixed; top: 0; left: 0; width: 18px; height: 18px; border-radius: 50%; background: rgba(168,85,247,0.0); border: 1.5px solid rgba(255,255,255,0.85); pointer-events: none; mix-blend-mode: difference; transition: width 0.32s var(--sys-ease-apple), height 0.32s var(--sys-ease-apple), border-color 0.3s, border-radius 0.3s, background 0.3s; will-change: transform; z-index: 10004; backdrop-filter: invert(1); }
+                .sys-spotlight-cursor.sys-cursor-text { width: 3px; height: 22px; border-radius: 1px; }
+                .sys-spotlight-cursor.sys-cursor-pointer { width: 38px; height: 38px; background: rgba(168,85,247,0.18); border-color: rgba(168,85,247,0.6); }
+                .sys-cursor-dot { position: fixed; top: 0; left: 0; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.95); pointer-events: none; z-index: 10005; mix-blend-mode: difference; will-change: transform; }
+                .sys-tooltip { position: fixed; padding: 6px 10px; background: rgba(8,8,10,0.96); backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(168,85,247,0.3); border-radius: 7px; font-size: 11px; color: rgba(255,255,255,0.96); pointer-events: none; white-space: nowrap; z-index: 10005; opacity: 0; transform: translateY(4px) scale(0.96); transition: opacity 200ms var(--sys-ease-apple), transform 280ms var(--sys-ease-spring-precise); box-shadow: var(--sys-shadow-md), 0 0 24px rgba(168,85,247,0.18); font-weight: 500; letter-spacing: 0.01em; will-change: transform, opacity; }
                 .sys-tooltip.sys-tooltip-show { opacity: 1; transform: translateY(0) scale(1); }
-                .sys-tooltip::before { content: ""; position: absolute; width: 8px; height: 8px; background: inherit; border: inherit; border-right: 0; border-top: 0; }
-                .sys-tooltip[data-placement="top"]::before { bottom: -5px; left: 50%; transform: translateX(-50%) rotate(-45deg); border-left: 0; border-bottom: 1px solid rgba(168,85,247,0.28); border-right: 1px solid rgba(168,85,247,0.28); border-top: 0; }
                 .sys-focus-ring:focus-visible { outline: 2px solid rgba(168, 85, 247, 0.7); outline-offset: 3px; border-radius: 4px; transition: outline-offset 180ms var(--sys-ease-spring); }
                 button, [role="button"] { position: relative; overflow: hidden; }
                 .sys-particle { position: fixed; pointer-events: none; border-radius: 50%; will-change: transform, opacity; }
                 .sys-aurora-text { background: var(--sys-gradient-aurora); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: sysShimmerText 4s linear infinite; }
                 .sys-grid-bg { background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px); background-size: 32px 32px; }
-                .sys-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--sys-accent-primary); border-radius: 50%; animation: sysSpin 0.7s linear infinite; will-change: transform; }
-                .sys-button-press { transition: transform 100ms var(--sys-ease-spring-snappy), filter 150ms; will-change: transform; }
-                .sys-button-press:active { transform: scale(0.95); filter: brightness(0.92); }
+                .sys-spinner { width: 16px; height: 16px; border: 1.5px solid rgba(255,255,255,0.12); border-top-color: var(--sys-accent-primary); border-right-color: rgba(168,85,247,0.4); border-radius: 50%; animation: sysSpin 0.65s linear infinite; will-change: transform; }
+                .sys-button-press { transition: transform 140ms var(--sys-ease-spring-precise), filter 180ms, box-shadow 220ms; will-change: transform; position: relative; transform-origin: center; }
+                .sys-button-press::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(120px circle at var(--sys-mx) var(--sys-my), rgba(255,255,255,0.12), transparent 50%); opacity: 0; transition: opacity 280ms; pointer-events: none; }
+                .sys-button-press:hover::before { opacity: 1; }
+                .sys-button-press:active { transform: scale(0.96); filter: brightness(0.94); transition: transform 80ms var(--sys-ease-accelerate); }
                 .sys-button-press:hover { transform: translateY(-1px); }
-                .sys-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.1); border-bottom-width: 2px; border-radius: 4px; font-size: 10px; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.7); letter-spacing: 0.05em; transition: transform 80ms var(--sys-ease-spring-snappy); }
-                .sys-kbd:active { transform: translateY(1px); border-bottom-width: 1px; }
+                .sys-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.025)); border: 0.5px solid rgba(255,255,255,0.14); border-bottom-width: 1.5px; border-radius: 5px; font-size: 10px; font-family: ui-monospace, 'SF Mono', monospace; color: rgba(255,255,255,0.78); letter-spacing: 0.04em; transition: transform 100ms var(--sys-ease-spring-precise), background 160ms; box-shadow: 0 1px 0 rgba(0,0,0,0.3), inset 0 0.5px 0 rgba(255,255,255,0.1); }
+                .sys-kbd:active, .sys-kbd.sys-kbd-press { transform: translateY(1px); border-bottom-width: 0.5px; background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); }
                 .sys-divider-glow { height: 1px; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.4), transparent); }
-                .sys-toast-enter { animation: sysToastIn 460ms var(--sys-ease-spring-bounce) forwards; }
-                .sys-toast-exit { animation: sysToastOut 280ms var(--sys-ease-accelerate) forwards; }
-                @keyframes sysToastIn { 0% { transform: translate3d(0, -36px, 0) scale(0.82); opacity: 0; filter: blur(4px); } 60% { transform: translate3d(0, 4px, 0) scale(1.025); opacity: 1; filter: blur(0); } 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; } }
-                @keyframes sysToastOut { to { transform: translate3d(0, -20px, 0) scale(0.88); opacity: 0; filter: blur(3px); } }
-                .sys-noise-overlay::before { content: ""; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='[w3.org](http://www.w3.org/2000/svg)'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E"); opacity: 0.04; pointer-events: none; mix-blend-mode: overlay; border-radius: inherit; }
+                .sys-toast-enter { animation: sysToastIn 520ms var(--sys-ease-spring-bounce) forwards; }
+                .sys-toast-exit { animation: sysToastOut 240ms var(--sys-ease-accelerate) forwards; }
+                @keyframes sysToastIn { 0% { transform: translate3d(0, -32px, 0) scale(0.84); opacity: 0; filter: blur(4px); } 55% { transform: translate3d(0, 3px, 0) scale(1.02); opacity: 1; filter: blur(0); } 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; } }
+                @keyframes sysToastOut { to { transform: translate3d(0, -16px, 0) scale(0.9); opacity: 0; filter: blur(3px); } }
+                .sys-noise-overlay::before { content: ""; position: absolute; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='[w3.org](http://www.w3.org/2000/svg)'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E"); opacity: 0.035; pointer-events: none; mix-blend-mode: overlay; border-radius: inherit; }
                 .sys-glow-border { position: relative; }
                 .sys-glow-border::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; background: conic-gradient(from var(--sys-glow-angle, 0deg), transparent, rgba(168,85,247,0.6), rgba(236,72,153,0.6), rgba(6,182,212,0.6), transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; animation: sysGlowRotate 6s linear infinite; }
                 @property --sys-glow-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
@@ -585,26 +686,36 @@ const SysUI = (() => {
                 .sys-shimmer-sweep::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%); transform: translateX(-100%); pointer-events: none; }
                 .sys-shimmer-sweep:hover::after { animation: sysSweep 900ms var(--sys-ease-smooth); }
                 @keyframes sysSweep { to { transform: translateX(100%); } }
-                .sys-tilt { transform-style: preserve-3d; transition: transform 280ms var(--sys-ease-spring); will-change: transform; }
+                .sys-tilt { transform-style: preserve-3d; transition: transform 380ms var(--sys-ease-apple); will-change: transform; }
                 .sys-overlay-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0); backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); transition: background var(--sys-dur-normal) var(--sys-ease-standard), backdrop-filter var(--sys-dur-normal) var(--sys-ease-standard), -webkit-backdrop-filter var(--sys-dur-normal) var(--sys-ease-standard); pointer-events: none; will-change: backdrop-filter, background; }
-                .sys-overlay-backdrop.sys-open { background: rgba(0,0,0,0.76); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); pointer-events: auto; }
-                .sys-drawer { position: fixed; background: rgba(10,10,12,0.92); backdrop-filter: blur(40px) saturate(200%); border: 1px solid var(--sys-border-strong); box-shadow: var(--sys-shadow-xl); transition: transform var(--sys-dur-emphasized) var(--sys-ease-spring); will-change: transform; }
-                .sys-accordion-content { overflow: hidden; transition: grid-template-rows var(--sys-dur-emphasized) var(--sys-ease-spring); display: grid; grid-template-rows: 0fr; }
+                .sys-overlay-backdrop.sys-open { background: rgba(0,0,0,0.62); backdrop-filter: blur(24px) saturate(160%) brightness(0.85); -webkit-backdrop-filter: blur(24px) saturate(160%) brightness(0.85); pointer-events: auto; }
+                .sys-drawer { position: fixed; background: rgba(10,10,12,0.88); backdrop-filter: blur(48px) saturate(210%); border: 0.5px solid var(--sys-border-strong); box-shadow: var(--sys-shadow-2xl); transition: transform var(--sys-dur-emphasized) var(--sys-ease-apple); will-change: transform; }
+                .sys-accordion-content { overflow: hidden; transition: grid-template-rows var(--sys-dur-emphasized) var(--sys-ease-apple); display: grid; grid-template-rows: 0fr; }
                 .sys-accordion-content.sys-open { grid-template-rows: 1fr; }
                 .sys-accordion-content > div { overflow: hidden; min-height: 0; }
                 .sys-icon-spin { animation: sysSpin 0.7s linear infinite; }
-                .sys-tab-indicator { position: absolute; bottom: 0; height: 2px; background: var(--sys-accent-primary); border-radius: 2px; box-shadow: 0 0 8px var(--sys-accent-primary); transition: transform var(--sys-dur-emphasized) var(--sys-ease-spring), width var(--sys-dur-emphasized) var(--sys-ease-spring); will-change: transform, width; }
+                .sys-tab-indicator { position: absolute; bottom: 0; height: 2px; background: var(--sys-accent-primary); border-radius: 2px; box-shadow: 0 0 12px var(--sys-accent-primary); transition: transform var(--sys-dur-emphasized) var(--sys-ease-apple), width var(--sys-dur-emphasized) var(--sys-ease-apple); will-change: transform, width; }
                 .sys-list-item-enter { animation: sysListItemIn 320ms var(--sys-ease-spring) backwards; }
                 @keyframes sysListItemIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
                 .sys-flip-card { transform-style: preserve-3d; transition: transform 600ms var(--sys-ease-spring); }
                 .sys-flip-card.sys-flipped { transform: rotateY(180deg); }
-                .sys-elevate { transition: transform 280ms var(--sys-ease-spring), box-shadow 320ms var(--sys-ease-smooth); will-change: transform, box-shadow; }
-                .sys-elevate:hover { transform: translateY(-3px); box-shadow: var(--sys-shadow-lg); }
+                .sys-elevate { transition: transform 380ms var(--sys-ease-apple), box-shadow 420ms var(--sys-ease-smooth); will-change: transform, box-shadow; }
+                .sys-elevate:hover { transform: translateY(-4px) scale(1.008); box-shadow: var(--sys-shadow-xl); }
                 .sys-bloom { position: relative; }
-                .sys-bloom::before { content: ""; position: absolute; inset: -20%; background: radial-gradient(circle at center, rgba(168,85,247,0.3), transparent 60%); opacity: 0; transition: opacity 400ms; pointer-events: none; filter: blur(20px); z-index: -1; }
+                .sys-bloom::before { content: ""; position: absolute; inset: -20%; background: radial-gradient(circle at var(--sys-mx) var(--sys-my), rgba(168,85,247,0.32), transparent 60%); opacity: 0; transition: opacity 480ms var(--sys-ease-smooth); pointer-events: none; filter: blur(24px); z-index: -1; }
                 .sys-bloom:hover::before { opacity: 1; }
                 @keyframes sysGlowPulse { 0%,100% { box-shadow: 0 0 20px rgba(168,85,247,0.2), 0 0 40px rgba(168,85,247,0.1); } 50% { box-shadow: 0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.2); } }
                 .sys-iridescent { background: linear-gradient(135deg, #a855f7, #ec4899, #06b6d4, #a855f7); background-size: 300% 300%; animation: sysAuroraShift 8s ease infinite; }
+                .sys-input-field { position: relative; }
+                .sys-input-field input, .sys-input-field textarea { caret-color: var(--sys-accent-primary); transition: border-color 240ms var(--sys-ease-apple), box-shadow 320ms var(--sys-ease-apple), background 240ms; }
+                .sys-input-field input:focus, .sys-input-field textarea:focus { box-shadow: 0 0 0 3px rgba(168,85,247,0.18), inset 0 0 0 0.5px rgba(168,85,247,0.5); }
+                .sys-input-field::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 0; height: 1.5px; background: linear-gradient(90deg, transparent, var(--sys-accent-primary), transparent); transition: width 380ms var(--sys-ease-apple), left 380ms var(--sys-ease-apple); }
+                .sys-input-field:focus-within::after { width: 100%; left: 0; }
+                .sys-pressure-hint { transition: transform 200ms var(--sys-ease-spring-precise); }
+                .sys-spotlight-overlay { mix-blend-mode: normal; }
+                @keyframes sysCaretBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.3; } }
+                .sys-focus-glow { position: absolute; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity 280ms; box-shadow: 0 0 0 2px rgba(168,85,247,0.4), 0 0 32px rgba(168,85,247,0.25); }
+                .sys-focus-glow.sys-show { opacity: 1; }
             `;
             document.head.appendChild(style);
             injected = true;
@@ -676,14 +787,14 @@ const SysUI = (() => {
         },
         addRipple: (e, el) => {
             const rect = el.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
+            const size = Math.max(rect.width, rect.height) * 1.4;
             const ripple = document.createElement('span');
             ripple.className = 'sys-ripple';
             const x = (e.clientX ?? rect.left + rect.width / 2) - rect.left - size / 2;
             const y = (e.clientY ?? rect.top + rect.height / 2) - rect.top - size / 2;
             ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
             el.appendChild(ripple);
-            setTimeout(() => ripple.remove(), 700);
+            setTimeout(() => ripple.remove(), 800);
         }
     };
 
@@ -695,6 +806,14 @@ const SysUI = (() => {
         }
     });
 
+    document.addEventListener('pointermove', (e) => {
+        const t = e.target.closest?.('.sys-glass, .sys-glass-strong, .sys-button-press, .sys-bloom');
+        if (!t) return;
+        const r = t.getBoundingClientRect();
+        t.style.setProperty('--sys-mx', ((e.clientX - r.left) / r.width * 100) + '%');
+        t.style.setProperty('--sys-my', ((e.clientY - r.top) / r.height * 100) + '%');
+    }, { passive: true });
+
     const Magnetic = (() => {
         let cache = [], lastUpdate = 0, raf = null;
         const refresh = $debounce(() => {
@@ -705,6 +824,8 @@ const SysUI = (() => {
             raf = requestAnimationFrame(() => {
                 const now = performance.now();
                 if (now - lastUpdate > 600) { refresh(); lastUpdate = now; }
+                const { speed } = $velocity.get();
+                const velocityBoost = Math.min(1.4, 1 + speed * 0.08);
                 for (let i = 0; i < cache.length; i++) {
                     const { el } = cache[i];
                     if (!el.isConnected) continue;
@@ -712,13 +833,14 @@ const SysUI = (() => {
                     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
                     const dx = e.clientX - cx, dy = e.clientY - cy;
                     const dist = Math.hypot(dx, dy);
-                    const range = Math.max(r.width, r.height) / 2 + 90;
+                    const range = Math.max(r.width, r.height) / 2 + 100;
                     if (dist < range) {
-                        const strength = (1 - dist / range) * 0.32;
-                        const rx = (dy / range) * -6 * strength;
-                        const ry = (dx / range) * 6 * strength;
-                        el.style.transform = `perspective(800px) translate3d(${dx * strength}px, ${dy * strength}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${1 + 0.05 * strength * 3})`;
-                    } else {
+                        const t = 1 - dist / range;
+                        const strength = (t * t * (3 - 2 * t)) * 0.34 * velocityBoost;
+                        const rx = (dy / range) * -7 * strength;
+                        const ry = (dx / range) * 7 * strength;
+                        el.style.transform = `perspective(900px) translate3d(${dx * strength}px, ${dy * strength}px, 0) rotateX(${rx}deg) rotateY(${ry}deg) scale(${1 + 0.06 * strength * 3})`;
+                    } else if (el.style.transform) {
                         el.style.transform = '';
                     }
                 }
@@ -737,41 +859,32 @@ const SysUI = (() => {
     })();
 
     const Cursor = (() => {
-        let cursor, active = false, raf = null, tx = 0, ty = 0, x = 0, y = 0;
-        const trails = [];
-        const trailCount = 6;
+        let cursor, dot, active = false, raf = null, tx = 0, ty = 0, x = 0, y = 0, dx = 0, dy = 0;
         const loop = () => {
-            x = $lerp(x, tx, 0.22); y = $lerp(y, ty, 0.22);
-            if (cursor) cursor.style.transform = `translate3d(${x - 12}px, ${y - 12}px, 0)`;
-            for (let i = 0; i < trails.length; i++) {
-                const t = trails[i];
-                t.x = $lerp(t.x, i === 0 ? x : trails[i-1].x, 0.35 - i * 0.04);
-                t.y = $lerp(t.y, i === 0 ? y : trails[i-1].y, 0.35 - i * 0.04);
-                if (t.el) {
-                    const scale = 1 - i * 0.13;
-                    t.el.style.transform = `translate3d(${t.x - 3}px, ${t.y - 3}px, 0) scale(${scale})`;
-                    t.el.style.opacity = `${0.5 - i * 0.07}`;
-                }
-            }
+            x = $lerp(x, tx, 0.28); y = $lerp(y, ty, 0.28);
+            dx = $lerp(dx, tx, 0.6); dy = $lerp(dy, ty, 0.6);
+            if (cursor) cursor.style.transform = `translate3d(${x - 9}px, ${y - 9}px, 0)`;
+            if (dot) dot.style.transform = `translate3d(${dx - 2}px, ${dy - 2}px, 0)`;
             raf = requestAnimationFrame(loop);
         };
         const move = (e) => { tx = e.clientX; ty = e.clientY; };
+        const detectTarget = (e) => {
+            const t = e.target;
+            if (!cursor) return;
+            cursor.classList.remove('sys-cursor-pointer', 'sys-cursor-text');
+            if (t.matches?.('input, textarea, [contenteditable]')) cursor.classList.add('sys-cursor-text');
+            else if (t.closest?.('button, a, [role="button"], .sys-magnetic')) cursor.classList.add('sys-cursor-pointer');
+        };
         const enable = () => {
             if (active || $isTouch) return; active = true;
             cursor = DOM.mount('sys-cursor', Layers.cursor, 'sys-spotlight-cursor');
-            for (let i = 0; i < trailCount; i++) {
-                const el = DOM.create('div', { class: 'sys-cursor-trail' });
-                document.body.appendChild(el);
-                trails.push({ el, x: 0, y: 0 });
-            }
+            dot = DOM.mount('sys-cursor-dot', Layers.cursor + 1, 'sys-cursor-dot');
+            document.documentElement.style.cursor = 'none';
             document.addEventListener('mousemove', move, { passive: true });
-            document.querySelectorAll('button, a, [role="button"]').forEach(el => {
-                el.addEventListener('mouseenter', () => { if (cursor) { cursor.style.width = '44px'; cursor.style.height = '44px'; cursor.style.background = 'radial-gradient(circle, rgba(236,72,153,0.65), transparent 70%)'; } });
-                el.addEventListener('mouseleave', () => { if (cursor) { cursor.style.width = '24px'; cursor.style.height = '24px'; cursor.style.background = 'radial-gradient(circle, rgba(168,85,247,0.55), transparent 70%)'; } });
-            });
+            document.addEventListener('mouseover', detectTarget, { passive: true });
             loop();
         };
-        const disable = () => { active = false; cancelAnimationFrame(raf); cursor?.remove(); trails.forEach(t => t.el?.remove()); trails.length = 0; document.removeEventListener('mousemove', move); };
+        const disable = () => { active = false; cancelAnimationFrame(raf); cursor?.remove(); dot?.remove(); document.documentElement.style.cursor = ''; document.removeEventListener('mousemove', move); document.removeEventListener('mouseover', detectTarget); };
         return { enable, disable, toggle: () => active ? disable() : enable() };
     })();
 
@@ -865,7 +978,7 @@ const SysUI = (() => {
                 }
                 document.body.insertBefore(wrapper, document.body.firstChild);
             }
-            const useVT = 'startViewTransition' in document && !$reducedMotion;
+            const useVT = $supportsVT && !$reducedMotion;
             if (useVT) {
                 Audio.play('swoosh');
                 document.startViewTransition(() => {
@@ -932,7 +1045,7 @@ const SysUI = (() => {
             if (persist && localStorage.getItem(`sysui_spotlight_${targetId}`)) return;
             Theme.inject();
             Audio.play('magic');
-            const overlay = DOM.mount('sys-spotlight-overlay', Layers.spotlight, 'fixed inset-0 pointer-events-none opacity-0 transition-opacity duration-500');
+            const overlay = DOM.mount('sys-spotlight-overlay', Layers.spotlight, 'fixed inset-0 pointer-events-none opacity-0 transition-opacity duration-500 sys-spotlight-overlay');
             const update = () => {
                 const rect = target.getBoundingClientRect();
                 overlay.innerHTML = '';
@@ -1002,7 +1115,7 @@ const SysUI = (() => {
                         <div class="flex justify-between"><span class="text-gray-500">📢 TST</span><span class="text-cyan-400">${State.toasts.size}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">🎯 ACT</span><span class="text-pink-400">${Actions.getAll().length}</span></div>
                         <div class="sys-divider-glow my-1"></div>
-                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v5.0 · ONLINE</div>
+                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v6.0 · ONLINE</div>
                     `;
                 }
                 rafId = requestAnimationFrame(loop);
@@ -1040,12 +1153,12 @@ const SysUI = (() => {
             if (!container) return;
             const items = Array.from(container.children);
             items.forEach((el, i) => {
-                const offset = i * 4;
-                const scale = 1 - i * 0.04;
-                const opacity = 1 - i * 0.18;
-                el.style.transition = 'transform 360ms cubic-bezier(0.16,1,0.3,1), opacity 360ms';
-                el.style.transform = `translateY(${-offset}px) scale(${Math.max(scale, 0.86)})`;
-                el.style.opacity = Math.max(opacity, 0.5);
+                const offset = i * 5;
+                const scale = 1 - i * 0.045;
+                const opacity = 1 - i * 0.2;
+                el.style.transition = 'transform 460ms cubic-bezier(0.32,0.72,0,1), opacity 460ms cubic-bezier(0.32,0.72,0,1)';
+                el.style.transform = `translate3d(0, ${-offset}px, 0) scale(${Math.max(scale, 0.84)})`;
+                el.style.opacity = Math.max(opacity, 0.45);
                 el.style.zIndex = 100 - i;
             });
         };
@@ -1072,13 +1185,21 @@ const SysUI = (() => {
             State.toasts.set(id, data);
             if (duration !== Infinity) data.timeout = setTimeout(() => remove(id), duration);
             if (State.toasts.size > 5) remove(State.toasts.keys().next().value);
-            let startX = 0, currentX = 0, dragging = false;
-            el.addEventListener('pointerdown', (e) => { if (e.target.tagName === 'BUTTON') return; startX = e.clientX; dragging = true; el.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
-            el.addEventListener('pointermove', (e) => { if (!dragging) return; currentX = e.clientX - startX; el.style.transform = `translateX(${currentX}px) rotate(${currentX * 0.03}deg)`; el.style.opacity = Math.max(0, 1 - Math.abs(currentX) / 200); });
-            el.addEventListener('pointerup', (e) => {
+            let startX = 0, currentX = 0, dragging = false, startT = 0;
+            el.addEventListener('pointerdown', (e) => { if (e.target.tagName === 'BUTTON') return; startX = e.clientX; startT = performance.now(); dragging = true; el.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
+            el.addEventListener('pointermove', (e) => { if (!dragging) return; currentX = e.clientX - startX; el.style.transform = `translate3d(${currentX}px, 0, 0) rotate(${currentX * 0.025}deg)`; el.style.opacity = Math.max(0, 1 - Math.abs(currentX) / 220); });
+            el.addEventListener('pointerup', () => {
                 if (!dragging) return; dragging = false;
-                if (Math.abs(currentX) > 100) { el.style.transition = 'transform 240ms cubic-bezier(0.3,0,1,1), opacity 240ms'; el.style.transform = `translateX(${currentX > 0 ? 400 : -400}px)`; el.style.opacity = '0'; setTimeout(() => remove(id), 240); }
-                else { el.style.transition = 'transform 320ms cubic-bezier(0.34,1.56,0.64,1), opacity 320ms'; el.style.transform = ''; el.style.opacity = ''; }
+                const dt = performance.now() - startT;
+                const vel = currentX / dt;
+                if (Math.abs(currentX) > 90 || Math.abs(vel) > 0.5) {
+                    el.style.transition = 'transform 280ms cubic-bezier(0.05,0.7,0.1,1), opacity 240ms';
+                    el.style.transform = `translate3d(${currentX > 0 ? 500 : -500}px, 0, 0) rotate(${currentX > 0 ? 15 : -15}deg)`;
+                    el.style.opacity = '0';
+                    setTimeout(() => remove(id), 240);
+                } else {
+                    Motion.spring(el, { transform: [`translate3d(${currentX}px, 0, 0)`, 'translate3d(0, 0, 0)'], opacity: [parseFloat(el.style.opacity) || 1, 1] }, 'bouncy');
+                }
                 currentX = 0;
             });
             el.addEventListener('click', (e) => { if (e.target.tagName !== 'BUTTON' && !dragging && Math.abs(currentX) < 5) remove(id); });
@@ -1091,14 +1212,13 @@ const SysUI = (() => {
             if (!t) return create(type, message, duration);
             Audio.play(sounds[type] || 'pop');
             if (t.timeout) clearTimeout(t.timeout);
-            const old = Array.from(t.el.children);
             Motion.animate(t.el, [{ filter: 'blur(0)' }, { filter: 'blur(4px)' }], { duration: 120, easing: 'ease-out' }).then(() => {
                 t.el.innerHTML = '';
                 t.el.className = t.el.className.replace(/border-\w+-500\/30/g, '') + ' ' + (borders[type] || borders.info);
                 const { wrap, bar } = renderContent(type, message, duration);
                 t.el.appendChild(wrap);
                 if (bar) t.el.appendChild(bar);
-                Motion.animate(t.el, [{ filter: 'blur(4px)', transform: 'scale(0.96)' }, { filter: 'blur(0)', transform: 'scale(1)' }], { duration: 280, easing: 'cubic-bezier(0.34,1.56,0.64,1)' });
+                Motion.animate(t.el, [{ filter: 'blur(4px)', transform: 'scale(0.96)' }, { filter: 'blur(0)', transform: 'scale(1)' }], { duration: 320, easing: Motion.tokens.ease.springBounce });
             });
             if (duration !== Infinity) t.timeout = setTimeout(() => remove(id), duration);
             return id;
@@ -1154,12 +1274,15 @@ const SysUI = (() => {
             else box.appendChild(DOM.create('div', { class: 'mb-5' }));
             let input = null, errorEl = null;
             if (inputId) {
-                input = DOM.create('input', { type: 'text', id: inputId, class: 'w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all mb-2 placeholder-gray-600', placeholder, autocomplete: 'off' });
-                box.appendChild(input);
+                const inputWrap = DOM.create('div', { class: 'sys-input-field mb-2' });
+                input = DOM.create('input', { type: 'text', id: inputId, class: 'w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-purple-500/60 transition-all placeholder-gray-600', placeholder, autocomplete: 'off' });
+                inputWrap.appendChild(input);
+                box.appendChild(inputWrap);
                 errorEl = DOM.create('p', { class: 'text-xs text-red-400 mb-4 min-h-[16px]' });
                 box.appendChild(errorEl);
                 if (State.sessionDrafts[inputId]) input.value = State.sessionDrafts[inputId];
                 input.addEventListener('input', (e) => { State.sessionDrafts[inputId] = e.target.value; try { localStorage.setItem('sysui_drafts', JSON.stringify(State.sessionDrafts)); } catch {} if (errorEl) errorEl.textContent = ''; });
+                input.addEventListener('focus', () => Audio.play('focus'));
             }
             const btnRow = DOM.create('div', { class: 'flex justify-end gap-3 mt-2' });
             const cancelBtn = DOM.create('button', { class: 'sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/5 border border-white/10 transition-all outline-none focus:ring-2 focus:ring-white/20', text: cancelLabel });
@@ -1171,9 +1294,9 @@ const SysUI = (() => {
             container.appendChild(box);
             container.classList.remove('hidden');
             container.classList.add('flex');
-            Motion.spring(box, { transform: ['scale(0.88) translateY(20px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'bouncy');
+            Motion.spring(box, { transform: ['scale(0.86) translateY(24px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
             const children = Array.from(box.children);
-            Motion.stagger(children, (el) => { Motion.enter.slideUp(el, { duration: 320 }); }, 30);
+            Motion.stagger(children, (el) => { Motion.enter.slideUp(el); }, 28);
             const releaseFocus = DOM.trapFocus(box);
             const close = (res) => {
                 if (inputId && res != null) { delete State.sessionDrafts[inputId]; try { localStorage.setItem('sysui_drafts', JSON.stringify(State.sessionDrafts)); } catch {} }
@@ -1264,6 +1387,13 @@ const SysUI = (() => {
             });
             let idx = 0;
             const allRows = [];
+            const highlight = (text, q) => {
+                if (!q) return $esc(text);
+                const safe = $esc(text);
+                const safeQ = $esc(q);
+                const re = new RegExp(`(${safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                return safe.replace(re, '<mark style="background:rgba(168,85,247,0.35);color:#fff;border-radius:3px;padding:0 2px;font-weight:600">$1</mark>');
+            };
             groups.forEach((items, groupName) => {
                 const header = DOM.create('div', { class: 'px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-[0.2em] text-gray-500 font-semibold', text: groupName });
                 container.appendChild(header);
@@ -1277,7 +1407,7 @@ const SysUI = (() => {
                     const left = DOM.create('div', { class: 'flex items-center gap-3 min-w-0 flex-1' });
                     const iconBox = DOM.create('div', { class: `w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base transition-transform group-hover:scale-110 ${cmd.isAI ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/20 border border-purple-500/30' : 'bg-white/5 border border-white/10'}`, text: cmd.icon || '⌘' });
                     const textWrap = DOM.create('div', { class: 'flex flex-col min-w-0 flex-1' });
-                    textWrap.appendChild(DOM.create('span', { class: `text-sm ${cmd.isAI ? 'text-purple-200' : 'text-gray-100'} font-medium truncate`, text: cmd.title }));
+                    textWrap.appendChild(DOM.create('span', { class: `text-sm ${cmd.isAI ? 'text-purple-200' : 'text-gray-100'} font-medium truncate`, html: highlight(cmd.title, query) }));
                     if (cmd.description) textWrap.appendChild(DOM.create('span', { class: 'text-[11px] text-gray-500 truncate mt-0.5', text: cmd.description }));
                     left.append(iconBox, textWrap);
                     row.appendChild(left);
@@ -1294,7 +1424,7 @@ const SysUI = (() => {
                     allRows.push(row);
                 });
             });
-            Motion.stagger(allRows, (el) => { Motion.animate(el, [{ opacity: 0, transform: 'translateX(-8px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: 240, easing: Motion.tokens.ease.spring }); }, 18);
+            Motion.stagger(allRows, (el) => { Motion.spring(el, { opacity: [0, 1], transform: ['translateX(-8px)', 'translateX(0)'] }, 'precise'); }, 14);
         };
 
         const updateActive = (container) => {
@@ -1319,7 +1449,7 @@ const SysUI = (() => {
             const bd = DOM.mount('sys-cmd-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
             State.cmdState = { ...State.cmdState, query: '', selectedIndex: 0, results: [] };
             const box = DOM.create('div', { class: 'w-full max-w-2xl sys-glass-strong rounded-2xl overflow-hidden pointer-events-auto flex flex-col sys-noise-overlay shadow-2xl', style: { transformOrigin: 'center top' } });
-            const header = DOM.create('div', { class: 'flex items-center px-5 py-4 border-b border-white/10 relative' });
+            const header = DOM.create('div', { class: 'flex items-center px-5 py-4 border-b border-white/10 relative sys-input-field' });
             header.innerHTML = `<svg class="w-5 h-5 text-purple-400 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
             const input = DOM.create('input', { type: 'text', id: 'sys-cmd-input', class: 'w-full bg-transparent text-white text-base outline-none placeholder-gray-500 font-medium', placeholder: 'ابحث، تنقل، أو اطلب من الذكاء الاصطناعي...', autocomplete: 'off', spellcheck: 'false' });
             const escTag = DOM.create('span', { class: 'sys-kbd ml-2 shrink-0', text: 'ESC' });
@@ -1333,13 +1463,13 @@ const SysUI = (() => {
             container.classList.remove('hidden');
             container.classList.add('flex');
             requestAnimationFrame(() => bd.classList.add('sys-open'));
-            Motion.spring(box, { transform: ['scale(0.94) translateY(-20px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'snappy');
+            Motion.spring(box, { transform: ['scale(0.92) translateY(-24px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
             setTimeout(() => input.focus(), 80);
-            input.addEventListener('input', (e) => { State.cmdState.query = e.target.value; State.cmdState.selectedIndex = 0; renderResults(results); });
+            input.addEventListener('input', (e) => { State.cmdState.query = e.target.value; State.cmdState.selectedIndex = 0; renderResults(results); Audio.play('tap'); });
             input.addEventListener('keydown', (e) => {
                 const len = lastScored.length || 1;
-                if (e.key === 'ArrowDown') { e.preventDefault(); State.cmdState.selectedIndex = (State.cmdState.selectedIndex + 1) % len; updateActive(results); Audio.play('tick'); }
-                else if (e.key === 'ArrowUp') { e.preventDefault(); State.cmdState.selectedIndex = (State.cmdState.selectedIndex - 1 + len) % len; updateActive(results); Audio.play('tick'); }
+                if (e.key === 'ArrowDown') { e.preventDefault(); State.cmdState.selectedIndex = (State.cmdState.selectedIndex + 1) % len; updateActive(results); Audio.play('tick'); Haptics.soft(); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); State.cmdState.selectedIndex = (State.cmdState.selectedIndex - 1 + len) % len; updateActive(results); Audio.play('tick'); Haptics.soft(); }
                 else if (e.key === 'Enter') { e.preventDefault(); const cmd = lastScored[State.cmdState.selectedIndex]; if (cmd) { close(); cmd.isAI ? cmd.handler() : Actions.execute(cmd.id); } }
                 else if (e.key === 'Tab') { e.preventDefault(); const cmd = lastScored[State.cmdState.selectedIndex]; if (cmd && !cmd.isAI) { Actions.toggleFavorite(cmd.id); renderResults(results); Audio.play('select'); Haptics.select(); } }
             });
@@ -1375,6 +1505,7 @@ const SysUI = (() => {
                 if (item.icon) row.appendChild(DOM.create('span', { class: 'text-sm shrink-0 w-4', text: item.icon }));
                 row.appendChild(DOM.create('span', { class: 'flex-1 text-right font-medium', text: item.label }));
                 if (item.shortcut) row.appendChild(DOM.create('span', { class: 'sys-kbd', text: item.shortcut }));
+                row.addEventListener('mouseenter', () => Audio.play('hover'));
                 row.addEventListener('click', () => { close(); Audio.play('click'); item.handler?.(); });
                 menu.appendChild(row);
                 rows.push(row);
@@ -1384,8 +1515,8 @@ const SysUI = (() => {
             if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
             if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
             menu.id = 'sys-context-menu';
-            Motion.spring(menu, { transform: ['scale(0.88) translateY(-6px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'snappy');
-            Motion.stagger(rows, (el) => { Motion.animate(el, [{ opacity: 0, transform: 'translateX(-6px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: 200, easing: Motion.tokens.ease.spring }); }, 22);
+            Motion.spring(menu, { transform: ['scale(0.86) translateY(-8px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
+            Motion.stagger(rows, (el) => { Motion.spring(el, { opacity: [0, 1], transform: ['translateX(-6px)', 'translateX(0)'] }, 'precise'); }, 18);
             setTimeout(() => document.addEventListener('click', close, { once: true }), 50);
         };
         const close = () => {
@@ -1396,24 +1527,27 @@ const SysUI = (() => {
     })();
 
     const Tooltip = (() => {
-        let el, hideTimer;
+        let el, hideTimer, showTimer;
         const ensure = () => { if (!el) { el = DOM.create('div', { class: 'sys-tooltip', id: 'sys-tooltip-root' }); document.body.appendChild(el); } return el; };
         const show = (target, text, placement = 'top') => {
             clearTimeout(hideTimer);
-            ensure().textContent = text;
-            el.dataset.placement = placement;
-            const rect = target.getBoundingClientRect();
-            const tRect = el.getBoundingClientRect();
-            let top, left;
-            if (placement === 'top') { top = rect.top - tRect.height - 10; left = rect.left + rect.width / 2 - tRect.width / 2; }
-            else if (placement === 'bottom') { top = rect.bottom + 10; left = rect.left + rect.width / 2 - tRect.width / 2; }
-            else if (placement === 'left') { top = rect.top + rect.height / 2 - tRect.height / 2; left = rect.left - tRect.width - 10; }
-            else { top = rect.top + rect.height / 2 - tRect.height / 2; left = rect.right + 10; }
-            el.style.top = $clamp(top, 8, window.innerHeight - tRect.height - 8) + 'px';
-            el.style.left = $clamp(left, 8, window.innerWidth - tRect.width - 8) + 'px';
-            el.classList.add('sys-tooltip-show');
+            clearTimeout(showTimer);
+            showTimer = setTimeout(() => {
+                ensure().textContent = text;
+                el.dataset.placement = placement;
+                const rect = target.getBoundingClientRect();
+                const tRect = el.getBoundingClientRect();
+                let top, left;
+                if (placement === 'top') { top = rect.top - tRect.height - 10; left = rect.left + rect.width / 2 - tRect.width / 2; }
+                else if (placement === 'bottom') { top = rect.bottom + 10; left = rect.left + rect.width / 2 - tRect.width / 2; }
+                else if (placement === 'left') { top = rect.top + rect.height / 2 - tRect.height / 2; left = rect.left - tRect.width - 10; }
+                else { top = rect.top + rect.height / 2 - tRect.height / 2; left = rect.right + 10; }
+                el.style.top = $clamp(top, 8, window.innerHeight - tRect.height - 8) + 'px';
+                el.style.left = $clamp(left, 8, window.innerWidth - tRect.width - 8) + 'px';
+                el.classList.add('sys-tooltip-show');
+            }, 280);
         };
-        const hide = () => { hideTimer = setTimeout(() => el?.classList.remove('sys-tooltip-show'), 80); };
+        const hide = () => { clearTimeout(showTimer); hideTimer = setTimeout(() => el?.classList.remove('sys-tooltip-show'), 60); };
         const attach = (selector, getText, placement = 'top') => {
             document.querySelectorAll(selector).forEach(target => {
                 target.addEventListener('mouseenter', () => show(target, typeof getText === 'function' ? getText(target) : getText, placement));
@@ -1450,7 +1584,7 @@ const SysUI = (() => {
                 { transform: `translate3d(0,0,0) rotate(0deg) scale(1)`, opacity: 1 },
                 { transform: `translate3d(${driftX * 0.5}px, 40vh, 0) rotate(${rotation * 0.5}deg) scale(1.1)`, opacity: 0.95, offset: 0.5 },
                 { transform: `translate3d(${driftX}px, 110vh, 0) rotate(${rotation}deg) scale(0.8)`, opacity: 0 }
-            ], { duration, easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)' }).onfinish = () => piece.remove();
+            ], { duration, easing: 'cubic-bezier(0.05, 0.7, 0.1, 1)' }).onfinish = () => piece.remove();
         }
         setTimeout(() => { if (layer && !layer.children.length) layer.remove(); }, 5000);
     };
@@ -1484,7 +1618,7 @@ const SysUI = (() => {
 
     const Ripple = {
         attach: (selector = '[data-ripple], button, [role="button"]') => {
-            document.addEventListener('click', (e) => {
+            document.addEventListener('pointerdown', (e) => {
                 const target = e.target.closest(selector);
                 if (target && !target.dataset.noRipple) DOM.addRipple(e, target);
             });
@@ -1551,7 +1685,7 @@ const SysUI = (() => {
             el.appendChild(wrap);
             const children = Array.from(wrap.children);
             children.forEach(c => { c.style.opacity = '0'; });
-            Motion.stagger(children, (c) => Motion.enter.slideUp(c, { duration: 380 }), 70);
+            Motion.stagger(children, (c) => Motion.enter.slideUp(c), 70);
         },
         generateSkeleton: (type = 'card', count = 1) => {
             Theme.inject();
@@ -1595,7 +1729,7 @@ const SysUI = (() => {
                     if (e.isIntersecting) {
                         e.target.style.opacity = '0';
                         e.target.style.transform = 'translateY(24px)';
-                        setTimeout(() => Motion.enter.slideUp(e.target, { duration: Motion.tokens.duration.emphasized }), i * 60);
+                        setTimeout(() => Motion.enter.slideUp(e.target), i * 60);
                         obs.unobserve(e.target);
                     }
                 });
@@ -1608,10 +1742,10 @@ const SysUI = (() => {
     const ScrollProgress = {
         enable: () => {
             Theme.inject();
-            const bar = DOM.mount('sys-scroll-progress', Layers.hud, 'fixed top-0 left-0 h-[3px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 origin-left shadow-[0_0_12px_rgba(168,85,247,0.6)]');
+            const bar = DOM.mount('sys-scroll-progress', Layers.hud, 'fixed top-0 left-0 h-[2.5px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 origin-left shadow-[0_0_16px_rgba(168,85,247,0.7)]');
             bar.style.width = '100%';
             bar.style.transform = 'scaleX(0)';
-            bar.style.transition = 'transform 120ms cubic-bezier(0.2,0,0,1)';
+            bar.style.transition = 'transform 140ms cubic-bezier(0.05,0.7,0.1,1)';
             const update = $rafThrottle(() => {
                 const scrolled = window.scrollY;
                 const max = document.documentElement.scrollHeight - window.innerHeight;
@@ -1701,6 +1835,7 @@ const SysUI = (() => {
                         tab.classList.add('sys-active');
                         update(tab);
                         Audio.play('tap');
+                        Haptics.select();
                         const panelId = tab.dataset.tab;
                         container.querySelectorAll('[data-panel]').forEach(p => {
                             if (p.dataset.panel === panelId) { p.style.display = ''; Motion.enter.fade(p, { duration: 220 }); }
@@ -1727,6 +1862,10 @@ const SysUI = (() => {
         Hotkeys.bind('shift+?', () => Toasts.create('info', 'Cmd+K: بحث · F12: HUD · ESC: إغلاق', 5000));
         Hotkeys.bind('f12', () => PerfHUD.toggle());
         Hotkeys.bind('mod+shift+m', () => { Audio.mute(!Audio.isMuted()); Toasts.create('info', Audio.isMuted() ? '🔇 تم كتم الأصوات' : '🔊 تم تفعيل الأصوات', 2000); });
+        document.addEventListener('pointerenter', (e) => {
+            const t = e.target;
+            if (t.matches?.('button, [role="button"], a, .sys-magnetic')) Audio.play('hover');
+        }, { capture: true });
         Events.emit('sysui:ready');
     };
 
@@ -1734,7 +1873,7 @@ const SysUI = (() => {
     else boot();
 
     return {
-        version: '5.0.0',
+        version: '6.0.0',
         Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs,
         pageTransition: Page.transition,
         load: SmartLoader.execute,
@@ -1765,6 +1904,8 @@ const SysUI = (() => {
         animate: Motion.animate,
         spring: Motion.spring,
         stagger: Motion.stagger,
+        morph: Motion.morphLayout,
+        inertial: Motion.inertial,
         utils: { esc: $esc, uid: $uid, debounce: $debounce, throttle: $throttle, idle: $idle, clamp: $clamp, lerp: $lerp, smoothstep: $smoothstep, hash: $hash, safeJSON: $safeJSON },
         icons: {
             trash: `<svg class="w-4 h-4 transition-transform hover:scale-110 active:scale-95" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
@@ -1792,3 +1933,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 export const trashSVG = SysUI.icons.trash;
 export { SysUI };
+
