@@ -14,10 +14,16 @@ const SysUI = (() => {
     const $map = (v, a1, a2, b1, b2) => b1 + ((v - a1) * (b2 - b1)) / (a2 - a1);
     const $easeOutExpo = (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
     const $easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    const $easeOutElastic = (t) => { const c4 = (2 * Math.PI) / 3; return t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1; };
+    const $easeOutBack = (t) => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2); };
     const $isElement = (el) => el instanceof Element && el.isConnected;
     const $nextFrame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const $waitFor = (ms) => new Promise(r => setTimeout(r, ms));
     const $supports = (prop, val) => CSS.supports?.(prop, val) ?? false;
+    const $hslMix = (h1, h2, t) => `hsl(${$lerp(h1, h2, t)}, 80%, 60%)`;
+    const $randomBetween = (min, max) => min + Math.random() * (max - min);
+    const $pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const $isVisible = (el) => { if (!el) return false; const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < innerHeight; };
 
     const $prm = matchMedia('(prefers-reduced-motion: reduce)');
     const $isTouch = matchMedia('(pointer: coarse)').matches;
@@ -31,6 +37,9 @@ const SysUI = (() => {
     const $hasViewTransitions = 'startViewTransition' in document;
     const $hasContainerQueries = $supports('container-type', 'inline-size');
     const $hasDvh = $supports('height', '100dvh');
+    const $hasScrollTimeline = $supports('animation-timeline', 'view()');
+    const $hasAnchor = $supports('anchor-name', '--x');
+    const $hasPopover = 'showPopover' in HTMLElement.prototype;
 
     let $reducedMotion = $prm.matches;
     $prm.addEventListener?.('change', e => { $reducedMotion = e.matches; });
@@ -44,7 +53,8 @@ const SysUI = (() => {
             w = window.innerWidth; h = window.innerHeight;
             dpr = window.devicePixelRatio || 1;
             orientation = w > h ? 'landscape' : 'portrait';
-            if (w < 480) breakpoint = 'xs';
+            if (w < 360) breakpoint = '2xs';
+            else if (w < 480) breakpoint = 'xs';
             else if (w < 640) breakpoint = 'sm';
             else if (w < 768) breakpoint = 'md';
             else if (w < 1024) breakpoint = 'lg';
@@ -55,9 +65,11 @@ const SysUI = (() => {
             root.style.setProperty('--sys-vw', w + 'px');
             root.style.setProperty('--sys-vh', h + 'px');
             root.style.setProperty('--sys-dvh', h * 0.01 + 'px');
+            root.style.setProperty('--sys-scale-factor', Math.min(1, w / 1440).toFixed(3));
             root.dataset.sysBp = breakpoint;
             root.dataset.sysOrient = orientation;
             root.dataset.sysTouch = $isTouch ? 'true' : 'false';
+            root.dataset.sysDpr = dpr > 1.5 ? 'high' : 'normal';
             subs.forEach(cb => { try { cb({ w, h, dpr, orientation, breakpoint }); } catch {} });
         };
         const onResize = $rafThrottle(compute);
@@ -68,9 +80,10 @@ const SysUI = (() => {
         return {
             get width() { return w; }, get height() { return h; }, get dpr() { return dpr; },
             get orientation() { return orientation; }, get breakpoint() { return breakpoint; },
-            get isMobile() { return ['xs', 'sm'].includes(breakpoint); },
+            get isMobile() { return ['2xs', 'xs', 'sm'].includes(breakpoint); },
             get isTablet() { return breakpoint === 'md'; },
             get isDesktop() { return ['lg', 'xl', '2xl', '3xl'].includes(breakpoint); },
+            get isNarrow() { return w < 480; },
             subscribe: (cb) => { subs.add(cb); return () => subs.delete(cb); },
             refresh: compute
         };
@@ -92,7 +105,9 @@ const SysUI = (() => {
                 smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
                 anticipate: 'cubic-bezier(0.75, -0.5, 0.25, 1.5)',
                 expo: 'cubic-bezier(0.16, 1, 0.3, 1)',
-                circ: 'cubic-bezier(0, 0.55, 0.45, 1)'
+                circ: 'cubic-bezier(0, 0.55, 0.45, 1)',
+                liquidGlass: 'cubic-bezier(0.32, 0.72, 0, 1)',
+                physicsRebound: 'cubic-bezier(0.4, 1.8, 0.6, 1)'
             },
             spring: {
                 gentle: { stiffness: 120, damping: 14, mass: 1 },
@@ -101,7 +116,9 @@ const SysUI = (() => {
                 slow: { stiffness: 80, damping: 20, mass: 1 },
                 snappy: { stiffness: 400, damping: 28, mass: 1 },
                 bouncy: { stiffness: 260, damping: 9, mass: 1.1 },
-                molasses: { stiffness: 280, damping: 120, mass: 1 }
+                molasses: { stiffness: 280, damping: 120, mass: 1 },
+                jelly: { stiffness: 180, damping: 6, mass: 0.8 },
+                granite: { stiffness: 500, damping: 50, mass: 2 }
             },
             stagger: { tight: 22, normal: 38, relaxed: 60, dramatic: 90 }
         };
@@ -176,7 +193,9 @@ const SysUI = (() => {
             slideLeft: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateX(20px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
             slideRight: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateX(-20px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
             pop: (el) => spring(el, { transform: ['scale(0.85)', 'scale(1)'], opacity: [0, 1] }, 'bouncy'),
-            blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts })
+            blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts }),
+            liquid: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'scale(0.6) rotate(-8deg)', filter: 'blur(20px) saturate(0)' }, { opacity: 1, transform: 'scale(1) rotate(0)', filter: 'blur(0) saturate(1)' }], { duration: tokens.duration.slow, easing: tokens.ease.liquidGlass, ...opts }),
+            morphIn: (el, opts = {}) => animate(el, [{ opacity: 0, clipPath: 'circle(0% at 50% 50%)' }, { opacity: 1, clipPath: 'circle(100% at 50% 50%)' }], { duration: tokens.duration.slow, easing: tokens.ease.spring, ...opts })
         };
         const exit = {
             fade: (el, opts = {}) => animate(el, [{ opacity: 1 }, { opacity: 0 }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
@@ -214,7 +233,14 @@ const SysUI = (() => {
                 { transformOrigin: 'top left', transform: 'translate(0, 0) scale(1, 1)', opacity: 1 }
             ], { duration: tokens.duration.slow, easing: tokens.ease.spring, ...opts });
         };
-        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, morph, reduce, springCurve, cancelOn };
+        const glitch = (el, intensity = 4) => animate(el, [
+            { transform: 'translate(0,0)', filter: 'hue-rotate(0deg)' },
+            { transform: `translate(${intensity}px,-${intensity/2}px)`, filter: 'hue-rotate(90deg)' },
+            { transform: `translate(-${intensity}px,${intensity/2}px)`, filter: 'hue-rotate(180deg)' },
+            { transform: `translate(${intensity/2}px,${intensity}px)`, filter: 'hue-rotate(270deg)' },
+            { transform: 'translate(0,0)', filter: 'hue-rotate(360deg)' }
+        ], { duration: 320, easing: tokens.ease.smooth });
+        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, morph, glitch, reduce, springCurve, cancelOn };
     })();
 
     const Events = (() => {
@@ -289,7 +315,7 @@ const SysUI = (() => {
     })();
 
     const Audio = (() => {
-        let ctx = null, master = null, compressor = null, reverb = null;
+        let ctx = null, master = null, compressor = null, reverb = null, analyser = null;
         let muted = $safeJSON('sysui_audio_muted', false);
         let volume = $safeJSON('sysui_audio_volume', 0.4);
         let lastPlayTime = new Map();
@@ -304,6 +330,8 @@ const SysUI = (() => {
                     compressor.ratio.value = 6; compressor.attack.value = 0.003; compressor.release.value = 0.15;
                     master = ctx.createGain();
                     master.gain.value = volume;
+                    analyser = ctx.createAnalyser();
+                    analyser.fftSize = 256;
                     const wet = ctx.createGain();
                     wet.gain.value = 0.08;
                     try {
@@ -317,6 +345,7 @@ const SysUI = (() => {
                         reverb.buffer = buf;
                         master.connect(reverb); reverb.connect(wet); wet.connect(compressor);
                     } catch {}
+                    master.connect(analyser);
                     master.connect(compressor);
                     compressor.connect(ctx.destination);
                 } catch { return false; }
@@ -409,7 +438,11 @@ const SysUI = (() => {
             morph: () => sweep(440, 880, 'triangle', 0.2, 0.05, 'lin'),
             zap: () => { sweep(2000, 200, 'sawtooth', 0.08, 0.06); noise(0.08, 0.03, 4000); },
             chime: () => chord([1318.51, 1567.98, 2093], 'sine', 0.35, 0.06),
-            heartbeat: () => { tone(60, 'sine', 0.1, 0.12); setTimeout(() => tone(60, 'sine', 0.12, 0.1), 140); }
+            heartbeat: () => { tone(60, 'sine', 0.1, 0.12); setTimeout(() => tone(60, 'sine', 0.12, 0.1), 140); },
+            quantum: () => { for (let i = 0; i < 8; i++) setTimeout(() => tone(440 * Math.pow(2, i/4), 'sine', 0.08, 0.04), i * 20); },
+            holo: () => { sweep(1200, 3200, 'sine', 0.18, 0.04); sweep(2400, 800, 'triangle', 0.22, 0.03); },
+            plasma: () => { for (let i = 0; i < 4; i++) setTimeout(() => sweep(200 + i * 300, 1200 + i * 200, 'sawtooth', 0.15, 0.03), i * 40); },
+            telekinesis: () => { sweep(80, 2400, 'sine', 0.4, 0.05); noise(0.3, 0.02, 6000); }
         };
         return {
             play: (name) => { if (!throttleKey(name, 25)) return; presets[name]?.(); },
@@ -417,7 +450,8 @@ const SysUI = (() => {
             mute: (v) => { muted = !!v; $safeSet('sysui_audio_muted', muted); Events.emit('audio:mute', muted); },
             isMuted: () => muted,
             setVolume: (v) => { volume = $clamp(v, 0, 1); if (master) master.gain.value = volume; $safeSet('sysui_audio_volume', volume); },
-            getVolume: () => volume
+            getVolume: () => volume,
+            getAnalyser: () => analyser
         };
     })();
 
@@ -430,7 +464,8 @@ const SysUI = (() => {
         warn: () => navigator.vibrate?.([20, 40, 20]),
         select: () => navigator.vibrate?.(5),
         soft: () => navigator.vibrate?.(3),
-        impact: () => navigator.vibrate?.([5, 10, 20])
+        impact: () => navigator.vibrate?.([5, 10, 20]),
+        pattern: (arr) => navigator.vibrate?.(arr)
     };
 
     const Layers = Object.freeze({
@@ -508,6 +543,7 @@ const SysUI = (() => {
                     --sys-safe-left: env(safe-area-inset-left, 0px);
                     --sys-safe-right: env(safe-area-inset-right, 0px);
                     --sys-touch-target: 44px;
+                    --sys-touch-target-sm: 36px;
                     --sys-dur-instant: 80ms;
                     --sys-dur-micro: 120ms;
                     --sys-dur-fast: 180ms;
@@ -525,6 +561,7 @@ const SysUI = (() => {
                     --sys-ease-spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);
                     --sys-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
                     --sys-ease-elastic: cubic-bezier(0.68, -0.4, 0.265, 1.4);
+                    --sys-ease-liquid: cubic-bezier(0.32, 0.72, 0, 1);
                     --sys-motion-instant: 80ms;
                     --sys-motion-fast: 180ms;
                     --sys-motion-normal: 240ms;
@@ -543,6 +580,8 @@ const SysUI = (() => {
                     --sys-shadow-xl: 0 40px 96px rgba(0,0,0,0.7);
                     --sys-gradient-aurora: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #06b6d4 100%);
                     --sys-gradient-fire: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+                    --sys-gradient-quantum: linear-gradient(135deg, #00f5ff 0%, #ff00ff 25%, #ffff00 50%, #00ff00 75%, #00f5ff 100%);
+                    --sys-gradient-nebula: radial-gradient(ellipse at top, rgba(168,85,247,0.3) 0%, transparent 50%), radial-gradient(ellipse at bottom, rgba(236,72,153,0.25) 0%, transparent 50%), radial-gradient(ellipse at left, rgba(6,182,212,0.2) 0%, transparent 50%);
                     --sys-gradient-mesh: radial-gradient(at 40% 20%, rgba(168,85,247,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(59,130,246,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(236,72,153,0.1) 0px, transparent 50%), radial-gradient(at 80% 50%, rgba(6,182,212,0.1) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(168,85,247,0.12) 0px, transparent 50%);
                 }
                 @supports (height: 100dvh) {
@@ -551,6 +590,7 @@ const SysUI = (() => {
                 @supports not (height: 100dvh) {
                     :root { --sys-vh-full: 100vh; --sys-vh-small: 100vh; --sys-vh-large: 100vh; }
                 }
+                *, *::before, *::after { box-sizing: border-box; }
                 @media (prefers-reduced-motion: reduce) {
                     *, *::before, *::after {
                         animation-duration: 0.01ms !important;
@@ -567,8 +607,8 @@ const SysUI = (() => {
                 }
                 ::selection { background: rgba(168, 85, 247, 0.35); color: #fff; }
                 ::-moz-selection { background: rgba(168, 85, 247, 0.35); color: #fff; }
-                html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-                body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; overscroll-behavior-y: none; }
+                html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; overflow-x: hidden; }
+                body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; overscroll-behavior-y: none; overflow-x: hidden; max-width: 100vw; }
                 body::before {
                     content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
                     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='[w3.org](http://www.w3.org/2000/svg)'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
@@ -645,7 +685,7 @@ const SysUI = (() => {
                 @keyframes sysAuroraShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
                 .sys-skeleton-bg { background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.06) 50%, rgba(255,255,255,0.02) 75%); background-size: 1200px 100%; animation: sysShimmer 1.8s infinite linear; }
                 .sys-magnetic { transition: transform 220ms var(--sys-ease-spring), box-shadow 280ms var(--sys-ease-smooth); will-change: transform; transform-origin: center; }
-                @media (pointer: coarse) { .sys-magnetic { transition: transform 140ms var(--sys-ease-spring-snappy); } }
+                @media (pointer: coarse) { .sys-magnetic { transition: transform 140ms var(--sys-ease-spring-snappy); transform: none !important; } }
                 .sys-progress { animation: sysProgress linear forwards; transform-origin: left; will-change: transform; }
                 @keyframes sysProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
                 .sys-ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: sysRipple 700ms var(--sys-ease-smooth); background: radial-gradient(circle, rgba(255,255,255,0.45), rgba(255,255,255,0.1) 60%, transparent); pointer-events: none; will-change: transform, opacity; }
@@ -655,25 +695,37 @@ const SysUI = (() => {
                 .sys-no-scroll::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(168,85,247,0.4), rgba(168,85,247,0.15)); border-radius: 6px; transition: background 200ms; }
                 .sys-no-scroll::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, rgba(168,85,247,0.7), rgba(168,85,247,0.35)); }
                 .sys-no-scroll { scrollbar-width: thin; scrollbar-color: rgba(168,85,247,0.4) transparent; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+                .sys-scroll-x { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scroll-snap-type: x proximity; scrollbar-width: none; -ms-overflow-style: none; scroll-padding-inline: 1rem; }
+                .sys-scroll-x::-webkit-scrollbar { display: none; }
+                .sys-scroll-x > * { scroll-snap-align: start; flex-shrink: 0; }
+                .sys-scroll-fade { position: relative; }
+                .sys-scroll-fade::before, .sys-scroll-fade::after { content: ""; position: absolute; top: 0; bottom: 0; width: 24px; pointer-events: none; z-index: 2; transition: opacity 200ms; }
+                .sys-scroll-fade::before { left: 0; background: linear-gradient(to right, rgba(10,10,12,0.9), transparent); }
+                .sys-scroll-fade::after { right: 0; background: linear-gradient(to left, rgba(10,10,12,0.9), transparent); }
+                .sys-scroll-fade[data-scroll-start="true"]::before { opacity: 0; }
+                .sys-scroll-fade[data-scroll-end="true"]::after { opacity: 0; }
                 .sys-spotlight-cursor { position: fixed; top: 0; left: 0; width: 24px; height: 24px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.55), transparent 70%); pointer-events: none; mix-blend-mode: screen; transition: width 0.22s var(--sys-ease-spring), height 0.22s var(--sys-ease-spring), background 0.3s; will-change: transform; z-index: 10004; }
                 .sys-spotlight-cursor::after { content: ""; position: absolute; inset: -20px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 70%); animation: sysBreathe 2.4s ease-in-out infinite; }
                 .sys-cursor-trail { position: fixed; width: 6px; height: 6px; border-radius: 50%; background: rgba(168,85,247,0.6); pointer-events: none; z-index: 10003; mix-blend-mode: screen; will-change: transform, opacity; }
-                .sys-tooltip { position: fixed; padding: 7px 11px; background: rgba(0,0,0,0.96); border: 1px solid rgba(168,85,247,0.28); border-radius: 8px; font-size: var(--sys-font-xs); color: rgba(255,255,255,0.95); pointer-events: none; white-space: nowrap; z-index: 10005; opacity: 0; transform: translateY(6px) scale(0.94); transition: opacity 200ms var(--sys-ease-spring), transform 240ms var(--sys-ease-spring-bounce); box-shadow: var(--sys-shadow-md), 0 0 20px rgba(168,85,247,0.22); font-weight: 500; letter-spacing: 0.01em; will-change: transform, opacity; max-width: 90vw; }
+                .sys-tooltip { position: fixed; padding: 7px 11px; background: rgba(0,0,0,0.96); border: 1px solid rgba(168,85,247,0.28); border-radius: 8px; font-size: var(--sys-font-xs); color: rgba(255,255,255,0.95); pointer-events: none; white-space: nowrap; z-index: 10005; opacity: 0; transform: translateY(6px) scale(0.94); transition: opacity 200ms var(--sys-ease-spring), transform 240ms var(--sys-ease-spring-bounce); box-shadow: var(--sys-shadow-md), 0 0 20px rgba(168,85,247,0.22); font-weight: 500; letter-spacing: 0.01em; will-change: transform, opacity; max-width: min(90vw, 320px); }
                 .sys-tooltip.sys-tooltip-show { opacity: 1; transform: translateY(0) scale(1); }
                 .sys-tooltip::before { content: ""; position: absolute; width: 8px; height: 8px; background: inherit; border: inherit; border-right: 0; border-top: 0; }
                 .sys-tooltip[data-placement="top"]::before { bottom: -5px; left: 50%; transform: translateX(-50%) rotate(-45deg); border-left: 0; border-bottom: 1px solid rgba(168,85,247,0.28); border-right: 1px solid rgba(168,85,247,0.28); border-top: 0; }
                 .sys-focus-ring:focus-visible { outline: 2px solid rgba(168, 85, 247, 0.7); outline-offset: 3px; border-radius: 4px; transition: outline-offset 180ms var(--sys-ease-spring); }
                 button, [role="button"] { position: relative; overflow: hidden; }
-                button, [role="button"], a, input, select, textarea { min-height: var(--sys-touch-target); }
-                @media (pointer: fine) { button, [role="button"], a, input, select, textarea { min-height: auto; } }
+                @media (pointer: coarse) {
+                    button, [role="button"], a:not(.sys-no-touch), input, select, textarea { min-height: var(--sys-touch-target); min-width: var(--sys-touch-target); }
+                    .sys-touch-sm { min-height: var(--sys-touch-target-sm) !important; min-width: var(--sys-touch-target-sm) !important; }
+                    .sys-touch-none { min-height: 0 !important; min-width: 0 !important; }
+                }
                 .sys-particle { position: fixed; pointer-events: none; border-radius: 50%; will-change: transform, opacity; }
                 .sys-aurora-text { background: var(--sys-gradient-aurora); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; animation: sysShimmerText 4s linear infinite; }
                 .sys-grid-bg { background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px); background-size: 32px 32px; }
-                .sys-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--sys-accent-primary); border-radius: 50%; animation: sysSpin 0.7s linear infinite; will-change: transform; }
+                .sys-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.1); border-top-color: var(--sys-accent-primary); border-radius: 50%; animation: sysSpin 0.7s linear infinite; will-change: transform; flex-shrink: 0; }
                 .sys-button-press { transition: transform 100ms var(--sys-ease-spring-snappy), filter 150ms; will-change: transform; -webkit-tap-highlight-color: transparent; }
                 .sys-button-press:active { transform: scale(0.95); filter: brightness(0.92); }
                 @media (hover: hover) { .sys-button-press:hover { transform: translateY(-1px); } }
-                .sys-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.1); border-bottom-width: 2px; border-radius: 4px; font-size: 10px; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.7); letter-spacing: 0.05em; transition: transform 80ms var(--sys-ease-spring-snappy); }
+                .sys-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.1); border-bottom-width: 2px; border-radius: 4px; font-size: 10px; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.7); letter-spacing: 0.05em; transition: transform 80ms var(--sys-ease-spring-snappy); flex-shrink: 0; }
                 .sys-kbd:active { transform: translateY(1px); border-bottom-width: 1px; }
                 .sys-divider-glow { height: 1px; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.4), transparent); }
                 .sys-toast-enter { animation: sysToastIn 460ms var(--sys-ease-spring-bounce) forwards; }
@@ -692,12 +744,12 @@ const SysUI = (() => {
                 .sys-tilt { transform-style: preserve-3d; transition: transform 280ms var(--sys-ease-spring); will-change: transform; }
                 .sys-overlay-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0); backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); transition: background var(--sys-dur-normal) var(--sys-ease-standard), backdrop-filter var(--sys-dur-normal) var(--sys-ease-standard), -webkit-backdrop-filter var(--sys-dur-normal) var(--sys-ease-standard); pointer-events: none; will-change: backdrop-filter, background; }
                 .sys-overlay-backdrop.sys-open { background: rgba(0,0,0,0.76); backdrop-filter: blur(20px) saturate(150%); -webkit-backdrop-filter: blur(20px) saturate(150%); pointer-events: auto; }
-                .sys-drawer { position: fixed; background: rgba(10,10,12,0.92); backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px) saturate(200%); border: 1px solid var(--sys-border-strong); box-shadow: var(--sys-shadow-xl); transition: transform var(--sys-dur-emphasized) var(--sys-ease-spring); will-change: transform; padding-top: var(--sys-safe-top); padding-bottom: var(--sys-safe-bottom); }
+                .sys-drawer { position: fixed; background: rgba(10,10,12,0.92); backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px) saturate(200%); border: 1px solid var(--sys-border-strong); box-shadow: var(--sys-shadow-xl); transition: transform var(--sys-dur-emphasized) var(--sys-ease-spring); will-change: transform; padding-top: var(--sys-safe-top); padding-bottom: var(--sys-safe-bottom); max-width: 100vw; }
                 .sys-accordion-content { overflow: hidden; transition: grid-template-rows var(--sys-dur-emphasized) var(--sys-ease-spring); display: grid; grid-template-rows: 0fr; }
                 .sys-accordion-content.sys-open { grid-template-rows: 1fr; }
                 .sys-accordion-content > div { overflow: hidden; min-height: 0; }
                 .sys-icon-spin { animation: sysSpin 0.7s linear infinite; }
-                .sys-tab-indicator { position: absolute; bottom: 0; height: 2px; background: var(--sys-accent-primary); border-radius: 2px; box-shadow: 0 0 8px var(--sys-accent-primary); transition: transform var(--sys-dur-emphasized) var(--sys-ease-spring), width var(--sys-dur-emphasized) var(--sys-ease-spring); will-change: transform, width; }
+                .sys-tab-indicator { position: absolute; bottom: 0; height: 2px; background: var(--sys-accent-primary); border-radius: 2px; box-shadow: 0 0 8px var(--sys-accent-primary); transition: transform var(--sys-dur-emphasized) var(--sys-ease-spring), width var(--sys-dur-emphasized) var(--sys-ease-spring); will-change: transform, width; pointer-events: none; }
                 .sys-list-item-enter { animation: sysListItemIn 320ms var(--sys-ease-spring) backwards; }
                 @keyframes sysListItemIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
                 .sys-flip-card { transform-style: preserve-3d; transition: transform 600ms var(--sys-ease-spring); }
@@ -709,13 +761,26 @@ const SysUI = (() => {
                 @media (hover: hover) { .sys-bloom:hover::before { opacity: 1; } }
                 @keyframes sysGlowPulse { 0%,100% { box-shadow: 0 0 20px rgba(168,85,247,0.2), 0 0 40px rgba(168,85,247,0.1); } 50% { box-shadow: 0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.2); } }
                 .sys-iridescent { background: linear-gradient(135deg, #a855f7, #ec4899, #06b6d4, #a855f7); background-size: 300% 300%; animation: sysAuroraShift 8s ease infinite; }
-                [data-sys-bp="xs"] .sys-hide-xs, [data-sys-bp="sm"] .sys-hide-sm { display: none !important; }
+                .sys-quantum-text { background: var(--sys-gradient-quantum); background-size: 400% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: sysShimmerText 6s linear infinite; }
+                [data-sys-bp="2xs"] .sys-hide-2xs, [data-sys-bp="xs"] .sys-hide-xs, [data-sys-bp="sm"] .sys-hide-sm { display: none !important; }
+                [data-sys-bp="2xs"] .sys-show-2xs-only, [data-sys-bp="xs"] .sys-show-xs-only { display: initial; }
                 .sys-safe-area { padding-top: var(--sys-safe-top); padding-bottom: var(--sys-safe-bottom); padding-left: var(--sys-safe-left); padding-right: var(--sys-safe-right); }
                 .sys-container-query { container-type: inline-size; }
                 @container (max-width: 480px) { .sys-cq-stack { flex-direction: column !important; } }
                 .sys-touch-action-none { touch-action: none; }
                 .sys-touch-action-pan-y { touch-action: pan-y; }
                 .sys-fluid { width: 100%; max-width: min(100%, 92vw); margin-inline: auto; }
+                .sys-hologram { background: linear-gradient(135deg, rgba(0,245,255,0.1), rgba(255,0,255,0.1), rgba(255,255,0,0.1)); background-size: 200% 200%; animation: sysAuroraShift 5s ease infinite; border: 1px solid rgba(0,245,255,0.3); box-shadow: 0 0 30px rgba(0,245,255,0.15), inset 0 0 30px rgba(255,0,255,0.05); position: relative; }
+                .sys-hologram::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px); pointer-events: none; border-radius: inherit; }
+                .sys-liquid-bg { background: radial-gradient(circle at 20% 30%, rgba(168,85,247,0.2), transparent 50%), radial-gradient(circle at 80% 70%, rgba(236,72,153,0.2), transparent 50%); animation: sysLiquidMove 12s ease-in-out infinite; }
+                @keyframes sysLiquidMove { 0%,100% { background-position: 0% 0%, 100% 100%; } 50% { background-position: 100% 100%, 0% 0%; } }
+                .sys-particle-field { position: absolute; inset: 0; overflow: hidden; pointer-events: none; border-radius: inherit; }
+                .sys-particle-field::before, .sys-particle-field::after { content: ""; position: absolute; width: 3px; height: 3px; border-radius: 50%; background: rgba(168,85,247,0.6); box-shadow: 0 0 10px rgba(168,85,247,0.4); animation: sysParticleFloat 8s linear infinite; }
+                .sys-particle-field::after { animation-delay: -4s; background: rgba(236,72,153,0.6); box-shadow: 0 0 10px rgba(236,72,153,0.4); }
+                @keyframes sysParticleFloat { 0% { transform: translate(10%, 110%) scale(0); opacity: 0; } 10% { opacity: 1; transform: translate(20%, 90%) scale(1); } 50% { transform: translate(80%, 40%) scale(1.2); } 90% { opacity: 1; transform: translate(70%, 10%) scale(0.8); } 100% { transform: translate(50%, -10%) scale(0); opacity: 0; } }
+                .sys-cmd-row[data-active="true"] { background: linear-gradient(90deg, rgba(168,85,247,0.18), rgba(236,72,153,0.08)); border-color: rgba(168,85,247,0.35) !important; box-shadow: inset 0 0 0 1px rgba(168,85,247,0.2), 0 4px 16px -4px rgba(168,85,247,0.3); }
+                .sys-cmd-row[data-active="true"]::before { content: ""; position: absolute; left: 0; top: 50%; transform: translateY(-50%); width: 3px; height: 60%; background: linear-gradient(180deg, #a855f7, #ec4899); border-radius: 0 3px 3px 0; box-shadow: 0 0 12px rgba(168,85,247,0.6); }
+                .sys-mag-3d { transform-style: preserve-3d; perspective: 1000px; }
             `;
             document.head.appendChild(style);
             injected = true;
@@ -1054,11 +1119,12 @@ const SysUI = (() => {
             const update = () => {
                 const rect = target.getBoundingClientRect();
                 overlay.innerHTML = '';
-                const hole = DOM.create('div', { class: 'absolute rounded-2xl pointer-events-auto transition-all duration-700 sys-breathe', style: { top: (rect.top - 10) + 'px', left: (rect.left - 10) + 'px', width: (rect.width + 20) + 'px', height: (rect.height + 20) + 'px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.82), inset 0 0 30px rgba(168,85,247,0.35), 0 0 40px rgba(168,85,247,0.4)' } });
+                const padding = Viewport.isMobile ? 6 : 10;
+                const hole = DOM.create('div', { class: 'absolute rounded-2xl pointer-events-auto transition-all duration-700 sys-breathe', style: { top: (rect.top - padding) + 'px', left: (rect.left - padding) + 'px', width: (rect.width + padding * 2) + 'px', height: (rect.height + padding * 2) + 'px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.82), inset 0 0 30px rgba(168,85,247,0.35), 0 0 40px rgba(168,85,247,0.4)' } });
                 const tipTop = placement === 'bottom' ? rect.bottom + 24 : rect.top - 90;
-                const tooltip = DOM.create('div', { class: 'absolute flex flex-col items-center pointer-events-auto sys-scale-in', style: { top: tipTop + 'px', left: (rect.left + rect.width / 2) + 'px', transform: 'translateX(-50%)', maxWidth: 'min(90vw, 320px)' } });
+                const tooltip = DOM.create('div', { class: 'absolute flex flex-col items-center pointer-events-auto sys-scale-in', style: { top: tipTop + 'px', left: Math.max(16, Math.min(window.innerWidth - 16, rect.left + rect.width / 2)) + 'px', transform: 'translateX(-50%)', maxWidth: 'min(92vw, 340px)' } });
                 const bubble = DOM.create('div', { class: 'sys-glass-glow text-white px-5 py-3 rounded-xl text-sm font-medium shadow-2xl mb-3 text-center', text: message });
-                const btn = DOM.create('button', { class: 'sys-magnetic text-xs text-white/70 hover:text-white transition-colors px-4 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md', text: dismissLabel });
+                const btn = DOM.create('button', { class: 'sys-magnetic text-xs text-white/70 hover:text-white transition-colors px-4 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md whitespace-nowrap', text: dismissLabel });
                 tooltip.append(bubble, btn);
                 overlay.append(hole, tooltip);
                 btn.addEventListener('click', close, { once: true });
@@ -1091,7 +1157,7 @@ const SysUI = (() => {
         let active = false, frames = 0, lastTime = performance.now(), fps = 0, fpsHistory = [], rafId = null;
         const toggle = () => {
             active = !active;
-            const el = DOM.mount('sys-hud', Layers.hud, 'fixed bottom-4 left-4 sys-glass-strong p-3.5 rounded-xl text-[10px] font-mono text-green-400 pointer-events-auto transition-all flex flex-col gap-1.5 w-64 max-w-[calc(100vw-2rem)] opacity-0 select-none sys-noise-overlay');
+            const el = DOM.mount('sys-hud', Layers.hud, 'fixed bottom-4 left-4 sys-glass-strong p-3.5 rounded-xl text-[10px] font-mono text-green-400 pointer-events-auto transition-all flex flex-col gap-1.5 max-w-[calc(100vw-2rem)] w-64 opacity-0 select-none sys-noise-overlay');
             if (!active) {
                 Motion.exit.scale(el).then(() => el.remove());
                 cancelAnimationFrame(rafId);
@@ -1121,7 +1187,7 @@ const SysUI = (() => {
                         <div class="flex justify-between"><span class="text-gray-500">📢 TST</span><span class="text-cyan-400">${State.toasts.size}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">🎯 ACT</span><span class="text-pink-400">${Actions.getAll().length}</span></div>
                         <div class="sys-divider-glow my-1"></div>
-                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v6.0 · ONLINE</div>
+                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v7.0 · QUANTUM</div>
                     `;
                 }
                 rafId = requestAnimationFrame(loop);
@@ -1133,11 +1199,11 @@ const SysUI = (() => {
 
     const Toasts = (() => {
         const icons = {
-            success: `<svg class="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`,
-            error: `<svg class="w-4 h-4 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>`,
+            success: `<svg class="w-4 h-4 text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>`,
+            error: `<svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>`,
             loading: `<div class="sys-spinner"></div>`,
-            info: `<svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
-            warn: `<svg class="w-4 h-4 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`
+            info: `<svg class="w-4 h-4 text-blue-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`,
+            warn: `<svg class="w-4 h-4 text-yellow-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`
         };
         const colors = { success: 'bg-green-500/40', error: 'bg-red-500/40', loading: 'bg-purple-500/40', info: 'bg-blue-500/40', warn: 'bg-yellow-500/40' };
         const borders = { success: 'border-green-500/30', error: 'border-red-500/30', loading: 'border-purple-500/30', info: 'border-blue-500/30', warn: 'border-yellow-500/30' };
@@ -1149,7 +1215,7 @@ const SysUI = (() => {
             const iconWrap = DOM.create('div', { class: 'shrink-0' });
             iconWrap.innerHTML = icons[type] || icons.info;
             wrap.appendChild(iconWrap);
-            wrap.appendChild(DOM.create('span', { class: 'flex-1 break-words', text: String(message) }));
+            wrap.appendChild(DOM.create('span', { class: 'flex-1 break-words min-w-0', text: String(message) }));
             const bar = duration !== Infinity ? DOM.create('div', { class: `absolute bottom-0 left-0 right-0 h-[2px] origin-left ${colors[type] || colors.info} sys-progress`, style: { animationDuration: duration + 'ms' } }) : null;
             return { wrap, bar };
         };
@@ -1173,15 +1239,15 @@ const SysUI = (() => {
             Theme.inject();
             Audio.play(opts.sound || sounds[type] || 'pop');
             Haptics[haptics[type] || 'light']?.();
-            const container = DOM.mount('sys-toasts', Layers.toast, 'fixed top-[max(1.5rem,calc(env(safe-area-inset-top,0px)+0.75rem))] left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none w-full max-w-md px-3 sm:px-4');
+            const container = DOM.mount('sys-toasts', Layers.toast, 'fixed top-[max(1.5rem,calc(env(safe-area-inset-top,0px)+0.75rem))] left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none w-[min(28rem,calc(100vw-1.5rem))] px-0');
             const id = opts.id || $uid();
             const borderCls = borders[type] || borders.info;
-            const el = DOM.create('div', { class: `sys-glass flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-gray-100 shadow-2xl relative overflow-hidden pointer-events-auto sys-toast-enter border ${borderCls} sys-noise-overlay min-w-[260px] max-w-full w-full sys-touch-action-pan-y`, role: 'status', 'aria-live': type === 'error' ? 'assertive' : 'polite' });
+            const el = DOM.create('div', { class: `sys-glass flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-gray-100 shadow-2xl relative overflow-hidden pointer-events-auto sys-toast-enter border ${borderCls} sys-noise-overlay w-full sys-touch-action-pan-y`, role: 'status', 'aria-live': type === 'error' ? 'assertive' : 'polite' });
             const { wrap, bar } = renderContent(type, message, duration);
             el.appendChild(wrap);
             if (bar) el.appendChild(bar);
             if (opts.action) {
-                const actionBtn = DOM.create('button', { class: 'sys-button-press text-xs text-white/90 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 ml-2 z-10 font-medium transition-all shrink-0', text: opts.action.label });
+                const actionBtn = DOM.create('button', { class: 'sys-button-press text-xs text-white/90 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 ml-2 z-10 font-medium transition-all shrink-0 sys-touch-sm', text: opts.action.label });
                 actionBtn.addEventListener('click', () => { opts.action.handler?.(); remove(id); }, { once: true });
                 el.appendChild(actionBtn);
             }
@@ -1200,7 +1266,7 @@ const SysUI = (() => {
                 else { el.style.transition = 'transform 320ms cubic-bezier(0.34,1.56,0.64,1), opacity 320ms'; el.style.transform = ''; el.style.opacity = ''; }
                 currentX = 0;
             });
-            el.addEventListener('click', () => { if (event?.target?.tagName !== 'BUTTON' && !dragging && Math.abs(currentX) < 5) remove(id); });
+            el.addEventListener('click', (event) => { if (event?.target?.tagName !== 'BUTTON' && !dragging && Math.abs(currentX) < 5) remove(id); });
             el.addEventListener('mouseenter', () => { if (data.timeout) { clearTimeout(data.timeout); data.timeout = null; bar?.style.setProperty('animation-play-state', 'paused'); } });
             el.addEventListener('mouseleave', () => { if (duration !== Infinity && !data.timeout) { data.timeout = setTimeout(() => remove(id), 1500); bar?.style.setProperty('animation-play-state', 'running'); } });
             return id;
@@ -1262,13 +1328,13 @@ const SysUI = (() => {
             const container = DOM.mount('sys-modal-root', Layers.modal, 'fixed inset-0 hidden items-center justify-center px-3 sm:px-4 pointer-events-none sys-safe-area');
             const box = DOM.create('div', { class: 'relative sys-glass-strong p-5 sm:p-7 rounded-2xl w-full max-w-md pointer-events-auto sys-noise-overlay max-h-[calc(100dvh-2rem)] overflow-y-auto sys-no-scroll', role: 'dialog', 'aria-modal': 'true', tabindex: '-1', style: { transformOrigin: 'center' } });
             if (icon || type === 'danger') {
-                const iconBox = DOM.create('div', { class: `w-12 h-12 rounded-xl mb-4 flex items-center justify-center ${type === 'danger' ? 'bg-red-500/15 border border-red-500/30' : 'bg-purple-500/15 border border-purple-500/30'} sys-breathe` });
+                const iconBox = DOM.create('div', { class: `w-12 h-12 rounded-xl mb-4 flex items-center justify-center ${type === 'danger' ? 'bg-red-500/15 border border-red-500/30' : 'bg-purple-500/15 border border-purple-500/30'} sys-breathe shrink-0` });
                 iconBox.innerHTML = icon || `<svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
                 box.appendChild(iconBox);
             }
-            const titleEl = DOM.create('h3', { class: 'text-white font-semibold text-lg mb-2 tracking-tight', text: title });
+            const titleEl = DOM.create('h3', { class: 'text-white font-semibold text-lg mb-2 tracking-tight break-words', text: title });
             box.appendChild(titleEl);
-            if (description) box.appendChild(DOM.create('p', { class: 'text-gray-400 text-sm mb-5 leading-relaxed', text: description }));
+            if (description) box.appendChild(DOM.create('p', { class: 'text-gray-400 text-sm mb-5 leading-relaxed break-words', text: description }));
             else box.appendChild(DOM.create('div', { class: 'mb-5' }));
             let input = null, errorEl = null;
             if (inputId) {
@@ -1389,17 +1455,16 @@ const SysUI = (() => {
                     const currentIdx = idx++;
                     const isActive = currentIdx === State.cmdState.selectedIndex;
                     const isFav = State.cmdState.favorites.has(cmd.id);
-                    const baseCls = isActive ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border-purple-500/30' : 'hover:bg-white/5 border-transparent';
                     const aiCls = cmd.isAI ? 'border-purple-500/40 bg-purple-900/15' : '';
-                    const row = DOM.create('div', { class: `flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer transition-all border ${baseCls} ${aiCls} group`, dataset: { idx: currentIdx }, style: { opacity: '0', transform: 'translateX(-8px)' } });
-                    const left = DOM.create('div', { class: 'flex items-center gap-3 min-w-0 flex-1' });
+                    const row = DOM.create('div', { class: `sys-cmd-row flex items-center justify-between gap-2 px-3 py-3 rounded-xl cursor-pointer transition-all border border-transparent hover:bg-white/5 ${aiCls} group relative min-w-0`, dataset: { idx: currentIdx, active: isActive ? 'true' : 'false' }, style: { opacity: '0', transform: 'translateX(-8px)' } });
+                    const left = DOM.create('div', { class: 'flex items-center gap-3 min-w-0 flex-1 overflow-hidden' });
                     const iconBox = DOM.create('div', { class: `w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base transition-transform group-hover:scale-110 ${cmd.isAI ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/20 border border-purple-500/30' : 'bg-white/5 border border-white/10'}`, text: cmd.icon || '⌘' });
-                    const textWrap = DOM.create('div', { class: 'flex flex-col min-w-0 flex-1' });
+                    const textWrap = DOM.create('div', { class: 'flex flex-col min-w-0 flex-1 overflow-hidden' });
                     textWrap.appendChild(DOM.create('span', { class: `text-sm ${cmd.isAI ? 'text-purple-200' : 'text-gray-100'} font-medium truncate`, text: cmd.title }));
                     if (cmd.description) textWrap.appendChild(DOM.create('span', { class: 'text-[11px] text-gray-500 truncate mt-0.5', text: cmd.description }));
                     left.append(iconBox, textWrap);
                     row.appendChild(left);
-                    const right = DOM.create('div', { class: 'flex items-center gap-2 shrink-0 ml-2' });
+                    const right = DOM.create('div', { class: 'flex items-center gap-2 shrink-0' });
                     if (isFav) right.appendChild(DOM.create('span', { class: 'text-yellow-400 text-xs', text: '★' }));
                     if (cmd.shortcut && !Viewport.isMobile) {
                         const kbd = DOM.create('span', { class: 'sys-kbd', text: cmd.shortcut });
@@ -1418,14 +1483,9 @@ const SysUI = (() => {
         const updateActive = (container) => {
             container.querySelectorAll('[data-idx]').forEach(el => {
                 const i = parseInt(el.dataset.idx);
-                if (i === State.cmdState.selectedIndex) {
-                    el.classList.add('bg-gradient-to-r', 'from-purple-500/20', 'to-pink-500/10', 'border-purple-500/30');
-                    el.classList.remove('hover:bg-white/5', 'border-transparent');
-                    el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                } else {
-                    el.classList.remove('bg-gradient-to-r', 'from-purple-500/20', 'to-pink-500/10', 'border-purple-500/30');
-                    el.classList.add('hover:bg-white/5', 'border-transparent');
-                }
+                const isActive = i === State.cmdState.selectedIndex;
+                el.dataset.active = isActive ? 'true' : 'false';
+                if (isActive) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
             });
         };
 
@@ -1437,14 +1497,16 @@ const SysUI = (() => {
             const bd = DOM.mount('sys-cmd-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
             State.cmdState = { ...State.cmdState, query: '', selectedIndex: 0, results: [] };
             const box = DOM.create('div', { class: 'w-full max-w-2xl sys-glass-strong rounded-2xl overflow-hidden pointer-events-auto flex flex-col sys-noise-overlay shadow-2xl max-h-[calc(100dvh-4rem)]', style: { transformOrigin: 'center top' } });
-            const header = DOM.create('div', { class: 'flex items-center px-4 sm:px-5 py-4 border-b border-white/10 relative shrink-0' });
-            header.innerHTML = `<svg class="w-5 h-5 text-purple-400 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
-            const input = DOM.create('input', { type: 'text', id: 'sys-cmd-input', class: 'w-full bg-transparent text-white text-base outline-none placeholder-gray-500 font-medium min-w-0', placeholder: Viewport.isMobile ? 'ابحث...' : 'ابحث، تنقل، أو اطلب من الذكاء الاصطناعي...', autocomplete: 'off', spellcheck: 'false' });
-            const escTag = DOM.create('span', { class: 'sys-kbd ml-2 shrink-0 sys-hide-xs', text: 'ESC' });
+            const header = DOM.create('div', { class: 'flex items-center gap-2 px-4 sm:px-5 py-4 border-b border-white/10 relative shrink-0 min-w-0' });
+            const searchIcon = DOM.create('div', { class: 'shrink-0' });
+            searchIcon.innerHTML = `<svg class="w-5 h-5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
+            header.appendChild(searchIcon);
+            const input = DOM.create('input', { type: 'text', id: 'sys-cmd-input', class: 'flex-1 bg-transparent text-white text-base outline-none placeholder-gray-500 font-medium min-w-0', placeholder: Viewport.isMobile ? 'ابحث...' : 'ابحث، تنقل، أو اطلب من الذكاء الاصطناعي...', autocomplete: 'off', spellcheck: 'false' });
+            const escTag = DOM.create('span', { class: 'sys-kbd shrink-0 sys-hide-xs sys-hide-2xs', text: 'ESC' });
             header.append(input, escTag);
             const results = DOM.create('div', { id: 'sys-cmd-results', class: 'flex-1 overflow-y-auto sys-no-scroll p-2 min-h-0' });
-            const footer = DOM.create('div', { class: 'flex items-center justify-between px-4 sm:px-5 py-3 border-t border-white/10 text-[10px] text-gray-500 bg-black/20 shrink-0' });
-            footer.innerHTML = `<div class="flex gap-4 flex-wrap"><span class="flex items-center gap-1.5"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5 sys-hide-xs"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em] sys-hide-xs">SYS_UI</div>`;
+            const footer = DOM.create('div', { class: 'flex items-center justify-between gap-2 px-4 sm:px-5 py-3 border-t border-white/10 text-[10px] text-gray-500 bg-black/20 shrink-0 sys-hide-2xs' });
+            footer.innerHTML = `<div class="flex gap-3 sm:gap-4 flex-wrap min-w-0"><span class="flex items-center gap-1.5 whitespace-nowrap"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5 whitespace-nowrap"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5 whitespace-nowrap sys-hide-xs"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em] sys-hide-xs shrink-0">SYS_UI</div>`;
             box.append(header, results, footer);
             container.innerHTML = '';
             container.appendChild(box);
@@ -1490,9 +1552,9 @@ const SysUI = (() => {
             const rows = [];
             items.forEach(item => {
                 if (item.divider) { menu.appendChild(DOM.create('div', { class: 'sys-divider-glow my-1.5 mx-2' })); return; }
-                const row = DOM.create('button', { class: `w-full flex items-center gap-3 px-3 py-2 text-xs ${item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-gray-200 hover:bg-white/10'} transition-colors text-right`, style: { opacity: '0' } });
+                const row = DOM.create('button', { class: `w-full flex items-center gap-3 px-3 py-2 text-xs ${item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-gray-200 hover:bg-white/10'} transition-colors text-right min-w-0`, style: { opacity: '0' } });
                 if (item.icon) row.appendChild(DOM.create('span', { class: 'text-sm shrink-0 w-4', text: item.icon }));
-                row.appendChild(DOM.create('span', { class: 'flex-1 text-right font-medium', text: item.label }));
+                row.appendChild(DOM.create('span', { class: 'flex-1 text-right font-medium truncate', text: item.label }));
                 if (item.shortcut && !Viewport.isMobile) row.appendChild(DOM.create('span', { class: 'sys-kbd', text: item.shortcut }));
                 row.addEventListener('click', () => { close(); Audio.play('click'); item.handler?.(); });
                 menu.appendChild(row);
@@ -1640,33 +1702,33 @@ const SysUI = (() => {
         presence: (msg, duration = 8000) => {
             Theme.inject();
             const container = DOM.mount('sys-presence-bar', Layers.base + 50, 'fixed top-[max(1rem,calc(env(safe-area-inset-top,0px)+0.5rem))] right-[max(1rem,calc(env(safe-area-inset-right,0px)+0.5rem))] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]');
-            const el = DOM.create('div', { class: 'flex items-center gap-2.5 px-4 py-2 rounded-full sys-glass shadow-xl pointer-events-auto w-max max-w-full sys-noise-overlay' });
+            const el = DOM.create('div', { class: 'flex items-center gap-2.5 px-4 py-2 rounded-full sys-glass shadow-xl pointer-events-auto max-w-full sys-noise-overlay min-w-0' });
             el.innerHTML = `<div class="relative shrink-0"><div class="w-2 h-2 rounded-full bg-green-500"></div><div class="absolute inset-0 w-2 h-2 rounded-full bg-green-500 animate-ping"></div></div>`;
-            el.appendChild(DOM.create('span', { class: 'text-[11px] text-gray-200 font-medium tracking-wide truncate', text: msg }));
+            el.appendChild(DOM.create('span', { class: 'text-[11px] text-gray-200 font-medium tracking-wide truncate min-w-0', text: msg }));
             container.appendChild(el);
             Motion.enter.slideLeft(el);
             setTimeout(() => Motion.exit.slideLeft(el).then(() => el.remove()), duration);
         },
         statCard: (title, value, trend = 0, trendLabel = '', sparkData = null) => {
-            const trendIcon = trend > 0 ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>` : trend < 0 ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"/></svg>` : '';
+            const trendIcon = trend > 0 ? `<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>` : trend < 0 ? `<svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"/></svg>` : '';
             const trendColor = trend > 0 ? 'text-green-400 bg-green-500/10 border-green-500/20' : trend < 0 ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-gray-400 bg-white/5 border-white/10';
             const sign = trend > 0 ? '+' : '';
             const spark = sparkData ? `<div class="mt-3 relative z-10">${Sparkline(sparkData, { color: trend >= 0 ? '#22c55e' : '#ef4444', width: 140, height: 32 })}</div>` : '';
-            return `<div class="sys-glass sys-magnetic sys-elevate sys-bloom p-4 sm:p-5 rounded-2xl flex flex-col relative overflow-hidden group sys-noise-overlay w-full min-w-0"><div class="absolute inset-0 bg-gradient-to-br from-purple-500/[0.06] via-transparent to-pink-500/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><span class="text-xs text-gray-400 font-medium mb-1.5 relative z-10 tracking-wide truncate">${$esc(title)}</span><div class="flex items-baseline gap-2 sm:gap-3 relative z-10 flex-wrap"><span class="text-xl sm:text-2xl font-bold text-white tracking-tight">${$esc(value)}</span>${trend !== 0 ? `<div class="flex items-center gap-1 ${trendColor} px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap">${trendIcon}<span>${sign}${trend}% ${$esc(trendLabel)}</span></div>` : ''}</div>${spark}</div>`;
+            return `<div class="sys-glass sys-magnetic sys-elevate sys-bloom p-4 sm:p-5 rounded-2xl flex flex-col relative overflow-hidden group sys-noise-overlay w-full min-w-0"><div class="absolute inset-0 bg-gradient-to-br from-purple-500/[0.06] via-transparent to-pink-500/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><span class="text-xs text-gray-400 font-medium mb-1.5 relative z-10 tracking-wide truncate">${$esc(title)}</span><div class="flex items-baseline gap-2 sm:gap-3 relative z-10 flex-wrap min-w-0"><span class="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">${$esc(value)}</span>${trend !== 0 ? `<div class="flex items-center gap-1 ${trendColor} px-2 py-0.5 rounded-md text-[10px] font-semibold border whitespace-nowrap shrink-0">${trendIcon}<span class="truncate">${sign}${trend}% ${$esc(trendLabel)}</span></div>` : ''}</div>${spark}</div>`;
         },
         emptyState: (containerId, type, title, desc, actionLabel = null, actionId = null) => {
             const el = document.getElementById(containerId);
             if (!el) return;
             el.innerHTML = '';
             const wrap = DOM.create('div', { class: 'flex flex-col items-center justify-center py-12 sm:py-20 px-4 text-center w-full max-w-sm mx-auto' });
-            const iconBox = DOM.create('div', { class: 'relative w-20 h-20 mb-5 rounded-2xl sys-glass border border-white/10 flex items-center justify-center shadow-inner sys-breathe sys-bloom' });
+            const iconBox = DOM.create('div', { class: 'relative w-20 h-20 mb-5 rounded-2xl sys-glass border border-white/10 flex items-center justify-center shadow-inner sys-breathe sys-bloom shrink-0' });
             iconBox.innerHTML = `<svg class="w-10 h-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg><div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/10 to-transparent"></div>`;
             wrap.appendChild(iconBox);
-            const titleEl = DOM.create('h3', { class: 'text-white font-semibold text-lg mb-2 tracking-tight', text: title });
-            const descEl = DOM.create('p', { class: 'text-gray-500 text-sm mb-6 leading-relaxed', text: desc });
+            const titleEl = DOM.create('h3', { class: 'text-white font-semibold text-lg mb-2 tracking-tight break-words', text: title });
+            const descEl = DOM.create('p', { class: 'text-gray-500 text-sm mb-6 leading-relaxed break-words', text: desc });
             wrap.append(titleEl, descEl);
             if (actionLabel) {
-                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)]', text: actionLabel });
+                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)] whitespace-nowrap', text: actionLabel });
                 if (actionId) btn.addEventListener('click', () => Actions.execute(actionId));
                 wrap.appendChild(btn);
             }
@@ -1678,10 +1740,10 @@ const SysUI = (() => {
         generateSkeleton: (type = 'card', count = 1) => {
             Theme.inject();
             const variants = {
-                card: () => `<div data-stagger class="p-4 sm:p-5 border border-white/5 rounded-2xl bg-white/[0.015] flex flex-col gap-4 w-full sys-fade-in shadow-inner mb-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full sys-skeleton-bg shrink-0"></div><div class="flex flex-col gap-2 flex-1 min-w-0"><div class="h-3 w-1/3 sys-skeleton-bg rounded-full"></div><div class="h-2 w-1/4 sys-skeleton-bg rounded-full opacity-60"></div></div></div><div class="h-20 w-full sys-skeleton-bg rounded-xl mt-2"></div></div>`,
-                list: () => `<div data-stagger class="flex items-center gap-3 p-3 border-b border-white/5 sys-fade-in"><div class="w-9 h-9 rounded-lg sys-skeleton-bg shrink-0"></div><div class="flex-1 flex flex-col gap-2 min-w-0"><div class="h-3 w-2/5 sys-skeleton-bg rounded-full"></div><div class="h-2 w-3/5 sys-skeleton-bg rounded-full opacity-60"></div></div></div>`,
+                card: () => `<div data-stagger class="p-4 sm:p-5 border border-white/5 rounded-2xl bg-white/[0.015] flex flex-col gap-4 w-full sys-fade-in shadow-inner mb-3"><div class="flex items-center gap-3 min-w-0"><div class="w-10 h-10 rounded-full sys-skeleton-bg shrink-0"></div><div class="flex flex-col gap-2 flex-1 min-w-0"><div class="h-3 w-1/3 sys-skeleton-bg rounded-full"></div><div class="h-2 w-1/4 sys-skeleton-bg rounded-full opacity-60"></div></div></div><div class="h-20 w-full sys-skeleton-bg rounded-xl mt-2"></div></div>`,
+                list: () => `<div data-stagger class="flex items-center gap-3 p-3 border-b border-white/5 sys-fade-in min-w-0"><div class="w-9 h-9 rounded-lg sys-skeleton-bg shrink-0"></div><div class="flex-1 flex flex-col gap-2 min-w-0"><div class="h-3 w-2/5 sys-skeleton-bg rounded-full"></div><div class="h-2 w-3/5 sys-skeleton-bg rounded-full opacity-60"></div></div></div>`,
                 text: () => `<div data-stagger class="flex flex-col gap-2 sys-fade-in mb-2"><div class="h-3 w-full sys-skeleton-bg rounded-full"></div><div class="h-3 w-5/6 sys-skeleton-bg rounded-full"></div><div class="h-3 w-4/6 sys-skeleton-bg rounded-full"></div></div>`,
-                stat: () => `<div data-stagger class="p-4 sm:p-5 border border-white/5 rounded-2xl bg-white/[0.015] sys-fade-in mb-3"><div class="h-2 w-1/3 sys-skeleton-bg rounded-full mb-3"></div><div class="h-6 w-2/3 sys-skeleton-bg rounded-full"></div><div class="h-8 w-full sys-skeleton-bg rounded-lg mt-3 opacity-50"></div></div>`
+                stat: () => `<div data-stagger class="p-4 sm:p-5 border border-white/5 rounded-2xl bg-white/[0.015] sys-fade-in mb-3 min-w-0"><div class="h-2 w-1/3 sys-skeleton-bg rounded-full mb-3"></div><div class="h-6 w-2/3 sys-skeleton-bg rounded-full"></div><div class="h-8 w-full sys-skeleton-bg rounded-lg mt-3 opacity-50"></div></div>`
             };
             const gen = variants[type] || variants.card;
             return Array.from({ length: count }, gen).join('');
@@ -1755,8 +1817,8 @@ const SysUI = (() => {
             const isRight = side === 'right';
             const computedWidth = Viewport.isMobile ? '100vw' : `min(${width}px, 92vw)`;
             const drawer = DOM.create('div', { class: 'sys-drawer flex flex-col sys-noise-overlay', style: { top: '0', bottom: '0', [side]: '0', width: computedWidth, transform: `translateX(${isRight ? '100%' : '-100%'})`, zIndex: Layers.modal } });
-            const header = DOM.create('div', { class: 'flex items-center justify-between px-5 py-4 border-b border-white/10 shrink-0' });
-            header.appendChild(DOM.create('h3', { class: 'text-white font-semibold tracking-tight truncate', text: title }));
+            const header = DOM.create('div', { class: 'flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 shrink-0 min-w-0' });
+            header.appendChild(DOM.create('h3', { class: 'text-white font-semibold tracking-tight truncate min-w-0 flex-1', text: title }));
             const closeBtn = DOM.create('button', { class: 'sys-button-press w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors shrink-0', html: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' });
             header.appendChild(closeBtn);
             const body = DOM.create('div', { class: 'flex-1 overflow-y-auto sys-no-scroll p-5 min-h-0', html: content });
@@ -1808,13 +1870,22 @@ const SysUI = (() => {
                 const list = container.querySelector('[data-tabs-list]');
                 if (!list) return;
                 list.style.position = 'relative';
+                list.style.display = list.style.display || 'flex';
+                list.style.flexWrap = 'nowrap';
+                list.style.minWidth = '0';
+                list.style.maxWidth = '100%';
+                if (!list.classList.contains('sys-scroll-x')) list.classList.add('sys-scroll-x');
+                list.querySelectorAll('[data-tab]').forEach(t => { t.style.flexShrink = '0'; t.style.whiteSpace = 'nowrap'; });
                 const indicator = DOM.create('div', { class: 'sys-tab-indicator' });
                 list.appendChild(indicator);
                 const update = (active) => {
+                    if (!active) return;
                     const r = active.getBoundingClientRect();
                     const lr = list.getBoundingClientRect();
+                    const scrollLeft = list.scrollLeft;
                     indicator.style.width = r.width + 'px';
-                    indicator.style.transform = `translateX(${r.left - lr.left}px)`;
+                    indicator.style.transform = `translateX(${r.left - lr.left + scrollLeft}px)`;
+                    if (r.left < lr.left || r.right > lr.right) active.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
                 };
                 const tabs = list.querySelectorAll('[data-tab]');
                 tabs.forEach(tab => {
@@ -1832,15 +1903,207 @@ const SysUI = (() => {
                 });
                 const active = list.querySelector('.sys-active') || tabs[0];
                 if (active) requestAnimationFrame(() => update(active));
+                list.addEventListener('scroll', $rafThrottle(() => { const a = list.querySelector('.sys-active'); if (a) update(a); }), { passive: true });
                 window.addEventListener('resize', $debounce(() => { const a = list.querySelector('.sys-active') || tabs[0]; if (a) update(a); }, 150));
             });
         }
     };
 
+    const ResponsiveGuard = (() => {
+        let observer = null, raf = null;
+        const SELECTORS = [
+            '[role="tablist"]', '[data-tabs-list]', '.tabs', '.nav-tabs',
+            'nav ul', 'header nav', '.navigation', '.toolbar',
+            '[role="navigation"]', '.tab-bar', '.tab-list',
+            '.chips', '.pills', '.filter-bar', '.segment-control'
+        ];
+        const FIXED_HEAD_SEL = 'header, [role="banner"], .header, .app-header, .navbar, .topbar, .top-bar';
+
+        const fixContainer = (el) => {
+            if (!el || !el.isConnected || el.dataset.sysGuarded === '1') return;
+            const cs = getComputedStyle(el);
+            const isFlex = cs.display.includes('flex');
+            const isGrid = cs.display.includes('grid');
+            const children = Array.from(el.children).filter(c => c.nodeType === 1 && getComputedStyle(c).display !== 'none');
+            if (!children.length) return;
+            const containerWidth = el.clientWidth;
+            if (!containerWidth) return;
+            let totalChildrenWidth = 0;
+            children.forEach(c => { totalChildrenWidth += c.scrollWidth || c.offsetWidth; });
+            const cs_gap = parseFloat(cs.gap) || parseFloat(cs.columnGap) || 0;
+            totalChildrenWidth += cs_gap * (children.length - 1);
+            const overflows = totalChildrenWidth > containerWidth + 4;
+            if (overflows && (isFlex || el.matches('ul, ol'))) {
+                if (cs.flexWrap === 'nowrap' || el.matches('ul, ol')) {
+                    if (isFlex) el.style.flexWrap = el.dataset.sysAllowWrap === '1' ? 'wrap' : 'nowrap';
+                    el.style.overflowX = 'auto';
+                    el.style.overflowY = 'hidden';
+                    el.style.webkitOverflowScrolling = 'touch';
+                    el.style.scrollbarWidth = 'none';
+                    el.style.msOverflowStyle = 'none';
+                    el.style.scrollSnapType = el.style.scrollSnapType || 'x proximity';
+                    el.style.maxWidth = '100%';
+                    el.style.minWidth = '0';
+                    if (!el.querySelector('style[data-sys-scrollbar]')) {
+                        const s = document.createElement('style');
+                        s.dataset.sysScrollbar = '1';
+                        s.textContent = `[data-sys-guarded="1"]::-webkit-scrollbar{display:none}`;
+                        el.appendChild(s);
+                    }
+                    children.forEach(c => {
+                        c.style.flexShrink = '0';
+                        c.style.scrollSnapAlign = c.style.scrollSnapAlign || 'start';
+                    });
+                }
+            }
+            el.style.maxWidth = '100%';
+            el.style.minWidth = '0';
+            if (isFlex || isGrid) el.style.minWidth = '0';
+            children.forEach(c => {
+                const ccs = getComputedStyle(c);
+                if (ccs.position === 'absolute' || ccs.position === 'fixed') return;
+                c.style.minWidth = '0';
+                if (c.offsetWidth > containerWidth) c.style.maxWidth = '100%';
+            });
+            el.dataset.sysGuarded = '1';
+        };
+
+        const fixHeaders = () => {
+            document.querySelectorAll(FIXED_HEAD_SEL).forEach(h => {
+                const cs = getComputedStyle(h);
+                if (cs.position === 'fixed' || cs.position === 'sticky') {
+                    h.style.maxWidth = '100vw';
+                    h.style.boxSizing = 'border-box';
+                    const inner = h.querySelector('[class*="container"], [class*="wrapper"], .inner, nav');
+                    if (inner) {
+                        inner.style.maxWidth = '100%';
+                        inner.style.minWidth = '0';
+                    }
+                }
+            });
+        };
+
+        const fixOverflowingElements = () => {
+            const root = document.body;
+            if (root.scrollWidth <= window.innerWidth + 2) return;
+            const all = root.querySelectorAll('*');
+            for (const el of all) {
+                if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') continue;
+                if (el.id?.startsWith('sys-')) continue;
+                const cs = getComputedStyle(el);
+                if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+                if (cs.position === 'fixed' || cs.position === 'absolute') continue;
+                const r = el.getBoundingClientRect();
+                if (r.right > window.innerWidth + 1 && r.width < window.innerWidth * 1.5) {
+                    el.style.maxWidth = '100%';
+                    el.style.minWidth = '0';
+                    if (el.tagName === 'IMG' || el.tagName === 'VIDEO' || el.tagName === 'CANVAS') {
+                        el.style.height = 'auto';
+                    }
+                    if (cs.whiteSpace === 'nowrap' && el.scrollWidth > el.clientWidth) {
+                        el.style.overflowX = 'auto';
+                        el.style.overflowY = 'hidden';
+                    }
+                }
+            }
+        };
+
+        const runOnce = () => {
+            if (raf) return;
+            raf = requestAnimationFrame(() => {
+                try {
+                    SELECTORS.forEach(sel => document.querySelectorAll(sel).forEach(fixContainer));
+                    fixHeaders();
+                    if (Viewport.isMobile) fixOverflowingElements();
+                } catch {}
+                raf = null;
+            });
+        };
+
+        const init = () => {
+            Theme.inject();
+            runOnce();
+            const deb = $debounce(runOnce, 180);
+            try {
+                observer = new MutationObserver((muts) => {
+                    let trigger = false;
+                    for (const m of muts) {
+                        if (m.type === 'childList' && (m.addedNodes.length || m.removedNodes.length)) trigger = true;
+                        if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'style')) trigger = true;
+                        if (trigger) break;
+                    }
+                    if (trigger) deb();
+                });
+                observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+            } catch {}
+            window.addEventListener('resize', deb, { passive: true });
+            window.addEventListener('orientationchange', () => setTimeout(runOnce, 150), { passive: true });
+            Viewport.subscribe(runOnce);
+        };
+
+        return { init, runOnce, fix: fixContainer };
+    })();
+
+    const Particles = (() => {
+        let canvas, ctx, animFrame, particles = [], active = false, mouse = { x: -1000, y: -1000 };
+        const enable = (opts = {}) => {
+            if (active || $reducedMotion) return;
+            active = true;
+            const { count = Viewport.isMobile ? 18 : 36, color = 'rgba(168,85,247,0.5)', size = 1.5, connect = true } = opts;
+            canvas = DOM.create('canvas', { style: { position: 'fixed', inset: '0', pointerEvents: 'none', zIndex: Layers.ambient } });
+            canvas.id = 'sys-particles-canvas';
+            document.body.appendChild(canvas);
+            ctx = canvas.getContext('2d');
+            const resize = () => { canvas.width = innerWidth * devicePixelRatio; canvas.height = innerHeight * devicePixelRatio; canvas.style.width = innerWidth + 'px'; canvas.style.height = innerHeight + 'px'; ctx.scale(devicePixelRatio, devicePixelRatio); };
+            resize();
+            window.addEventListener('resize', resize);
+            window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; }, { passive: true });
+            for (let i = 0; i < count; i++) {
+                particles.push({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3, r: size + Math.random() * size });
+            }
+            const loop = () => {
+                if (!active) return;
+                ctx.clearRect(0, 0, innerWidth, innerHeight);
+                particles.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0 || p.x > innerWidth) p.vx *= -1;
+                    if (p.y < 0 || p.y > innerHeight) p.vy *= -1;
+                    const dx = mouse.x - p.x, dy = mouse.y - p.y, dist = Math.hypot(dx, dy);
+                    if (dist < 100) { p.x -= dx / dist * 0.5; p.y -= dy / dist * 0.5; }
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+                });
+                if (connect) {
+                    for (let i = 0; i < particles.length; i++) {
+                        for (let j = i + 1; j < particles.length; j++) {
+                            const a = particles[i], b = particles[j];
+                            const d = Math.hypot(a.x - b.x, a.y - b.y);
+                            if (d < 140) {
+                                ctx.beginPath();
+                                ctx.moveTo(a.x, a.y);
+                                ctx.lineTo(b.x, b.y);
+                                ctx.strokeStyle = `rgba(168,85,247,${0.15 * (1 - d / 140)})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+                animFrame = requestAnimationFrame(loop);
+            };
+            loop();
+        };
+        const disable = () => { active = false; cancelAnimationFrame(animFrame); canvas?.remove(); particles = []; };
+        return { enable, disable, toggle: () => active ? disable() : enable() };
+    })();
+
     let initialized = false;
     const boot = () => {
         if (initialized) return; initialized = true;
         Theme.inject();
+        ResponsiveGuard.init();
         Magnetic.init();
         Ripple.attach();
         ScrollProgress.enable();
@@ -1850,7 +2113,8 @@ const SysUI = (() => {
         Hotkeys.bind('shift+?', () => Toasts.create('info', 'Cmd+K: بحث · F12: HUD · ESC: إغلاق', 5000));
         Hotkeys.bind('f12', () => PerfHUD.toggle());
         Hotkeys.bind('mod+shift+m', () => { Audio.mute(!Audio.isMuted()); Toasts.create('info', Audio.isMuted() ? '🔇 تم كتم الأصوات' : '🔊 تم تفعيل الأصوات', 2000); });
-        Viewport.subscribe(({ breakpoint }) => Events.emit('viewport:change', breakpoint));
+        Hotkeys.bind('mod+shift+p', () => Particles.toggle());
+        Viewport.subscribe(({ breakpoint }) => { Events.emit('viewport:change', breakpoint); ResponsiveGuard.runOnce(); });
         Events.emit('sysui:ready');
     };
 
@@ -1858,8 +2122,8 @@ const SysUI = (() => {
     else boot();
 
     return {
-        version: '6.0.0',
-        Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs, Viewport,
+        version: '7.0.0',
+        Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs, Viewport, Particles, ResponsiveGuard,
         pageTransition: Page.transition,
         load: SmartLoader.execute,
         spotlight: Spotlight.show,
@@ -1889,7 +2153,8 @@ const SysUI = (() => {
         animate: Motion.animate,
         spring: Motion.spring,
         stagger: Motion.stagger,
-        utils: { esc: $esc, uid: $uid, debounce: $debounce, throttle: $throttle, idle: $idle, clamp: $clamp, lerp: $lerp, smoothstep: $smoothstep, hash: $hash, safeJSON: $safeJSON, map: $map, easeOutExpo: $easeOutExpo, easeInOutCubic: $easeInOutCubic, nextFrame: $nextFrame, waitFor: $waitFor, supports: $supports },
+        fixLayout: ResponsiveGuard.runOnce,
+        utils: { esc: $esc, uid: $uid, debounce: $debounce, throttle: $throttle, idle: $idle, clamp: $clamp, lerp: $lerp, smoothstep: $smoothstep, hash: $hash, safeJSON: $safeJSON, map: $map, easeOutExpo: $easeOutExpo, easeInOutCubic: $easeInOutCubic, easeOutElastic: $easeOutElastic, easeOutBack: $easeOutBack, nextFrame: $nextFrame, waitFor: $waitFor, supports: $supports, hslMix: $hslMix, randomBetween: $randomBetween, pick: $pick, isVisible: $isVisible },
         icons: {
             trash: `<svg class="w-4 h-4 transition-transform hover:scale-110 active:scale-95" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
             check: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`,
@@ -1904,15 +2169,4 @@ const SysUI = (() => {
 
 document.addEventListener('DOMContentLoaded', () => {
     SysUI.Actions.registerBatch([
-        { id: 'hud.toggle', title: 'تفعيل/إلغاء أدوات المطوّر (HUD)', shortcut: 'F12', icon: '📊', group: 'النظام', keywords: ['fps', 'performance', 'debug'], handler: SysUI.hud },
-        { id: 'cursor.toggle', title: 'تفعيل/إلغاء المؤشر المتقدم', icon: '🎯', group: 'النظام', handler: SysUI.Cursor.toggle },
-        { id: 'audio.toggle', title: 'كتم/تفعيل الأصوات', icon: '🔊', group: 'النظام', handler: () => { const m = !SysUI.Audio.isMuted(); SysUI.Audio.mute(m); SysUI.toast('info', m ? 'تم كتم الأصوات' : 'تم تفعيل الأصوات', 2000); } },
-        { id: 'settings', title: 'إعدادات النظام', shortcut: 'S', icon: '⚙️', group: 'التطبيق', handler: () => SysUI.toast('info', 'فتح الإعدادات') },
-        { id: 'users', title: 'إدارة الطلاب', shortcut: 'U', icon: '👥', group: 'التطبيق', handler: () => SysUI.load(new Promise(r => setTimeout(r, 2500)), 'main-content') },
-        { id: 'celebrate', title: 'احتفال!', icon: '🎉', group: 'مرح', handler: () => SysUI.confetti(120) },
-        { id: 'fireworks', title: 'ألعاب نارية', icon: '🎆', group: 'مرح', handler: () => SysUI.fireworks(6) }
-    ]);
-});
-
-export const trashSVG = SysUI.icons.trash;
-export { SysUI };
+        { id: 'hud.toggle', title: 'تفعيل/إلغاء أدوات المطوّر (HUD)', shortcut: 'F12', icon: '📊', group: 'النظ
