@@ -83,3 +83,11 @@ export function rejectStudent(email, btnElement) {
     });
 }
 
+// إتاحة الدوال لعناصر HTML (onclick) فوراً عند تحميل الموديول
+if (typeof window !== 'undefined') {
+    window.updateStudentStatus = updateStudentStatus;
+    window.rejectStudent = rejectStudent;
+    window.fetchPendingRequests = fetchPendingRequests;
+    window.fetchStats = fetchStats;
+}
+
