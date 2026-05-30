@@ -16,9 +16,14 @@ const SysUI = (() => {
     const $hash = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i); return (h >>> 0).toString(36); };
     const $noop = () => {};
     const $isSafeURL = (u) => /^(https?:|mailto:|tel:|\/|#)/i.test(u || '');
+    const $now = () => performance.now();
+    const $easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
+    const $easeOutExpo = (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    const $easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
     const $prm = matchMedia('(prefers-reduced-motion: reduce)');
     const $prc = matchMedia('(prefers-contrast: more)');
+    const $prd = matchMedia('(prefers-color-scheme: dark)');
     const $isTouch = matchMedia('(pointer: coarse)').matches;
     const $hasHover = matchMedia('(hover: hover)').matches;
     const $isHighRefresh = matchMedia('(min-resolution: 120dpi)').matches;
@@ -29,6 +34,9 @@ const SysUI = (() => {
     const $supportsAnchor = CSS.supports?.('anchor-name', '--x');
     const $supportsPopover = HTMLElement.prototype.hasOwnProperty('popover');
     const $supportsHasSelector = CSS.supports?.('selector(:has(*))');
+    const $supportsScrollTimeline = CSS.supports?.('animation-timeline', 'view()');
+    const $supportsHoudini = 'registerProperty' in CSS;
+    const $supportsWebGL = (() => { try { const c = document.createElement('canvas'); return !!(c.getContext('webgl2') || c.getContext('webgl')); } catch { return false; } })();
     const $cores = navigator.hardwareConcurrency || 4;
     const $memory = navigator.deviceMemory || 4;
     const $connection = navigator.connection || {};
@@ -37,6 +45,37 @@ const SysUI = (() => {
     const $perfTier = $isLowEnd ? 'low' : $isMidEnd ? 'mid' : 'high';
     let $reducedMotion = $prm.matches;
     let $highContrast = $prc.matches;
+
+    document.documentElement.dataset.perf = $perfTier;
+    document.documentElement.dataset.touch = $isTouch ? 'true' : 'false';
+
+    const FrameScheduler = (() => {
+        const tasks = new Set();
+        let running = false;
+        let targetFPS = $perfTier === 'low' ? 30 : 60;
+        let frameBudget = 1000 / targetFPS;
+        let lastFrame = $now();
+        let droppedFrames = 0;
+        let avgFrameTime = 16;
+        const tick = (t) => {
+            const dt = t - lastFrame;
+            avgFrameTime = avgFrameTime * 0.9 + dt * 0.1;
+            if (dt > frameBudget * 1.5) droppedFrames++;
+            lastFrame = t;
+            const deadline = t + frameBudget * 0.7;
+            for (const task of tasks) {
+                if ($now() > deadline) break;
+                try { task(t); } catch (e) { console.warn('[Scheduler]', e); }
+                tasks.delete(task);
+            }
+            if (tasks.size) requestAnimationFrame(tick);
+            else running = false;
+        };
+        return {
+            schedule: (fn) => { tasks.add(fn); if (!running) { running = true; requestAnimationFrame(tick); } },
+            metrics: () => ({ avgFrameTime, droppedFrames, fps: Math.round(1000 / avgFrameTime) })
+        };
+    })();
 
     const Viewport = (() => {
         let state = { w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio, breakpoint: 'md', orientation: 'portrait' };
@@ -116,19 +155,23 @@ const SysUI = (() => {
     const rootOwner = Lifecycle.createOwner('root');
 
     const $velocity = (() => {
-        let lastX = 0, lastY = 0, lastT = performance.now(), vx = 0, vy = 0, speed = 0;
+        let lastX = 0, lastY = 0, lastT = performance.now(), vx = 0, vy = 0, speed = 0, angle = 0;
+        const samples = [];
         const track = (x, y) => {
             const now = performance.now();
             const dt = Math.max(1, now - lastT);
             const nvx = (x - lastX) / dt;
             const nvy = (y - lastY) / dt;
-            vx = vx * 0.7 + nvx * 0.3;
-            vy = vy * 0.7 + nvy * 0.3;
+            vx = vx * 0.65 + nvx * 0.35;
+            vy = vy * 0.65 + nvy * 0.35;
             speed = Math.hypot(vx, vy);
+            angle = Math.atan2(vy, vx);
+            samples.push({ t: now, x, y });
+            while (samples.length > 12) samples.shift();
             lastX = x; lastY = y; lastT = now;
         };
         rootOwner.listen(document, 'pointermove', (e) => track(e.clientX, e.clientY), { passive: true });
-        return { get: () => ({ vx, vy, speed }), track };
+        return { get: () => ({ vx, vy, speed, angle }), track, samples: () => samples.slice() };
     })();
 
     const Bus = (() => {
@@ -171,6 +214,8 @@ const SysUI = (() => {
         const state = new Map();
         const subs = new Map();
         const middleware = [];
+        const history = [];
+        const MAX_HISTORY = 50;
         return {
             get: (k) => state.get(k),
             set: (k, v) => {
@@ -179,6 +224,8 @@ const SysUI = (() => {
                 for (const mw of middleware) { try { next = mw(k, next, prev) ?? next; } catch (e) { console.error('[Store:mw]', e); } }
                 if (Object.is(prev, next)) return;
                 state.set(k, next);
+                history.push({ k, prev, next, t: $now() });
+                if (history.length > MAX_HISTORY) history.shift();
                 const set = subs.get(k);
                 if (set) for (const cb of set) { try { cb(next, prev); } catch (e) { console.error('[Store]', e); } }
                 Bus.emit('store:change', { key: k, value: next, prev });
@@ -193,7 +240,8 @@ const SysUI = (() => {
             hydrate: (k, fallback) => { const v = $safeJSON('sysui_' + k, fallback); Store.set(k, v); return v; },
             use: (mw) => middleware.push(mw),
             snapshot: () => Object.fromEntries(state),
-            restore: (snap) => { Object.entries(snap).forEach(([k, v]) => Store.set(k, v)); }
+            restore: (snap) => { Object.entries(snap).forEach(([k, v]) => Store.set(k, v)); },
+            history: () => history.slice()
         };
     })();
 
@@ -233,7 +281,9 @@ const SysUI = (() => {
                 appleEmphasized: 'cubic-bezier(0.32, 0.72, 0, 1)',
                 materialEmphasized: 'cubic-bezier(0.2, 0, 0, 1)',
                 overshoot: 'cubic-bezier(0.34, 1.7, 0.64, 1)',
-                inertia: 'cubic-bezier(0.05, 0.7, 0.1, 1)'
+                inertia: 'cubic-bezier(0.05, 0.7, 0.1, 1)',
+                magnetic: 'cubic-bezier(0.18, 0.89, 0.32, 1.28)',
+                fluid: 'cubic-bezier(0.65, 0, 0.35, 1)'
             },
             spring: {
                 gentle: { stiffness: 120, damping: 14, mass: 1 },
@@ -244,7 +294,9 @@ const SysUI = (() => {
                 bouncy: { stiffness: 260, damping: 9, mass: 1.1 },
                 precise: { stiffness: 220, damping: 26, mass: 1 },
                 ios: { stiffness: 180, damping: 20, mass: 1 },
-                molasses: { stiffness: 60, damping: 30, mass: 1.4 }
+                molasses: { stiffness: 60, damping: 30, mass: 1.4 },
+                rubber: { stiffness: 340, damping: 11, mass: 1 },
+                silk: { stiffness: 140, damping: 24, mass: 1 }
             },
             stagger: { tight: 18, normal: 32, relaxed: 52, dramatic: 78 }
         };
@@ -363,7 +415,15 @@ const SysUI = (() => {
             materialize: (el) => animate(el, [
                 { opacity: 0, filter: 'blur(12px) brightness(1.4)', transform: 'scale(1.04)' },
                 { opacity: 1, filter: 'blur(0) brightness(1)', transform: 'scale(1)' }
-            ], { duration: tokens.duration.emphasized, easing: tokens.ease.appleEmphasized })
+            ], { duration: tokens.duration.emphasized, easing: tokens.ease.appleEmphasized }),
+            warp: (el) => animate(el, [
+                { opacity: 0, transform: 'perspective(800px) rotateX(-25deg) translateY(40px) scale(0.85)', filter: 'blur(8px)' },
+                { opacity: 1, transform: 'perspective(800px) rotateX(0) translateY(0) scale(1)', filter: 'blur(0)' }
+            ], { duration: tokens.duration.emphasized, easing: tokens.ease.appleEmphasized }),
+            iris: (el) => animate(el, [
+                { clipPath: 'circle(0% at 50% 50%)', opacity: 0 },
+                { clipPath: 'circle(150% at 50% 50%)', opacity: 1 }
+            ], { duration: tokens.duration.slow, easing: tokens.ease.smooth })
         };
 
         const exit = {
@@ -394,6 +454,14 @@ const SysUI = (() => {
             { transform: 'scale(1.035)', filter: 'brightness(1.12)' },
             { transform: 'scale(1)', filter: 'brightness(1)' }
         ], { duration: 460, easing: tokens.ease.springSoft });
+
+        const glitch = (el) => animate(el, [
+            { transform: 'translate(0)', filter: 'hue-rotate(0)' },
+            { transform: 'translate(-2px, 1px)', filter: 'hue-rotate(90deg)' },
+            { transform: 'translate(2px, -1px)', filter: 'hue-rotate(-90deg)' },
+            { transform: 'translate(-1px, -1px)', filter: 'hue-rotate(45deg)' },
+            { transform: 'translate(0)', filter: 'hue-rotate(0)' }
+        ], { duration: 280, easing: 'steps(5)' });
 
         const flip = (el, from, to) => {
             if ($reducedMotion) return Promise.resolve();
@@ -430,7 +498,23 @@ const SysUI = (() => {
             });
         };
 
-        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, morphLayout, inertial, reduce, springCurve, springDuration, cancel: cancelOn };
+        const countUp = (el, from, to, duration = 1200, format = (n) => Math.round(n)) => {
+            if (!el) return Promise.resolve();
+            if ($reducedMotion) { el.textContent = format(to); return Promise.resolve(); }
+            return new Promise(resolve => {
+                const start = $now();
+                const tick = (t) => {
+                    const p = $clamp((t - start) / duration, 0, 1);
+                    const eased = $easeOutExpo(p);
+                    el.textContent = format($lerp(from, to, eased));
+                    if (p < 1) requestAnimationFrame(tick);
+                    else resolve();
+                };
+                requestAnimationFrame(tick);
+            });
+        };
+
+        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, glitch, flip, morphLayout, inertial, countUp, reduce, springCurve, springDuration, cancel: cancelOn };
     })();
 
     const Audio = (() => {
@@ -584,7 +668,10 @@ const SysUI = (() => {
             focus: () => tone(1600, 'sine', 0.04, 0.022, 0, 0.002),
             unfocus: () => tone(1100, 'sine', 0.035, 0.018, 0, 0.002),
             slide: () => sweep(1800, 900, 'sine', 0.09, 0.025),
-            confirm: () => { tone(1318, 'sine', 0.06, 0.05); setTimeout(() => tone(1760, 'sine', 0.09, 0.045), 50); }
+            confirm: () => { tone(1318, 'sine', 0.06, 0.05); setTimeout(() => tone(1760, 'sine', 0.09, 0.045), 50); },
+            quantum: () => { for (let i = 0; i < 8; i++) setTimeout(() => tone(440 * Math.pow(2, i / 4), 'sine', 0.18, 0.025), i * 35); },
+            zap: () => { sweep(2400, 200, 'sawtooth', 0.08, 0.06); noise(0.05, 0.04, 4000, 'highpass'); },
+            chime: () => { chord([1046.5, 1318.5, 1568, 2093], 'sine', 0.6, 0.045); }
         };
 
         return {
@@ -607,7 +694,8 @@ const SysUI = (() => {
         warn: () => $isTouch && navigator.vibrate?.([18, 36, 18]),
         select: () => $isTouch && navigator.vibrate?.(4),
         soft: () => $isTouch && navigator.vibrate?.(2),
-        impact: () => $isTouch && navigator.vibrate?.([4, 8, 16])
+        impact: () => $isTouch && navigator.vibrate?.([4, 8, 16]),
+        pulse: () => $isTouch && navigator.vibrate?.([6, 18, 6, 18, 6])
     };
 
     const Theme = (() => {
@@ -617,7 +705,9 @@ const SysUI = (() => {
             azure: { accent: '#3b82f6', bg: '#000814', surface: '#001233' },
             emerald: { accent: '#10b981', bg: '#000a06', surface: '#001f12' },
             crimson: { accent: '#ef4444', bg: '#0a0000', surface: '#1f0606' },
-            solar: { accent: '#f59e0b', bg: '#0a0700', surface: '#1f1500' }
+            solar: { accent: '#f59e0b', bg: '#0a0700', surface: '#1f1500' },
+            arctic: { accent: '#06b6d4', bg: '#000a0e', surface: '#001f29' },
+            sakura: { accent: '#ec4899', bg: '#0e0008', surface: '#290016' }
         };
         const inject = () => {
             if (injected || document.getElementById('sys-theme-tokens')) { injected = true; return; }
@@ -689,6 +779,7 @@ const SysUI = (() => {
                     --sys-ease-elastic: cubic-bezier(0.68, -0.4, 0.265, 1.4);
                     --sys-ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
                     --sys-ease-inertia: cubic-bezier(0.05, 0.7, 0.1, 1);
+                    --sys-ease-magnetic: cubic-bezier(0.18, 0.89, 0.32, 1.28);
                     --sys-motion-instant: 60ms;
                     --sys-motion-fast: 170ms;
                     --sys-motion-normal: 230ms;
@@ -708,6 +799,9 @@ const SysUI = (() => {
                     --sys-shadow-2xl: 0 56px 128px -20px rgba(0,0,0,0.85), 0 32px 64px -16px rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.09);
                     --sys-gradient-aurora: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #06b6d4 100%);
                     --sys-gradient-fire: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+                    --sys-gradient-ocean: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+                    --sys-gradient-sunset: linear-gradient(135deg, #f59e0b 0%, #ec4899 50%, #a855f7 100%);
+                    --sys-gradient-cyber: linear-gradient(135deg, #06b6d4 0%, #a855f7 50%, #ec4899 100%);
                     --sys-gradient-mesh: radial-gradient(at 40% 20%, rgba(168,85,247,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(59,130,246,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(236,72,153,0.1) 0px, transparent 50%), radial-gradient(at 80% 50%, rgba(6,182,212,0.1) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(168,85,247,0.12) 0px, transparent 50%);
                     --sys-safe-top: env(safe-area-inset-top, 0px);
                     --sys-safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -716,8 +810,9 @@ const SysUI = (() => {
                     --sys-mx: 50%;
                     --sys-my: 50%;
                     --sys-blur-strength: 32px;
+                    --sys-noise-opacity: 0.025;
                 }
-                [data-perf="low"] { --sys-blur-strength: 12px; }
+                [data-perf="low"] { --sys-blur-strength: 12px; --sys-noise-opacity: 0; }
                 [data-perf="mid"] { --sys-blur-strength: 20px; }
                 @media (prefers-contrast: more) {
                     :root {
@@ -739,6 +834,8 @@ const SysUI = (() => {
                     @supports (animation-timeline: view()) {
                         .sys-reveal-scroll { animation: sysRevealScroll linear; animation-timeline: view(); animation-range: entry 0% cover 30%; }
                         @keyframes sysRevealScroll { from { opacity: 0; transform: translateY(40px) scale(0.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+                        .sys-parallax-scroll { animation: sysParallax linear; animation-timeline: view(); animation-range: entry 0% exit 100%; }
+                        @keyframes sysParallax { from { transform: translateY(60px); } to { transform: translateY(-60px); } }
                     }
                 }
                 ::selection { background: rgba(168, 85, 247, 0.4); color: #fff; text-shadow: 0 0 8px rgba(168,85,247,0.6); }
@@ -748,7 +845,7 @@ const SysUI = (() => {
                 body::before {
                     content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
                     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='[w3.org](http://www.w3.org/2000/svg)'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
-                    opacity: 0.025;
+                    opacity: var(--sys-noise-opacity);
                 }
                 body::after {
                     content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
@@ -845,6 +942,7 @@ const SysUI = (() => {
                 .sys-spotlight-cursor.sys-cursor-text { width: 3px; height: 22px; border-radius: 1px; }
                 .sys-spotlight-cursor.sys-cursor-pointer { width: 38px; height: 38px; background: rgba(168,85,247,0.18); border-color: rgba(168,85,247,0.6); }
                 .sys-cursor-dot { position: fixed; top: 0; left: 0; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.95); pointer-events: none; z-index: 10005; mix-blend-mode: difference; will-change: transform; }
+                .sys-cursor-trail { position: fixed; pointer-events: none; z-index: 10003; width: 8px; height: 8px; border-radius: 50%; background: radial-gradient(circle, rgba(168,85,247,0.6), transparent); will-change: transform, opacity; }
                 .sys-tooltip { position: fixed; padding: 6px 10px; background: rgba(8,8,10,0.96); backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(168,85,247,0.3); border-radius: 7px; font-size: var(--sys-text-xs); color: rgba(255,255,255,0.96); pointer-events: none; white-space: nowrap; z-index: 10005; opacity: 0; transform: translateY(4px) scale(0.96); transition: opacity 200ms var(--sys-ease-apple), transform 280ms var(--sys-ease-spring-precise); box-shadow: var(--sys-shadow-md), 0 0 24px rgba(168,85,247,0.18); font-weight: 500; letter-spacing: 0.01em; will-change: transform, opacity; max-width: min(280px, 80vw); white-space: normal; }
                 .sys-tooltip.sys-tooltip-show { opacity: 1; transform: translateY(0) scale(1); }
                 .sys-focus-ring:focus-visible { outline: 2px solid rgba(168, 85, 247, 0.7); outline-offset: 3px; border-radius: 4px; transition: outline-offset 180ms var(--sys-ease-spring); }
@@ -924,6 +1022,42 @@ const SysUI = (() => {
                 @media (max-width: 480px) {
                     .sys-tooltip { display: none; }
                 }
+                .sys-holo {
+                    background: linear-gradient(135deg, rgba(168,85,247,0.15), rgba(236,72,153,0.15), rgba(6,182,212,0.15));
+                    background-size: 200% 200%;
+                    animation: sysAuroraShift 6s ease infinite;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    backdrop-filter: blur(20px) saturate(180%);
+                    position: relative;
+                    overflow: hidden;
+                }
+                .sys-holo::before {
+                    content: ""; position: absolute; inset: 0;
+                    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,0.15) 50%, transparent 70%);
+                    transform: translateX(-100%);
+                    animation: sysHoloShine 4s ease infinite;
+                }
+                @keyframes sysHoloShine { 0%, 60% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+                .sys-neon-text { color: #fff; text-shadow: 0 0 5px rgba(168,85,247,0.8), 0 0 10px rgba(168,85,247,0.6), 0 0 20px rgba(168,85,247,0.4), 0 0 40px rgba(168,85,247,0.2); }
+                .sys-pixel-corner { clip-path: polygon(0 6px, 6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px)); }
+                .sys-scan-lines::before {
+                    content: ""; position: absolute; inset: 0;
+                    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.02) 2px, rgba(255,255,255,0.02) 4px);
+                    pointer-events: none; border-radius: inherit;
+                }
+                .sys-text-gradient-purple { background: linear-gradient(135deg, #a855f7, #ec4899); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+                .sys-text-gradient-cyan { background: linear-gradient(135deg, #06b6d4, #3b82f6); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+                .sys-text-gradient-fire { background: linear-gradient(135deg, #ef4444, #f59e0b); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+                .sys-text-3d { text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb, 0 4px 0 #b9b9b9, 0 5px 0 #aaa, 0 6px 1px rgba(0,0,0,.1), 0 0 5px rgba(0,0,0,.1), 0 1px 3px rgba(0,0,0,.3), 0 3px 5px rgba(0,0,0,.2), 0 5px 10px rgba(0,0,0,.25); }
+                .sys-mask-fade-y { mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent); -webkit-mask-image: linear-gradient(180deg, transparent, #000 12%, #000 88%, transparent); }
+                .sys-mask-fade-x { mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); }
+                .sys-orbit-loader { position: relative; width: 48px; height: 48px; }
+                .sys-orbit-loader::before, .sys-orbit-loader::after { content: ""; position: absolute; border-radius: 50%; }
+                .sys-orbit-loader::before { inset: 0; border: 2px solid rgba(168,85,247,0.2); }
+                .sys-orbit-loader::after { width: 8px; height: 8px; background: var(--sys-accent-primary); top: -4px; left: 50%; transform-origin: 4px 28px; animation: sysOrbitDot 1.2s linear infinite; box-shadow: 0 0 12px var(--sys-accent-primary); }
+                @keyframes sysOrbitDot { to { transform: rotate(360deg); } }
+                .sys-data-grid { background-image: linear-gradient(rgba(168,85,247,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,0.06) 1px, transparent 1px); background-size: 24px 24px; }
+                .sys-blink-cursor::after { content: "▊"; color: var(--sys-accent-primary); animation: sysCaretBlink 1s infinite; margin-left: 2px; }
             `;
             document.head.appendChild(style);
             injected = true;
@@ -1096,11 +1230,23 @@ const SysUI = (() => {
     const Cursor = (() => {
         let cursor, dot, active = false, raf = null, tx = 0, ty = 0, x = 0, y = 0, dx = 0, dy = 0;
         let owner = null;
+        const trails = [];
+        const MAX_TRAILS = $perfTier === 'high' ? 8 : 0;
         const loop = () => {
             x = $lerp(x, tx, 0.28); y = $lerp(y, ty, 0.28);
             dx = $lerp(dx, tx, 0.6); dy = $lerp(dy, ty, 0.6);
             if (cursor) cursor.style.transform = `translate3d(${x - 9}px, ${y - 9}px, 0)`;
             if (dot) dot.style.transform = `translate3d(${dx - 2}px, ${dy - 2}px, 0)`;
+            for (let i = 0; i < trails.length; i++) {
+                const trail = trails[i];
+                const next = i === trails.length - 1 ? { x: dx, y: dy } : trails[i + 1];
+                trail.x = $lerp(trail.x, next.x, 0.4);
+                trail.y = $lerp(trail.y, next.y, 0.4);
+                if (trail.el) {
+                    trail.el.style.transform = `translate3d(${trail.x - 4}px, ${trail.y - 4}px, 0)`;
+                    trail.el.style.opacity = (1 - i / trails.length) * 0.5;
+                }
+            }
             raf = requestAnimationFrame(loop);
         };
         const move = (e) => { tx = e.clientX; ty = e.clientY; };
@@ -1116,6 +1262,12 @@ const SysUI = (() => {
             owner = Lifecycle.createOwner();
             cursor = DOM.mount('sys-cursor', Layers.cursor, 'sys-spotlight-cursor');
             dot = DOM.mount('sys-cursor-dot', Layers.cursor + 1, 'sys-cursor-dot');
+            for (let i = 0; i < MAX_TRAILS; i++) {
+                const t = DOM.create('div', { class: 'sys-cursor-trail' });
+                document.body.appendChild(t);
+                trails.push({ el: t, x: 0, y: 0 });
+                owner.add(() => t.remove());
+            }
             document.documentElement.style.cursor = 'none';
             owner.listen(document, 'mousemove', move, { passive: true });
             owner.listen(document, 'mouseover', detectTarget, { passive: true });
@@ -1126,6 +1278,7 @@ const SysUI = (() => {
             if (raf) { cancelAnimationFrame(raf); raf = null; }
             cursor?.remove(); dot?.remove();
             cursor = dot = null;
+            trails.length = 0;
             document.documentElement.style.cursor = '';
             owner?.dispose(); owner = null;
         };
@@ -1259,7 +1412,7 @@ const SysUI = (() => {
             const timers = [];
             timers.push(setTimeout(() => { if (!resolved) { container.innerHTML = UIHelpers.generateSkeleton(skeletonType, count); container.querySelectorAll('[data-stagger]').forEach((el, i) => { el.style.animationDelay = (i * 60) + 'ms'; }); } }, 320));
             timers.push(setTimeout(() => {
-                if (!resolved) container.innerHTML = `<div class="flex flex-col items-center justify-center p-10 text-center sys-fade-in"><div class="relative w-14 h-14 mb-5"><div class="absolute inset-0 rounded-full border-2 border-white/5"></div><div class="absolute inset-0 rounded-full border-2 border-transparent border-t-purple-500 border-r-purple-500/40 animate-spin"></div><div class="absolute inset-2 rounded-full bg-purple-500/10 sys-breathe"></div></div><p class="text-sm text-gray-300 font-medium sys-shimmer-text">جاري معالجة البيانات</p></div>`;
+                if (!resolved) container.innerHTML = `<div class="flex flex-col items-center justify-center p-10 text-center sys-fade-in"><div class="sys-orbit-loader mb-5"></div><p class="text-sm text-gray-300 font-medium sys-shimmer-text">جاري معالجة البيانات</p></div>`;
             }, 2100));
             timers.push(setTimeout(() => {
                 if (!resolved) container.innerHTML = `<div class="flex flex-col items-center justify-center p-10 text-center sys-fade-in"><svg class="w-12 h-12 text-yellow-500 mb-4 sys-breathe" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><p class="text-sm text-yellow-300 font-medium">الاتصال بطيء، جاري المحاولة...</p></div>`;
@@ -1366,7 +1519,7 @@ const SysUI = (() => {
                         <div class="flex justify-between"><span class="text-gray-500">🎯 ACT</span><span class="text-pink-400">${Actions.getAll().length}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">⚙️ TIER</span><span class="text-orange-400">${$perfTier} · ${$cores}c · ${$memory}gb</span></div>
                         <div class="sys-divider-glow my-1"></div>
-                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v8.0 · ONLINE</div>
+                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v9.0 · ONLINE</div>
                     `;
                 }
                 rafId = requestAnimationFrame(loop);
@@ -2064,223 +2217,4 @@ const SysUI = (() => {
                 card: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] flex flex-col gap-4 w-full sys-fade-in shadow-inner mb-3" aria-hidden="true"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full sys-skeleton-bg"></div><div class="flex flex-col gap-2 flex-1"><div class="h-3 w-1/3 sys-skeleton-bg rounded-full"></div><div class="h-2 w-1/4 sys-skeleton-bg rounded-full opacity-60"></div></div></div><div class="h-20 w-full sys-skeleton-bg rounded-xl mt-2"></div></div>`,
                 list: () => `<div data-stagger class="flex items-center gap-3 p-3 border-b border-white/5 sys-fade-in" aria-hidden="true"><div class="w-9 h-9 rounded-lg sys-skeleton-bg shrink-0"></div><div class="flex-1 flex flex-col gap-2 min-w-0"><div class="h-3 w-2/5 sys-skeleton-bg rounded-full"></div><div class="h-2 w-3/5 sys-skeleton-bg rounded-full opacity-60"></div></div></div>`,
                 text: () => `<div data-stagger class="flex flex-col gap-2 sys-fade-in mb-2" aria-hidden="true"><div class="h-3 w-full sys-skeleton-bg rounded-full"></div><div class="h-3 w-5/6 sys-skeleton-bg rounded-full"></div><div class="h-3 w-4/6 sys-skeleton-bg rounded-full"></div></div>`,
-                stat: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] sys-fade-in mb-3" aria-hidden="true"><div class="h-2 w-1/3 sys-skeleton-bg rounded-full mb-3"></div><div class="h-6 w-2/3 sys-skeleton-bg rounded-full"></div><div class="h-8 w-full sys-skeleton-bg rounded-lg mt-3 opacity-50"></div></div>`
-            };
-            const gen = variants[type] || variants.card;
-            return Array.from({ length: count }, gen).join('');
-        }
-    };
-
-    const Hotkeys = (() => {
-        const map = new Map();
-        const fmt = (e) => `${e.ctrlKey || e.metaKey ? 'mod+' : ''}${e.shiftKey ? 'shift+' : ''}${e.altKey ? 'alt+' : ''}${e.key.toLowerCase()}`;
-        rootOwner.listen(document, 'keydown', (e) => {
-            const key = fmt(e);
-            const cb = map.get(key);
-            if (cb && !(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
-                e.preventDefault();
-                try { cb(e); } catch (err) { console.error('[Hotkeys]', err); }
-            }
-        });
-        return {
-            bind: (combo, cb) => { map.set(combo.toLowerCase(), cb); return () => map.delete(combo.toLowerCase()); },
-            unbind: (combo) => map.delete(combo.toLowerCase()),
-            list: () => Array.from(map.keys())
-        };
-    })();
-
-    const Observe = {
-        intersect: (selector, cb, opts = {}) => {
-            const obs = new IntersectionObserver((entries) => entries.forEach(e => e.isIntersecting && cb(e.target, e)), { threshold: 0.1, ...opts });
-            document.querySelectorAll(selector).forEach(el => obs.observe(el));
-            rootOwner.add(() => obs.disconnect());
-            return obs;
-        },
-        revealOnScroll: (selector = '[data-reveal]') => {
-            const obs = new IntersectionObserver((entries) => {
-                entries.forEach((e, i) => {
-                    if (e.isIntersecting) {
-                        e.target.style.opacity = '0';
-                        e.target.style.transform = 'translateY(24px)';
-                        setTimeout(() => Motion.enter.slideUp(e.target), i * 60);
-                        obs.unobserve(e.target);
-                    }
-                });
-            }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
-            document.querySelectorAll(selector).forEach(el => obs.observe(el));
-            rootOwner.add(() => obs.disconnect());
-            return obs;
-        }
-    };
-
-    const ScrollProgress = {
-        enable: () => {
-            Theme.inject();
-            const bar = DOM.mount('sys-scroll-progress', Layers.hud, 'fixed top-0 left-0 h-[2.5px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 origin-left shadow-[0_0_16px_rgba(168,85,247,0.7)]');
-            bar.setAttribute('aria-hidden', 'true');
-            bar.style.width = '100%';
-            bar.style.transform = 'scaleX(0)';
-            bar.style.transition = 'transform 140ms cubic-bezier(0.05,0.7,0.1,1)';
-            const update = $rafThrottle(() => {
-                const scrolled = window.scrollY;
-                const max = document.documentElement.scrollHeight - window.innerHeight;
-                bar.style.transform = `scaleX(${max > 0 ? scrolled / max : 0})`;
-            });
-            rootOwner.listen(window, 'scroll', update, { passive: true });
-            rootOwner.listen(window, 'resize', update, { passive: true });
-            update();
-        }
-    };
-
-    const Drawer = (() => {
-        const open = (config = {}) => {
-            const { side = 'right', width = 360, title = '', content = '', onClose = null } = config;
-            Theme.inject();
-            Audio.play('swoosh');
-            Haptics.medium();
-            const bd = DOM.mount('sys-drawer-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
-            const id = $uid();
-            const vp = Viewport.get();
-            const isMobile = vp.isMobile;
-            const actualSide = isMobile ? 'bottom' : side;
-            const isVertical = actualSide === 'bottom' || actualSide === 'top';
-            const owner = Lifecycle.createOwner();
-            const titleId = 'sys-drawer-title-' + id;
-            const sideStyle = {
-                right: { top: '0', bottom: '0', right: '0', width: `min(${width}px, 92vw)`, transform: 'translateX(100%)' },
-                left: { top: '0', bottom: '0', left: '0', width: `min(${width}px, 92vw)`, transform: 'translateX(-100%)' },
-                bottom: { left: '0', right: '0', bottom: '0', maxHeight: '88dvh', transform: 'translateY(100%)', borderRadius: '24px 24px 0 0', paddingBottom: 'var(--sys-safe-bottom)' },
-                top: { left: '0', right: '0', top: '0', maxHeight: '88dvh', transform: 'translateY(-100%)', borderRadius: '0 0 24px 24px', paddingTop: 'var(--sys-safe-top)' }
-            }[actualSide];
-            const drawer = DOM.create('div', { class: 'sys-drawer flex flex-col sys-noise-overlay sys-no-scroll', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, style: { ...sideStyle, zIndex: Layers.modal, overflowY: 'auto' } });
-            Lifecycle.attach(drawer, owner);
-            if (isVertical && actualSide === 'bottom') drawer.appendChild(DOM.create('div', { class: 'sys-sheet-handle', 'aria-hidden': 'true' }));
-            const header = DOM.create('div', { class: 'flex items-center justify-between border-b border-white/10', style: { padding: 'clamp(0.875rem, 1.5vw, 1rem) clamp(1rem, 2vw, 1.25rem)' } });
-            header.appendChild(DOM.create('h3', { id: titleId, class: 'text-white font-semibold tracking-tight', style: { fontSize: 'var(--sys-text-lg)' }, text: title }));
-            const closeBtn = DOM.create('button', { class: 'sys-button-press rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors', style: { width: 'var(--sys-touch-target-sm)', height: 'var(--sys-touch-target-sm)' }, 'aria-label': 'إغلاق', html: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' });
-            header.appendChild(closeBtn);
-            const body = DOM.create('div', { class: 'flex-1 overflow-y-auto sys-no-scroll', style: { padding: 'clamp(1rem, 2vw, 1.25rem)' }, html: content });
-            drawer.append(header, body);
-            document.body.appendChild(drawer);
-            requestAnimationFrame(() => { bd.classList.add('sys-open'); drawer.style.transform = isVertical ? 'translateY(0)' : 'translateX(0)'; });
-            const releaseFocus = DOM.trapFocus(drawer);
-            owner.add(releaseFocus);
-            const close = () => {
-                Audio.play('close');
-                drawer.style.transform = sideStyle.transform;
-                bd.classList.remove('sys-open');
-                DOM.popOverlay();
-                owner.dispose();
-                setTimeout(() => { drawer.remove(); try { onClose?.(); } catch {} }, 340);
-            };
-            DOM.pushOverlay('drawer-' + id, close);
-            owner.listen(closeBtn, 'click', close);
-            owner.listen(bd, 'click', close);
-            if (isVertical && actualSide === 'bottom') {
-                let startY = 0, currentY = 0, dragging = false;
-                owner.listen(drawer, 'pointerdown', (e) => {
-                    if (e.target.closest('button, input, textarea, a')) return;
-                    if (drawer.scrollTop > 0) return;
-                    startY = e.clientY; dragging = true;
-                    drawer.style.transition = 'none';
-                });
-                owner.listen(drawer, 'pointermove', (e) => {
-                    if (!dragging) return;
-                    currentY = Math.max(0, e.clientY - startY);
-                    drawer.style.transform = `translateY(${currentY}px)`;
-                });
-                owner.listen(drawer, 'pointerup', () => {
-                    if (!dragging) return; dragging = false;
-                    drawer.style.transition = '';
-                    if (currentY > 120) close();
-                    else Motion.spring(drawer, { transform: [`translateY(${currentY}px)`, 'translateY(0)'] }, 'bouncy');
-                    currentY = 0;
-                });
-            }
-            return { close, el: drawer };
-        };
-        return { open };
-    })();
-
-    const Accordion = {
-        mount: (containerSelector) => {
-            document.querySelectorAll(containerSelector).forEach(container => {
-                const owner = Lifecycle.createOwner();
-                Lifecycle.attach(container, owner);
-                container.querySelectorAll('[data-accordion-trigger]').forEach(trigger => {
-                    const targetId = trigger.dataset.accordionTrigger;
-                    const target = container.querySelector(`[data-accordion-content="${CSS.escape(targetId)}"]`);
-                    if (!target) return;
-                    if (!target.classList.contains('sys-accordion-content')) {
-                        const inner = DOM.create('div');
-                        while (target.firstChild) inner.appendChild(target.firstChild);
-                        target.appendChild(inner);
-                        target.classList.add('sys-accordion-content');
-                    }
-                    trigger.setAttribute('aria-expanded', target.classList.contains('sys-open') ? 'true' : 'false');
-                    owner.listen(trigger, 'click', () => {
-                        const isOpen = target.classList.toggle('sys-open');
-                        Audio.play(isOpen ? 'pop' : 'tap');
-                        Haptics.soft();
-                        trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-                    });
-                });
-            });
-        }
-    };
-
-    const Tabs = {
-        mount: (containerSelector) => {
-            document.querySelectorAll(containerSelector).forEach(container => {
-                const list = container.querySelector('[data-tabs-list]');
-                if (!list) return;
-                const owner = Lifecycle.createOwner();
-                Lifecycle.attach(container, owner);
-                list.style.position = 'relative';
-                list.style.overflowX = 'auto';
-                list.style.scrollbarWidth = 'none';
-                list.setAttribute('role', 'tablist');
-                const indicator = DOM.create('div', { class: 'sys-tab-indicator' });
-                list.appendChild(indicator);
-                const update = (active) => {
-                    const r = active.getBoundingClientRect();
-                    const lr = list.getBoundingClientRect();
-                    indicator.style.width = r.width + 'px';
-                    indicator.style.transform = `translateX(${r.left - lr.left + list.scrollLeft}px)`;
-                    active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-                };
-                const tabs = list.querySelectorAll('[data-tab]');
-                tabs.forEach(tab => {
-                    tab.setAttribute('role', 'tab');
-                    owner.listen(tab, 'click', () => {
-                        tabs.forEach(t => { t.classList.remove('sys-active'); t.setAttribute('aria-selected', 'false'); });
-                        tab.classList.add('sys-active');
-                        tab.setAttribute('aria-selected', 'true');
-                        update(tab);
-                        Audio.play('tap');
-                        Haptics.select();
-                        const panelId = tab.dataset.tab;
-                        container.querySelectorAll('[data-panel]').forEach(p => {
-                            if (p.dataset.panel === panelId) { p.style.display = ''; p.setAttribute('role', 'tabpanel'); Motion.enter.fade(p, { duration: 220 }); }
-                            else p.style.display = 'none';
-                        });
-                    });
-                });
-                const active = list.querySelector('.sys-active') || tabs[0];
-
-if (active) {
-    requestAnimationFrame(() => update(active));
-}
-
-owner.listen(
-    window,
-    'resize',
-    $debounce(() => {
-        const current = list.querySelector('.sys-active') || tabs[0];
-        if (current) update(current);
-    }, 150)
-);
-
-            });
-        }
-    };
+                stat: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] sys-fade-in mb-3" aria-hidden="true"><div class="h-2 w-1/3 
