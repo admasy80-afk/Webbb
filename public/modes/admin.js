@@ -12,7 +12,7 @@ import { Anim } from './admin/anim.js';
 
 import { fetchStats, fetchPendingRequests, updateStudentStatus, rejectStudent } from './admin/dashboard.js';
 import { fetchStudentsByGrade } from './admin/students.js';
-import { fetchGradeContent, renderManageContent, deleteContent } from './admin/content.js';
+import { fetchGradeContent, renderManageContent, deleteContent, viewResults } from './admin/content.js';
 import { logout } from './admin/auth.js';
 import './admin/quiz.js'; // يقوم تلقائياً بتهيئة الـ FormsEngine وربط الدوال بالنافذة (window)
 
