@@ -46,3 +46,8 @@ function _renderStudentsList(container, students) {
     Anim.progressBars(container);
 }
 
+// إتاحة الدوال لعناصر HTML (onclick) فوراً عند تحميل الموديول
+if (typeof window !== 'undefined') {
+    window.fetchStudentsByGrade = fetchStudentsByGrade;
+}
+
