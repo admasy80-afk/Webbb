@@ -2216,5 +2216,29 @@ const SysUI = (() => {
             const variants = {
                 card: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] flex flex-col gap-4 w-full sys-fade-in shadow-inner mb-3" aria-hidden="true"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full sys-skeleton-bg"></div><div class="flex flex-col gap-2 flex-1"><div class="h-3 w-1/3 sys-skeleton-bg rounded-full"></div><div class="h-2 w-1/4 sys-skeleton-bg rounded-full opacity-60"></div></div></div><div class="h-20 w-full sys-skeleton-bg rounded-xl mt-2"></div></div>`,
                 list: () => `<div data-stagger class="flex items-center gap-3 p-3 border-b border-white/5 sys-fade-in" aria-hidden="true"><div class="w-9 h-9 rounded-lg sys-skeleton-bg shrink-0"></div><div class="flex-1 flex flex-col gap-2 min-w-0"><div class="h-3 w-2/5 sys-skeleton-bg rounded-full"></div><div class="h-2 w-3/5 sys-skeleton-bg rounded-full opacity-60"></div></div></div>`,
-                text: () => `<div data-stagger class="flex flex-col gap-2 sys-fade-in mb-2" aria-hidden="true"><div class="h-3 w-full sys-skeleton-bg rounded-full"></div><div class="h-3 w-5/6 sys-skeleton-bg rounded-full"></div><div class="h-3 w-4/6 sys-skeleton-bg rounded-full"></div></div>`,
-                stat: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] sys-fade-in mb-3" aria-hidden="true"><div class="h-2 w-1/3 
+                            text: () => `<div data-stagger class="flex flex-col gap-2 sys-fade-in mb-2"><div class="h-3 w-full sys-skeleton-bg rounded-full"></div><div class="h-3 w-4/5 sys-skeleton-bg rounded-full opacity-75"></div></div>`
+            };
+            // تكرار الهيكل بناءً على العدد المطلوب (count)
+            return Array(count).fill(0).map(() => (variants[type] || variants.card)()).join('');
+        }
+    };
+
+    // تصدير كافه المكونات المكتوبة في الملف لتصبح متاحة عبر الكائن الرئيسي SysUI
+    return {
+        FrameScheduler,
+        Viewport,
+        Lifecycle,
+        Events,
+        Store,
+        Layers,
+        State,
+        Motion,
+        Audio,
+        Actions,
+        Page,
+        SmartLoader,
+        UIHelpers,
+        Ripple: typeof Ripple !== 'undefined' ? Ripple : undefined,
+        Sparkline: typeof Sparkline !== 'undefined' ? Sparkline : undefined
+    };
+})();
