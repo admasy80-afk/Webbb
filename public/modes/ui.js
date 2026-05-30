@@ -514,20 +514,34 @@ const SysUI = (() => {
         };
 
         return {
-            confirm: (title, desc, cb) => open(`
+            // 🛠️ توقيع مرن: يقبل confirm(title, cb) أو confirm(title, desc, cb)
+            confirm: (title, descOrCb, maybeCb) => {
+                let desc = '', cb;
+                if (typeof descOrCb === 'function') { cb = descOrCb; }
+                else { desc = descOrCb || ''; cb = maybeCb; }
+                const handler = typeof cb === 'function' ? cb : () => {};
+                return open(`
                 <h3 class="text-white font-semibold text-lg mb-2">${title}</h3>
-                <p class="text-gray-400 text-sm mb-6 leading-relaxed">${desc}</p>
+                ${desc ? `<p class="text-gray-400 text-sm mb-6 leading-relaxed">${desc}</p>` : '<div class="mb-6"></div>'}
                 <div class="flex justify-end gap-3">
                     <button id="sys-modal-cancel" class="sys-magnetic px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-white/5 transition-all outline-none focus:ring-2">إلغاء</button>
                     <button id="sys-modal-confirm" class="sys-magnetic px-4 py-2 rounded-lg text-sm font-medium bg-white text-black hover:bg-gray-200 transition-all shadow-md outline-none focus:ring-2">تأكيد</button>
-                </div>`, cb, () => cb(false)),
-            prompt: (title, placeholder, cb, id='sys_p1') => open(`
+                </div>`, handler, () => handler(false));
+            },
+            // 🛠️ توقيع مرن: يقبل prompt(title, cb) أو prompt(title, placeholder, cb, id)
+            prompt: (title, placeholderOrCb, cbOrId, maybeId) => {
+                let placeholder = '', cb, id;
+                if (typeof placeholderOrCb === 'function') { cb = placeholderOrCb; id = cbOrId || 'sys_p1'; }
+                else { placeholder = placeholderOrCb || ''; cb = cbOrId; id = maybeId || 'sys_p1'; }
+                const handler = typeof cb === 'function' ? cb : () => {};
+                return open(`
                 <h3 class="text-white font-semibold text-lg mb-4">${title}</h3>
                 <input type="text" id="${id}" class="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-white/30 focus:ring-1 transition-all mb-6 placeholder-gray-600" placeholder="${placeholder}">
                 <div class="flex justify-end gap-3">
                     <button id="sys-modal-cancel" class="sys-magnetic px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-white/5 transition-all outline-none focus:ring-2">إلغاء</button>
                     <button id="sys-modal-confirm" class="sys-magnetic px-4 py-2 rounded-lg text-sm font-medium bg-white text-black hover:bg-gray-200 transition-all shadow-md outline-none focus:ring-2">حفظ</button>
-                </div>`, cb, () => cb(null), id)
+                </div>`, handler, () => handler(null), id);
+            }
         };
     })();
 
@@ -722,6 +736,26 @@ const SysUI = (() => {
         confirm: Modals.confirm,
         prompt: Modals.prompt,
         cmd: Cmd,
+
+        // 🎉 احتفال خفيف (يمنع الأخطاء عند استدعائه من نماذج الأسئلة)
+        confetti: (count = 60) => {
+            try {
+                Theme.inject();
+                const layer = DOM.mount('sys-confetti', Layers.toast - 1, 'fixed inset-0 pointer-events-none overflow-hidden');
+                const colors = ['#eab308', '#22c55e', '#3b82f6', '#ffffff'];
+                for (let i = 0; i < count; i++) {
+                    const piece = document.createElement('div');
+                    const size = 6 + Math.random() * 6;
+                    piece.style.cssText = `position:absolute;top:-10px;left:${Math.random() * 100}%;width:${size}px;height:${size}px;background:${colors[i % colors.length]};opacity:0.9;border-radius:2px;`;
+                    layer.appendChild(piece);
+                    piece.animate([
+                        { transform: `translateY(0) rotate(0deg)`, opacity: 1 },
+                        { transform: `translateY(100vh) rotate(${360 + Math.random() * 360}deg)`, opacity: 0 }
+                    ], { duration: 1500 + Math.random() * 1500, easing: 'cubic-bezier(0.4,0,0.2,1)' }).onfinish = () => piece.remove();
+                }
+                setTimeout(() => { if (layer && !layer.children.length) layer.remove(); }, 3200);
+            } catch (e) {}
+        },
         
         // Smart Components
         presence: UIHelpers.presence,
@@ -746,3 +780,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 export const trashSVG = SysUI.icons.trash;
 export { SysUI };
+
