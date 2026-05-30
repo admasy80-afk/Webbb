@@ -1,22 +1,119 @@
 const SysUI = (() => {
+    'use strict';
+
     const $esc = (str) => String(str ?? '').replace(/[&<>"'`=\/]/g, (s) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;','/':'&#47;'}[s]));
+    const $sanitizeURL = (url) => { try { const u = new URL(url, location.href); return ['http:', 'https:', 'mailto:', 'tel:'].includes(u.protocol) ? u.href : '#'; } catch { return '#'; } };
     const $safeJSON = (key, fallback) => { try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
+    const $safeSet = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); return true; } catch { return false; } };
     const $rafThrottle = (fn) => { let t = false, lastArgs; return (...args) => { lastArgs = args; if (!t) { t = true; requestAnimationFrame(() => { fn(...lastArgs); t = false; }); } }; };
-    const $debounce = (fn, ms) => { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; };
-    const $throttle = (fn, ms) => { let last = 0, id; return (...a) => { const now = performance.now(); if (now - last >= ms) { last = now; fn(...a); } else { clearTimeout(id); id = setTimeout(() => { last = performance.now(); fn(...a); }, ms - (now - last)); } }; };
+    const $debounce = (fn, ms) => { let id; const debounced = (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; debounced.cancel = () => clearTimeout(id); return debounced; };
+    const $throttle = (fn, ms) => { let last = 0, id; const throttled = (...a) => { const now = performance.now(); if (now - last >= ms) { last = now; fn(...a); } else { clearTimeout(id); id = setTimeout(() => { last = performance.now(); fn(...a); }, ms - (now - last)); } }; throttled.cancel = () => clearTimeout(id); return throttled; };
     const $idle = (fn, timeout = 200) => ('requestIdleCallback' in window ? requestIdleCallback(fn, { timeout }) : setTimeout(fn, 1));
     const $uid = () => 'sys_' + Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
     const $clamp = (v, min, max) => Math.max(min, Math.min(max, v));
     const $lerp = (a, b, t) => a + (b - a) * t;
     const $smoothstep = (a, b, t) => { const x = $clamp((t - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
     const $hash = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i); return (h >>> 0).toString(36); };
+    const $noop = () => {};
+    const $isSafeURL = (u) => /^(https?:|mailto:|tel:|\/|#)/i.test(u || '');
+
     const $prm = matchMedia('(prefers-reduced-motion: reduce)');
+    const $prc = matchMedia('(prefers-contrast: more)');
     const $isTouch = matchMedia('(pointer: coarse)').matches;
+    const $hasHover = matchMedia('(hover: hover)').matches;
     const $isHighRefresh = matchMedia('(min-resolution: 120dpi)').matches;
+    const $isRetina = window.devicePixelRatio >= 2;
     const $supportsVT = 'startViewTransition' in document;
-    const $supportsConstraint = CSS.supports?.('animation-timeline', 'view()') ?? false;
+    const $supportsBackdrop = CSS.supports?.('backdrop-filter', 'blur(1px)') || CSS.supports?.('-webkit-backdrop-filter', 'blur(1px)');
+    const $supportsContainer = CSS.supports?.('container-type', 'inline-size');
+    const $supportsAnchor = CSS.supports?.('anchor-name', '--x');
+    const $supportsPopover = HTMLElement.prototype.hasOwnProperty('popover');
+    const $supportsHasSelector = CSS.supports?.('selector(:has(*))');
+    const $cores = navigator.hardwareConcurrency || 4;
+    const $memory = navigator.deviceMemory || 4;
+    const $connection = navigator.connection || {};
+    const $isLowEnd = $cores <= 4 || $memory <= 2 || ['slow-2g', '2g', '3g'].includes($connection.effectiveType);
+    const $isMidEnd = $cores <= 6 || $memory <= 4;
+    const $perfTier = $isLowEnd ? 'low' : $isMidEnd ? 'mid' : 'high';
     let $reducedMotion = $prm.matches;
-    $prm.addEventListener?.('change', e => { $reducedMotion = e.matches; });
+    let $highContrast = $prc.matches;
+
+    const Viewport = (() => {
+        let state = { w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio, breakpoint: 'md', orientation: 'portrait' };
+        const breakpoints = { xs: 0, sm: 480, md: 768, lg: 1024, xl: 1280, xxl: 1536, ultra: 1920 };
+        const calc = () => {
+            const w = window.innerWidth, h = window.innerHeight;
+            let bp = 'xs';
+            for (const [k, v] of Object.entries(breakpoints)) if (w >= v) bp = k;
+            state = { w, h, dpr: window.devicePixelRatio, breakpoint: bp, orientation: w > h ? 'landscape' : 'portrait', aspect: w / h, isUltrawide: w / h > 2.1, isCompact: w < 480, isMobile: w < 768, isTablet: w >= 768 && w < 1024, isDesktop: w >= 1024 };
+            document.documentElement.dataset.bp = bp;
+            document.documentElement.dataset.orientation = state.orientation;
+            document.documentElement.style.setProperty('--sys-vw', w + 'px');
+            document.documentElement.style.setProperty('--sys-vh', h + 'px');
+            document.documentElement.style.setProperty('--sys-dvh', h * 0.01 + 'px');
+        };
+        calc();
+        const onResize = $debounce(() => { calc(); Events?.emit('viewport:change', state); }, 80);
+        window.addEventListener('resize', onResize, { passive: true });
+        window.addEventListener('orientationchange', onResize, { passive: true });
+        return { get: () => ({ ...state }), breakpoints, is: (q) => state.breakpoint === q, atLeast: (q) => state.w >= breakpoints[q] };
+    })();
+
+    $prm.addEventListener?.('change', e => { $reducedMotion = e.matches; Events?.emit('motion:preference', e.matches); });
+    $prc.addEventListener?.('change', e => { $highContrast = e.matches; document.documentElement.dataset.contrast = e.matches ? 'high' : 'normal'; });
+
+    const Lifecycle = (() => {
+        const ownerRegistry = new WeakMap();
+        const allCleanups = new Set();
+        const createOwner = (id = $uid()) => {
+            const cleanups = new Set();
+            const owner = {
+                id,
+                disposed: false,
+                add: (fn) => { if (owner.disposed) { try { fn(); } catch {} return $noop; } cleanups.add(fn); return () => { cleanups.delete(fn); try { fn(); } catch {} }; },
+                listen: (target, event, handler, opts) => {
+                    if (!target?.addEventListener) return $noop;
+                    target.addEventListener(event, handler, opts);
+                    const off = () => target.removeEventListener(event, handler, opts);
+                    return owner.add(off);
+                },
+                interval: (fn, ms) => { const id = setInterval(fn, ms); return owner.add(() => clearInterval(id)); },
+                timeout: (fn, ms) => { const id = setTimeout(fn, ms); return owner.add(() => clearTimeout(id)); },
+                raf: (fn) => { let id = requestAnimationFrame(function tick(t) { fn(t); id = requestAnimationFrame(tick); }); return owner.add(() => cancelAnimationFrame(id)); },
+                observe: (observer) => owner.add(() => observer.disconnect()),
+                child: () => { const c = createOwner(); owner.add(() => c.dispose()); return c; },
+                dispose: () => {
+                    if (owner.disposed) return;
+                    owner.disposed = true;
+                    for (const fn of cleanups) { try { fn(); } catch (e) { console.warn('[Lifecycle]', e); } }
+                    cleanups.clear();
+                    allCleanups.delete(owner);
+                }
+            };
+            allCleanups.add(owner);
+            return owner;
+        };
+        const attach = (el, owner) => { if (el && owner) ownerRegistry.set(el, owner); };
+        const getOwner = (el) => ownerRegistry.get(el);
+        const disposeFor = (el) => { const o = ownerRegistry.get(el); if (o) { o.dispose(); ownerRegistry.delete(el); } };
+        const domObserver = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                for (const node of m.removedNodes) {
+                    if (node.nodeType !== 1) continue;
+                    disposeFor(node);
+                    if (node.querySelectorAll) {
+                        for (const child of node.querySelectorAll('*')) disposeFor(child);
+                    }
+                }
+            }
+        });
+        const init = () => { if (document.body) domObserver.observe(document.body, { childList: true, subtree: true }); };
+        if (document.body) init(); else document.addEventListener('DOMContentLoaded', init, { once: true });
+        window.addEventListener('beforeunload', () => { for (const o of allCleanups) try { o.dispose(); } catch {} });
+        return { createOwner, attach, getOwner, disposeFor };
+    })();
+
+    const rootOwner = Lifecycle.createOwner('root');
 
     const $velocity = (() => {
         let lastX = 0, lastY = 0, lastT = performance.now(), vx = 0, vy = 0, speed = 0;
@@ -30,11 +127,93 @@ const SysUI = (() => {
             speed = Math.hypot(vx, vy);
             lastX = x; lastY = y; lastT = now;
         };
-        document.addEventListener('pointermove', (e) => track(e.clientX, e.clientY), { passive: true });
+        rootOwner.listen(document, 'pointermove', (e) => track(e.clientX, e.clientY), { passive: true });
         return { get: () => ({ vx, vy, speed }), track };
     })();
 
+    const Bus = (() => {
+        const listeners = new Map();
+        const wildcards = new Set();
+        const queue = [];
+        let flushing = false;
+        const flush = () => {
+            flushing = true;
+            while (queue.length) {
+                const { event, data } = queue.shift();
+                const set = listeners.get(event);
+                if (set) for (const cb of set) { try { cb(data); } catch (e) { console.error('[Bus]', event, e); } }
+                for (const cb of wildcards) { try { cb({ event, data }); } catch (e) { console.error('[Bus]', e); } }
+            }
+            flushing = false;
+        };
+        return {
+            on: (event, cb) => {
+                if (event === '*') { wildcards.add(cb); return () => wildcards.delete(cb); }
+                if (!listeners.has(event)) listeners.set(event, new Set());
+                listeners.get(event).add(cb);
+                return () => listeners.get(event)?.delete(cb);
+            },
+            once: (event, cb) => { const off = Bus.on(event, (d) => { off(); cb(d); }); return off; },
+            emit: (event, data) => { queue.push({ event, data }); if (!flushing) queueMicrotask(flush); },
+            emitSync: (event, data) => {
+                const set = listeners.get(event);
+                if (set) for (const cb of set) { try { cb(data); } catch (e) { console.error('[Bus]', e); } }
+                for (const cb of wildcards) { try { cb({ event, data }); } catch {} }
+            },
+            off: (event, cb) => listeners.get(event)?.delete(cb),
+            clear: (event) => event ? listeners.delete(event) : (listeners.clear(), wildcards.clear()),
+            count: (event) => listeners.get(event)?.size || 0
+        };
+    })();
+    const Events = Bus;
+
+    const Store = (() => {
+        const state = new Map();
+        const subs = new Map();
+        const middleware = [];
+        return {
+            get: (k) => state.get(k),
+            set: (k, v) => {
+                const prev = state.get(k);
+                let next = v;
+                for (const mw of middleware) { try { next = mw(k, next, prev) ?? next; } catch (e) { console.error('[Store:mw]', e); } }
+                if (Object.is(prev, next)) return;
+                state.set(k, next);
+                const set = subs.get(k);
+                if (set) for (const cb of set) { try { cb(next, prev); } catch (e) { console.error('[Store]', e); } }
+                Bus.emit('store:change', { key: k, value: next, prev });
+            },
+            update: (k, fn) => Store.set(k, fn(state.get(k))),
+            subscribe: (k, cb) => {
+                if (!subs.has(k)) subs.set(k, new Set());
+                subs.get(k).add(cb);
+                return () => subs.get(k)?.delete(cb);
+            },
+            persist: (k, v) => { Store.set(k, v); $safeSet('sysui_' + k, v); },
+            hydrate: (k, fallback) => { const v = $safeJSON('sysui_' + k, fallback); Store.set(k, v); return v; },
+            use: (mw) => middleware.push(mw),
+            snapshot: () => Object.fromEntries(state),
+            restore: (snap) => { Object.entries(snap).forEach(([k, v]) => Store.set(k, v)); }
+        };
+    })();
+
+    const Layers = Object.freeze({
+        ambient: -1, base: 0, magnetic: 100, spotlight: 8000, feed: 9000,
+        backdrop: 9998, context: 9999, toast: 10000, modal: 10001, cmd: 10002, hud: 10003, cursor: 10004, particles: 10005
+    });
+
+    const State = {
+        toasts: new Map(),
+        activeOverlays: [],
+        cmdState: { query: '', selectedIndex: 0, results: [], history: $safeJSON('sysui_cmd_history', []), favorites: new Set($safeJSON('sysui_cmd_favs', [])) },
+        previousFocus: null,
+        sessionDrafts: $safeJSON('sysui_drafts', {}),
+        focusStack: [],
+        themeMode: $safeJSON('sysui_theme', 'auto')
+    };
+
     const Motion = (() => {
+        const tierMultiplier = { low: 0.55, mid: 0.82, high: 1 }[$perfTier];
         const tokens = {
             duration: { instant: 60, micro: 110, fast: 170, normal: 230, emphasized: 320, slow: 460, slower: 640, glacial: 880 },
             ease: {
@@ -70,21 +249,26 @@ const SysUI = (() => {
             stagger: { tight: 18, normal: 32, relaxed: 52, dramatic: 78 }
         };
 
-        const reduce = (ms) => $reducedMotion ? Math.min(ms, 60) : ms;
+        const reduce = (ms) => $reducedMotion ? Math.min(ms, 60) : Math.round(ms * tierMultiplier);
+        const activeAnimations = new WeakMap();
+        const springCache = new Map();
 
         const springCurve = (preset = 'gentle', steps = 60) => {
+            const cacheKey = `${preset}:${steps}`;
+            if (springCache.has(cacheKey)) return springCache.get(cacheKey);
             const { stiffness, damping, mass } = tokens.spring[preset] || tokens.spring.gentle;
             const w0 = Math.sqrt(stiffness / mass);
             const zeta = damping / (2 * Math.sqrt(stiffness * mass));
             const wd = zeta < 1 ? w0 * Math.sqrt(1 - zeta * zeta) : 0;
-            const frames = [];
+            const frames = new Array(steps + 1);
             for (let i = 0; i <= steps; i++) {
                 const t = i / steps;
                 let v;
                 if (zeta < 1) v = 1 - Math.exp(-zeta * w0 * t) * (Math.cos(wd * t) + ((zeta * w0) / wd) * Math.sin(wd * t));
                 else v = 1 - Math.exp(-w0 * t) * (1 + w0 * t);
-                frames.push(v);
+                frames[i] = v;
             }
+            springCache.set(cacheKey, frames);
             return frames;
         };
 
@@ -95,23 +279,40 @@ const SysUI = (() => {
             return Math.min(1400, Math.max(180, (zeta < 1 ? 1000 / (zeta * w0) : 1000 / w0) * 0.85));
         };
 
+        const cancelOn = (el) => {
+            const set = activeAnimations.get(el);
+            if (!set) return;
+            for (const a of set) { try { a.cancel(); } catch {} }
+            set.clear();
+        };
+
+        const track = (el, anim) => {
+            if (!activeAnimations.has(el)) activeAnimations.set(el, new Set());
+            const set = activeAnimations.get(el);
+            set.add(anim);
+            anim.finished.finally(() => set.delete(anim)).catch($noop);
+        };
+
         const animate = (el, keyframes, opts = {}) => {
-            if (!el) return Promise.resolve();
-            const { duration = tokens.duration.normal, easing = tokens.ease.standard, delay = 0, fill = 'forwards', composite = 'replace' } = opts;
+            if (!el || !el.isConnected) return Promise.resolve();
+            const { duration = tokens.duration.normal, easing = tokens.ease.standard, delay = 0, fill = 'forwards', composite = 'replace', cancel = false } = opts;
+            if (cancel) cancelOn(el);
             const d = reduce(duration);
             try {
                 const anim = el.animate(keyframes, { duration: d, easing, delay: reduce(delay), fill, composite });
+                track(el, anim);
                 return anim.finished.catch(() => {});
             } catch { return Promise.resolve(); }
         };
 
         const spring = (el, props, preset = 'gentle', opts = {}) => {
-            if (!el) return Promise.resolve();
+            if (!el || !el.isConnected) return Promise.resolve();
             if ($reducedMotion) {
                 if (props) Object.entries(props).forEach(([k, v]) => { el.style[k] = Array.isArray(v) ? v[v.length - 1] : v; });
                 return Promise.resolve();
             }
-            const curve = springCurve(preset, 60);
+            const steps = $perfTier === 'low' ? 24 : $perfTier === 'mid' ? 40 : 60;
+            const curve = springCurve(preset, steps);
             const keys = Object.keys(props);
             const frames = curve.map(t => {
                 const f = {};
@@ -131,29 +332,32 @@ const SysUI = (() => {
             });
             const dur = reduce(opts.duration ?? springDuration(preset));
             try {
+                if (opts.cancel) cancelOn(el);
                 const anim = el.animate(frames, { duration: dur, easing: 'linear', fill: 'forwards' });
+                track(el, anim);
                 return anim.finished.catch(() => {});
             } catch { return Promise.resolve(); }
         };
 
         const stagger = async (els, fn, gap = tokens.stagger.normal) => {
-            const promises = [];
             const arr = Array.from(els);
             const total = arr.length;
+            if (!total) return;
+            const promises = [];
             for (let i = 0; i < total; i++) {
                 const eased = Math.pow(i / Math.max(1, total - 1), 0.85) * (total - 1);
-                promises.push(new Promise(r => setTimeout(() => { fn(arr[i], i); r(); }, reduce(eased * gap))));
+                promises.push(new Promise(r => setTimeout(() => { try { fn(arr[i], i); } catch {} r(); }, reduce(eased * gap))));
             }
             return Promise.all(promises);
         };
 
         const enter = {
             fade: (el, opts = {}) => animate(el, [{ opacity: 0 }, { opacity: 1 }], { duration: tokens.duration.normal, easing: tokens.ease.standard, ...opts }),
-            scale: (el, opts = {}) => spring(el, { transform: ['scale(0.94)', 'scale(1)'], opacity: [0, 1] }, 'precise'),
-            slideUp: (el, opts = {}) => spring(el, { transform: ['translate3d(0,14px,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
-            slideDown: (el, opts = {}) => spring(el, { transform: ['translate3d(0,-14px,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
-            slideLeft: (el, opts = {}) => spring(el, { transform: ['translate3d(18px,0,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
-            slideRight: (el, opts = {}) => spring(el, { transform: ['translate3d(-18px,0,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            scale: (el) => spring(el, { transform: ['scale(0.94)', 'scale(1)'], opacity: [0, 1] }, 'precise'),
+            slideUp: (el) => spring(el, { transform: ['translate3d(0,14px,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            slideDown: (el) => spring(el, { transform: ['translate3d(0,-14px,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            slideLeft: (el) => spring(el, { transform: ['translate3d(18px,0,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
+            slideRight: (el) => spring(el, { transform: ['translate3d(-18px,0,0)', 'translate3d(0,0,0)'], opacity: [0, 1] }, 'ios'),
             pop: (el) => spring(el, { transform: ['scale(0.82)', 'scale(1)'], opacity: [0, 1] }, 'bouncy'),
             blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts }),
             materialize: (el) => animate(el, [
@@ -167,6 +371,7 @@ const SysUI = (() => {
             scale: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.96)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
             slideUp: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translate3d(0,0,0)' }, { opacity: 0, transform: 'translate3d(0,-10px,0)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
             slideDown: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translate3d(0,0,0)' }, { opacity: 0, transform: 'translate3d(0,10px,0)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
+            slideLeft: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translate3d(0,0,0)' }, { opacity: 0, transform: 'translate3d(20px,0,0)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
             blur: (el, opts = {}) => animate(el, [{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(8px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
             dematerialize: (el) => animate(el, [
                 { opacity: 1, filter: 'blur(0) brightness(1)', transform: 'scale(1)' },
@@ -193,7 +398,7 @@ const SysUI = (() => {
         const flip = (el, from, to) => {
             if ($reducedMotion) return Promise.resolve();
             const dx = from.left - to.left, dy = from.top - to.top;
-            const sx = from.width / to.width, sy = from.height / to.height;
+            const sx = from.width / Math.max(to.width, 1), sy = from.height / Math.max(to.height, 1);
             return animate(el, [
                 { transform: `translate3d(${dx}px, ${dy}px, 0) scale(${sx}, ${sy})` },
                 { transform: 'translate3d(0, 0, 0) scale(1, 1)' }
@@ -213,96 +418,33 @@ const SysUI = (() => {
             return new Promise(resolve => {
                 let vx = velocity.vx * 16, vy = velocity.vy * 16;
                 let tx = 0, ty = 0;
+                let raf;
                 const tick = () => {
                     tx += vx; ty += vy;
                     vx *= friction; vy *= friction;
                     el.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
-                    if (Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) requestAnimationFrame(tick);
+                    if (Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) raf = requestAnimationFrame(tick);
                     else resolve();
                 };
-                requestAnimationFrame(tick);
+                raf = requestAnimationFrame(tick);
             });
         };
 
-        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, morphLayout, inertial, reduce, springCurve, springDuration };
-    })();
-
-    const Events = (() => {
-        const listeners = new Map();
-        const wildcards = new Set();
-        const queue = [];
-        let flushing = false;
-        const flush = () => {
-            flushing = true;
-            while (queue.length) {
-                const { event, data } = queue.shift();
-                listeners.get(event)?.forEach(cb => { try { cb(data); } catch (e) { console.error('[SysUI:Events]', event, e); } });
-                wildcards.forEach(cb => { try { cb({ event, data }); } catch (e) { console.error('[SysUI:Events]', e); } });
-            }
-            flushing = false;
-        };
-        return {
-            on: (event, cb) => {
-                if (event === '*') { wildcards.add(cb); return () => wildcards.delete(cb); }
-                if (!listeners.has(event)) listeners.set(event, new Set());
-                listeners.get(event).add(cb);
-                return () => listeners.get(event)?.delete(cb);
-            },
-            once: (event, cb) => { const off = Events.on(event, (d) => { off(); cb(d); }); return off; },
-            emit: (event, data) => { queue.push({ event, data }); if (!flushing) queueMicrotask(flush); },
-            emitSync: (event, data) => {
-                listeners.get(event)?.forEach(cb => { try { cb(data); } catch (e) { console.error('[SysUI:Events]', e); } });
-                wildcards.forEach(cb => { try { cb({ event, data }); } catch (e) {} });
-            },
-            off: (event, cb) => listeners.get(event)?.delete(cb),
-            clear: (event) => event ? listeners.delete(event) : listeners.clear(),
-            listenerCount: (event) => listeners.get(event)?.size || 0
-        };
-    })();
-
-    const Store = (() => {
-        const state = new Map();
-        const subs = new Map();
-        const computedCache = new Map();
-        const middleware = [];
-        return {
-            get: (k) => state.get(k),
-            set: (k, v) => {
-                const prev = state.get(k);
-                let next = v;
-                for (const mw of middleware) next = mw(k, next, prev) ?? next;
-                if (Object.is(prev, next)) return;
-                state.set(k, next);
-                computedCache.clear();
-                subs.get(k)?.forEach(cb => { try { cb(next, prev); } catch (e) { console.error('[SysUI:Store]', e); } });
-                Events.emit('store:change', { key: k, value: next, prev });
-            },
-            update: (k, fn) => Store.set(k, fn(state.get(k))),
-            subscribe: (k, cb) => {
-                if (!subs.has(k)) subs.set(k, new Set());
-                subs.get(k).add(cb);
-                return () => subs.get(k)?.delete(cb);
-            },
-            persist: (k, v) => { Store.set(k, v); try { localStorage.setItem('sysui_' + k, JSON.stringify(v)); } catch {} },
-            hydrate: (k, fallback) => { const v = $safeJSON('sysui_' + k, fallback); Store.set(k, v); return v; },
-            compute: (key, deps, fn) => {
-                const cacheKey = key + ':' + deps.join(',');
-                if (computedCache.has(cacheKey)) return computedCache.get(cacheKey);
-                const result = fn(...deps.map(d => state.get(d)));
-                computedCache.set(cacheKey, result);
-                return result;
-            },
-            use: (mw) => middleware.push(mw),
-            snapshot: () => Object.fromEntries(state),
-            restore: (snap) => { Object.entries(snap).forEach(([k, v]) => Store.set(k, v)); }
-        };
+        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, morphLayout, inertial, reduce, springCurve, springDuration, cancel: cancelOn };
     })();
 
     const Audio = (() => {
-        let ctx = null, master = null, compressor = null, reverb = null, lowShelf = null;
+        let ctx = null, master = null, compressor = null, reverb = null, lowShelf = null, initialized = false;
         let muted = $safeJSON('sysui_audio_muted', false);
         let volume = $safeJSON('sysui_audio_volume', 0.32);
+        const activeNodes = new Set();
+        const MAX_CONCURRENT = $perfTier === 'low' ? 8 : 24;
+
         const init = async () => {
+            if (initialized && ctx) {
+                if (ctx.state !== 'running') { try { await ctx.resume(); } catch {} }
+                return ctx.state === 'running';
+            }
             if (!ctx) {
                 try {
                     const AC = window.AudioContext || window.webkitAudioContext;
@@ -320,34 +462,45 @@ const SysUI = (() => {
                     lowShelf.gain.value = -3;
                     master = ctx.createGain();
                     master.gain.value = volume;
-                    const wet = ctx.createGain();
-                    wet.gain.value = 0.06;
-                    try {
-                        reverb = ctx.createConvolver();
-                        const len = ctx.sampleRate * 0.55;
-                        const buf = ctx.createBuffer(2, len, ctx.sampleRate);
-                        for (let ch = 0; ch < 2; ch++) {
-                            const d = buf.getChannelData(ch);
-                            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
-                        }
-                        reverb.buffer = buf;
-                        master.connect(reverb); reverb.connect(wet); wet.connect(lowShelf);
-                    } catch {}
+                    if ($perfTier !== 'low') {
+                        try {
+                            reverb = ctx.createConvolver();
+                            const len = ctx.sampleRate * 0.55;
+                            const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+                            for (let ch = 0; ch < 2; ch++) {
+                                const d = buf.getChannelData(ch);
+                                for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.4);
+                            }
+                            reverb.buffer = buf;
+                            const wet = ctx.createGain();
+                            wet.gain.value = 0.06;
+                            master.connect(reverb); reverb.connect(wet); wet.connect(lowShelf);
+                        } catch {}
+                    }
                     master.connect(lowShelf);
                     lowShelf.connect(compressor);
                     compressor.connect(ctx.destination);
+                    initialized = true;
                 } catch { return false; }
             }
             if (ctx.state !== 'running') { try { await ctx.resume(); } catch {} }
             return ctx.state === 'running';
         };
+
+        const cleanup = (nodes) => {
+            for (const n of nodes) { try { n.disconnect(); } catch {} }
+            activeNodes.delete(nodes);
+        };
+
         const tone = async (freq, type, dur, vol, detune = 0, attack = 0.003, filterFreq = null) => {
-            if (muted) return;
+            if (muted || activeNodes.size >= MAX_CONCURRENT) return;
             if (!(await init())) return;
             try {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
                 const filter = ctx.createBiquadFilter();
+                const nodes = [osc, gain, filter];
+                activeNodes.add(nodes);
                 filter.type = 'lowpass';
                 filter.frequency.value = filterFreq ?? freq * 5;
                 filter.Q.value = 1.1;
@@ -359,15 +512,18 @@ const SysUI = (() => {
                 gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
                 osc.connect(filter); filter.connect(gain); gain.connect(master);
                 osc.start(); osc.stop(ctx.currentTime + dur + 0.05);
-                osc.onended = () => { try { osc.disconnect(); filter.disconnect(); gain.disconnect(); } catch {} };
+                osc.onended = () => cleanup(nodes);
             } catch {}
         };
+
         const sweep = async (f1, f2, type, dur, vol, curve = 'exp') => {
-            if (muted) return;
+            if (muted || activeNodes.size >= MAX_CONCURRENT) return;
             if (!(await init())) return;
             try {
                 const osc = ctx.createOscillator();
                 const gain = ctx.createGain();
+                const nodes = [osc, gain];
+                activeNodes.add(nodes);
                 osc.type = type;
                 osc.frequency.setValueAtTime(f1, ctx.currentTime);
                 if (curve === 'exp') osc.frequency.exponentialRampToValueAtTime(Math.max(0.01, f2), ctx.currentTime + dur);
@@ -376,12 +532,14 @@ const SysUI = (() => {
                 gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
                 osc.connect(gain); gain.connect(master);
                 osc.start(); osc.stop(ctx.currentTime + dur + 0.05);
-                osc.onended = () => { try { osc.disconnect(); gain.disconnect(); } catch {} };
+                osc.onended = () => cleanup(nodes);
             } catch {}
         };
+
         const chord = (freqs, type, dur, vol) => freqs.forEach((f, i) => setTimeout(() => tone(f, type, dur, vol), i * 28));
+
         const noise = async (dur, vol, filterFreq = 2000, type = 'bandpass') => {
-            if (muted) return;
+            if (muted || activeNodes.size >= MAX_CONCURRENT) return;
             if (!(await init())) return;
             try {
                 const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
@@ -390,6 +548,8 @@ const SysUI = (() => {
                 const src = ctx.createBufferSource();
                 const gain = ctx.createGain();
                 const filter = ctx.createBiquadFilter();
+                const nodes = [src, gain, filter];
+                activeNodes.add(nodes);
                 filter.type = type;
                 filter.frequency.value = filterFreq;
                 filter.Q.value = 2;
@@ -397,9 +557,10 @@ const SysUI = (() => {
                 gain.gain.value = vol;
                 src.connect(filter); filter.connect(gain); gain.connect(master);
                 src.start();
-                src.onended = () => { try { src.disconnect(); filter.disconnect(); gain.disconnect(); } catch {} };
+                src.onended = () => cleanup(nodes);
             } catch {}
         };
+
         const presets = {
             pop: () => { tone(1200, 'sine', 0.05, 0.05, 0, 0.002); tone(1800, 'sine', 0.03, 0.02, 0, 0.001); },
             click: () => { tone(2200, 'triangle', 0.018, 0.035, 0, 0.0005); tone(3200, 'sine', 0.012, 0.02, 0, 0.0003); },
@@ -425,43 +586,28 @@ const SysUI = (() => {
             slide: () => sweep(1800, 900, 'sine', 0.09, 0.025),
             confirm: () => { tone(1318, 'sine', 0.06, 0.05); setTimeout(() => tone(1760, 'sine', 0.09, 0.045), 50); }
         };
+
         return {
             play: (name) => presets[name]?.(),
             tone, sweep, chord, noise,
-            mute: (v) => { muted = !!v; try { localStorage.setItem('sysui_audio_muted', JSON.stringify(muted)); } catch {} Events.emit('audio:mute', muted); },
+            mute: (v) => { muted = !!v; $safeSet('sysui_audio_muted', muted); Bus.emit('audio:mute', muted); },
             isMuted: () => muted,
-            setVolume: (v) => { volume = $clamp(v, 0, 1); if (master) master.gain.value = volume; try { localStorage.setItem('sysui_audio_volume', JSON.stringify(volume)); } catch {} },
-            getVolume: () => volume
+            setVolume: (v) => { volume = $clamp(v, 0, 1); if (master) master.gain.value = volume; $safeSet('sysui_audio_volume', volume); },
+            getVolume: () => volume,
+            suspend: async () => { if (ctx?.state === 'running') await ctx.suspend(); }
         };
     })();
 
     const Haptics = {
-        light: () => navigator.vibrate?.(6),
-        medium: () => navigator.vibrate?.(12),
-        heavy: () => navigator.vibrate?.(24),
-        success: () => navigator.vibrate?.([8, 28, 8]),
-        error: () => navigator.vibrate?.([24, 48, 24, 48, 24]),
-        warn: () => navigator.vibrate?.([18, 36, 18]),
-        select: () => navigator.vibrate?.(4),
-        soft: () => navigator.vibrate?.(2),
-        impact: () => navigator.vibrate?.([4, 8, 16])
-    };
-
-    const Layers = Object.freeze({
-        ambient: -1, base: 0, magnetic: 100, spotlight: 8000, feed: 9000,
-        backdrop: 9998, context: 9999, toast: 10000, modal: 10001, cmd: 10002, hud: 10003, cursor: 10004, particles: 10005
-    });
-
-    const State = {
-        toasts: new Map(),
-        activeOverlays: [],
-        cmdState: { query: '', selectedIndex: 0, results: [], history: $safeJSON('sysui_cmd_history', []), favorites: new Set($safeJSON('sysui_cmd_favs', [])) },
-        previousFocus: null,
-        sessionDrafts: $safeJSON('sysui_drafts', {}),
-        animations: new Set(),
-        observers: new Map(),
-        focusStack: [],
-        themeMode: $safeJSON('sysui_theme', 'auto')
+        light: () => $isTouch && navigator.vibrate?.(6),
+        medium: () => $isTouch && navigator.vibrate?.(12),
+        heavy: () => $isTouch && navigator.vibrate?.(24),
+        success: () => $isTouch && navigator.vibrate?.([8, 28, 8]),
+        error: () => $isTouch && navigator.vibrate?.([24, 48, 24, 48, 24]),
+        warn: () => $isTouch && navigator.vibrate?.([18, 36, 18]),
+        select: () => $isTouch && navigator.vibrate?.(4),
+        soft: () => $isTouch && navigator.vibrate?.(2),
+        impact: () => $isTouch && navigator.vibrate?.([4, 8, 16])
     };
 
     const Theme = (() => {
@@ -499,12 +645,30 @@ const SysUI = (() => {
                     --sys-accent-purple: #a855f7;
                     --sys-accent-pink: #ec4899;
                     --sys-accent-cyan: #06b6d4;
-                    --sys-radius-xs: 4px;
-                    --sys-radius-sm: 6px;
-                    --sys-radius-md: 10px;
-                    --sys-radius-lg: 16px;
-                    --sys-radius-xl: 24px;
-                    --sys-radius-2xl: 32px;
+                    --sys-touch-target: max(44px, 2.75rem);
+                    --sys-touch-target-sm: max(36px, 2.25rem);
+                    --sys-radius-xs: clamp(3px, 0.4vw, 4px);
+                    --sys-radius-sm: clamp(5px, 0.5vw, 6px);
+                    --sys-radius-md: clamp(8px, 0.8vw, 10px);
+                    --sys-radius-lg: clamp(12px, 1.2vw, 16px);
+                    --sys-radius-xl: clamp(18px, 1.8vw, 24px);
+                    --sys-radius-2xl: clamp(24px, 2.4vw, 32px);
+                    --sys-space-1: clamp(0.25rem, 0.5vw, 0.375rem);
+                    --sys-space-2: clamp(0.5rem, 1vw, 0.75rem);
+                    --sys-space-3: clamp(0.75rem, 1.5vw, 1rem);
+                    --sys-space-4: clamp(1rem, 2vw, 1.5rem);
+                    --sys-space-5: clamp(1.25rem, 2.5vw, 2rem);
+                    --sys-space-6: clamp(1.5rem, 3vw, 2.5rem);
+                    --sys-text-xs: clamp(0.6875rem, 0.65vw + 0.5rem, 0.75rem);
+                    --sys-text-sm: clamp(0.8125rem, 0.7vw + 0.6rem, 0.875rem);
+                    --sys-text-base: clamp(0.875rem, 0.8vw + 0.7rem, 1rem);
+                    --sys-text-lg: clamp(1rem, 1vw + 0.8rem, 1.125rem);
+                    --sys-text-xl: clamp(1.125rem, 1.2vw + 0.9rem, 1.375rem);
+                    --sys-text-2xl: clamp(1.375rem, 1.6vw + 1rem, 1.75rem);
+                    --sys-text-3xl: clamp(1.75rem, 2vw + 1.2rem, 2.25rem);
+                    --sys-content-max: min(1440px, 92vw);
+                    --sys-content-narrow: min(640px, 92vw);
+                    --sys-content-prose: min(72ch, 92vw);
                     --sys-dur-instant: 60ms;
                     --sys-dur-micro: 110ms;
                     --sys-dur-fast: 170ms;
@@ -545,8 +709,23 @@ const SysUI = (() => {
                     --sys-gradient-aurora: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #06b6d4 100%);
                     --sys-gradient-fire: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
                     --sys-gradient-mesh: radial-gradient(at 40% 20%, rgba(168,85,247,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(59,130,246,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(236,72,153,0.1) 0px, transparent 50%), radial-gradient(at 80% 50%, rgba(6,182,212,0.1) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(168,85,247,0.12) 0px, transparent 50%);
+                    --sys-safe-top: env(safe-area-inset-top, 0px);
+                    --sys-safe-bottom: env(safe-area-inset-bottom, 0px);
+                    --sys-safe-left: env(safe-area-inset-left, 0px);
+                    --sys-safe-right: env(safe-area-inset-right, 0px);
                     --sys-mx: 50%;
                     --sys-my: 50%;
+                    --sys-blur-strength: 32px;
+                }
+                [data-perf="low"] { --sys-blur-strength: 12px; }
+                [data-perf="mid"] { --sys-blur-strength: 20px; }
+                @media (prefers-contrast: more) {
+                    :root {
+                        --sys-border-base: rgba(255,255,255,0.3);
+                        --sys-border-strong: rgba(255,255,255,0.5);
+                        --sys-text-secondary: rgba(255,255,255,0.85);
+                        --sys-text-muted: rgba(255,255,255,0.65);
+                    }
                 }
                 @media (prefers-reduced-motion: reduce) {
                     *, *::before, *::after {
@@ -564,8 +743,8 @@ const SysUI = (() => {
                 }
                 ::selection { background: rgba(168, 85, 247, 0.4); color: #fff; text-shadow: 0 0 8px rgba(168,85,247,0.6); }
                 ::-moz-selection { background: rgba(168, 85, 247, 0.4); color: #fff; }
-                html { scroll-behavior: smooth; }
-                body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-feature-settings: 'ss01', 'ss02', 'cv01', 'cv11'; }
+                html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+                body { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; font-feature-settings: 'ss01', 'ss02', 'cv01', 'cv11'; padding-top: var(--sys-safe-top); padding-bottom: var(--sys-safe-bottom); padding-left: var(--sys-safe-left); padding-right: var(--sys-safe-right); overflow-x: hidden; min-height: 100vh; min-height: 100dvh; }
                 body::before {
                     content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
                     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='[w3.org](http://www.w3.org/2000/svg)'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E");
@@ -577,11 +756,12 @@ const SysUI = (() => {
                     animation: sysMeshDrift 36s ease-in-out infinite alternate;
                     will-change: transform;
                 }
+                [data-perf="low"] body::after { animation: none; }
                 @keyframes sysMeshDrift { 0% { transform: scale(1) rotate(0deg); } 100% { transform: scale(1.18) rotate(10deg); } }
                 .sys-glass {
                     background: rgba(10, 10, 12, 0.62);
-                    backdrop-filter: blur(32px) saturate(200%) contrast(1.05);
-                    -webkit-backdrop-filter: blur(32px) saturate(200%) contrast(1.05);
+                    backdrop-filter: blur(var(--sys-blur-strength)) saturate(200%) contrast(1.05);
+                    -webkit-backdrop-filter: blur(var(--sys-blur-strength)) saturate(200%) contrast(1.05);
                     border: 0.5px solid var(--sys-border-base);
                     box-shadow: var(--sys-shadow-md), inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -1px 0 rgba(0,0,0,0.5);
                     will-change: transform, opacity;
@@ -589,16 +769,20 @@ const SysUI = (() => {
                 }
                 .sys-glass-strong {
                     background: rgba(14, 14, 18, 0.82);
-                    backdrop-filter: blur(56px) saturate(220%) contrast(1.08);
-                    -webkit-backdrop-filter: blur(56px) saturate(220%) contrast(1.08);
+                    backdrop-filter: blur(calc(var(--sys-blur-strength) * 1.75)) saturate(220%) contrast(1.08);
+                    -webkit-backdrop-filter: blur(calc(var(--sys-blur-strength) * 1.75)) saturate(220%) contrast(1.08);
                     border: 0.5px solid var(--sys-border-strong);
                     box-shadow: var(--sys-shadow-xl), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 -1px 0 rgba(0,0,0,0.6), 0 0 0 0.5px rgba(255,255,255,0.03);
                     will-change: transform, opacity;
                     position: relative;
                 }
+                @supports not (backdrop-filter: blur(1px)) {
+                    .sys-glass { background: rgba(14, 14, 18, 0.95); }
+                    .sys-glass-strong { background: rgba(18, 18, 22, 0.98); }
+                }
                 .sys-glass-glow {
                     background: rgba(14, 14, 18, 0.78);
-                    backdrop-filter: blur(44px) saturate(210%);
+                    backdrop-filter: blur(calc(var(--sys-blur-strength) * 1.4)) saturate(210%);
                     border: 0.5px solid rgba(168, 85, 247, 0.28);
                     box-shadow: var(--sys-shadow-lg), 0 0 56px rgba(168, 85, 247, 0.22), inset 0 1px 0 rgba(255,255,255,0.09);
                 }
@@ -614,7 +798,9 @@ const SysUI = (() => {
                     background: radial-gradient(600px circle at var(--sys-mx) var(--sys-my), rgba(255,255,255,0.04), transparent 40%);
                     opacity: 0; transition: opacity 400ms var(--sys-ease-smooth);
                 }
-                .sys-glass:hover::after, .sys-glass-strong:hover::after { opacity: 1; }
+                @media (hover: hover) {
+                    .sys-glass:hover::after, .sys-glass-strong:hover::after { opacity: 1; }
+                }
                 .sys-page-wrap { transition: opacity var(--sys-dur-normal) var(--sys-ease-smooth), transform var(--sys-dur-normal) var(--sys-ease-apple), filter var(--sys-dur-normal); will-change: opacity, transform, filter; transform-origin: center center; }
                 .sys-page-exit { opacity: 0; transform: scale(0.97) translateY(6px); filter: blur(6px) brightness(0.7); }
                 .sys-page-enter { opacity: 0; transform: scale(1.03) translateY(-6px); filter: blur(3px) brightness(1.1); }
@@ -645,10 +831,12 @@ const SysUI = (() => {
                 @keyframes sysAuroraShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
                 .sys-skeleton-bg { background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.02) 75%); background-size: 1200px 100%; animation: sysShimmer 1.6s infinite linear; }
                 .sys-magnetic { transition: transform 380ms var(--sys-ease-apple), box-shadow 320ms var(--sys-ease-smooth); will-change: transform; transform-origin: center; }
+                @media (hover: none) { .sys-magnetic { transform: none !important; } }
                 .sys-progress { animation: sysProgress linear forwards; transform-origin: left; will-change: transform; }
                 @keyframes sysProgress { from { transform: scaleX(1); } to { transform: scaleX(0); } }
                 .sys-ripple { position: absolute; border-radius: 50%; transform: scale(0); animation: sysRipple 800ms var(--sys-ease-inertia); background: radial-gradient(circle, rgba(255,255,255,0.5), rgba(255,255,255,0.12) 60%, transparent); pointer-events: none; will-change: transform, opacity; }
                 @keyframes sysRipple { to { transform: scale(5); opacity: 0; } }
+                .sys-no-scroll { scrollbar-width: thin; scrollbar-color: rgba(168,85,247,0.4) transparent; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
                 .sys-no-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
                 .sys-no-scroll::-webkit-scrollbar-track { background: transparent; }
                 .sys-no-scroll::-webkit-scrollbar-thumb { background: linear-gradient(180deg, rgba(168,85,247,0.4), rgba(168,85,247,0.15)); border-radius: 6px; transition: background 200ms; }
@@ -657,19 +845,24 @@ const SysUI = (() => {
                 .sys-spotlight-cursor.sys-cursor-text { width: 3px; height: 22px; border-radius: 1px; }
                 .sys-spotlight-cursor.sys-cursor-pointer { width: 38px; height: 38px; background: rgba(168,85,247,0.18); border-color: rgba(168,85,247,0.6); }
                 .sys-cursor-dot { position: fixed; top: 0; left: 0; width: 4px; height: 4px; border-radius: 50%; background: rgba(255,255,255,0.95); pointer-events: none; z-index: 10005; mix-blend-mode: difference; will-change: transform; }
-                .sys-tooltip { position: fixed; padding: 6px 10px; background: rgba(8,8,10,0.96); backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(168,85,247,0.3); border-radius: 7px; font-size: 11px; color: rgba(255,255,255,0.96); pointer-events: none; white-space: nowrap; z-index: 10005; opacity: 0; transform: translateY(4px) scale(0.96); transition: opacity 200ms var(--sys-ease-apple), transform 280ms var(--sys-ease-spring-precise); box-shadow: var(--sys-shadow-md), 0 0 24px rgba(168,85,247,0.18); font-weight: 500; letter-spacing: 0.01em; will-change: transform, opacity; }
+                .sys-tooltip { position: fixed; padding: 6px 10px; background: rgba(8,8,10,0.96); backdrop-filter: blur(20px) saturate(180%); border: 0.5px solid rgba(168,85,247,0.3); border-radius: 7px; font-size: var(--sys-text-xs); color: rgba(255,255,255,0.96); pointer-events: none; white-space: nowrap; z-index: 10005; opacity: 0; transform: translateY(4px) scale(0.96); transition: opacity 200ms var(--sys-ease-apple), transform 280ms var(--sys-ease-spring-precise); box-shadow: var(--sys-shadow-md), 0 0 24px rgba(168,85,247,0.18); font-weight: 500; letter-spacing: 0.01em; will-change: transform, opacity; max-width: min(280px, 80vw); white-space: normal; }
                 .sys-tooltip.sys-tooltip-show { opacity: 1; transform: translateY(0) scale(1); }
                 .sys-focus-ring:focus-visible { outline: 2px solid rgba(168, 85, 247, 0.7); outline-offset: 3px; border-radius: 4px; transition: outline-offset 180ms var(--sys-ease-spring); }
-                button, [role="button"] { position: relative; overflow: hidden; }
+                button, [role="button"] { position: relative; overflow: hidden; min-height: var(--sys-touch-target-sm); }
+                @media (pointer: coarse) {
+                    button, [role="button"], a, input, select, textarea { min-height: var(--sys-touch-target); }
+                }
                 .sys-particle { position: fixed; pointer-events: none; border-radius: 50%; will-change: transform, opacity; }
                 .sys-aurora-text { background: var(--sys-gradient-aurora); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: sysShimmerText 4s linear infinite; }
                 .sys-grid-bg { background-image: linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px); background-size: 32px 32px; }
-                .sys-spinner { width: 16px; height: 16px; border: 1.5px solid rgba(255,255,255,0.12); border-top-color: var(--sys-accent-primary); border-right-color: rgba(168,85,247,0.4); border-radius: 50%; animation: sysSpin 0.65s linear infinite; will-change: transform; }
-                .sys-button-press { transition: transform 140ms var(--sys-ease-spring-precise), filter 180ms, box-shadow 220ms; will-change: transform; position: relative; transform-origin: center; }
+                .sys-spinner { width: clamp(14px, 1.2vw, 16px); height: clamp(14px, 1.2vw, 16px); border: 1.5px solid rgba(255,255,255,0.12); border-top-color: var(--sys-accent-primary); border-right-color: rgba(168,85,247,0.4); border-radius: 50%; animation: sysSpin 0.65s linear infinite; will-change: transform; }
+                .sys-button-press { transition: transform 140ms var(--sys-ease-spring-precise), filter 180ms, box-shadow 220ms; will-change: transform; position: relative; transform-origin: center; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
                 .sys-button-press::before { content: ""; position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(120px circle at var(--sys-mx) var(--sys-my), rgba(255,255,255,0.12), transparent 50%); opacity: 0; transition: opacity 280ms; pointer-events: none; }
-                .sys-button-press:hover::before { opacity: 1; }
+                @media (hover: hover) {
+                    .sys-button-press:hover::before { opacity: 1; }
+                    .sys-button-press:hover { transform: translateY(-1px); }
+                }
                 .sys-button-press:active { transform: scale(0.96); filter: brightness(0.94); transition: transform 80ms var(--sys-ease-accelerate); }
-                .sys-button-press:hover { transform: translateY(-1px); }
                 .sys-kbd { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.025)); border: 0.5px solid rgba(255,255,255,0.14); border-bottom-width: 1.5px; border-radius: 5px; font-size: 10px; font-family: ui-monospace, 'SF Mono', monospace; color: rgba(255,255,255,0.78); letter-spacing: 0.04em; transition: transform 100ms var(--sys-ease-spring-precise), background 160ms; box-shadow: 0 1px 0 rgba(0,0,0,0.3), inset 0 0.5px 0 rgba(255,255,255,0.1); }
                 .sys-kbd:active, .sys-kbd.sys-kbd-press { transform: translateY(1px); border-bottom-width: 0.5px; background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02)); }
                 .sys-divider-glow { height: 1px; background: linear-gradient(90deg, transparent, rgba(168,85,247,0.4), transparent); }
@@ -684,12 +877,14 @@ const SysUI = (() => {
                 @keyframes sysGlowRotate { to { --sys-glow-angle: 360deg; } }
                 .sys-shimmer-sweep { position: relative; overflow: hidden; }
                 .sys-shimmer-sweep::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.18) 50%, transparent 70%); transform: translateX(-100%); pointer-events: none; }
-                .sys-shimmer-sweep:hover::after { animation: sysSweep 900ms var(--sys-ease-smooth); }
+                @media (hover: hover) {
+                    .sys-shimmer-sweep:hover::after { animation: sysSweep 900ms var(--sys-ease-smooth); }
+                }
                 @keyframes sysSweep { to { transform: translateX(100%); } }
                 .sys-tilt { transform-style: preserve-3d; transition: transform 380ms var(--sys-ease-apple); will-change: transform; }
                 .sys-overlay-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0); backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); transition: background var(--sys-dur-normal) var(--sys-ease-standard), backdrop-filter var(--sys-dur-normal) var(--sys-ease-standard), -webkit-backdrop-filter var(--sys-dur-normal) var(--sys-ease-standard); pointer-events: none; will-change: backdrop-filter, background; }
-                .sys-overlay-backdrop.sys-open { background: rgba(0,0,0,0.62); backdrop-filter: blur(24px) saturate(160%) brightness(0.85); -webkit-backdrop-filter: blur(24px) saturate(160%) brightness(0.85); pointer-events: auto; }
-                .sys-drawer { position: fixed; background: rgba(10,10,12,0.88); backdrop-filter: blur(48px) saturate(210%); border: 0.5px solid var(--sys-border-strong); box-shadow: var(--sys-shadow-2xl); transition: transform var(--sys-dur-emphasized) var(--sys-ease-apple); will-change: transform; }
+                .sys-overlay-backdrop.sys-open { background: rgba(0,0,0,0.62); backdrop-filter: blur(var(--sys-blur-strength)) saturate(160%) brightness(0.85); -webkit-backdrop-filter: blur(var(--sys-blur-strength)) saturate(160%) brightness(0.85); pointer-events: auto; }
+                .sys-drawer { position: fixed; background: rgba(10,10,12,0.88); backdrop-filter: blur(calc(var(--sys-blur-strength) * 1.5)) saturate(210%); border: 0.5px solid var(--sys-border-strong); box-shadow: var(--sys-shadow-2xl); transition: transform var(--sys-dur-emphasized) var(--sys-ease-apple); will-change: transform; }
                 .sys-accordion-content { overflow: hidden; transition: grid-template-rows var(--sys-dur-emphasized) var(--sys-ease-apple); display: grid; grid-template-rows: 0fr; }
                 .sys-accordion-content.sys-open { grid-template-rows: 1fr; }
                 .sys-accordion-content > div { overflow: hidden; min-height: 0; }
@@ -700,14 +895,18 @@ const SysUI = (() => {
                 .sys-flip-card { transform-style: preserve-3d; transition: transform 600ms var(--sys-ease-spring); }
                 .sys-flip-card.sys-flipped { transform: rotateY(180deg); }
                 .sys-elevate { transition: transform 380ms var(--sys-ease-apple), box-shadow 420ms var(--sys-ease-smooth); will-change: transform, box-shadow; }
-                .sys-elevate:hover { transform: translateY(-4px) scale(1.008); box-shadow: var(--sys-shadow-xl); }
+                @media (hover: hover) {
+                    .sys-elevate:hover { transform: translateY(-4px) scale(1.008); box-shadow: var(--sys-shadow-xl); }
+                }
                 .sys-bloom { position: relative; }
                 .sys-bloom::before { content: ""; position: absolute; inset: -20%; background: radial-gradient(circle at var(--sys-mx) var(--sys-my), rgba(168,85,247,0.32), transparent 60%); opacity: 0; transition: opacity 480ms var(--sys-ease-smooth); pointer-events: none; filter: blur(24px); z-index: -1; }
-                .sys-bloom:hover::before { opacity: 1; }
+                @media (hover: hover) {
+                    .sys-bloom:hover::before { opacity: 1; }
+                }
                 @keyframes sysGlowPulse { 0%,100% { box-shadow: 0 0 20px rgba(168,85,247,0.2), 0 0 40px rgba(168,85,247,0.1); } 50% { box-shadow: 0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.2); } }
                 .sys-iridescent { background: linear-gradient(135deg, #a855f7, #ec4899, #06b6d4, #a855f7); background-size: 300% 300%; animation: sysAuroraShift 8s ease infinite; }
                 .sys-input-field { position: relative; }
-                .sys-input-field input, .sys-input-field textarea { caret-color: var(--sys-accent-primary); transition: border-color 240ms var(--sys-ease-apple), box-shadow 320ms var(--sys-ease-apple), background 240ms; }
+                .sys-input-field input, .sys-input-field textarea { caret-color: var(--sys-accent-primary); transition: border-color 240ms var(--sys-ease-apple), box-shadow 320ms var(--sys-ease-apple), background 240ms; font-size: max(16px, var(--sys-text-base)); }
                 .sys-input-field input:focus, .sys-input-field textarea:focus { box-shadow: 0 0 0 3px rgba(168,85,247,0.18), inset 0 0 0 0.5px rgba(168,85,247,0.5); }
                 .sys-input-field::after { content: ""; position: absolute; left: 50%; bottom: 0; width: 0; height: 1.5px; background: linear-gradient(90deg, transparent, var(--sys-accent-primary), transparent); transition: width 380ms var(--sys-ease-apple), left 380ms var(--sys-ease-apple); }
                 .sys-input-field:focus-within::after { width: 100%; left: 0; }
@@ -716,6 +915,15 @@ const SysUI = (() => {
                 @keyframes sysCaretBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.3; } }
                 .sys-focus-glow { position: absolute; pointer-events: none; border-radius: inherit; opacity: 0; transition: opacity 280ms; box-shadow: 0 0 0 2px rgba(168,85,247,0.4), 0 0 32px rgba(168,85,247,0.25); }
                 .sys-focus-glow.sys-show { opacity: 1; }
+                .sys-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+                .sys-container { width: 100%; max-width: var(--sys-content-max); margin-inline: auto; padding-inline: var(--sys-space-3); }
+                @media (min-width: 1920px) {
+                    .sys-container { max-width: min(1680px, 88vw); }
+                }
+                .sys-sheet-handle { width: 36px; height: 4px; border-radius: 999px; background: rgba(255,255,255,0.3); margin: 8px auto 4px; }
+                @media (max-width: 480px) {
+                    .sys-tooltip { display: none; }
+                }
             `;
             document.head.appendChild(style);
             injected = true;
@@ -739,13 +947,26 @@ const SysUI = (() => {
             const el = document.createElement(tag);
             for (const k in attrs) {
                 const v = attrs[k];
+                if (v == null) continue;
                 if (k === 'class') el.className = v;
                 else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
                 else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
                 else if (k === 'dataset') Object.assign(el.dataset, v);
                 else if (k === 'text') el.textContent = v;
-                else if (k === 'html') el.innerHTML = v;
+                else if (k === 'html') {
+                    const tpl = document.createElement('template');
+                    tpl.innerHTML = String(v);
+                    tpl.content.querySelectorAll('script,iframe,object,embed').forEach(n => n.remove());
+                    tpl.content.querySelectorAll('*').forEach(n => {
+                        for (const a of Array.from(n.attributes)) {
+                            if (/^on/i.test(a.name)) n.removeAttribute(a.name);
+                            if ((a.name === 'href' || a.name === 'src') && !$isSafeURL(a.value)) n.removeAttribute(a.name);
+                        }
+                    });
+                    el.appendChild(tpl.content);
+                }
                 else if (k === 'ref' && typeof v === 'function') v(el);
+                else if (k === 'href' || k === 'src') el.setAttribute(k, $sanitizeURL(v));
                 else el.setAttribute(k, v);
             }
             const arr = Array.isArray(children) ? children : [children];
@@ -767,21 +988,27 @@ const SysUI = (() => {
             };
             container.addEventListener('keydown', handler);
             const focusable = container.querySelectorAll(sel);
-            if (focusable.length) setTimeout(() => focusable[0].focus(), 80);
+            if (focusable.length) setTimeout(() => { try { focusable[0].focus(); } catch {} }, 80);
             return () => container.removeEventListener('keydown', handler);
         },
         pushOverlay: (id, closeCb) => {
-            if (!State.activeOverlays.length) State.previousFocus = document.activeElement;
+            if (!State.activeOverlays.length) {
+                State.previousFocus = document.activeElement;
+                const sbw = window.innerWidth - document.documentElement.clientWidth;
+                document.body.style.overflow = 'hidden';
+                if (sbw > 0) document.body.style.paddingRight = sbw + 'px';
+            }
             State.activeOverlays.push({ id, closeCb });
-            document.body.style.overflow = 'hidden';
-            document.body.style.paddingRight = (window.innerWidth - document.documentElement.clientWidth) + 'px';
         },
         popOverlay: () => {
             const overlay = State.activeOverlays.pop();
             if (!State.activeOverlays.length) {
                 document.body.style.overflow = '';
                 document.body.style.paddingRight = '';
-                if (State.previousFocus?.focus) try { State.previousFocus.focus(); } catch {}
+                if (State.previousFocus?.focus && document.contains(State.previousFocus)) {
+                    try { State.previousFocus.focus(); } catch {}
+                }
+                State.previousFocus = null;
             }
             return overlay;
         },
@@ -798,38 +1025,39 @@ const SysUI = (() => {
         }
     };
 
-    document.addEventListener('keydown', (e) => {
+    rootOwner.listen(document, 'keydown', (e) => {
         if (e.key === 'Escape' && State.activeOverlays.length > 0) {
             e.preventDefault();
             const top = DOM.popOverlay();
-            if (top?.closeCb) top.closeCb();
+            if (top?.closeCb) try { top.closeCb(); } catch {}
         }
     });
 
-    document.addEventListener('pointermove', (e) => {
-        const t = e.target.closest?.('.sys-glass, .sys-glass-strong, .sys-button-press, .sys-bloom');
+    rootOwner.listen(document, 'pointermove', $rafThrottle((e) => {
+        if ($isTouch) return;
+        const t = e.target?.closest?.('.sys-glass, .sys-glass-strong, .sys-button-press, .sys-bloom');
         if (!t) return;
         const r = t.getBoundingClientRect();
         t.style.setProperty('--sys-mx', ((e.clientX - r.left) / r.width * 100) + '%');
         t.style.setProperty('--sys-my', ((e.clientY - r.top) / r.height * 100) + '%');
-    }, { passive: true });
+    }), { passive: true });
 
     const Magnetic = (() => {
-        let cache = [], lastUpdate = 0, raf = null;
-        const refresh = $debounce(() => {
-            cache = Array.from(document.querySelectorAll('.sys-magnetic')).map(el => ({ el, rect: el.getBoundingClientRect() }));
-        }, 220);
+        let raf = null;
+        let observed = new WeakSet();
+        let registry = new Set();
         const move = (e) => {
             if (raf) return;
             raf = requestAnimationFrame(() => {
-                const now = performance.now();
-                if (now - lastUpdate > 600) { refresh(); lastUpdate = now; }
                 const { speed } = $velocity.get();
                 const velocityBoost = Math.min(1.4, 1 + speed * 0.08);
-                for (let i = 0; i < cache.length; i++) {
-                    const { el } = cache[i];
-                    if (!el.isConnected) continue;
+                for (const el of registry) {
+                    if (!el.isConnected) { registry.delete(el); continue; }
                     const r = el.getBoundingClientRect();
+                    if (r.bottom < 0 || r.top > window.innerHeight || r.right < 0 || r.left > window.innerWidth) {
+                        if (el.style.transform) el.style.transform = '';
+                        continue;
+                    }
                     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
                     const dx = e.clientX - cx, dy = e.clientY - cy;
                     const dist = Math.hypot(dx, dy);
@@ -847,19 +1075,27 @@ const SysUI = (() => {
                 raf = null;
             });
         };
+        const scan = $debounce(() => {
+            document.querySelectorAll('.sys-magnetic').forEach(el => {
+                if (!observed.has(el)) { observed.add(el); registry.add(el); }
+            });
+            for (const el of registry) if (!el.isConnected) registry.delete(el);
+        }, 220);
         const init = () => {
-            if ($reducedMotion || $isTouch) return;
-            document.addEventListener('mousemove', move, { passive: true });
-            window.addEventListener('resize', refresh, { passive: true });
-            window.addEventListener('scroll', refresh, { passive: true, capture: true });
-            new MutationObserver(refresh).observe(document.body, { childList: true, subtree: true });
-            refresh();
+            if ($reducedMotion || $isTouch || $isLowEnd || !$hasHover) return;
+            rootOwner.listen(document, 'mousemove', move, { passive: true });
+            rootOwner.listen(window, 'resize', scan, { passive: true });
+            const mo = new MutationObserver(scan);
+            mo.observe(document.body, { childList: true, subtree: true });
+            rootOwner.add(() => mo.disconnect());
+            scan();
         };
-        return { init, refresh };
+        return { init, refresh: scan };
     })();
 
     const Cursor = (() => {
         let cursor, dot, active = false, raf = null, tx = 0, ty = 0, x = 0, y = 0, dx = 0, dy = 0;
+        let owner = null;
         const loop = () => {
             x = $lerp(x, tx, 0.28); y = $lerp(y, ty, 0.28);
             dx = $lerp(dx, tx, 0.6); dy = $lerp(dy, ty, 0.6);
@@ -877,14 +1113,22 @@ const SysUI = (() => {
         };
         const enable = () => {
             if (active || $isTouch) return; active = true;
+            owner = Lifecycle.createOwner();
             cursor = DOM.mount('sys-cursor', Layers.cursor, 'sys-spotlight-cursor');
             dot = DOM.mount('sys-cursor-dot', Layers.cursor + 1, 'sys-cursor-dot');
             document.documentElement.style.cursor = 'none';
-            document.addEventListener('mousemove', move, { passive: true });
-            document.addEventListener('mouseover', detectTarget, { passive: true });
+            owner.listen(document, 'mousemove', move, { passive: true });
+            owner.listen(document, 'mouseover', detectTarget, { passive: true });
             loop();
         };
-        const disable = () => { active = false; cancelAnimationFrame(raf); cursor?.remove(); dot?.remove(); document.documentElement.style.cursor = ''; document.removeEventListener('mousemove', move); document.removeEventListener('mouseover', detectTarget); };
+        const disable = () => {
+            active = false;
+            if (raf) { cancelAnimationFrame(raf); raf = null; }
+            cursor?.remove(); dot?.remove();
+            cursor = dot = null;
+            document.documentElement.style.cursor = '';
+            owner?.dispose(); owner = null;
+        };
         return { enable, disable, toggle: () => active ? disable() : enable() };
     })();
 
@@ -898,7 +1142,7 @@ const SysUI = (() => {
                     if (!groups.has(def.group)) groups.set(def.group, new Set());
                     groups.get(def.group).add(id);
                 }
-                Events.emit('action:registered', { id, ...def });
+                Bus.emit('action:registered', { id, ...def });
             },
             registerBatch: (actions) => actions.forEach(a => Actions.register(a.id, a)),
             unregister: (id) => { const a = registry.get(id); if (a?.group) groups.get(a.group)?.delete(id); registry.delete(id); },
@@ -907,17 +1151,17 @@ const SysUI = (() => {
                 if (!action?.handler) return;
                 Audio.play(action.sound || 'click');
                 Haptics.light();
-                Events.emit('action:before', { id, payload });
+                Bus.emit('action:before', { id, payload });
                 try {
                     const result = await action.handler(payload);
-                    Events.emit('action:executed', { id, payload, result });
+                    Bus.emit('action:executed', { id, payload, result });
                     const history = State.cmdState.history;
                     history.unshift(id);
                     State.cmdState.history = [...new Set(history)].slice(0, 24);
-                    try { localStorage.setItem('sysui_cmd_history', JSON.stringify(State.cmdState.history)); } catch {}
+                    $safeSet('sysui_cmd_history', State.cmdState.history);
                     return result;
                 } catch (e) {
-                    Events.emit('action:error', { id, payload, error: e });
+                    Bus.emit('action:error', { id, payload, error: e });
                     throw e;
                 }
             },
@@ -927,7 +1171,7 @@ const SysUI = (() => {
             toggleFavorite: (id) => {
                 if (State.cmdState.favorites.has(id)) State.cmdState.favorites.delete(id);
                 else State.cmdState.favorites.add(id);
-                try { localStorage.setItem('sysui_cmd_favs', JSON.stringify([...State.cmdState.favorites])); } catch {}
+                $safeSet('sysui_cmd_favs', [...State.cmdState.favorites]);
             },
             search: (query) => {
                 const q = query.toLowerCase().trim();
@@ -1046,13 +1290,14 @@ const SysUI = (() => {
             Theme.inject();
             Audio.play('magic');
             const overlay = DOM.mount('sys-spotlight-overlay', Layers.spotlight, 'fixed inset-0 pointer-events-none opacity-0 transition-opacity duration-500 sys-spotlight-overlay');
+            const owner = Lifecycle.createOwner();
             const update = () => {
                 const rect = target.getBoundingClientRect();
                 overlay.innerHTML = '';
                 const hole = DOM.create('div', { class: 'absolute rounded-2xl pointer-events-auto transition-all duration-700 sys-breathe', style: { top: (rect.top - 10) + 'px', left: (rect.left - 10) + 'px', width: (rect.width + 20) + 'px', height: (rect.height + 20) + 'px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.82), inset 0 0 30px rgba(168,85,247,0.35), 0 0 40px rgba(168,85,247,0.4)' } });
                 const tipTop = placement === 'bottom' ? rect.bottom + 24 : rect.top - 90;
-                const tooltip = DOM.create('div', { class: 'absolute flex flex-col items-center pointer-events-auto sys-scale-in', style: { top: tipTop + 'px', left: (rect.left + rect.width / 2) + 'px', transform: 'translateX(-50%)' } });
-                const bubble = DOM.create('div', { class: 'sys-glass-glow text-white px-5 py-3 rounded-xl text-sm font-medium shadow-2xl whitespace-nowrap mb-3', text: message });
+                const tooltip = DOM.create('div', { class: 'absolute flex flex-col items-center pointer-events-auto sys-scale-in', style: { top: tipTop + 'px', left: (rect.left + rect.width / 2) + 'px', transform: 'translateX(-50%)', maxWidth: '90vw' } });
+                const bubble = DOM.create('div', { class: 'sys-glass-glow text-white px-5 py-3 rounded-xl text-sm font-medium shadow-2xl mb-3 text-center', text: message });
                 const btn = DOM.create('button', { class: 'sys-magnetic text-xs text-white/70 hover:text-white transition-colors px-4 py-1.5 rounded-full bg-white/10 border border-white/10 backdrop-blur-md', text: dismissLabel });
                 tooltip.append(bubble, btn);
                 overlay.append(hole, tooltip);
@@ -1064,18 +1309,17 @@ const SysUI = (() => {
             target.style.zIndex = Layers.spotlight + 1;
             update();
             const onResize = $debounce(update, 100);
-            window.addEventListener('resize', onResize);
-            window.addEventListener('scroll', onResize, true);
+            owner.listen(window, 'resize', onResize);
+            owner.listen(window, 'scroll', onResize, true);
             const close = () => {
                 overlay.classList.add('opacity-0');
-                window.removeEventListener('resize', onResize);
-                window.removeEventListener('scroll', onResize, true);
+                owner.dispose();
                 setTimeout(() => {
                     overlay.remove();
                     target.style.zIndex = origZ;
                     target.style.position = origPos;
                 }, 500);
-                if (persist) try { localStorage.setItem(`sysui_spotlight_${targetId}`, '1'); } catch {}
+                if (persist) $safeSet(`sysui_spotlight_${targetId}`, '1');
             };
         };
         const reset = (targetId) => { try { targetId ? localStorage.removeItem(`sysui_spotlight_${targetId}`) : Object.keys(localStorage).filter(k => k.startsWith('sysui_spotlight_')).forEach(k => localStorage.removeItem(k)); } catch {} };
@@ -1086,10 +1330,14 @@ const SysUI = (() => {
         let active = false, frames = 0, lastTime = performance.now(), fps = 0, fpsHistory = [], rafId = null;
         const toggle = () => {
             active = !active;
-            const el = DOM.mount('sys-hud', Layers.hud, 'fixed bottom-4 left-4 sys-glass-strong p-3.5 rounded-xl text-[10px] font-mono text-green-400 pointer-events-auto transition-all flex flex-col gap-1.5 w-64 opacity-0 select-none sys-noise-overlay');
+            const el = DOM.mount('sys-hud', Layers.hud, 'fixed bottom-4 left-4 sys-glass-strong rounded-xl text-[10px] font-mono text-green-400 pointer-events-auto transition-all flex flex-col gap-1.5 opacity-0 select-none sys-noise-overlay');
+            el.style.padding = 'clamp(10px, 1.4vw, 14px)';
+            el.style.width = 'min(260px, 70vw)';
+            el.style.bottom = 'calc(1rem + var(--sys-safe-bottom))';
+            el.style.left = 'calc(1rem + var(--sys-safe-left))';
             if (!active) {
                 Motion.exit.scale(el).then(() => el.remove());
-                cancelAnimationFrame(rafId);
+                if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
                 return;
             }
             el.style.opacity = '1';
@@ -1106,16 +1354,19 @@ const SysUI = (() => {
                     const minFps = Math.min(...fpsHistory);
                     const bars = fpsHistory.map(f => `<div style="height:${Math.min(24, f / 2.6)}px;width:3px;background:${f < 30 ? '#ef4444' : f < 50 ? '#eab308' : '#22c55e'};border-radius:1px;opacity:0.8;transition:height 200ms cubic-bezier(0.16,1,0.3,1)"></div>`).join('');
                     const fpsColor = fps < 30 ? 'text-red-400' : fps < 50 ? 'text-yellow-400' : 'text-green-400';
+                    const vp = Viewport.get();
                     el.innerHTML = `
                         <div class="flex justify-between items-center"><span class="text-gray-500">⚡ FPS</span><span class="${fpsColor} font-bold">${fps} <span class="text-gray-500 text-[8px]">avg ${avgFps} · min ${minFps}</span></span></div>
                         <div class="flex items-end gap-[1px] h-6 bg-black/40 p-1 rounded">${bars}</div>
                         <div class="flex justify-between"><span class="text-gray-500">🧠 MEM</span><span class="text-blue-400">${mem} <span class="text-gray-600 text-[8px]">/ ${memMax}</span></span></div>
                         <div class="flex justify-between"><span class="text-gray-500">🌐 DOM</span><span class="text-yellow-400">${document.getElementsByTagName('*').length}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">📐 VP</span><span class="text-cyan-400">${vp.w}×${vp.h} ${vp.breakpoint}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">🪟 OVR</span><span class="text-purple-400">${State.activeOverlays.length}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">📢 TST</span><span class="text-cyan-400">${State.toasts.size}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">🎯 ACT</span><span class="text-pink-400">${Actions.getAll().length}</span></div>
+                        <div class="flex justify-between"><span class="text-gray-500">⚙️ TIER</span><span class="text-orange-400">${$perfTier} · ${$cores}c · ${$memory}gb</span></div>
                         <div class="sys-divider-glow my-1"></div>
-                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v6.0 · ONLINE</div>
+                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v8.0 · ONLINE</div>
                     `;
                 }
                 rafId = requestAnimationFrame(loop);
@@ -1139,11 +1390,11 @@ const SysUI = (() => {
         const haptics = { success: 'success', error: 'error', loading: 'light', info: 'light', warn: 'warn' };
 
         const renderContent = (type, message, duration) => {
-            const wrap = DOM.create('div', { class: 'flex items-center gap-3 z-10 font-medium tracking-wide flex-1' });
+            const wrap = DOM.create('div', { class: 'flex items-center gap-3 z-10 font-medium tracking-wide flex-1 min-w-0' });
             const iconWrap = DOM.create('div', { class: 'shrink-0' });
             iconWrap.innerHTML = icons[type] || icons.info;
             wrap.appendChild(iconWrap);
-            wrap.appendChild(DOM.create('span', { class: 'flex-1', text: String(message) }));
+            wrap.appendChild(DOM.create('span', { class: 'flex-1 break-words', text: String(message) }));
             const bar = duration !== Infinity ? DOM.create('div', { class: `absolute bottom-0 left-0 right-0 h-[2px] origin-left ${colors[type] || colors.info} sys-progress`, style: { animationDuration: duration + 'ms' } }) : null;
             return { wrap, bar };
         };
@@ -1167,31 +1418,35 @@ const SysUI = (() => {
             Theme.inject();
             Audio.play(opts.sound || sounds[type] || 'pop');
             Haptics[haptics[type] || 'light']?.();
-            const container = DOM.mount('sys-toasts', Layers.toast, 'fixed top-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none w-full max-w-md px-4');
+            const container = DOM.mount('sys-toasts', Layers.toast, 'fixed left-1/2 -translate-x-1/2 flex flex-col items-stretch gap-2 pointer-events-none w-full px-3');
+            container.style.top = 'calc(1rem + var(--sys-safe-top))';
+            container.style.maxWidth = 'min(28rem, calc(100vw - 1.5rem))';
             const id = opts.id || $uid();
             const borderCls = borders[type] || borders.info;
-            const el = DOM.create('div', { class: `sys-glass flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-gray-100 shadow-2xl relative overflow-hidden pointer-events-auto sys-toast-enter border ${borderCls} sys-noise-overlay min-w-[280px]`, role: 'status', 'aria-live': type === 'error' ? 'assertive' : 'polite' });
+            const el = DOM.create('div', { class: `sys-glass flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-gray-100 shadow-2xl relative overflow-hidden pointer-events-auto sys-toast-enter border ${borderCls} sys-noise-overlay w-full`, role: 'status', 'aria-live': type === 'error' ? 'assertive' : 'polite', 'aria-atomic': 'true' });
+            const owner = Lifecycle.createOwner();
+            Lifecycle.attach(el, owner);
             const { wrap, bar } = renderContent(type, message, duration);
             el.appendChild(wrap);
             if (bar) el.appendChild(bar);
             if (opts.action) {
-                const actionBtn = DOM.create('button', { class: 'sys-button-press text-xs text-white/90 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 ml-2 z-10 font-medium transition-all', text: opts.action.label });
-                actionBtn.addEventListener('click', () => { opts.action.handler?.(); remove(id); }, { once: true });
+                const actionBtn = DOM.create('button', { class: 'sys-button-press text-xs text-white/90 hover:text-white px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 ml-2 z-10 font-medium transition-all shrink-0', text: opts.action.label });
+                actionBtn.addEventListener('click', () => { try { opts.action.handler?.(); } catch {} remove(id); }, { once: true });
                 el.appendChild(actionBtn);
             }
             container.prepend(el);
             requestAnimationFrame(reflow);
-            const data = { id, el, timeout: null, type };
+            const data = { id, el, timeout: null, type, owner };
             State.toasts.set(id, data);
             if (duration !== Infinity) data.timeout = setTimeout(() => remove(id), duration);
             if (State.toasts.size > 5) remove(State.toasts.keys().next().value);
             let startX = 0, currentX = 0, dragging = false, startT = 0;
-            el.addEventListener('pointerdown', (e) => { if (e.target.tagName === 'BUTTON') return; startX = e.clientX; startT = performance.now(); dragging = true; el.style.transition = 'none'; el.setPointerCapture(e.pointerId); });
-            el.addEventListener('pointermove', (e) => { if (!dragging) return; currentX = e.clientX - startX; el.style.transform = `translate3d(${currentX}px, 0, 0) rotate(${currentX * 0.025}deg)`; el.style.opacity = Math.max(0, 1 - Math.abs(currentX) / 220); });
-            el.addEventListener('pointerup', () => {
+            owner.listen(el, 'pointerdown', (e) => { if (e.target.tagName === 'BUTTON') return; startX = e.clientX; startT = performance.now(); dragging = true; el.style.transition = 'none'; try { el.setPointerCapture(e.pointerId); } catch {} });
+            owner.listen(el, 'pointermove', (e) => { if (!dragging) return; currentX = e.clientX - startX; el.style.transform = `translate3d(${currentX}px, 0, 0) rotate(${currentX * 0.025}deg)`; el.style.opacity = Math.max(0, 1 - Math.abs(currentX) / 220); });
+            owner.listen(el, 'pointerup', () => {
                 if (!dragging) return; dragging = false;
                 const dt = performance.now() - startT;
-                const vel = currentX / dt;
+                const vel = currentX / Math.max(1, dt);
                 if (Math.abs(currentX) > 90 || Math.abs(vel) > 0.5) {
                     el.style.transition = 'transform 280ms cubic-bezier(0.05,0.7,0.1,1), opacity 240ms';
                     el.style.transform = `translate3d(${currentX > 0 ? 500 : -500}px, 0, 0) rotate(${currentX > 0 ? 15 : -15}deg)`;
@@ -1202,16 +1457,17 @@ const SysUI = (() => {
                 }
                 currentX = 0;
             });
-            el.addEventListener('click', (e) => { if (e.target.tagName !== 'BUTTON' && !dragging && Math.abs(currentX) < 5) remove(id); });
-            el.addEventListener('mouseenter', () => { if (data.timeout) { clearTimeout(data.timeout); data.timeout = null; bar?.style.setProperty('animation-play-state', 'paused'); } });
-            el.addEventListener('mouseleave', () => { if (duration !== Infinity && !data.timeout) { data.timeout = setTimeout(() => remove(id), 1500); bar?.style.setProperty('animation-play-state', 'running'); } });
+            owner.listen(el, 'click', (e) => { if (e.target.tagName !== 'BUTTON' && !dragging && Math.abs(currentX) < 5) remove(id); });
+            owner.listen(el, 'mouseenter', () => { if (data.timeout) { clearTimeout(data.timeout); data.timeout = null; bar?.style.setProperty('animation-play-state', 'paused'); } });
+            owner.listen(el, 'mouseleave', () => { if (duration !== Infinity && !data.timeout) { data.timeout = setTimeout(() => remove(id), 1500); bar?.style.setProperty('animation-play-state', 'running'); } });
             return id;
         };
+
         const update = (id, type, message, duration = 4000) => {
             const t = State.toasts.get(id);
             if (!t) return create(type, message, duration);
             Audio.play(sounds[type] || 'pop');
-            if (t.timeout) clearTimeout(t.timeout);
+            if (t.timeout) { clearTimeout(t.timeout); t.timeout = null; }
             Motion.animate(t.el, [{ filter: 'blur(0)' }, { filter: 'blur(4px)' }], { duration: 120, easing: 'ease-out' }).then(() => {
                 t.el.innerHTML = '';
                 t.el.className = t.el.className.replace(/border-\w+-500\/30/g, '') + ' ' + (borders[type] || borders.info);
@@ -1223,15 +1479,23 @@ const SysUI = (() => {
             if (duration !== Infinity) t.timeout = setTimeout(() => remove(id), duration);
             return id;
         };
+
         const remove = (id) => {
             const t = State.toasts.get(id);
             if (!t) return;
-            if (t.timeout) clearTimeout(t.timeout);
+            if (t.timeout) { clearTimeout(t.timeout); t.timeout = null; }
             t.el.classList.remove('sys-toast-enter');
             t.el.classList.add('sys-toast-exit');
-            setTimeout(() => { t.el.remove(); State.toasts.delete(id); reflow(); }, 280);
+            setTimeout(() => {
+                t.owner?.dispose();
+                t.el.remove();
+                State.toasts.delete(id);
+                reflow();
+            }, 280);
         };
-        const clear = () => { State.toasts.forEach((_, id) => remove(id)); };
+
+        const clear = () => { Array.from(State.toasts.keys()).forEach(remove); };
+
         const promise = async (fn, opts) => {
             const { loading = 'جاري المعالجة...', success = 'تم بنجاح', error = 'حدث خطأ' } = opts || {};
             const id = create('loading', loading, Infinity);
@@ -1261,69 +1525,117 @@ const SysUI = (() => {
             toggleBackdrop(true);
             Audio.play('open');
             Haptics.medium();
-            const container = DOM.mount('sys-modal-root', Layers.modal, 'fixed inset-0 hidden items-center justify-center px-4 pointer-events-none');
-            const box = DOM.create('div', { class: 'relative sys-glass-strong p-7 rounded-2xl w-full max-w-md pointer-events-auto sys-noise-overlay', role: 'dialog', 'aria-modal': 'true', tabindex: '-1', style: { transformOrigin: 'center' } });
+            const vp = Viewport.get();
+            const isSheet = vp.isMobile;
+            const container = DOM.mount('sys-modal-root', Layers.modal, `fixed inset-0 hidden ${isSheet ? 'items-end' : 'items-center'} justify-center pointer-events-none`);
+            container.style.padding = isSheet ? '0' : 'clamp(0.75rem, 2vw, 1.5rem)';
+            container.style.paddingBottom = isSheet ? 'var(--sys-safe-bottom)' : 'clamp(0.75rem, 2vw, 1.5rem)';
+            const owner = Lifecycle.createOwner();
+            const titleId = 'sys-modal-title-' + $uid();
+            const descId = description ? 'sys-modal-desc-' + $uid() : null;
+            const boxCls = isSheet
+                ? 'relative sys-glass-strong w-full pointer-events-auto sys-noise-overlay'
+                : 'relative sys-glass-strong w-full pointer-events-auto sys-noise-overlay';
+            const box = DOM.create('div', { class: boxCls, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, ...(descId ? { 'aria-describedby': descId } : {}), tabindex: '-1', style: { transformOrigin: isSheet ? 'bottom' : 'center', padding: 'clamp(1.25rem, 2.5vw, 1.75rem)', borderRadius: isSheet ? '24px 24px 0 0' : 'var(--sys-radius-xl)', maxWidth: isSheet ? '100%' : 'min(28rem, calc(100vw - 2rem))', maxHeight: '88dvh', overflowY: 'auto' } });
+            box.classList.add('sys-no-scroll');
+            Lifecycle.attach(box, owner);
+            if (isSheet) {
+                const handle = DOM.create('div', { class: 'sys-sheet-handle', 'aria-hidden': 'true' });
+                box.appendChild(handle);
+            }
             if (icon || type === 'danger') {
-                const iconBox = DOM.create('div', { class: `w-12 h-12 rounded-xl mb-4 flex items-center justify-center ${type === 'danger' ? 'bg-red-500/15 border border-red-500/30' : 'bg-purple-500/15 border border-purple-500/30'} sys-breathe` });
+                const iconBox = DOM.create('div', { class: `w-12 h-12 rounded-xl mb-4 flex items-center justify-center ${type === 'danger' ? 'bg-red-500/15 border border-red-500/30' : 'bg-purple-500/15 border border-purple-500/30'} sys-breathe`, 'aria-hidden': 'true' });
                 iconBox.innerHTML = icon || `<svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
                 box.appendChild(iconBox);
             }
-            const titleEl = DOM.create('h3', { class: 'text-white font-semibold text-lg mb-2 tracking-tight', text: title });
+            const titleEl = DOM.create('h3', { id: titleId, class: 'text-white font-semibold mb-2 tracking-tight', style: { fontSize: 'var(--sys-text-lg)' }, text: title });
             box.appendChild(titleEl);
-            if (description) box.appendChild(DOM.create('p', { class: 'text-gray-400 text-sm mb-5 leading-relaxed', text: description }));
+            if (description) box.appendChild(DOM.create('p', { id: descId, class: 'text-gray-400 mb-5 leading-relaxed', style: { fontSize: 'var(--sys-text-sm)' }, text: description }));
             else box.appendChild(DOM.create('div', { class: 'mb-5' }));
             let input = null, errorEl = null;
             if (inputId) {
                 const inputWrap = DOM.create('div', { class: 'sys-input-field mb-2' });
-                input = DOM.create('input', { type: 'text', id: inputId, class: 'w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-purple-500/60 transition-all placeholder-gray-600', placeholder, autocomplete: 'off' });
+                const errId = 'sys-modal-err-' + $uid();
+                input = DOM.create('input', { type: 'text', id: inputId, class: 'w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500/60 transition-all placeholder-gray-600', placeholder, autocomplete: 'off', 'aria-describedby': errId, 'aria-invalid': 'false' });
                 inputWrap.appendChild(input);
                 box.appendChild(inputWrap);
-                errorEl = DOM.create('p', { class: 'text-xs text-red-400 mb-4 min-h-[16px]' });
+                errorEl = DOM.create('p', { id: errId, class: 'text-xs text-red-400 mb-4 min-h-[16px]', role: 'alert' });
                 box.appendChild(errorEl);
                 if (State.sessionDrafts[inputId]) input.value = State.sessionDrafts[inputId];
-                input.addEventListener('input', (e) => { State.sessionDrafts[inputId] = e.target.value; try { localStorage.setItem('sysui_drafts', JSON.stringify(State.sessionDrafts)); } catch {} if (errorEl) errorEl.textContent = ''; });
-                input.addEventListener('focus', () => Audio.play('focus'));
+                owner.listen(input, 'input', (e) => { State.sessionDrafts[inputId] = e.target.value; $safeSet('sysui_drafts', State.sessionDrafts); if (errorEl) { errorEl.textContent = ''; input.setAttribute('aria-invalid', 'false'); } });
+                owner.listen(input, 'focus', () => Audio.play('focus'));
             }
-            const btnRow = DOM.create('div', { class: 'flex justify-end gap-3 mt-2' });
-            const cancelBtn = DOM.create('button', { class: 'sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/5 border border-white/10 transition-all outline-none focus:ring-2 focus:ring-white/20', text: cancelLabel });
+            const btnRow = DOM.create('div', { class: `flex ${isSheet ? 'flex-col-reverse' : 'justify-end'} gap-3 mt-2` });
+            const cancelBtn = DOM.create('button', { class: `sys-magnetic sys-button-press ${isSheet ? 'w-full' : ''} px-5 py-3 rounded-xl font-medium text-gray-300 hover:bg-white/5 border border-white/10 transition-all outline-none focus:ring-2 focus:ring-white/20`, style: { fontSize: 'var(--sys-text-sm)' }, text: cancelLabel });
             const confirmClass = type === 'danger' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white shadow-[0_0_20px_rgba(255,255,255,0.3)]';
-            const confirmBtn = DOM.create('button', { class: `sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-semibold ${confirmClass} transition-all outline-none focus:ring-2 focus:ring-white/40`, text: confirmLabel });
+            const confirmBtn = DOM.create('button', { class: `sys-magnetic sys-button-press ${isSheet ? 'w-full' : ''} px-5 py-3 rounded-xl font-semibold ${confirmClass} transition-all outline-none focus:ring-2 focus:ring-white/40`, style: { fontSize: 'var(--sys-text-sm)' }, text: confirmLabel });
             btnRow.append(cancelBtn, confirmBtn);
             box.appendChild(btnRow);
             container.innerHTML = '';
             container.appendChild(box);
             container.classList.remove('hidden');
             container.classList.add('flex');
-            Motion.spring(box, { transform: ['scale(0.86) translateY(24px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
+            if (isSheet) {
+                Motion.spring(box, { transform: ['translateY(100%)', 'translateY(0)'], opacity: [0.5, 1] }, 'ios');
+            } else {
+                Motion.spring(box, { transform: ['scale(0.86) translateY(24px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
+            }
             const children = Array.from(box.children);
             Motion.stagger(children, (el) => { Motion.enter.slideUp(el); }, 28);
             const releaseFocus = DOM.trapFocus(box);
+            owner.add(releaseFocus);
             const close = (res) => {
-                if (inputId && res != null) { delete State.sessionDrafts[inputId]; try { localStorage.setItem('sysui_drafts', JSON.stringify(State.sessionDrafts)); } catch {} }
+                if (inputId && res != null) { delete State.sessionDrafts[inputId]; $safeSet('sysui_drafts', State.sessionDrafts); }
                 Audio.play('close');
-                Motion.animate(box, [{ transform: 'scale(1) translateY(0)', opacity: 1, filter: 'blur(0)' }, { transform: 'scale(0.94) translateY(8px)', opacity: 0, filter: 'blur(4px)' }], { duration: 220, easing: Motion.tokens.ease.accelerate });
+                if (isSheet) {
+                    Motion.animate(box, [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(100%)', opacity: 0 }], { duration: 280, easing: Motion.tokens.ease.accelerate });
+                } else {
+                    Motion.animate(box, [{ transform: 'scale(1) translateY(0)', opacity: 1, filter: 'blur(0)' }, { transform: 'scale(0.94) translateY(8px)', opacity: 0, filter: 'blur(4px)' }], { duration: 220, easing: Motion.tokens.ease.accelerate });
+                }
                 toggleBackdrop(false);
-                releaseFocus();
+                owner.dispose();
                 setTimeout(() => {
                     container.classList.add('hidden');
                     container.classList.remove('flex');
                     container.innerHTML = '';
-                    if (res !== null && res !== undefined) onConfirm?.(res);
-                    else onCancel?.();
-                }, 220);
+                    try {
+                        if (res !== null && res !== undefined) onConfirm?.(res);
+                        else onCancel?.();
+                    } catch (e) { console.error('[Modal:cb]', e); }
+                }, 300);
             };
             DOM.pushOverlay('modal', () => close(null));
-            cancelBtn.addEventListener('click', () => { DOM.popOverlay(); close(null); }, { once: true });
-            confirmBtn.addEventListener('click', () => {
+            owner.listen(cancelBtn, 'click', () => { DOM.popOverlay(); close(null); });
+            owner.listen(confirmBtn, 'click', () => {
                 const value = inputId ? input.value : true;
                 if (validator && inputId) {
-                    const err = validator(value);
-                    if (err) { if (errorEl) errorEl.textContent = err; Audio.play('error'); Haptics.error(); input.focus(); Motion.shake(box); return; }
+                    let err;
+                    try { err = validator(value); } catch (e) { err = 'خطأ في التحقق'; }
+                    if (err) { if (errorEl) { errorEl.textContent = err; input.setAttribute('aria-invalid', 'true'); } Audio.play('error'); Haptics.error(); input.focus(); Motion.shake(box); return; }
                 }
                 DOM.popOverlay();
                 close(value);
             });
-            if (inputId) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); } });
+            if (inputId) owner.listen(input, 'keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); } });
+            if (isSheet) {
+                let startY = 0, currentY = 0, dragging = false;
+                owner.listen(box, 'pointerdown', (e) => {
+                    if (e.target.closest('button, input, textarea')) return;
+                    startY = e.clientY; dragging = true;
+                    box.style.transition = 'none';
+                });
+                owner.listen(box, 'pointermove', (e) => {
+                    if (!dragging) return;
+                    currentY = Math.max(0, e.clientY - startY);
+                    box.style.transform = `translateY(${currentY}px)`;
+                });
+                owner.listen(box, 'pointerup', () => {
+                    if (!dragging) return; dragging = false;
+                    if (currentY > 100) { DOM.popOverlay(); close(null); }
+                    else { Motion.spring(box, { transform: [`translateY(${currentY}px)`, 'translateY(0)'] }, 'bouncy'); }
+                    currentY = 0;
+                });
+            }
         };
 
         return {
@@ -1348,6 +1660,7 @@ const SysUI = (() => {
 
     const Cmd = (() => {
         let lastScored = [];
+        let cmdOwner = null;
 
         const renderResults = (container) => {
             const query = State.cmdState.query;
@@ -1368,11 +1681,13 @@ const SysUI = (() => {
             if (State.cmdState.selectedIndex >= scored.length) State.cmdState.selectedIndex = 0;
             lastScored = scored;
             State.cmdState.results = scored;
-            container.innerHTML = '';
+            const frag = document.createDocumentFragment();
             if (!scored.length) {
-                const empty = DOM.create('div', { class: 'px-4 py-16 text-center sys-fade-in' });
+                const empty = DOM.create('div', { class: 'px-4 py-16 text-center sys-fade-in', role: 'status' });
                 empty.innerHTML = `<div class="w-12 h-12 rounded-full bg-white/5 border border-white/10 mx-auto mb-3 flex items-center justify-center sys-breathe"><svg class="w-6 h-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div><p class="text-sm text-gray-500 font-medium">لا توجد نتائج</p>`;
-                container.appendChild(empty);
+                frag.appendChild(empty);
+                container.innerHTML = '';
+                container.appendChild(frag);
                 return;
             }
             const groups = new Map();
@@ -1390,53 +1705,56 @@ const SysUI = (() => {
             const highlight = (text, q) => {
                 if (!q) return $esc(text);
                 const safe = $esc(text);
-                const safeQ = $esc(q);
-                const re = new RegExp(`(${safeQ.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                const safeQ = $esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const re = new RegExp(`(${safeQ})`, 'gi');
                 return safe.replace(re, '<mark style="background:rgba(168,85,247,0.35);color:#fff;border-radius:3px;padding:0 2px;font-weight:600">$1</mark>');
             };
             groups.forEach((items, groupName) => {
-                const header = DOM.create('div', { class: 'px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-[0.2em] text-gray-500 font-semibold', text: groupName });
-                container.appendChild(header);
+                const header = DOM.create('div', { class: 'px-3 pt-3 pb-1.5 text-[10px] uppercase tracking-[0.2em] text-gray-500 font-semibold', text: groupName, role: 'presentation' });
+                frag.appendChild(header);
                 items.forEach(cmd => {
                     const currentIdx = idx++;
                     const isActive = currentIdx === State.cmdState.selectedIndex;
                     const isFav = State.cmdState.favorites.has(cmd.id);
                     const baseCls = isActive ? 'bg-gradient-to-r from-purple-500/20 to-pink-500/10 border-purple-500/30' : 'hover:bg-white/5 border-transparent';
                     const aiCls = cmd.isAI ? 'border-purple-500/40 bg-purple-900/15' : '';
-                    const row = DOM.create('div', { class: `flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer transition-all border ${baseCls} ${aiCls} group`, dataset: { idx: currentIdx }, style: { opacity: '0', transform: 'translateX(-8px)' } });
+                    const row = DOM.create('div', { class: `flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer transition-all border ${baseCls} ${aiCls} group`, dataset: { idx: currentIdx }, role: 'option', 'aria-selected': isActive ? 'true' : 'false', id: 'sys-cmd-row-' + currentIdx, style: { opacity: '0', transform: 'translateX(-8px)', minHeight: 'var(--sys-touch-target)' } });
                     const left = DOM.create('div', { class: 'flex items-center gap-3 min-w-0 flex-1' });
-                    const iconBox = DOM.create('div', { class: `w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base transition-transform group-hover:scale-110 ${cmd.isAI ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/20 border border-purple-500/30' : 'bg-white/5 border border-white/10'}`, text: cmd.icon || '⌘' });
+                    const iconBox = DOM.create('div', { class: `w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-base transition-transform group-hover:scale-110 ${cmd.isAI ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/20 border border-purple-500/30' : 'bg-white/5 border border-white/10'}`, text: cmd.icon || '⌘', 'aria-hidden': 'true' });
                     const textWrap = DOM.create('div', { class: 'flex flex-col min-w-0 flex-1' });
-                    textWrap.appendChild(DOM.create('span', { class: `text-sm ${cmd.isAI ? 'text-purple-200' : 'text-gray-100'} font-medium truncate`, html: highlight(cmd.title, query) }));
+                    textWrap.appendChild(DOM.create('span', { class: `${cmd.isAI ? 'text-purple-200' : 'text-gray-100'} font-medium truncate`, style: { fontSize: 'var(--sys-text-sm)' }, html: highlight(cmd.title, query) }));
                     if (cmd.description) textWrap.appendChild(DOM.create('span', { class: 'text-[11px] text-gray-500 truncate mt-0.5', text: cmd.description }));
                     left.append(iconBox, textWrap);
                     row.appendChild(left);
                     const right = DOM.create('div', { class: 'flex items-center gap-2 shrink-0 ml-2' });
-                    if (isFav) right.appendChild(DOM.create('span', { class: 'text-yellow-400 text-xs', text: '★' }));
-                    if (cmd.shortcut) {
-                        const kbd = DOM.create('span', { class: 'sys-kbd', text: cmd.shortcut });
-                        right.appendChild(kbd);
-                    }
+                    if (isFav) right.appendChild(DOM.create('span', { class: 'text-yellow-400 text-xs', text: '★', 'aria-label': 'مفضلة' }));
+                    if (cmd.shortcut && Viewport.atLeast('md')) right.appendChild(DOM.create('span', { class: 'sys-kbd', text: cmd.shortcut }));
                     row.appendChild(right);
                     row.addEventListener('mouseenter', () => { State.cmdState.selectedIndex = currentIdx; updateActive(container); Audio.play('hover'); });
                     row.addEventListener('click', () => { close(); cmd.isAI ? cmd.handler() : Actions.execute(cmd.id); });
-                    container.appendChild(row);
+                    frag.appendChild(row);
                     allRows.push(row);
                 });
             });
+            container.innerHTML = '';
+            container.appendChild(frag);
             Motion.stagger(allRows, (el) => { Motion.spring(el, { opacity: [0, 1], transform: ['translateX(-8px)', 'translateX(0)'] }, 'precise'); }, 14);
         };
 
         const updateActive = (container) => {
+            const input = document.getElementById('sys-cmd-input');
             container.querySelectorAll('[data-idx]').forEach(el => {
                 const i = parseInt(el.dataset.idx);
                 if (i === State.cmdState.selectedIndex) {
                     el.classList.add('bg-gradient-to-r', 'from-purple-500/20', 'to-pink-500/10', 'border-purple-500/30');
                     el.classList.remove('hover:bg-white/5', 'border-transparent');
+                    el.setAttribute('aria-selected', 'true');
                     el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    if (input) input.setAttribute('aria-activedescendant', el.id);
                 } else {
                     el.classList.remove('bg-gradient-to-r', 'from-purple-500/20', 'to-pink-500/10', 'border-purple-500/30');
                     el.classList.add('hover:bg-white/5', 'border-transparent');
+                    el.setAttribute('aria-selected', 'false');
                 }
             });
         };
@@ -1445,18 +1763,28 @@ const SysUI = (() => {
             Theme.inject();
             Audio.play('open');
             Haptics.medium();
-            const container = DOM.mount('sys-cmd-root', Layers.cmd, 'fixed inset-0 hidden items-start justify-center pt-[12vh] px-4 pointer-events-none');
+            const vp = Viewport.get();
+            const container = DOM.mount('sys-cmd-root', Layers.cmd, 'fixed inset-0 hidden items-start justify-center pointer-events-none');
+            container.style.padding = 'clamp(0.75rem, 2vw, 1.5rem)';
+            container.style.paddingTop = vp.isMobile ? 'calc(var(--sys-safe-top) + 4vh)' : '12vh';
             const bd = DOM.mount('sys-cmd-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
             State.cmdState = { ...State.cmdState, query: '', selectedIndex: 0, results: [] };
-            const box = DOM.create('div', { class: 'w-full max-w-2xl sys-glass-strong rounded-2xl overflow-hidden pointer-events-auto flex flex-col sys-noise-overlay shadow-2xl', style: { transformOrigin: 'center top' } });
+            cmdOwner?.dispose();
+            cmdOwner = Lifecycle.createOwner();
+            const listId = 'sys-cmd-list-' + $uid();
+            const box = DOM.create('div', { class: 'w-full sys-glass-strong rounded-2xl overflow-hidden pointer-events-auto flex flex-col sys-noise-overlay shadow-2xl', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'لوحة الأوامر', style: { transformOrigin: 'center top', maxWidth: 'min(42rem, calc(100vw - 1.5rem))', maxHeight: '80dvh' } });
+            Lifecycle.attach(box, cmdOwner);
             const header = DOM.create('div', { class: 'flex items-center px-5 py-4 border-b border-white/10 relative sys-input-field' });
-            header.innerHTML = `<svg class="w-5 h-5 text-purple-400 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
-            const input = DOM.create('input', { type: 'text', id: 'sys-cmd-input', class: 'w-full bg-transparent text-white text-base outline-none placeholder-gray-500 font-medium', placeholder: 'ابحث، تنقل، أو اطلب من الذكاء الاصطناعي...', autocomplete: 'off', spellcheck: 'false' });
+            header.innerHTML = `<svg class="w-5 h-5 text-purple-400 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
+            const input = DOM.create('input', { type: 'text', id: 'sys-cmd-input', class: 'w-full bg-transparent text-white outline-none placeholder-gray-500 font-medium', style: { fontSize: 'var(--sys-text-base)' }, placeholder: 'ابحث، تنقل، أو اطلب من الذكاء الاصطناعي...', autocomplete: 'off', spellcheck: 'false', role: 'combobox', 'aria-expanded': 'true', 'aria-controls': listId, 'aria-autocomplete': 'list' });
             const escTag = DOM.create('span', { class: 'sys-kbd ml-2 shrink-0', text: 'ESC' });
-            header.append(input, escTag);
-            const results = DOM.create('div', { id: 'sys-cmd-results', class: 'max-h-[420px] overflow-y-auto sys-no-scroll p-2' });
+            if (!vp.isMobile) header.append(input, escTag);
+            else header.appendChild(input);
+            const results = DOM.create('div', { id: listId, class: 'overflow-y-auto sys-no-scroll p-2', style: { maxHeight: 'min(420px, 60dvh)' }, role: 'listbox' });
             const footer = DOM.create('div', { class: 'flex items-center justify-between px-5 py-3 border-t border-white/10 text-[10px] text-gray-500 bg-black/20' });
-            footer.innerHTML = `<div class="flex gap-4"><span class="flex items-center gap-1.5"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em]">SYS_UI</div>`;
+            footer.innerHTML = vp.isMobile
+                ? `<div>اضغط على عنصر للتنفيذ</div><div class="sys-shimmer-text font-semibold tracking-[0.3em]">SYS_UI</div>`
+                : `<div class="flex gap-4"><span class="flex items-center gap-1.5"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em]">SYS_UI</div>`;
             box.append(header, results, footer);
             container.innerHTML = '';
             container.appendChild(box);
@@ -1464,15 +1792,17 @@ const SysUI = (() => {
             container.classList.add('flex');
             requestAnimationFrame(() => bd.classList.add('sys-open'));
             Motion.spring(box, { transform: ['scale(0.92) translateY(-24px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
-            setTimeout(() => input.focus(), 80);
-            input.addEventListener('input', (e) => { State.cmdState.query = e.target.value; State.cmdState.selectedIndex = 0; renderResults(results); Audio.play('tap'); });
-            input.addEventListener('keydown', (e) => {
+            setTimeout(() => { try { input.focus(); } catch {} }, 80);
+            const debouncedRender = $debounce(() => renderResults(results), 30);
+            cmdOwner.listen(input, 'input', (e) => { State.cmdState.query = e.target.value; State.cmdState.selectedIndex = 0; debouncedRender(); Audio.play('tap'); });
+            cmdOwner.listen(input, 'keydown', (e) => {
                 const len = lastScored.length || 1;
                 if (e.key === 'ArrowDown') { e.preventDefault(); State.cmdState.selectedIndex = (State.cmdState.selectedIndex + 1) % len; updateActive(results); Audio.play('tick'); Haptics.soft(); }
                 else if (e.key === 'ArrowUp') { e.preventDefault(); State.cmdState.selectedIndex = (State.cmdState.selectedIndex - 1 + len) % len; updateActive(results); Audio.play('tick'); Haptics.soft(); }
                 else if (e.key === 'Enter') { e.preventDefault(); const cmd = lastScored[State.cmdState.selectedIndex]; if (cmd) { close(); cmd.isAI ? cmd.handler() : Actions.execute(cmd.id); } }
                 else if (e.key === 'Tab') { e.preventDefault(); const cmd = lastScored[State.cmdState.selectedIndex]; if (cmd && !cmd.isAI) { Actions.toggleFavorite(cmd.id); renderResults(results); Audio.play('select'); Haptics.select(); } }
             });
+            cmdOwner.listen(bd, 'click', close);
             DOM.pushOverlay('cmd', close);
             renderResults(results);
         };
@@ -1484,6 +1814,7 @@ const SysUI = (() => {
             if (box) Motion.animate(box, [{ transform: 'scale(1) translateY(0)', opacity: 1, filter: 'blur(0)' }, { transform: 'scale(0.96) translateY(-12px)', opacity: 0, filter: 'blur(6px)' }], { duration: 220, easing: Motion.tokens.ease.accelerate });
             if (bd) bd.classList.remove('sys-open');
             DOM.popOverlay();
+            cmdOwner?.dispose(); cmdOwner = null;
             setTimeout(() => { if (container) { container.classList.add('hidden'); container.classList.remove('flex'); container.innerHTML = ''; } }, 220);
         };
         const toggle = () => { const c = document.getElementById('sys-cmd-root'); (c && !c.classList.contains('hidden')) ? close() : open(); };
@@ -1491,45 +1822,74 @@ const SysUI = (() => {
     })();
 
     const ContextMenu = (() => {
+        let activeOwner = null;
         const show = (e, items) => {
             e.preventDefault();
             Theme.inject();
             close();
             Audio.play('pop');
             Haptics.light();
-            const menu = DOM.create('div', { class: 'fixed sys-glass-strong rounded-xl py-1.5 min-w-[200px] sys-noise-overlay', style: { zIndex: Layers.context, top: e.clientY + 'px', left: e.clientX + 'px', transformOrigin: 'top left', opacity: '0' } });
+            activeOwner = Lifecycle.createOwner();
+            const vp = Viewport.get();
+            const isSheet = vp.isMobile;
+            if (isSheet) {
+                const bd = DOM.create('div', { class: 'fixed inset-0 bg-black/50 backdrop-blur-sm', style: { zIndex: Layers.context - 1 } });
+                document.body.appendChild(bd);
+                bd.id = 'sys-context-bd';
+                activeOwner.add(() => bd.remove());
+                activeOwner.listen(bd, 'click', close);
+            }
+            const menuStyle = isSheet
+                ? { zIndex: Layers.context, bottom: 'var(--sys-safe-bottom)', left: '12px', right: '12px', borderRadius: '20px 20px 0 0', padding: '8px', maxHeight: '70dvh', overflowY: 'auto', transform: 'translateY(100%)' }
+                : { zIndex: Layers.context, top: e.clientY + 'px', left: e.clientX + 'px', transformOrigin: 'top left', opacity: '0', minWidth: '200px' };
+            const menu = DOM.create('div', { class: `fixed sys-glass-strong ${isSheet ? '' : 'rounded-xl'} py-1.5 sys-noise-overlay sys-no-scroll`, role: 'menu', style: menuStyle });
+            Lifecycle.attach(menu, activeOwner);
+            if (isSheet) menu.appendChild(DOM.create('div', { class: 'sys-sheet-handle', 'aria-hidden': 'true' }));
             const rows = [];
             items.forEach(item => {
-                if (item.divider) { menu.appendChild(DOM.create('div', { class: 'sys-divider-glow my-1.5 mx-2' })); return; }
-                const row = DOM.create('button', { class: `w-full flex items-center gap-3 px-3 py-2 text-xs ${item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-gray-200 hover:bg-white/10'} transition-colors text-right`, style: { opacity: '0' } });
-                if (item.icon) row.appendChild(DOM.create('span', { class: 'text-sm shrink-0 w-4', text: item.icon }));
+                if (item.divider) { menu.appendChild(DOM.create('div', { class: 'sys-divider-glow my-1.5 mx-2', role: 'separator' })); return; }
+                const row = DOM.create('button', { class: `w-full flex items-center gap-3 px-3 py-3 ${item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-gray-200 hover:bg-white/10'} transition-colors text-right rounded-lg`, style: { fontSize: 'var(--sys-text-sm)', minHeight: 'var(--sys-touch-target)' }, role: 'menuitem' });
+                if (!isSheet) row.style.opacity = '0';
+                if (item.icon) row.appendChild(DOM.create('span', { class: 'text-base shrink-0 w-5', text: item.icon, 'aria-hidden': 'true' }));
                 row.appendChild(DOM.create('span', { class: 'flex-1 text-right font-medium', text: item.label }));
-                if (item.shortcut) row.appendChild(DOM.create('span', { class: 'sys-kbd', text: item.shortcut }));
-                row.addEventListener('mouseenter', () => Audio.play('hover'));
-                row.addEventListener('click', () => { close(); Audio.play('click'); item.handler?.(); });
+                if (item.shortcut && !isSheet) row.appendChild(DOM.create('span', { class: 'sys-kbd', text: item.shortcut }));
+                activeOwner.listen(row, 'mouseenter', () => Audio.play('hover'));
+                activeOwner.listen(row, 'click', () => { close(); Audio.play('click'); try { item.handler?.(); } catch {} });
                 menu.appendChild(row);
                 rows.push(row);
             });
             document.body.appendChild(menu);
-            const rect = menu.getBoundingClientRect();
-            if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
-            if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
             menu.id = 'sys-context-menu';
-            Motion.spring(menu, { transform: ['scale(0.86) translateY(-8px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
-            Motion.stagger(rows, (el) => { Motion.spring(el, { opacity: [0, 1], transform: ['translateX(-6px)', 'translateX(0)'] }, 'precise'); }, 18);
-            setTimeout(() => document.addEventListener('click', close, { once: true }), 50);
+            if (isSheet) {
+                requestAnimationFrame(() => Motion.spring(menu, { transform: ['translateY(100%)', 'translateY(0)'] }, 'ios'));
+            } else {
+                const rect = menu.getBoundingClientRect();
+                if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+                if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+                Motion.spring(menu, { transform: ['scale(0.86) translateY(-8px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'ios');
+                Motion.stagger(rows, (el) => { Motion.spring(el, { opacity: [0, 1], transform: ['translateX(-6px)', 'translateX(0)'] }, 'precise'); }, 18);
+                setTimeout(() => { activeOwner?.listen(document, 'click', close, { once: true }); activeOwner?.listen(document, 'contextmenu', close, { once: true }); }, 50);
+            }
+            DOM.pushOverlay('ctx', close);
         };
         const close = () => {
             const m = document.getElementById('sys-context-menu');
-            if (m) { Motion.animate(m, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.92)' }], { duration: 160, easing: Motion.tokens.ease.accelerate }).then(() => m.remove()); }
+            if (m) {
+                const isSheet = m.style.bottom !== '';
+                if (isSheet) Motion.animate(m, [{ transform: 'translateY(0)' }, { transform: 'translateY(100%)' }], { duration: 200, easing: Motion.tokens.ease.accelerate }).then(() => m.remove());
+                else Motion.animate(m, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.92)' }], { duration: 160, easing: Motion.tokens.ease.accelerate }).then(() => m.remove());
+            }
+            if (State.activeOverlays.length && State.activeOverlays[State.activeOverlays.length - 1].id === 'ctx') DOM.popOverlay();
+            activeOwner?.dispose(); activeOwner = null;
         };
         return { show, close };
     })();
 
     const Tooltip = (() => {
         let el, hideTimer, showTimer;
-        const ensure = () => { if (!el) { el = DOM.create('div', { class: 'sys-tooltip', id: 'sys-tooltip-root' }); document.body.appendChild(el); } return el; };
+        const ensure = () => { if (!el) { el = DOM.create('div', { class: 'sys-tooltip', id: 'sys-tooltip-root', role: 'tooltip' }); document.body.appendChild(el); } return el; };
         const show = (target, text, placement = 'top') => {
+            if ($isTouch) return;
             clearTimeout(hideTimer);
             clearTimeout(showTimer);
             showTimer = setTimeout(() => {
@@ -1549,12 +1909,16 @@ const SysUI = (() => {
         };
         const hide = () => { clearTimeout(showTimer); hideTimer = setTimeout(() => el?.classList.remove('sys-tooltip-show'), 60); };
         const attach = (selector, getText, placement = 'top') => {
+            const owner = Lifecycle.createOwner();
             document.querySelectorAll(selector).forEach(target => {
-                target.addEventListener('mouseenter', () => show(target, typeof getText === 'function' ? getText(target) : getText, placement));
-                target.addEventListener('mouseleave', hide);
-                target.addEventListener('focus', () => show(target, typeof getText === 'function' ? getText(target) : getText, placement));
-                target.addEventListener('blur', hide);
+                Lifecycle.attach(target, owner);
+                const text = typeof getText === 'function' ? () => getText(target) : () => getText;
+                owner.listen(target, 'mouseenter', () => show(target, text(), placement));
+                owner.listen(target, 'mouseleave', hide);
+                owner.listen(target, 'focus', () => show(target, text(), placement));
+                owner.listen(target, 'blur', hide);
             });
+            return () => owner.dispose();
         };
         return { show, hide, attach };
     })();
@@ -1565,7 +1929,9 @@ const SysUI = (() => {
         const layer = DOM.mount('sys-confetti', Layers.particles, 'fixed inset-0 pointer-events-none overflow-hidden');
         Audio.play('success');
         Haptics.success();
-        for (let i = 0; i < count; i++) {
+        const tierFactor = $perfTier === 'low' ? 0.35 : $perfTier === 'mid' ? 0.65 : 1;
+        const actualCount = Math.floor(count * tierFactor);
+        for (let i = 0; i < actualCount; i++) {
             const piece = document.createElement('div');
             const size = 5 + Math.random() * 10;
             const shape = shapes[Math.floor(Math.random() * shapes.length)];
@@ -1593,12 +1959,13 @@ const SysUI = (() => {
         Theme.inject();
         const layer = DOM.mount('sys-fireworks', Layers.particles, 'fixed inset-0 pointer-events-none overflow-hidden');
         Audio.play('bell');
-        for (let f = 0; f < count; f++) {
+        const actual = $perfTier === 'low' ? Math.min(count, 2) : $perfTier === 'mid' ? Math.min(count, 4) : count;
+        for (let f = 0; f < actual; f++) {
             setTimeout(() => {
                 const cx = 20 + Math.random() * 60;
                 const cy = 20 + Math.random() * 40;
                 const hue = Math.floor(Math.random() * 360);
-                const particles = 40;
+                const particles = $perfTier === 'low' ? 16 : $perfTier === 'mid' ? 28 : 40;
                 Audio.play('pop');
                 for (let i = 0; i < particles; i++) {
                     const angle = (Math.PI * 2 * i) / particles;
@@ -1618,8 +1985,8 @@ const SysUI = (() => {
 
     const Ripple = {
         attach: (selector = '[data-ripple], button, [role="button"]') => {
-            document.addEventListener('pointerdown', (e) => {
-                const target = e.target.closest(selector);
+            rootOwner.listen(document, 'pointerdown', (e) => {
+                const target = e.target.closest?.(selector);
                 if (target && !target.dataset.noRipple) DOM.addRipple(e, target);
             });
         }
@@ -1644,17 +2011,21 @@ const SysUI = (() => {
             path = 'M ' + points.map(p => `${p[0]},${p[1]}`).join(' L ');
         }
         const gradId = 'sg' + $hash(values.join(','));
-        const fillPath = fill ? `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity="0.4"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${path} L ${width},${height} L 0,${height} Z" fill="url(#${gradId})"/>` : '';
-        return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="[w3.org](http://www.w3.org/2000/svg)">${fillPath}<path d="${path}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px ${color}80)"/></svg>`;
+        const safeColor = $esc(color);
+        const fillPath = fill ? `<defs><linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${safeColor}" stop-opacity="0.4"/><stop offset="100%" stop-color="${safeColor}" stop-opacity="0"/></linearGradient></defs><path d="${path} L ${width},${height} L 0,${height} Z" fill="url(#${gradId})"/>` : '';
+        return `<svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="[w3.org](http://www.w3.org/2000/svg)" aria-hidden="true" style="max-width:${width}px">${fillPath}<path d="${path}" fill="none" stroke="${safeColor}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 4px ${safeColor}80)"/></svg>`;
     };
 
     const UIHelpers = {
         presence: (msg, duration = 8000) => {
             Theme.inject();
-            const container = DOM.mount('sys-presence-bar', Layers.base + 50, 'fixed top-4 right-4 flex flex-col gap-2 pointer-events-none');
-            const el = DOM.create('div', { class: 'flex items-center gap-2.5 px-4 py-2 rounded-full sys-glass shadow-xl pointer-events-auto w-max sys-noise-overlay' });
-            el.innerHTML = `<div class="relative"><div class="w-2 h-2 rounded-full bg-green-500"></div><div class="absolute inset-0 w-2 h-2 rounded-full bg-green-500 animate-ping"></div></div>`;
-            el.appendChild(DOM.create('span', { class: 'text-[11px] text-gray-200 font-medium tracking-wide', text: msg }));
+            const container = DOM.mount('sys-presence-bar', Layers.base + 50, 'fixed flex flex-col gap-2 pointer-events-none');
+            container.style.top = 'calc(1rem + var(--sys-safe-top))';
+            container.style.right = 'calc(1rem + var(--sys-safe-right))';
+            container.style.maxWidth = 'calc(100vw - 2rem)';
+            const el = DOM.create('div', { class: 'flex items-center gap-2.5 px-4 py-2 rounded-full sys-glass shadow-xl pointer-events-auto w-max max-w-full sys-noise-overlay', role: 'status' });
+            el.innerHTML = `<div class="relative" aria-hidden="true"><div class="w-2 h-2 rounded-full bg-green-500"></div><div class="absolute inset-0 w-2 h-2 rounded-full bg-green-500 animate-ping"></div></div>`;
+            el.appendChild(DOM.create('span', { class: 'text-gray-200 font-medium tracking-wide truncate', style: { fontSize: 'var(--sys-text-xs)' }, text: msg }));
             container.appendChild(el);
             Motion.enter.slideLeft(el);
             setTimeout(() => Motion.exit.slideLeft(el).then(() => el.remove()), duration);
@@ -1663,22 +2034,22 @@ const SysUI = (() => {
             const trendIcon = trend > 0 ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>` : trend < 0 ? `<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 17h8m0 0v-8m0 8l-8-8-4 4-6-6"/></svg>` : '';
             const trendColor = trend > 0 ? 'text-green-400 bg-green-500/10 border-green-500/20' : trend < 0 ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-gray-400 bg-white/5 border-white/10';
             const sign = trend > 0 ? '+' : '';
-            const spark = sparkData ? `<div class="mt-3 relative z-10">${Sparkline(sparkData, { color: trend >= 0 ? '#22c55e' : '#ef4444', width: 140, height: 32 })}</div>` : '';
-            return `<div class="sys-glass sys-magnetic sys-elevate sys-bloom p-5 rounded-2xl flex flex-col relative overflow-hidden group sys-noise-overlay"><div class="absolute inset-0 bg-gradient-to-br from-purple-500/[0.06] via-transparent to-pink-500/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><span class="text-xs text-gray-400 font-medium mb-1.5 relative z-10 tracking-wide">${$esc(title)}</span><div class="flex items-baseline gap-3 relative z-10"><span class="text-2xl font-bold text-white tracking-tight">${$esc(value)}</span>${trend !== 0 ? `<div class="flex items-center gap-1 ${trendColor} px-2 py-0.5 rounded-md text-[10px] font-semibold border">${trendIcon}<span>${sign}${trend}% ${$esc(trendLabel)}</span></div>` : ''}</div>${spark}</div>`;
+            const spark = sparkData ? `<div class="mt-3 relative z-10 w-full">${Sparkline(sparkData, { color: trend >= 0 ? '#22c55e' : '#ef4444', width: 140, height: 32 })}</div>` : '';
+            return `<div class="sys-glass sys-magnetic sys-elevate sys-bloom rounded-2xl flex flex-col relative overflow-hidden group sys-noise-overlay" style="padding:clamp(1rem,2vw,1.25rem)"><div class="absolute inset-0 bg-gradient-to-br from-purple-500/[0.06] via-transparent to-pink-500/[0.04] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div><span class="text-gray-400 font-medium mb-1.5 relative z-10 tracking-wide" style="font-size:var(--sys-text-xs)">${$esc(title)}</span><div class="flex items-baseline gap-3 relative z-10 flex-wrap"><span class="font-bold text-white tracking-tight" style="font-size:var(--sys-text-2xl)">${$esc(value)}</span>${trend !== 0 ? `<div class="flex items-center gap-1 ${trendColor} px-2 py-0.5 rounded-md text-[10px] font-semibold border">${trendIcon}<span>${sign}${trend}% ${$esc(trendLabel)}</span></div>` : ''}</div>${spark}</div>`;
         },
         emptyState: (containerId, type, title, desc, actionLabel = null, actionId = null) => {
             const el = document.getElementById(containerId);
             if (!el) return;
             el.innerHTML = '';
-            const wrap = DOM.create('div', { class: 'flex flex-col items-center justify-center py-20 px-4 text-center w-full max-w-sm mx-auto' });
-            const iconBox = DOM.create('div', { class: 'relative w-20 h-20 mb-5 rounded-2xl sys-glass border border-white/10 flex items-center justify-center shadow-inner sys-breathe sys-bloom' });
-            iconBox.innerHTML = `<svg class="w-10 h-10 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg><div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/10 to-transparent"></div>`;
+            const wrap = DOM.create('div', { class: 'flex flex-col items-center justify-center text-center w-full mx-auto', style: { padding: 'clamp(2.5rem,5vw,5rem) 1rem', maxWidth: 'min(24rem, 92vw)' } });
+            const iconBox = DOM.create('div', { class: 'relative mb-5 rounded-2xl sys-glass border border-white/10 flex items-center justify-center shadow-inner sys-breathe sys-bloom', style: { width: 'clamp(64px, 8vw, 80px)', height: 'clamp(64px, 8vw, 80px)' }, 'aria-hidden': 'true' });
+            iconBox.innerHTML = `<svg style="width:60%;height:60%" class="text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.4"><path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/></svg><div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-purple-500/10 to-transparent"></div>`;
             wrap.appendChild(iconBox);
-            const titleEl = DOM.create('h3', { class: 'text-white font-semibold text-lg mb-2 tracking-tight', text: title });
-            const descEl = DOM.create('p', { class: 'text-gray-500 text-sm mb-6 leading-relaxed', text: desc });
+            const titleEl = DOM.create('h3', { class: 'text-white font-semibold mb-2 tracking-tight', style: { fontSize: 'var(--sys-text-lg)' }, text: title });
+            const descEl = DOM.create('p', { class: 'text-gray-500 mb-6 leading-relaxed', style: { fontSize: 'var(--sys-text-sm)' }, text: desc });
             wrap.append(titleEl, descEl);
             if (actionLabel) {
-                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)]', text: actionLabel });
+                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep px-6 py-3 rounded-xl font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)]', style: { fontSize: 'var(--sys-text-sm)' }, text: actionLabel });
                 if (actionId) btn.addEventListener('click', () => Actions.execute(actionId));
                 wrap.appendChild(btn);
             }
@@ -1690,10 +2061,10 @@ const SysUI = (() => {
         generateSkeleton: (type = 'card', count = 1) => {
             Theme.inject();
             const variants = {
-                card: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] flex flex-col gap-4 w-full sys-fade-in shadow-inner mb-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full sys-skeleton-bg"></div><div class="flex flex-col gap-2 flex-1"><div class="h-3 w-1/3 sys-skeleton-bg rounded-full"></div><div class="h-2 w-1/4 sys-skeleton-bg rounded-full opacity-60"></div></div></div><div class="h-20 w-full sys-skeleton-bg rounded-xl mt-2"></div></div>`,
-                list: () => `<div data-stagger class="flex items-center gap-3 p-3 border-b border-white/5 sys-fade-in"><div class="w-9 h-9 rounded-lg sys-skeleton-bg"></div><div class="flex-1 flex flex-col gap-2"><div class="h-3 w-2/5 sys-skeleton-bg rounded-full"></div><div class="h-2 w-3/5 sys-skeleton-bg rounded-full opacity-60"></div></div></div>`,
-                text: () => `<div data-stagger class="flex flex-col gap-2 sys-fade-in mb-2"><div class="h-3 w-full sys-skeleton-bg rounded-full"></div><div class="h-3 w-5/6 sys-skeleton-bg rounded-full"></div><div class="h-3 w-4/6 sys-skeleton-bg rounded-full"></div></div>`,
-                stat: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] sys-fade-in mb-3"><div class="h-2 w-1/3 sys-skeleton-bg rounded-full mb-3"></div><div class="h-6 w-2/3 sys-skeleton-bg rounded-full"></div><div class="h-8 w-full sys-skeleton-bg rounded-lg mt-3 opacity-50"></div></div>`
+                card: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] flex flex-col gap-4 w-full sys-fade-in shadow-inner mb-3" aria-hidden="true"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full sys-skeleton-bg"></div><div class="flex flex-col gap-2 flex-1"><div class="h-3 w-1/3 sys-skeleton-bg rounded-full"></div><div class="h-2 w-1/4 sys-skeleton-bg rounded-full opacity-60"></div></div></div><div class="h-20 w-full sys-skeleton-bg rounded-xl mt-2"></div></div>`,
+                list: () => `<div data-stagger class="flex items-center gap-3 p-3 border-b border-white/5 sys-fade-in" aria-hidden="true"><div class="w-9 h-9 rounded-lg sys-skeleton-bg shrink-0"></div><div class="flex-1 flex flex-col gap-2 min-w-0"><div class="h-3 w-2/5 sys-skeleton-bg rounded-full"></div><div class="h-2 w-3/5 sys-skeleton-bg rounded-full opacity-60"></div></div></div>`,
+                text: () => `<div data-stagger class="flex flex-col gap-2 sys-fade-in mb-2" aria-hidden="true"><div class="h-3 w-full sys-skeleton-bg rounded-full"></div><div class="h-3 w-5/6 sys-skeleton-bg rounded-full"></div><div class="h-3 w-4/6 sys-skeleton-bg rounded-full"></div></div>`,
+                stat: () => `<div data-stagger class="p-5 border border-white/5 rounded-2xl bg-white/[0.015] sys-fade-in mb-3" aria-hidden="true"><div class="h-2 w-1/3 sys-skeleton-bg rounded-full mb-3"></div><div class="h-6 w-2/3 sys-skeleton-bg rounded-full"></div><div class="h-8 w-full sys-skeleton-bg rounded-lg mt-3 opacity-50"></div></div>`
             };
             const gen = variants[type] || variants.card;
             return Array.from({ length: count }, gen).join('');
@@ -1703,11 +2074,12 @@ const SysUI = (() => {
     const Hotkeys = (() => {
         const map = new Map();
         const fmt = (e) => `${e.ctrlKey || e.metaKey ? 'mod+' : ''}${e.shiftKey ? 'shift+' : ''}${e.altKey ? 'alt+' : ''}${e.key.toLowerCase()}`;
-        document.addEventListener('keydown', (e) => {
+        rootOwner.listen(document, 'keydown', (e) => {
             const key = fmt(e);
             const cb = map.get(key);
             if (cb && !(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) {
-                e.preventDefault(); cb(e);
+                e.preventDefault();
+                try { cb(e); } catch (err) { console.error('[Hotkeys]', err); }
             }
         });
         return {
@@ -1721,6 +2093,7 @@ const SysUI = (() => {
         intersect: (selector, cb, opts = {}) => {
             const obs = new IntersectionObserver((entries) => entries.forEach(e => e.isIntersecting && cb(e.target, e)), { threshold: 0.1, ...opts });
             document.querySelectorAll(selector).forEach(el => obs.observe(el));
+            rootOwner.add(() => obs.disconnect());
             return obs;
         },
         revealOnScroll: (selector = '[data-reveal]') => {
@@ -1735,6 +2108,7 @@ const SysUI = (() => {
                 });
             }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
             document.querySelectorAll(selector).forEach(el => obs.observe(el));
+            rootOwner.add(() => obs.disconnect());
             return obs;
         }
     };
@@ -1743,6 +2117,7 @@ const SysUI = (() => {
         enable: () => {
             Theme.inject();
             const bar = DOM.mount('sys-scroll-progress', Layers.hud, 'fixed top-0 left-0 h-[2.5px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500 origin-left shadow-[0_0_16px_rgba(168,85,247,0.7)]');
+            bar.setAttribute('aria-hidden', 'true');
             bar.style.width = '100%';
             bar.style.transform = 'scaleX(0)';
             bar.style.transition = 'transform 140ms cubic-bezier(0.05,0.7,0.1,1)';
@@ -1751,8 +2126,8 @@ const SysUI = (() => {
                 const max = document.documentElement.scrollHeight - window.innerHeight;
                 bar.style.transform = `scaleX(${max > 0 ? scrolled / max : 0})`;
             });
-            window.addEventListener('scroll', update, { passive: true });
-            window.addEventListener('resize', update, { passive: true });
+            rootOwner.listen(window, 'scroll', update, { passive: true });
+            rootOwner.listen(window, 'resize', update, { passive: true });
             update();
         }
     };
@@ -1765,26 +2140,63 @@ const SysUI = (() => {
             Haptics.medium();
             const bd = DOM.mount('sys-drawer-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
             const id = $uid();
-            const isRight = side === 'right';
-            const drawer = DOM.create('div', { class: 'sys-drawer flex flex-col sys-noise-overlay', style: { top: '0', bottom: '0', [side]: '0', width: width + 'px', maxWidth: '92vw', transform: `translateX(${isRight ? '100%' : '-100%'})`, zIndex: Layers.modal } });
-            const header = DOM.create('div', { class: 'flex items-center justify-between px-5 py-4 border-b border-white/10' });
-            header.appendChild(DOM.create('h3', { class: 'text-white font-semibold tracking-tight', text: title }));
-            const closeBtn = DOM.create('button', { class: 'sys-button-press w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors', html: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' });
+            const vp = Viewport.get();
+            const isMobile = vp.isMobile;
+            const actualSide = isMobile ? 'bottom' : side;
+            const isVertical = actualSide === 'bottom' || actualSide === 'top';
+            const owner = Lifecycle.createOwner();
+            const titleId = 'sys-drawer-title-' + id;
+            const sideStyle = {
+                right: { top: '0', bottom: '0', right: '0', width: `min(${width}px, 92vw)`, transform: 'translateX(100%)' },
+                left: { top: '0', bottom: '0', left: '0', width: `min(${width}px, 92vw)`, transform: 'translateX(-100%)' },
+                bottom: { left: '0', right: '0', bottom: '0', maxHeight: '88dvh', transform: 'translateY(100%)', borderRadius: '24px 24px 0 0', paddingBottom: 'var(--sys-safe-bottom)' },
+                top: { left: '0', right: '0', top: '0', maxHeight: '88dvh', transform: 'translateY(-100%)', borderRadius: '0 0 24px 24px', paddingTop: 'var(--sys-safe-top)' }
+            }[actualSide];
+            const drawer = DOM.create('div', { class: 'sys-drawer flex flex-col sys-noise-overlay sys-no-scroll', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, style: { ...sideStyle, zIndex: Layers.modal, overflowY: 'auto' } });
+            Lifecycle.attach(drawer, owner);
+            if (isVertical && actualSide === 'bottom') drawer.appendChild(DOM.create('div', { class: 'sys-sheet-handle', 'aria-hidden': 'true' }));
+            const header = DOM.create('div', { class: 'flex items-center justify-between border-b border-white/10', style: { padding: 'clamp(0.875rem, 1.5vw, 1rem) clamp(1rem, 2vw, 1.25rem)' } });
+            header.appendChild(DOM.create('h3', { id: titleId, class: 'text-white font-semibold tracking-tight', style: { fontSize: 'var(--sys-text-lg)' }, text: title }));
+            const closeBtn = DOM.create('button', { class: 'sys-button-press rounded-lg flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors', style: { width: 'var(--sys-touch-target-sm)', height: 'var(--sys-touch-target-sm)' }, 'aria-label': 'إغلاق', html: '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>' });
             header.appendChild(closeBtn);
-            const body = DOM.create('div', { class: 'flex-1 overflow-y-auto sys-no-scroll p-5', html: content });
+            const body = DOM.create('div', { class: 'flex-1 overflow-y-auto sys-no-scroll', style: { padding: 'clamp(1rem, 2vw, 1.25rem)' }, html: content });
             drawer.append(header, body);
             document.body.appendChild(drawer);
-            requestAnimationFrame(() => { bd.classList.add('sys-open'); drawer.style.transform = 'translateX(0)'; });
+            requestAnimationFrame(() => { bd.classList.add('sys-open'); drawer.style.transform = isVertical ? 'translateY(0)' : 'translateX(0)'; });
+            const releaseFocus = DOM.trapFocus(drawer);
+            owner.add(releaseFocus);
             const close = () => {
                 Audio.play('close');
-                drawer.style.transform = `translateX(${isRight ? '100%' : '-100%'})`;
+                drawer.style.transform = sideStyle.transform;
                 bd.classList.remove('sys-open');
                 DOM.popOverlay();
-                setTimeout(() => { drawer.remove(); onClose?.(); }, 340);
+                owner.dispose();
+                setTimeout(() => { drawer.remove(); try { onClose?.(); } catch {} }, 340);
             };
             DOM.pushOverlay('drawer-' + id, close);
-            closeBtn.addEventListener('click', close);
-            bd.addEventListener('click', close);
+            owner.listen(closeBtn, 'click', close);
+            owner.listen(bd, 'click', close);
+            if (isVertical && actualSide === 'bottom') {
+                let startY = 0, currentY = 0, dragging = false;
+                owner.listen(drawer, 'pointerdown', (e) => {
+                    if (e.target.closest('button, input, textarea, a')) return;
+                    if (drawer.scrollTop > 0) return;
+                    startY = e.clientY; dragging = true;
+                    drawer.style.transition = 'none';
+                });
+                owner.listen(drawer, 'pointermove', (e) => {
+                    if (!dragging) return;
+                    currentY = Math.max(0, e.clientY - startY);
+                    drawer.style.transform = `translateY(${currentY}px)`;
+                });
+                owner.listen(drawer, 'pointerup', () => {
+                    if (!dragging) return; dragging = false;
+                    drawer.style.transition = '';
+                    if (currentY > 120) close();
+                    else Motion.spring(drawer, { transform: [`translateY(${currentY}px)`, 'translateY(0)'] }, 'bouncy');
+                    currentY = 0;
+                });
+            }
             return { close, el: drawer };
         };
         return { open };
@@ -1793,9 +2205,11 @@ const SysUI = (() => {
     const Accordion = {
         mount: (containerSelector) => {
             document.querySelectorAll(containerSelector).forEach(container => {
+                const owner = Lifecycle.createOwner();
+                Lifecycle.attach(container, owner);
                 container.querySelectorAll('[data-accordion-trigger]').forEach(trigger => {
                     const targetId = trigger.dataset.accordionTrigger;
-                    const target = container.querySelector(`[data-accordion-content="${targetId}"]`);
+                    const target = container.querySelector(`[data-accordion-content="${CSS.escape(targetId)}"]`);
                     if (!target) return;
                     if (!target.classList.contains('sys-accordion-content')) {
                         const inner = DOM.create('div');
@@ -1803,11 +2217,12 @@ const SysUI = (() => {
                         target.appendChild(inner);
                         target.classList.add('sys-accordion-content');
                     }
-                    trigger.addEventListener('click', () => {
+                    trigger.setAttribute('aria-expanded', target.classList.contains('sys-open') ? 'true' : 'false');
+                    owner.listen(trigger, 'click', () => {
                         const isOpen = target.classList.toggle('sys-open');
                         Audio.play(isOpen ? 'pop' : 'tap');
                         Haptics.soft();
-                        trigger.setAttribute('aria-expanded', isOpen);
+                        trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
                     });
                 });
             });
@@ -1819,118 +2234,38 @@ const SysUI = (() => {
             document.querySelectorAll(containerSelector).forEach(container => {
                 const list = container.querySelector('[data-tabs-list]');
                 if (!list) return;
+                const owner = Lifecycle.createOwner();
+                Lifecycle.attach(container, owner);
                 list.style.position = 'relative';
+                list.style.overflowX = 'auto';
+                list.style.scrollbarWidth = 'none';
+                list.setAttribute('role', 'tablist');
                 const indicator = DOM.create('div', { class: 'sys-tab-indicator' });
                 list.appendChild(indicator);
                 const update = (active) => {
                     const r = active.getBoundingClientRect();
                     const lr = list.getBoundingClientRect();
                     indicator.style.width = r.width + 'px';
-                    indicator.style.transform = `translateX(${r.left - lr.left}px)`;
+                    indicator.style.transform = `translateX(${r.left - lr.left + list.scrollLeft}px)`;
+                    active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
                 };
                 const tabs = list.querySelectorAll('[data-tab]');
                 tabs.forEach(tab => {
-                    tab.addEventListener('click', () => {
-                        tabs.forEach(t => t.classList.remove('sys-active'));
+                    tab.setAttribute('role', 'tab');
+                    owner.listen(tab, 'click', () => {
+                        tabs.forEach(t => { t.classList.remove('sys-active'); t.setAttribute('aria-selected', 'false'); });
                         tab.classList.add('sys-active');
+                        tab.setAttribute('aria-selected', 'true');
                         update(tab);
                         Audio.play('tap');
                         Haptics.select();
                         const panelId = tab.dataset.tab;
                         container.querySelectorAll('[data-panel]').forEach(p => {
-                            if (p.dataset.panel === panelId) { p.style.display = ''; Motion.enter.fade(p, { duration: 220 }); }
+                            if (p.dataset.panel === panelId) { p.style.display = ''; p.setAttribute('role', 'tabpanel'); Motion.enter.fade(p, { duration: 220 }); }
                             else p.style.display = 'none';
                         });
                     });
                 });
                 const active = list.querySelector('.sys-active') || tabs[0];
                 if (active) requestAnimationFrame(() => update(active));
-            });
-        }
-    };
-
-    let initialized = false;
-    const boot = () => {
-        if (initialized) return; initialized = true;
-        Theme.inject();
-        Magnetic.init();
-        Ripple.attach();
-        ScrollProgress.enable();
-        Observe.revealOnScroll();
-        Hotkeys.bind('mod+k', () => Cmd.toggle());
-        Hotkeys.bind('mod+/', () => Cmd.toggle());
-        Hotkeys.bind('shift+?', () => Toasts.create('info', 'Cmd+K: بحث · F12: HUD · ESC: إغلاق', 5000));
-        Hotkeys.bind('f12', () => PerfHUD.toggle());
-        Hotkeys.bind('mod+shift+m', () => { Audio.mute(!Audio.isMuted()); Toasts.create('info', Audio.isMuted() ? '🔇 تم كتم الأصوات' : '🔊 تم تفعيل الأصوات', 2000); });
-        document.addEventListener('pointerenter', (e) => {
-            const t = e.target;
-            if (t.matches?.('button, [role="button"], a, .sys-magnetic')) Audio.play('hover');
-        }, { capture: true });
-        Events.emit('sysui:ready');
-    };
-
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-    else boot();
-
-    return {
-        version: '6.0.0',
-        Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs,
-        pageTransition: Page.transition,
-        load: SmartLoader.execute,
-        spotlight: Spotlight.show,
-        resetSpotlight: Spotlight.reset,
-        hud: PerfHUD.toggle,
-        toast: Toasts.create,
-        updateToast: Toasts.update,
-        removeToast: Toasts.remove,
-        clearToasts: Toasts.clear,
-        toastPromise: Toasts.promise,
-        confirm: Modals.confirm,
-        prompt: Modals.prompt,
-        danger: Modals.danger,
-        modal: Modals.open,
-        cmd: Cmd,
-        confetti: Confetti,
-        fireworks: Fireworks,
-        sparkline: Sparkline,
-        contextMenu: ContextMenu.show,
-        tooltip: Tooltip,
-        presence: UIHelpers.presence,
-        statCard: UIHelpers.statCard,
-        emptyState: UIHelpers.emptyState,
-        skeleton: UIHelpers.generateSkeleton,
-        ripple: Ripple,
-        drawer: Drawer.open,
-        animate: Motion.animate,
-        spring: Motion.spring,
-        stagger: Motion.stagger,
-        morph: Motion.morphLayout,
-        inertial: Motion.inertial,
-        utils: { esc: $esc, uid: $uid, debounce: $debounce, throttle: $throttle, idle: $idle, clamp: $clamp, lerp: $lerp, smoothstep: $smoothstep, hash: $hash, safeJSON: $safeJSON },
-        icons: {
-            trash: `<svg class="w-4 h-4 transition-transform hover:scale-110 active:scale-95" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
-            check: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`,
-            close: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
-            search: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`,
-            settings: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>`,
-            sparkles: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L23 12l-6.714 2.143L14 21l-2.286-6.857L5 12l6.714-2.143L14 3z"/></svg>`,
-            lightning: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>`
-        }
-    };
-})();
-
-document.addEventListener('DOMContentLoaded', () => {
-    SysUI.Actions.registerBatch([
-        { id: 'hud.toggle', title: 'تفعيل/إلغاء أدوات المطوّر (HUD)', shortcut: 'F12', icon: '📊', group: 'النظام', keywords: ['fps', 'performance', 'debug'], handler: SysUI.hud },
-        { id: 'cursor.toggle', title: 'تفعيل/إلغاء المؤشر المتقدم', icon: '🎯', group: 'النظام', handler: SysUI.Cursor.toggle },
-        { id: 'audio.toggle', title: 'كتم/تفعيل الأصوات', icon: '🔊', group: 'النظام', handler: () => { const m = !SysUI.Audio.isMuted(); SysUI.Audio.mute(m); SysUI.toast('info', m ? 'تم كتم الأصوات' : 'تم تفعيل الأصوات', 2000); } },
-        { id: 'settings', title: 'إعدادات النظام', shortcut: 'S', icon: '⚙️', group: 'التطبيق', handler: () => SysUI.toast('info', 'فتح الإعدادات') },
-        { id: 'users', title: 'إدارة الطلاب', shortcut: 'U', icon: '👥', group: 'التطبيق', handler: () => SysUI.load(new Promise(r => setTimeout(r, 2500)), 'main-content') },
-        { id: 'celebrate', title: 'احتفال!', icon: '🎉', group: 'مرح', handler: () => SysUI.confetti(120) },
-        { id: 'fireworks', title: 'ألعاب نارية', icon: '🎆', group: 'مرح', handler: () => SysUI.fireworks(6) }
-    ]);
-});
-
-export const trashSVG = SysUI.icons.trash;
-export { SysUI };
-
+                owner.listen(window, 'resize', $debounce
