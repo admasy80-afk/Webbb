@@ -42,7 +42,8 @@ export {
     fetchStudentsByGrade, 
     fetchGradeContent, 
     renderManageContent, 
-    deleteContent, 
+    deleteContent,
+    viewResults,
     logout 
 };
 
@@ -56,7 +57,8 @@ if (typeof window !== 'undefined') {
         fetchStudentsByGrade, 
         fetchGradeContent, 
         renderManageContent, 
-        deleteContent, 
+        deleteContent,
+        viewResults, 
         logout
     });
 }
