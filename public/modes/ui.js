@@ -10,9 +10,13 @@ const SysUI = (() => {
     const $lerp = (a, b, t) => a + (b - a) * t;
     const $smoothstep = (a, b, t) => { const x = $clamp((t - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
     const $hash = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i); return (h >>> 0).toString(36); };
+    const $easeOutExpo = (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+    const $easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     const $prm = matchMedia('(prefers-reduced-motion: reduce)');
     const $isTouch = matchMedia('(pointer: coarse)').matches;
     const $isHighRefresh = matchMedia('(min-resolution: 120dpi)').matches;
+    const $isMobile = matchMedia('(max-width: 768px)').matches;
+    const $isSmallMobile = matchMedia('(max-width: 480px)').matches;
     let $reducedMotion = $prm.matches;
     $prm.addEventListener?.('change', e => { $reducedMotion = e.matches; });
 
@@ -31,7 +35,7 @@ const SysUI = (() => {
                 elastic: 'cubic-bezier(0.68, -0.4, 0.265, 1.4)',
                 smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
                 anticipate: 'cubic-bezier(0.75, -0.5, 0.25, 1.5)',
-                magnetic: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+                gravity: 'cubic-bezier(0.5, 0, 0.75, 0)',
                 liquid: 'cubic-bezier(0.45, 0, 0.15, 1)'
             },
             spring: {
@@ -41,7 +45,8 @@ const SysUI = (() => {
                 slow: { stiffness: 80, damping: 20, mass: 1 },
                 snappy: { stiffness: 400, damping: 28, mass: 1 },
                 bouncy: { stiffness: 260, damping: 9, mass: 1.1 },
-                molten: { stiffness: 200, damping: 16, mass: 1.2 }
+                molasses: { stiffness: 60, damping: 30, mass: 1.5 },
+                ethereal: { stiffness: 200, damping: 18, mass: 0.8 }
             },
             stagger: { tight: 22, normal: 38, relaxed: 60, dramatic: 90 }
         };
@@ -118,8 +123,7 @@ const SysUI = (() => {
             slideRight: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateX(-20px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
             pop: (el, opts = {}) => spring(el, { transform: ['scale(0.85)', 'scale(1)'], opacity: [0, 1] }, 'bouncy'),
             blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts }),
-            liquid: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'scale(0.6) rotate(-8deg)', filter: 'blur(12px)' }, { opacity: 1, transform: 'scale(1) rotate(0deg)', filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.springBounce, ...opts }),
-            unfold: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'perspective(800px) rotateX(-90deg)', transformOrigin: 'top' }, { opacity: 1, transform: 'perspective(800px) rotateX(0deg)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts })
+            liquid: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'scale(0.6) rotate(-8deg)', filter: 'blur(20px)' }, { opacity: 1, transform: 'scale(1) rotate(0)', filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.elastic, ...opts })
         };
 
         const exit = {
@@ -143,6 +147,15 @@ const SysUI = (() => {
             { transform: 'scale(1)', filter: 'brightness(1)' }
         ], { duration: 420, easing: tokens.ease.springSoft });
 
+        const wobble = (el) => animate(el, [
+            { transform: 'rotate(0deg) scale(1)' },
+            { transform: 'rotate(-3deg) scale(1.02)' },
+            { transform: 'rotate(3deg) scale(1.02)' },
+            { transform: 'rotate(-2deg) scale(1.01)' },
+            { transform: 'rotate(2deg) scale(1.01)' },
+            { transform: 'rotate(0deg) scale(1)' }
+        ], { duration: 600, easing: tokens.ease.springSoft });
+
         const flip = (el, from, to) => {
             if ($reducedMotion) return Promise.resolve();
             const dx = from.left - to.left, dy = from.top - to.top;
@@ -153,18 +166,12 @@ const SysUI = (() => {
             ], { duration: tokens.duration.emphasized, easing: tokens.ease.spring });
         };
 
-        const morphNumber = (el, from, to, duration = 800, formatter = (n) => Math.round(n).toLocaleString('ar-EG')) => {
-            const start = performance.now();
-            const tick = (now) => {
-                const t = $clamp((now - start) / duration, 0, 1);
-                const eased = 1 - Math.pow(1 - t, 3);
-                el.textContent = formatter($lerp(from, to, eased));
-                if (t < 1) requestAnimationFrame(tick);
-            };
-            requestAnimationFrame(tick);
-        };
+        const morph = (el, from, to, opts = {}) => animate(el, [
+            { clipPath: from },
+            { clipPath: to }
+        ], { duration: tokens.duration.slow, easing: tokens.ease.liquid, ...opts });
 
-        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, reduce, springCurve, morphNumber };
+        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, wobble, flip, morph, reduce, springCurve };
     })();
 
     const Events = (() => {
@@ -355,9 +362,8 @@ const SysUI = (() => {
             swoosh: () => { sweep(400, 1200, 'sine', 0.12, 0.05); noise(0.12, 0.04, 2400); },
             crystal: () => { tone(2093, 'sine', 0.4, 0.05); tone(3136, 'sine', 0.35, 0.03); tone(4186, 'sine', 0.3, 0.02); },
             morph: () => sweep(440, 880, 'triangle', 0.2, 0.05, 'lin'),
-            tabSwipe: () => { tone(1400, 'sine', 0.05, 0.04); setTimeout(() => tone(2000, 'sine', 0.04, 0.03), 25); },
-            tabSelect: () => chord([1568, 2093], 'sine', 0.12, 0.05),
-            liquid: () => { sweep(600, 1600, 'sine', 0.2, 0.06); tone(2400, 'triangle', 0.15, 0.03, 0, 0.05); }
+            scroll: () => tone(3200, 'sine', 0.006, 0.012),
+            slide: () => { sweep(800, 1400, 'sine', 0.08, 0.03); }
         };
         return {
             play: (name) => presets[name]?.(),
@@ -456,7 +462,6 @@ const SysUI = (() => {
                     --sys-ease-spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);
                     --sys-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
                     --sys-ease-elastic: cubic-bezier(0.68, -0.4, 0.265, 1.4);
-                    --sys-ease-magnetic: cubic-bezier(0.2, 0.8, 0.2, 1);
                     --sys-ease-liquid: cubic-bezier(0.45, 0, 0.15, 1);
                     --sys-motion-instant: 80ms;
                     --sys-motion-fast: 180ms;
@@ -476,6 +481,8 @@ const SysUI = (() => {
                     --sys-shadow-xl: 0 40px 96px rgba(0,0,0,0.7);
                     --sys-gradient-aurora: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #06b6d4 100%);
                     --sys-gradient-fire: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
+                    --sys-gradient-ocean: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
+                    --sys-gradient-sunset: linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #ec4899 100%);
                     --sys-gradient-mesh: radial-gradient(at 40% 20%, rgba(168,85,247,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(59,130,246,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(236,72,153,0.1) 0px, transparent 50%), radial-gradient(at 80% 50%, rgba(6,182,212,0.1) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(168,85,247,0.12) 0px, transparent 50%);
                 }
                 @media (prefers-reduced-motion: reduce) {
@@ -628,181 +635,246 @@ const SysUI = (() => {
                 @keyframes sysGlowPulse { 0%,100% { box-shadow: 0 0 20px rgba(168,85,247,0.2), 0 0 40px rgba(168,85,247,0.1); } 50% { box-shadow: 0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.2); } }
                 .sys-iridescent { background: linear-gradient(135deg, #a855f7, #ec4899, #06b6d4, #a855f7); background-size: 300% 300%; animation: sysAuroraShift 8s ease infinite; }
 
-                /* ========== HYPER TABS — LEGENDARY EDITION ========== */
-                .sys-hyper-tabs {
-                    position: relative;
-                    display: flex;
-                    align-items: stretch;
-                    width: 100%;
-                    min-height: 56px;
-                    padding: 6px;
-                    border-radius: 18px;
-                    background: linear-gradient(180deg, rgba(20,20,28,0.85), rgba(8,8,12,0.95));
-                    backdrop-filter: blur(40px) saturate(220%);
-                    -webkit-backdrop-filter: blur(40px) saturate(220%);
-                    border: 1px solid rgba(255,255,255,0.06);
-                    box-shadow: 0 20px 60px -20px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.02);
-                    overflow: hidden;
-                    isolation: isolate;
-                    contain: layout style;
-                }
-                .sys-hyper-tabs::before {
-                    content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
-                    background: radial-gradient(120% 80% at 50% 0%, rgba(168,85,247,0.12), transparent 60%), radial-gradient(80% 60% at 100% 100%, rgba(236,72,153,0.08), transparent 70%);
-                    opacity: 0.7;
-                }
-                .sys-hyper-tabs-scroll {
-                    display: flex;
-                    align-items: stretch;
-                    gap: 4px;
-                    flex: 1 1 auto;
-                    overflow-x: auto;
+                .sys-tabs-scroller {
+                    display: flex !important;
+                    flex-wrap: nowrap !important;
+                    gap: 0.5rem;
+                    overflow-x: auto !important;
                     overflow-y: hidden;
-                    scroll-behavior: smooth;
-                    scroll-snap-type: x proximity;
-                    -webkit-overflow-scrolling: touch;
                     scrollbar-width: none;
                     -ms-overflow-style: none;
-                    mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
-                    -webkit-mask-image: linear-gradient(to right, transparent, #000 24px, #000 calc(100% - 24px), transparent);
-                    padding: 0 4px;
+                    -webkit-overflow-scrolling: touch;
+                    scroll-snap-type: x proximity;
+                    scroll-padding: 0 1rem;
+                    padding: 0.5rem 1rem 0.75rem 1rem;
+                    mask-image: linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
+                    -webkit-mask-image: linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
                     position: relative;
-                    z-index: 1;
-                    cursor: grab;
-                    user-select: none;
-                    -webkit-user-select: none;
+                    width: 100%;
+                    max-width: 100vw;
+                    box-sizing: border-box;
+                    overscroll-behavior-x: contain;
+                    scroll-behavior: smooth;
                 }
-                .sys-hyper-tabs-scroll.sys-dragging { cursor: grabbing; scroll-behavior: auto; mask-image: none; -webkit-mask-image: none; }
-                .sys-hyper-tabs-scroll::-webkit-scrollbar { display: none; height: 0; width: 0; }
-                .sys-hyper-tab {
-                    position: relative;
-                    flex: 0 0 auto;
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 8px;
-                    padding: 10px 18px;
-                    min-height: 44px;
-                    border: 0;
-                    background: transparent;
-                    color: rgba(255,255,255,0.62);
-                    font-size: 13.5px;
-                    font-weight: 600;
-                    line-height: 1;
-                    white-space: nowrap;
-                    word-break: keep-all;
-                    overflow-wrap: normal;
-                    border-radius: 12px;
+                .sys-tabs-scroller::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
+                .sys-tabs-scroller > * {
+                    flex: 0 0 auto !important;
+                    white-space: nowrap !important;
+                    word-break: keep-all !important;
+                    overflow-wrap: normal !important;
+                    -webkit-hyphens: none !important;
+                    hyphens: none !important;
+                    text-overflow: clip !important;
+                    min-width: max-content !important;
+                    width: auto !important;
+                    scroll-snap-align: start;
+                    padding: 0.6rem 1.1rem;
+                    border-radius: 0.75rem;
+                    font-size: 0.875rem;
+                    line-height: 1.4;
+                    transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
                     cursor: pointer;
-                    scroll-snap-align: center;
-                    transition: color 280ms var(--sys-ease-spring), transform 240ms var(--sys-ease-spring-bounce), filter 240ms;
-                    letter-spacing: 0.01em;
-                    -webkit-tap-highlight-color: transparent;
-                    will-change: transform, color;
+                    user-select: none;
+                    position: relative;
+                    direction: rtl;
+                    unicode-bidi: plaintext;
                 }
-                .sys-hyper-tab:hover { color: rgba(255,255,255,0.92); transform: translateY(-1px); }
-                .sys-hyper-tab:active { transform: scale(0.96); }
-                .sys-hyper-tab.sys-active { color: #fff; }
-                .sys-hyper-tab .sys-tab-icon {
-                    display: inline-flex; align-items: center; justify-content: center;
-                    width: 18px; height: 18px; font-size: 14px;
-                    transition: transform 320ms var(--sys-ease-spring-bounce), filter 280ms;
-                    filter: grayscale(0.3) opacity(0.8);
-                }
-                .sys-hyper-tab.sys-active .sys-tab-icon { filter: grayscale(0) opacity(1) drop-shadow(0 0 6px rgba(168,85,247,0.6)); transform: scale(1.15); }
-                .sys-hyper-tab .sys-tab-label { display: inline-block; white-space: nowrap; word-break: keep-all; overflow-wrap: normal; }
-                .sys-hyper-tab .sys-tab-badge {
-                    display: inline-flex; align-items: center; justify-content: center;
-                    min-width: 18px; height: 18px; padding: 0 5px;
-                    border-radius: 9px;
-                    background: linear-gradient(135deg, #a855f7, #ec4899);
-                    color: #fff; font-size: 10px; font-weight: 700;
-                    box-shadow: 0 4px 12px -2px rgba(168,85,247,0.6), inset 0 1px 0 rgba(255,255,255,0.3);
-                    transition: transform 240ms var(--sys-ease-spring-bounce);
-                }
-                .sys-hyper-tab.sys-active .sys-tab-badge { transform: scale(1.08); }
-                .sys-hyper-tab-pill {
-                    position: absolute;
-                    top: 6px; bottom: 6px;
-                    border-radius: 11px;
-                    background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
-                    backdrop-filter: blur(20px) saturate(180%);
-                    -webkit-backdrop-filter: blur(20px) saturate(180%);
-                    border: 1px solid rgba(255,255,255,0.14);
-                    box-shadow: 0 8px 24px -6px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.2), 0 0 24px -4px rgba(168,85,247,0.4);
-                    pointer-events: none;
-                    z-index: 0;
-                    opacity: 0;
-                    transform: translateX(0) scale(0.85);
-                    transition: transform 520ms cubic-bezier(0.34, 1.26, 0.64, 1), width 520ms cubic-bezier(0.34, 1.26, 0.64, 1), opacity 320ms ease;
-                    will-change: transform, width, opacity;
-                }
-                .sys-hyper-tab-pill.sys-ready { opacity: 1; transform: translateX(0) scale(1); }
-                .sys-hyper-tab-pill::before {
-                    content: ""; position: absolute; inset: 0; border-radius: inherit;
-                    background: conic-gradient(from var(--sys-glow-angle, 0deg), transparent, rgba(168,85,247,0.5), rgba(236,72,153,0.5), rgba(6,182,212,0.4), transparent 70%);
-                    opacity: 0.5; filter: blur(0.5px);
-                    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-                    -webkit-mask-composite: xor; mask-composite: exclude;
-                    padding: 1px; pointer-events: none;
-                    animation: sysGlowRotate 6s linear infinite;
-                }
-                .sys-hyper-tab-pill::after {
-                    content: ""; position: absolute; inset: 0; border-radius: inherit;
-                    background: linear-gradient(180deg, rgba(168,85,247,0.18), transparent 60%);
-                    pointer-events: none;
-                }
-                .sys-hyper-tabs-fade-l, .sys-hyper-tabs-fade-r {
-                    position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2;
-                    opacity: 0; transition: opacity 240ms var(--sys-ease-smooth);
-                }
-                .sys-hyper-tabs-fade-l { left: 0; background: linear-gradient(to right, rgba(10,10,14,0.95), transparent); }
-                .sys-hyper-tabs-fade-r { right: 0; background: linear-gradient(to left, rgba(10,10,14,0.95), transparent); }
-                .sys-hyper-tabs.sys-overflow-l .sys-hyper-tabs-fade-l { opacity: 1; }
-                .sys-hyper-tabs.sys-overflow-r .sys-hyper-tabs-fade-r { opacity: 1; }
-                .sys-hyper-tabs-arrow {
-                    position: absolute; top: 50%; transform: translateY(-50%);
-                    width: 28px; height: 28px;
-                    display: flex; align-items: center; justify-content: center;
-                    border-radius: 50%;
-                    background: rgba(20,20,28,0.95);
-                    backdrop-filter: blur(20px) saturate(180%);
-                    border: 1px solid rgba(255,255,255,0.12);
-                    color: rgba(255,255,255,0.85);
-                    cursor: pointer; z-index: 3;
-                    opacity: 0; pointer-events: none;
-                    transition: opacity 240ms var(--sys-ease-smooth), transform 240ms var(--sys-ease-spring-bounce), background 200ms;
-                    box-shadow: 0 6px 16px -4px rgba(0,0,0,0.6);
-                }
-                .sys-hyper-tabs-arrow:hover { background: rgba(168,85,247,0.25); transform: translateY(-50%) scale(1.1); }
-                .sys-hyper-tabs-arrow:active { transform: translateY(-50%) scale(0.92); }
-                .sys-hyper-tabs-arrow.sys-arrow-l { left: 4px; }
-                .sys-hyper-tabs-arrow.sys-arrow-r { right: 4px; }
-                .sys-hyper-tabs.sys-overflow-l .sys-hyper-tabs-arrow.sys-arrow-l,
-                .sys-hyper-tabs.sys-overflow-r .sys-hyper-tabs-arrow.sys-arrow-r { opacity: 1; pointer-events: auto; }
-                @media (pointer: coarse) { .sys-hyper-tabs-arrow { display: none; } }
-                .sys-hyper-tab-ripple {
-                    position: absolute; border-radius: 50%; transform: scale(0);
-                    background: radial-gradient(circle, rgba(168,85,247,0.6), rgba(236,72,153,0.2) 60%, transparent);
-                    pointer-events: none; mix-blend-mode: screen;
-                    animation: sysRipple 800ms var(--sys-ease-smooth);
-                }
-                .sys-hyper-tabs-progress {
-                    position: absolute; left: 6px; right: 6px; bottom: 0;
-                    height: 1px; pointer-events: none; z-index: 3;
-                    background: linear-gradient(90deg, transparent, rgba(168,85,247,0.5), rgba(236,72,153,0.5), rgba(6,182,212,0.5), transparent);
-                    transform-origin: left; transform: scaleX(0);
-                    transition: transform 400ms var(--sys-ease-spring);
-                    opacity: 0.7;
+                @media (max-width: 768px) {
+                    .sys-tabs-scroller { padding: 0.5rem 0.75rem; gap: 0.4rem; }
+                    .sys-tabs-scroller > * { padding: 0.55rem 0.9rem; font-size: 0.825rem; }
                 }
                 @media (max-width: 480px) {
-                    .sys-hyper-tabs { border-radius: 14px; padding: 4px; min-height: 50px; }
-                    .sys-hyper-tab { padding: 8px 14px; font-size: 12.5px; min-height: 40px; }
-                    .sys-hyper-tab-pill { top: 4px; bottom: 4px; }
+                    .sys-tabs-scroller { padding: 0.5rem 0.5rem; gap: 0.35rem; mask-image: linear-gradient(to left, transparent 0%, black 6%, black 94%, transparent 100%); -webkit-mask-image: linear-gradient(to left, transparent 0%, black 6%, black 94%, transparent 100%); }
+                    .sys-tabs-scroller > * { padding: 0.5rem 0.85rem; font-size: 0.8rem; }
+                }
+                .sys-tab-arrow {
+                    position: absolute;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: linear-gradient(135deg, rgba(20,20,24,0.95), rgba(10,10,14,0.95));
+                    backdrop-filter: blur(20px);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    border-radius: 50%;
+                    color: rgba(255,255,255,0.85);
+                    cursor: pointer;
+                    z-index: 5;
+                    opacity: 0;
+                    pointer-events: none;
+                    transition: opacity 240ms var(--sys-ease-spring), transform 220ms var(--sys-ease-spring);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+                }
+                .sys-tab-arrow.sys-visible { opacity: 1; pointer-events: auto; }
+                .sys-tab-arrow:hover { transform: translateY(-50%) scale(1.1); background: linear-gradient(135deg, rgba(168,85,247,0.3), rgba(236,72,153,0.2)); border-color: rgba(168,85,247,0.5); }
+                .sys-tab-arrow.sys-tab-arrow-left { left: 4px; }
+                .sys-tab-arrow.sys-tab-arrow-right { right: 4px; }
+                @media (max-width: 480px) { .sys-tab-arrow { display: none; } }
+
+                * { -webkit-tap-highlight-color: transparent; }
+                @media (max-width: 768px) {
+                    button, [role="button"], a, input, select, textarea { min-height: 40px; }
                 }
 
-                .sys-tab-panel-enter { animation: sysPanelIn 380ms var(--sys-ease-spring-bounce) forwards; }
-                @keyframes sysPanelIn { from { opacity: 0; transform: translateY(8px) scale(0.985); filter: blur(4px); } to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); } }
+                .sys-cmd-mobile {
+                    padding-top: 8vh !important;
+                }
+                @media (max-width: 480px) {
+                    .sys-cmd-mobile { padding-top: 4vh !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+                }
+
+                .sys-magnetic-glow {
+                    position: absolute;
+                    pointer-events: none;
+                    width: 200px;
+                    height: 200px;
+                    border-radius: 50%;
+                    background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 60%);
+                    opacity: 0;
+                    transition: opacity 300ms;
+                    mix-blend-mode: screen;
+                    z-index: -1;
+                    filter: blur(20px);
+                }
+
+                .sys-particle-trail {
+                    position: fixed;
+                    pointer-events: none;
+                    border-radius: 50%;
+                    background: radial-gradient(circle, currentColor, transparent 70%);
+                    will-change: transform, opacity;
+                    z-index: 10003;
+                    mix-blend-mode: screen;
+                }
+
+                @keyframes sysGlitch {
+                    0%,100% { transform: translate(0); filter: hue-rotate(0deg); }
+                    20% { transform: translate(-2px, 2px); filter: hue-rotate(90deg); }
+                    40% { transform: translate(-2px, -2px); filter: hue-rotate(180deg); }
+                    60% { transform: translate(2px, 2px); filter: hue-rotate(270deg); }
+                    80% { transform: translate(2px, -2px); filter: hue-rotate(360deg); }
+                }
+                .sys-glitch { animation: sysGlitch 300ms steps(2) infinite; }
+
+                @keyframes sysNeonPulse {
+                    0%,100% { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
+                    50% { text-shadow: 0 0 16px currentColor, 0 0 32px currentColor, 0 0 48px currentColor; }
+                }
+                .sys-neon { animation: sysNeonPulse 2s ease-in-out infinite; }
+
+                .sys-3d-card {
+                    transform-style: preserve-3d;
+                    perspective: 1000px;
+                    transition: transform 400ms var(--sys-ease-spring);
+                }
+                .sys-3d-card-inner {
+                    transform-style: preserve-3d;
+                    transition: transform 400ms var(--sys-ease-spring);
+                }
+
+                .sys-liquid-button {
+                    position: relative;
+                    overflow: hidden;
+                    isolation: isolate;
+                }
+                .sys-liquid-button::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(168,85,247,0.4), transparent 50%);
+                    opacity: 0;
+                    transition: opacity 280ms;
+                    z-index: -1;
+                }
+                .sys-liquid-button:hover::before { opacity: 1; }
+
+                @keyframes sysOrbitalRing {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .sys-orbital-ring {
+                    position: absolute;
+                    inset: -8px;
+                    border: 1px dashed rgba(168,85,247,0.3);
+                    border-radius: inherit;
+                    animation: sysOrbitalRing 12s linear infinite;
+                    pointer-events: none;
+                }
+
+                .sys-snap-y { scroll-snap-type: y mandatory; }
+                .sys-snap-item { scroll-snap-align: start; }
+
+                .sys-stagger-child { opacity: 0; transform: translateY(20px); animation: sysStaggerIn 500ms var(--sys-ease-spring) forwards; }
+                @keyframes sysStaggerIn { to { opacity: 1; transform: translateY(0); } }
+
+                @keyframes sysHeartbeat {
+                    0%,100% { transform: scale(1); }
+                    14% { transform: scale(1.1); }
+                    28% { transform: scale(1); }
+                    42% { transform: scale(1.1); }
+                    70% { transform: scale(1); }
+                }
+                .sys-heartbeat { animation: sysHeartbeat 1.5s ease-in-out infinite; }
+
+                .sys-blob {
+                    border-radius: 64% 36% 27% 73% / 55% 58% 42% 45%;
+                    animation: sysBlobMorph 8s ease-in-out infinite;
+                }
+                @keyframes sysBlobMorph {
+                    0%,100% { border-radius: 64% 36% 27% 73% / 55% 58% 42% 45%; }
+                    25% { border-radius: 45% 55% 68% 32% / 38% 62% 38% 62%; }
+                    50% { border-radius: 32% 68% 38% 62% / 65% 35% 65% 35%; }
+                    75% { border-radius: 55% 45% 52% 48% / 42% 58% 42% 58%; }
+                }
+
+                .sys-haze {
+                    position: relative;
+                    overflow: hidden;
+                }
+                .sys-haze::before {
+                    content: "";
+                    position: absolute;
+                    inset: -50%;
+                    background: conic-gradient(from var(--haze-angle, 0deg), transparent 0%, rgba(168,85,247,0.15) 25%, transparent 50%, rgba(236,72,153,0.15) 75%, transparent 100%);
+                    animation: sysHazeRotate 10s linear infinite;
+                    pointer-events: none;
+                    z-index: -1;
+                    filter: blur(40px);
+                }
+                @keyframes sysHazeRotate { to { transform: rotate(360deg); } }
+
+                .sys-input-glow {
+                    transition: all 280ms var(--sys-ease-spring);
+                }
+                .sys-input-glow:focus {
+                    box-shadow: 0 0 0 3px rgba(168,85,247,0.2), 0 0 24px rgba(168,85,247,0.2);
+                    border-color: rgba(168,85,247,0.6);
+                }
+
+                .sys-magic-border {
+                    position: relative;
+                    background-clip: padding-box;
+                    border: 1px solid transparent;
+                }
+                .sys-magic-border::before {
+                    content: "";
+                    position: absolute;
+                    inset: 0;
+                    z-index: -1;
+                    margin: -1px;
+                    border-radius: inherit;
+                    background: conic-gradient(from var(--angle, 0deg), #a855f7, #ec4899, #06b6d4, #a855f7);
+                    animation: sysMagicRotate 4s linear infinite;
+                }
+                @keyframes sysMagicRotate { to { --angle: 360deg; } }
+                @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+
+                @media (max-width: 768px) {
+                    .sys-glass, .sys-glass-strong { backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+                }
             `;
             document.head.appendChild(style);
             injected = true;
@@ -893,6 +965,141 @@ const SysUI = (() => {
         }
     });
 
+    const TabsFixer = (() => {
+        const NAV_SELECTORS = [
+            'nav', '[role="tablist"]', '.tabs', '.nav-tabs', '.tab-list',
+            '[class*="tabs"]', '[class*="Tabs"]', '[class*="tab-bar"]',
+            '[class*="navbar"]', '[class*="NavBar"]', '[data-tabs]'
+        ];
+        const arrows = new WeakMap();
+        const fixed = new WeakSet();
+
+        const isLikelyTabBar = (el) => {
+            if (!el || fixed.has(el)) return false;
+            const children = Array.from(el.children).filter(c => c.offsetWidth > 0);
+            if (children.length < 3 || children.length > 20) return false;
+            const styles = getComputedStyle(el);
+            const isFlex = styles.display.includes('flex');
+            const isGrid = styles.display.includes('grid');
+            if (!isFlex && !isGrid) return false;
+            let textChildren = 0;
+            for (const c of children) {
+                const txt = c.textContent?.trim() || '';
+                if (txt.length > 0 && txt.length < 50) textChildren++;
+            }
+            return textChildren >= children.length * 0.6;
+        };
+
+        const fix = (el) => {
+            if (!el || fixed.has(el)) return;
+            fixed.add(el);
+            el.classList.add('sys-tabs-scroller');
+            const children = Array.from(el.children);
+            children.forEach(c => {
+                c.style.flex = '0 0 auto';
+                c.style.whiteSpace = 'nowrap';
+                c.style.wordBreak = 'keep-all';
+                c.style.overflowWrap = 'normal';
+                c.style.minWidth = 'max-content';
+                c.style.width = 'auto';
+                c.style.textOverflow = 'clip';
+            });
+            const wrap = el.parentElement;
+            if (wrap && getComputedStyle(wrap).position === 'static') wrap.style.position = 'relative';
+
+            const leftArrow = DOM.create('button', { class: 'sys-tab-arrow sys-tab-arrow-left', 'aria-label': 'سابق' });
+            const rightArrow = DOM.create('button', { class: 'sys-tab-arrow sys-tab-arrow-right', 'aria-label': 'التالي' });
+            leftArrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
+            rightArrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+
+            if (wrap) {
+                wrap.appendChild(leftArrow);
+                wrap.appendChild(rightArrow);
+                arrows.set(el, { left: leftArrow, right: rightArrow });
+            }
+
+            const updateArrows = () => {
+                const isRTL = getComputedStyle(el).direction === 'rtl';
+                const scrollLeft = el.scrollLeft;
+                const maxScroll = el.scrollWidth - el.clientWidth;
+                const atStart = isRTL ? Math.abs(scrollLeft) < 8 : scrollLeft < 8;
+                const atEnd = isRTL ? Math.abs(scrollLeft) >= maxScroll - 8 : scrollLeft >= maxScroll - 8;
+                if (isRTL) {
+                    leftArrow.classList.toggle('sys-visible', !atEnd);
+                    rightArrow.classList.toggle('sys-visible', !atStart);
+                } else {
+                    leftArrow.classList.toggle('sys-visible', !atStart);
+                    rightArrow.classList.toggle('sys-visible', !atEnd);
+                }
+            };
+
+            const scrollBy = (dir) => {
+                const isRTL = getComputedStyle(el).direction === 'rtl';
+                const amount = el.clientWidth * 0.7;
+                el.scrollBy({ left: isRTL ? -dir * amount : dir * amount, behavior: 'smooth' });
+                Audio.play('slide');
+            };
+
+            leftArrow.addEventListener('click', () => scrollBy(-1));
+            rightArrow.addEventListener('click', () => scrollBy(1));
+            el.addEventListener('scroll', $rafThrottle(updateArrows), { passive: true });
+            new ResizeObserver(updateArrows).observe(el);
+            setTimeout(updateArrows, 100);
+
+            let dragStart = null, dragScrollStart = 0, isDragging = false;
+            el.addEventListener('pointerdown', (e) => {
+                if (e.target.closest('button, a, [role="button"], [role="tab"]')) return;
+                dragStart = e.clientX;
+                dragScrollStart = el.scrollLeft;
+                isDragging = false;
+            });
+            el.addEventListener('pointermove', (e) => {
+                if (dragStart === null) return;
+                const dx = e.clientX - dragStart;
+                if (Math.abs(dx) > 5) {
+                    isDragging = true;
+                    el.style.cursor = 'grabbing';
+                    el.scrollLeft = dragScrollStart - dx;
+                }
+            });
+            const endDrag = () => { dragStart = null; el.style.cursor = ''; setTimeout(() => isDragging = false, 50); };
+            el.addEventListener('pointerup', endDrag);
+            el.addEventListener('pointerleave', endDrag);
+            el.addEventListener('pointercancel', endDrag);
+            el.addEventListener('click', (e) => { if (isDragging) { e.preventDefault(); e.stopPropagation(); } }, true);
+
+            el.addEventListener('wheel', (e) => {
+                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); el.scrollLeft += e.deltaY; }
+            }, { passive: false });
+
+            const activeChild = el.querySelector('[aria-selected="true"], .active, .sys-active, [data-active="true"]');
+            if (activeChild) setTimeout(() => activeChild.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 200);
+        };
+
+        const scan = () => {
+            const candidates = new Set();
+            NAV_SELECTORS.forEach(sel => {
+                try { document.querySelectorAll(sel).forEach(el => candidates.add(el)); } catch {}
+            });
+            document.querySelectorAll('div, ul, ol').forEach(el => { if (isLikelyTabBar(el)) candidates.add(el); });
+            candidates.forEach(el => { if (isLikelyTabBar(el) || el.matches?.(NAV_SELECTORS.join(','))) fix(el); });
+        };
+
+        const init = () => {
+            scan();
+            const obs = new MutationObserver($debounce(scan, 200));
+            obs.observe(document.body, { childList: true, subtree: true });
+            window.addEventListener('resize', $debounce(() => {
+                document.querySelectorAll('.sys-tabs-scroller').forEach(el => {
+                    const evt = new Event('scroll');
+                    el.dispatchEvent(evt);
+                });
+            }, 150));
+        };
+
+        return { init, fix, scan };
+    })();
+
     const Magnetic = (() => {
         let cache = [], lastUpdate = 0, raf = null;
         const refresh = $debounce(() => {
@@ -937,18 +1144,18 @@ const SysUI = (() => {
     const Cursor = (() => {
         let cursor, active = false, raf = null, tx = 0, ty = 0, x = 0, y = 0;
         const trails = [];
-        const trailCount = 6;
+        const trailCount = 8;
         const loop = () => {
             x = $lerp(x, tx, 0.22); y = $lerp(y, ty, 0.22);
             if (cursor) cursor.style.transform = `translate3d(${x - 12}px, ${y - 12}px, 0)`;
             for (let i = 0; i < trails.length; i++) {
                 const t = trails[i];
-                t.x = $lerp(t.x, i === 0 ? x : trails[i-1].x, 0.35 - i * 0.04);
-                t.y = $lerp(t.y, i === 0 ? y : trails[i-1].y, 0.35 - i * 0.04);
+                t.x = $lerp(t.x, i === 0 ? x : trails[i-1].x, 0.35 - i * 0.03);
+                t.y = $lerp(t.y, i === 0 ? y : trails[i-1].y, 0.35 - i * 0.03);
                 if (t.el) {
-                    const scale = 1 - i * 0.13;
+                    const scale = 1 - i * 0.11;
                     t.el.style.transform = `translate3d(${t.x - 3}px, ${t.y - 3}px, 0) scale(${scale})`;
-                    t.el.style.opacity = `${0.5 - i * 0.07}`;
+                    t.el.style.opacity = `${0.5 - i * 0.05}`;
                 }
             }
             raf = requestAnimationFrame(loop);
@@ -1289,7 +1496,6 @@ const SysUI = (() => {
             if (!t) return create(type, message, duration);
             Audio.play(sounds[type] || 'pop');
             if (t.timeout) clearTimeout(t.timeout);
-            const old = Array.from(t.el.children);
             Motion.animate(t.el, [{ filter: 'blur(0)' }, { filter: 'blur(4px)' }], { duration: 120, easing: 'ease-out' }).then(() => {
                 t.el.innerHTML = '';
                 t.el.className = t.el.className.replace(/border-\w+-500\/30/g, '') + ' ' + (borders[type] || borders.info);
@@ -1352,7 +1558,7 @@ const SysUI = (() => {
             else box.appendChild(DOM.create('div', { class: 'mb-5' }));
             let input = null, errorEl = null;
             if (inputId) {
-                input = DOM.create('input', { type: 'text', id: inputId, class: 'w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all mb-2 placeholder-gray-600', placeholder, autocomplete: 'off' });
+                input = DOM.create('input', { type: 'text', id: inputId, class: 'sys-input-glow w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all mb-2 placeholder-gray-600', placeholder, autocomplete: 'off' });
                 box.appendChild(input);
                 errorEl = DOM.create('p', { class: 'text-xs text-red-400 mb-4 min-h-[16px]' });
                 box.appendChild(errorEl);
@@ -1362,7 +1568,7 @@ const SysUI = (() => {
             const btnRow = DOM.create('div', { class: 'flex justify-end gap-3 mt-2' });
             const cancelBtn = DOM.create('button', { class: 'sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/5 border border-white/10 transition-all outline-none focus:ring-2 focus:ring-white/20', text: cancelLabel });
             const confirmClass = type === 'danger' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white shadow-[0_0_20px_rgba(255,255,255,0.3)]';
-            const confirmBtn = DOM.create('button', { class: `sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-semibold ${confirmClass} transition-all outline-none focus:ring-2 focus:ring-white/40`, text: confirmLabel });
+            const confirmBtn = DOM.create('button', { class: `sys-magnetic sys-button-press sys-liquid-button px-5 py-2.5 rounded-xl text-sm font-semibold ${confirmClass} transition-all outline-none focus:ring-2 focus:ring-white/40`, text: confirmLabel });
             btnRow.append(cancelBtn, confirmBtn);
             box.appendChild(btnRow);
             container.innerHTML = '';
@@ -1513,7 +1719,7 @@ const SysUI = (() => {
             Theme.inject();
             Audio.play('open');
             Haptics.medium();
-            const container = DOM.mount('sys-cmd-root', Layers.cmd, 'fixed inset-0 hidden items-start justify-center pt-[12vh] px-4 pointer-events-none');
+            const container = DOM.mount('sys-cmd-root', Layers.cmd, 'sys-cmd-mobile fixed inset-0 hidden items-start justify-center pt-[12vh] px-4 pointer-events-none');
             const bd = DOM.mount('sys-cmd-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
             State.cmdState = { ...State.cmdState, query: '', selectedIndex: 0, results: [] };
             const box = DOM.create('div', { class: 'w-full max-w-2xl sys-glass-strong rounded-2xl overflow-hidden pointer-events-auto flex flex-col sys-noise-overlay shadow-2xl', style: { transformOrigin: 'center top' } });
@@ -1524,7 +1730,7 @@ const SysUI = (() => {
             header.append(input, escTag);
             const results = DOM.create('div', { id: 'sys-cmd-results', class: 'max-h-[420px] overflow-y-auto sys-no-scroll p-2' });
             const footer = DOM.create('div', { class: 'flex items-center justify-between px-5 py-3 border-t border-white/10 text-[10px] text-gray-500 bg-black/20' });
-            footer.innerHTML = `<div class="flex gap-4"><span class="flex items-center gap-1.5"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em]">SYS_UI</div>`;
+            footer.innerHTML = `<div class="flex gap-4 flex-wrap"><span class="flex items-center gap-1.5"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em]">SYS_UI</div>`;
             box.append(header, results, footer);
             container.innerHTML = '';
             container.appendChild(box);
@@ -1742,7 +1948,7 @@ const SysUI = (() => {
             const descEl = DOM.create('p', { class: 'text-gray-500 text-sm mb-6 leading-relaxed', text: desc });
             wrap.append(titleEl, descEl);
             if (actionLabel) {
-                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)]', text: actionLabel });
+                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep sys-liquid-button px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)]', text: actionLabel });
                 if (actionId) btn.addEventListener('click', () => Actions.execute(actionId));
                 wrap.appendChild(btn);
             }
@@ -1878,272 +2084,36 @@ const SysUI = (() => {
         }
     };
 
-    /* ========== HYPER TABS — LEGENDARY EDITION ========== */
-    const HyperTabs = (() => {
-        const instances = new WeakMap();
-
-        const enhance = (container) => {
-            if (!container || instances.has(container)) return instances.get(container);
-            Theme.inject();
-            container.classList.add('sys-hyper-tabs');
-
-            let scroll = container.querySelector('.sys-hyper-tabs-scroll');
-            if (!scroll) {
-                scroll = DOM.create('div', { class: 'sys-hyper-tabs-scroll' });
-                const tabs = Array.from(container.querySelectorAll('[data-tab], [data-hyper-tab], button:not(.sys-hyper-tabs-arrow)'));
-                tabs.forEach(t => scroll.appendChild(t));
-                container.appendChild(scroll);
-            } else {
-                scroll.classList.add('sys-hyper-tabs-scroll');
-            }
-
-            scroll.querySelectorAll('button, [data-tab], [data-hyper-tab]').forEach(t => {
-                t.classList.add('sys-hyper-tab');
-                if (!t.querySelector('.sys-tab-label')) {
-                    const rawIcon = t.dataset.icon;
-                    const rawBadge = t.dataset.badge;
-                    const text = (t.textContent || '').trim();
-                    t.textContent = '';
-                    if (rawIcon) t.appendChild(DOM.create('span', { class: 'sys-tab-icon', text: rawIcon }));
-                    t.appendChild(DOM.create('span', { class: 'sys-tab-label', text }));
-                    if (rawBadge) t.appendChild(DOM.create('span', { class: 'sys-tab-badge', text: rawBadge }));
-                }
-            });
-
-            const pill = DOM.create('div', { class: 'sys-hyper-tab-pill' });
-            scroll.insertBefore(pill, scroll.firstChild);
-
-            const fadeL = DOM.create('div', { class: 'sys-hyper-tabs-fade-l' });
-            const fadeR = DOM.create('div', { class: 'sys-hyper-tabs-fade-r' });
-            const arrowL = DOM.create('button', { class: 'sys-hyper-tabs-arrow sys-arrow-l', 'aria-label': 'Previous', html: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>' });
-            const arrowR = DOM.create('button', { class: 'sys-hyper-tabs-arrow sys-arrow-r', 'aria-label': 'Next', html: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>' });
-            const progress = DOM.create('div', { class: 'sys-hyper-tabs-progress' });
-            container.append(fadeL, fadeR, arrowL, arrowR, progress);
-
-            const isRTL = getComputedStyle(container).direction === 'rtl';
-
-            const movePill = (target, animated = true) => {
-                if (!target) return;
-                const tabs = Array.from(scroll.querySelectorAll('.sys-hyper-tab'));
-                const idx = tabs.indexOf(target);
-                const total = tabs.length || 1;
-
-                const sRect = scroll.getBoundingClientRect();
-                const tRect = target.getBoundingClientRect();
-                const offsetX = (tRect.left - sRect.left) + scroll.scrollLeft;
-
-                if (!animated) pill.style.transition = 'none';
-                pill.style.width = tRect.width + 'px';
-                pill.style.transform = `translateX(${offsetX}px) scale(1)`;
-                pill.classList.add('sys-ready');
-                if (!animated) requestAnimationFrame(() => pill.style.transition = '');
-
-                progress.style.transform = `scaleX(${(idx + 1) / total})`;
-            };
-
-            const updateOverflow = () => {
-                const max = scroll.scrollWidth - scroll.clientWidth;
-                const pos = isRTL ? Math.abs(scroll.scrollLeft) : scroll.scrollLeft;
-                const hasL = pos > 4;
-                const hasR = pos < max - 4;
-                container.classList.toggle('sys-overflow-l', hasL);
-                container.classList.toggle('sys-overflow-r', hasR);
-            };
-
-            const setActive = (target, opts = {}) => {
-                const { fromKeyboard = false, fromClick = false } = opts;
-                if (!target) return;
-                const wasActive = target.classList.contains('sys-active');
-                scroll.querySelectorAll('.sys-hyper-tab').forEach(t => t.classList.remove('sys-active'));
-                target.classList.add('sys-active');
-                target.setAttribute('aria-selected', 'true');
-                movePill(target, true);
-
-                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-
-                if (!wasActive) {
-                    if (fromClick) { Audio.play('tabSelect'); Haptics.select(); }
-                    else if (fromKeyboard) { Audio.play('tabSwipe'); Haptics.soft(); }
-                }
-
-                const panelId = target.dataset.tab || target.dataset.hyperTab;
-                if (panelId) {
-                    const root = container.closest('[data-tabs-root]') || document;
-                    root.querySelectorAll('[data-panel]').forEach(p => {
-                        if (p.dataset.panel === panelId) {
-                            p.style.display = '';
-                            p.classList.remove('sys-tab-panel-enter');
-                            void p.offsetWidth;
-                            p.classList.add('sys-tab-panel-enter');
-                        } else {
-                            p.style.display = 'none';
-                        }
-                    });
-                }
-
-                Events.emit('hyperTabs:change', { container, target, panelId });
-            };
-
-            const addRipple = (e, target) => {
-                const rect = target.getBoundingClientRect();
-                const r = DOM.create('span', { class: 'sys-hyper-tab-ripple' });
-                const size = Math.max(rect.width, rect.height) * 1.6;
-                const x = (e.clientX ?? rect.left + rect.width / 2) - rect.left - size / 2;
-                const y = (e.clientY ?? rect.top + rect.height / 2) - rect.top - size / 2;
-                r.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
-                target.appendChild(r);
-                setTimeout(() => r.remove(), 800);
-            };
-
-            scroll.addEventListener('click', (e) => {
-                const tab = e.target.closest('.sys-hyper-tab');
-                if (!tab || tab.classList.contains('sys-hyper-tabs-arrow')) return;
-                addRipple(e, tab);
-                setActive(tab, { fromClick: true });
-            });
-
-            scroll.addEventListener('mouseover', (e) => {
-                const tab = e.target.closest('.sys-hyper-tab');
-                if (tab && !tab.classList.contains('sys-active')) Audio.play('hover');
-            });
-
-            arrowL.addEventListener('click', () => {
-                scroll.scrollBy({ left: isRTL ? scroll.clientWidth * 0.6 : -scroll.clientWidth * 0.6, behavior: 'smooth' });
-                Audio.play('tabSwipe'); Haptics.light();
-            });
-            arrowR.addEventListener('click', () => {
-                scroll.scrollBy({ left: isRTL ? -scroll.clientWidth * 0.6 : scroll.clientWidth * 0.6, behavior: 'smooth' });
-                Audio.play('tabSwipe'); Haptics.light();
-            });
-
-            let dragging = false, startX = 0, startScroll = 0, velocity = 0, lastX = 0, lastT = 0, momentumRaf = null;
-            const onPointerDown = (e) => {
-                if (e.target.closest('.sys-hyper-tabs-arrow')) return;
-                dragging = true;
-                scroll.classList.add('sys-dragging');
-                startX = e.clientX;
-                startScroll = scroll.scrollLeft;
-                lastX = e.clientX;
-                lastT = performance.now();
-                velocity = 0;
-                cancelAnimationFrame(momentumRaf);
-                try { scroll.setPointerCapture(e.pointerId); } catch {}
-            };
-            const onPointerMove = (e) => {
-                if (!dragging) return;
-                const dx = e.clientX - startX;
-                scroll.scrollLeft = startScroll - dx;
-                const now = performance.now();
-                const dt = now - lastT;
-                if (dt > 0) velocity = (e.clientX - lastX) / dt;
-                lastX = e.clientX;
-                lastT = now;
-            };
-            const onPointerUp = (e) => {
-                if (!dragging) return;
-                dragging = false;
-                scroll.classList.remove('sys-dragging');
-                try { scroll.releasePointerCapture(e.pointerId); } catch {}
-                let v = velocity * 18;
-                const friction = 0.94;
-                const tick = () => {
-                    if (Math.abs(v) < 0.5) return;
-                    scroll.scrollLeft -= v;
-                    v *= friction;
-                    momentumRaf = requestAnimationFrame(tick);
-                };
-                if (Math.abs(v) > 1) momentumRaf = requestAnimationFrame(tick);
-            };
-            scroll.addEventListener('pointerdown', onPointerDown);
-            scroll.addEventListener('pointermove', onPointerMove);
-            scroll.addEventListener('pointerup', onPointerUp);
-            scroll.addEventListener('pointercancel', onPointerUp);
-            scroll.addEventListener('pointerleave', (e) => { if (dragging) onPointerUp(e); });
-
-            scroll.addEventListener('wheel', (e) => {
-                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-                    e.preventDefault();
-                    scroll.scrollLeft += e.deltaY;
-                }
-            }, { passive: false });
-
-            container.addEventListener('keydown', (e) => {
-                const tabs = Array.from(scroll.querySelectorAll('.sys-hyper-tab'));
-                const active = scroll.querySelector('.sys-hyper-tab.sys-active');
-                let idx = tabs.indexOf(active);
-                const isHorizArrow = e.key === 'ArrowRight' || e.key === 'ArrowLeft';
-                if (!isHorizArrow && e.key !== 'Home' && e.key !== 'End') return;
-                e.preventDefault();
-                if (e.key === 'Home') idx = 0;
-                else if (e.key === 'End') idx = tabs.length - 1;
-                else {
-                    const dir = (e.key === 'ArrowRight' ? 1 : -1) * (isRTL ? -1 : 1);
-                    idx = (idx + dir + tabs.length) % tabs.length;
-                }
-                setActive(tabs[idx], { fromKeyboard: true });
-                tabs[idx].focus();
-            });
-
-            scroll.addEventListener('scroll', $rafThrottle(updateOverflow), { passive: true });
-
-            const ro = new ResizeObserver(() => {
-                const active = scroll.querySelector('.sys-hyper-tab.sys-active');
-                if (active) movePill(active, false);
-                updateOverflow();
-            });
-            ro.observe(container);
-            ro.observe(scroll);
-
-            scroll.querySelectorAll('.sys-hyper-tab').forEach(t => {
-                t.setAttribute('role', 'tab');
-                t.setAttribute('tabindex', '0');
-            });
-            container.setAttribute('role', 'tablist');
-
-            requestAnimationFrame(() => {
-                const initial = scroll.querySelector('.sys-hyper-tab.sys-active') || scroll.querySelector('.sys-hyper-tab');
-                if (initial) {
-                    initial.classList.add('sys-active');
-                    movePill(initial, false);
-                    setTimeout(() => movePill(initial, true), 60);
-                }
-                updateOverflow();
-            });
-
-            const api = { setActive: (selector) => { const t = typeof selector === 'string' ? scroll.querySelector(selector) : selector; if (t) setActive(t, { fromClick: true }); }, refresh: () => { const a = scroll.querySelector('.sys-hyper-tab.sys-active'); if (a) movePill(a, true); updateOverflow(); }, destroy: () => { ro.disconnect(); instances.delete(container); } };
-            instances.set(container, api);
-            return api;
-        };
-
-        const mount = (selector) => {
-            const all = typeof selector === 'string' ? document.querySelectorAll(selector) : [selector];
-            const results = [];
-            all.forEach(el => { if (el) results.push(enhance(el)); });
-            return results.length === 1 ? results[0] : results;
-        };
-
-        const autoEnhance = () => {
-            document.querySelectorAll('[data-hyper-tabs], .sys-hyper-tabs:not([data-hyper-init])').forEach(el => {
-                el.setAttribute('data-hyper-init', '1');
-                enhance(el);
-            });
-            document.querySelectorAll('[data-tabs-list]').forEach(list => {
-                if (list.dataset.hyperInit) return;
-                list.dataset.hyperInit = '1';
-                enhance(list);
-            });
-        };
-
-        return { mount, enhance, autoEnhance };
-    })();
-
     const Tabs = {
         mount: (containerSelector) => {
             document.querySelectorAll(containerSelector).forEach(container => {
-                const list = container.querySelector('[data-tabs-list]') || container;
+                const list = container.querySelector('[data-tabs-list]');
                 if (!list) return;
-                if (!container.hasAttribute('data-tabs-root')) container.setAttribute('data-tabs-root', '');
-                HyperTabs.enhance(list);
+                list.style.position = 'relative';
+                const indicator = DOM.create('div', { class: 'sys-tab-indicator' });
+                list.appendChild(indicator);
+                const update = (active) => {
+                    const r = active.getBoundingClientRect();
+                    const lr = list.getBoundingClientRect();
+                    indicator.style.width = r.width + 'px';
+                    indicator.style.transform = `translateX(${r.left - lr.left}px)`;
+                };
+                const tabs = list.querySelectorAll('[data-tab]');
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        tabs.forEach(t => t.classList.remove('sys-active'));
+                        tab.classList.add('sys-active');
+                        update(tab);
+                        Audio.play('tap');
+                        const panelId = tab.dataset.tab;
+                        container.querySelectorAll('[data-panel]').forEach(p => {
+                            if (p.dataset.panel === panelId) { p.style.display = ''; Motion.enter.fade(p, { duration: 220 }); }
+                            else p.style.display = 'none';
+                        });
+                    });
+                });
+                const active = list.querySelector('.sys-active') || tabs[0];
+                if (active) requestAnimationFrame(() => update(active));
             });
         }
     };
@@ -2156,9 +2126,7 @@ const SysUI = (() => {
         Ripple.attach();
         ScrollProgress.enable();
         Observe.revealOnScroll();
-        HyperTabs.autoEnhance();
-        const mo = new MutationObserver($debounce(() => HyperTabs.autoEnhance(), 120));
-        mo.observe(document.body, { childList: true, subtree: true });
+        TabsFixer.init();
         Hotkeys.bind('mod+k', () => Cmd.toggle());
         Hotkeys.bind('mod+/', () => Cmd.toggle());
         Hotkeys.bind('shift+?', () => Toasts.create('info', 'Cmd+K: بحث · F12: HUD · ESC: إغلاق', 5000));
@@ -2172,7 +2140,7 @@ const SysUI = (() => {
 
     return {
         version: '6.0.0',
-        Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs, HyperTabs,
+        Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs, TabsFixer,
         pageTransition: Page.transition,
         load: SmartLoader.execute,
         spotlight: Spotlight.show,
@@ -2202,7 +2170,7 @@ const SysUI = (() => {
         animate: Motion.animate,
         spring: Motion.spring,
         stagger: Motion.stagger,
-        hyperTabs: HyperTabs.mount,
+        fixTabs: TabsFixer.fix,
         utils: { esc: $esc, uid: $uid, debounce: $debounce, throttle: $throttle, idle: $idle, clamp: $clamp, lerp: $lerp, smoothstep: $smoothstep, hash: $hash, safeJSON: $safeJSON },
         icons: {
             trash: `<svg class="w-4 h-4 transition-transform hover:scale-110 active:scale-95" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
@@ -2221,6 +2189,7 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'hud.toggle', title: 'تفعيل/إلغاء أدوات المطوّر (HUD)', shortcut: 'F12', icon: '📊', group: 'النظام', keywords: ['fps', 'performance', 'debug'], handler: SysUI.hud },
         { id: 'cursor.toggle', title: 'تفعيل/إلغاء المؤشر المتقدم', icon: '🎯', group: 'النظام', handler: SysUI.Cursor.toggle },
         { id: 'audio.toggle', title: 'كتم/تفعيل الأصوات', icon: '🔊', group: 'النظام', handler: () => { const m = !SysUI.Audio.isMuted(); SysUI.Audio.mute(m); SysUI.toast('info', m ? 'تم كتم الأصوات' : 'تم تفعيل الأصوات', 2000); } },
+        { id: 'tabs.rescan', title: 'إعادة فحص شرائط التبويبات', icon: '🔄', group: 'النظام', handler: () => { SysUI.TabsFixer.scan(); SysUI.toast('success', 'تم إعادة فحص التبويبات', 2000); } },
         { id: 'settings', title: 'إعدادات النظام', shortcut: 'S', icon: '⚙️', group: 'التطبيق', handler: () => SysUI.toast('info', 'فتح الإعدادات') },
         { id: 'users', title: 'إدارة الطلاب', shortcut: 'U', icon: '👥', group: 'التطبيق', handler: () => SysUI.load(new Promise(r => setTimeout(r, 2500)), 'main-content') },
         { id: 'celebrate', title: 'احتفال!', icon: '🎉', group: 'مرح', handler: () => SysUI.confetti(120) },
