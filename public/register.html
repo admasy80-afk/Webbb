@@ -14,8 +14,11 @@ body { font-family: 'Readex Pro', sans-serif; background-color: #03050a; overflo
 .orb-2 { width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(79,70,229,0.2) 0%, rgba(0,0,0,0) 70%); bottom: -20%; right: -10%; animation-delay: -5s; }
 .orb-3 { width: 30vw; height: 30vw; background: radial-gradient(circle, rgba(236,72,153,0.15) 0%, rgba(0,0,0,0) 70%); top: 40%; left: 30%; animation-delay: -10s; }
 @keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(5%, 10%) scale(1.1); } }
-.glass-panel { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 30px 60px -10px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); position: relative; overflow: hidden; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-#glow-effect { position: absolute; width: 300px; height: 300px; background: radial-gradient(circle, rgba(234,179,8,0.1) 0%, transparent 70%); border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 0; transform: translate(-50%, -50%); }
+/* تمت إزالة overflow: hidden من هنا للسماح للقوائم بالظهور بالكامل */
+.glass-panel { backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 30px 60px -10px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1); position: relative; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+/* تمت إضافة كلاس جديد لاحتواء تأثير الإضاءة ومنعه من الخروج عن الحواف */
+.glow-wrapper { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; z-index: 0; }
+#glow-effect { position: absolute; width: 300px; height: 300px; background: radial-gradient(circle, rgba(234,179,8,0.1) 0%, transparent 70%); border-radius: 50%; pointer-events: none; opacity: 0; transition: opacity 0.3s; transform: translate(-50%, -50%); }
 .glass-panel:hover #glow-effect { opacity: 1; }
 .input-group { position: relative; z-index: 1; margin-bottom: 1.5rem; }
 .floating-input { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; padding: 1.25rem 1rem 0.5rem 3rem; color: #fff; font-size: 0.95rem; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); }
@@ -25,6 +28,8 @@ body { font-family: 'Readex Pro', sans-serif; background-color: #03050a; overflo
 .input-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3); transition: all 0.3s; width: 1.25rem; height: 1.25rem; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
 .floating-input:focus ~ .input-icon { color: #eab308; }
 .custom-dropdown-container { position: relative; z-index: 10; margin-bottom: 1.5rem; }
+/* إضافة الخاصية دي عشان القائمة تظهر فوق كل حاجة وقت التفعيل */
+.custom-dropdown-container.active { z-index: 50; }
 .custom-dropdown-selected { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.08); border-radius: 1rem; padding: 1rem; color: rgba(255,255,255,0.4); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.3s ease; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2); font-size: 0.95rem; }
 .custom-dropdown-selected.has-value { color: #fff; }
 .custom-dropdown-selected:focus, .custom-dropdown-container.active .custom-dropdown-selected { border-color: rgba(234,179,8,0.5); box-shadow: 0 0 0 4px rgba(234,179,8,0.1), inset 0 2px 4px rgba(0,0,0,0.2); }
@@ -87,7 +92,10 @@ body { font-family: 'Readex Pro', sans-serif; background-color: #03050a; overflo
 </div>
 
 <div id="mainCard" class="glass-panel w-full max-w-4xl rounded-[2.5rem] p-6 sm:p-12 my-auto">
-    <div id="glow-effect"></div>
+    
+    <div class="glow-wrapper">
+        <div id="glow-effect"></div>
+    </div>
     
     <div class="success-overlay" id="successOverlay">
         <div class="check-circle mb-6">
@@ -112,7 +120,7 @@ body { font-family: 'Readex Pro', sans-serif; background-color: #03050a; overflo
         <div class="progress-dot" id="dot-4">4</div>
     </div>
 
-    <form id="regForm" class="relative z-10">
+    <form id="regForm" class="relative z-20">
         <div class="wizard-step active" id="step-1">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
                 <div class="input-group stagger-item">
