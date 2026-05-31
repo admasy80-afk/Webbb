@@ -3,394 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#070b19">
+    <meta name="theme-color" content="#050914">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <title>تسجيل الدخول | منصة الدحيح</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root {
-            --gold: #f5c842;
-            --gold-bright: #ffe566;
-            --gold-dim: #b8912a;
-            --gold-glow: rgba(245, 200, 66, 0.35);
-            --gold-glow-soft: rgba(245, 200, 66, 0.12);
-            --bg-deep: #040711;
-            --bg-mid: #070b19;
-            --card-bg: rgba(255,255,255,0.038);
-            --border-subtle: rgba(255,255,255,0.07);
-            --border-gold: rgba(245,200,66,0.45);
-        }
-
         html { scroll-behavior: smooth; }
-        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
-
-        body {
-            font-family: 'Readex Pro', sans-serif;
-            overflow-x: hidden;
-            overflow-y: auto;
-            background-color: var(--bg-deep);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1.5rem;
-            position: relative;
-        }
-
-        .bg-scene {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
-            overflow: hidden;
-        }
-
-        .bg-scene::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse 80% 60% at 50% -10%, rgba(245,200,66,0.09) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 50% at 90% 80%, rgba(245,200,66,0.055) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 40% at 10% 100%, rgba(100,80,220,0.07) 0%, transparent 55%),
-                radial-gradient(ellipse 100% 80% at 50% 50%, rgba(7,11,25,0.98) 0%, transparent 100%);
-        }
-
-        .bg-scene::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.12) 0%, transparent 100%),
-                radial-gradient(1px 1px at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 100%),
-                radial-gradient(1px 1px at 60% 70%, rgba(255,255,255,0.06) 0%, transparent 100%),
-                radial-gradient(1px 1px at 30% 80%, rgba(255,255,255,0.09) 0%, transparent 100%),
-                radial-gradient(1px 1px at 70% 50%, rgba(245,200,66,0.15) 0%, transparent 100%),
-                radial-gradient(1.5px 1.5px at 15% 60%, rgba(245,200,66,0.1) 0%, transparent 100%),
-                radial-gradient(1px 1px at 45% 15%, rgba(255,255,255,0.07) 0%, transparent 100%),
-                radial-gradient(1px 1px at 85% 65%, rgba(255,255,255,0.08) 0%, transparent 100%),
-                radial-gradient(1px 1px at 55% 90%, rgba(245,200,66,0.08) 0%, transparent 100%),
-                radial-gradient(1px 1px at 25% 45%, rgba(255,255,255,0.06) 0%, transparent 100%);
-        }
-
-        .ambient-orb-1 {
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(245,200,66,0.06) 0%, transparent 70%);
-            top: -150px;
-            left: 50%;
-            transform: translateX(-50%);
-            filter: blur(40px);
-            animation: orbFloat1 12s ease-in-out infinite alternate;
-        }
-
-        .ambient-orb-2 {
-            position: absolute;
-            width: 350px;
-            height: 350px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(120,80,255,0.055) 0%, transparent 70%);
-            bottom: 0;
-            right: -80px;
-            filter: blur(60px);
-            animation: orbFloat2 15s ease-in-out infinite alternate;
-        }
-
-        .ambient-orb-3 {
-            position: absolute;
-            width: 250px;
-            height: 250px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(245,200,66,0.04) 0%, transparent 70%);
-            bottom: 100px;
-            left: -50px;
-            filter: blur(50px);
-            animation: orbFloat3 10s ease-in-out infinite alternate;
-        }
-
-        @keyframes orbFloat1 { from { transform: translateX(-50%) translateY(0px) scale(1); } to { transform: translateX(-50%) translateY(30px) scale(1.1); } }
-        @keyframes orbFloat2 { from { transform: translateY(0px) scale(1); } to { transform: translateY(-25px) scale(1.08); } }
-        @keyframes orbFloat3 { from { transform: translateY(0px); } to { transform: translateY(-20px) scale(1.05); } }
-
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Readex Pro', sans-serif; overflow-x: hidden; overflow-y: auto; background-color: #050914; }
+        
         .glass-card {
-            backdrop-filter: blur(28px) saturate(160%);
-            -webkit-backdrop-filter: blur(28px) saturate(160%);
-            background: linear-gradient(145deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.025) 50%, rgba(255,255,255,0.04) 100%);
-            border: 1px solid rgba(255,255,255,0.09);
-            border-top: 1px solid rgba(255,255,255,0.14);
-            border-left: 1px solid rgba(255,255,255,0.12);
-            box-shadow:
-                0 40px 80px rgba(0,0,0,0.55),
-                0 0 0 1px rgba(245,200,66,0.04),
-                inset 0 1px 0 rgba(255,255,255,0.1),
-                inset 0 -1px 0 rgba(0,0,0,0.2),
-                0 0 60px rgba(245,200,66,0.04);
+            backdrop-filter: blur(24px); 
+            -webkit-backdrop-filter: blur(24px);
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 40px 80px -20px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.1);
             position: relative;
             z-index: 2;
-            overflow: hidden;
         }
 
-        .glass-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent 0%, rgba(245,200,66,0.4) 30%, rgba(255,255,255,0.35) 50%, rgba(245,200,66,0.4) 70%, transparent 100%);
+        @keyframes premiumFadeUp {
+            0% { opacity: 0; transform: translateY(30px) scale(0.98); filter: blur(8px); }
+            100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
         }
 
-        .glass-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle at top right, rgba(245,200,66,0.06) 0%, transparent 65%);
-            pointer-events: none;
-        }
-
-        .card-noise {
-            position: absolute;
-            inset: 0;
-            opacity: 0.025;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            background-size: 150px;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .card-content { position: relative; z-index: 1; }
-
-        .logo-text {
-            font-size: 3.2rem;
-            font-weight: 900;
-            letter-spacing: -0.03em;
-            line-height: 1;
-            background: linear-gradient(135deg, #ffe566 0%, #f5c842 35%, #d4a017 70%, #f5c842 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            filter: drop-shadow(0 0 20px rgba(245,200,66,0.4)) drop-shadow(0 0 40px rgba(245,200,66,0.2));
-            position: relative;
-            display: inline-block;
-        }
-
-        .logo-dot {
-            background: linear-gradient(135deg, #ffffff, rgba(255,255,255,0.7));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .logo-tagline {
-            font-size: 0.65rem;
-            letter-spacing: 0.25em;
-            text-transform: uppercase;
-            color: rgba(245,200,66,0.5);
-            margin-top: 0.25rem;
-        }
-
-        .logo-divider {
-            width: 40px;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(245,200,66,0.6), transparent);
-            margin: 0.75rem auto;
-            border-radius: 2px;
-        }
-
-        .icon-3d-wrapper {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 22px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 8px rgba(245,200,66,0.0));
-        }
-
-        .input-field:focus ~ .icon-3d-wrapper,
-        .input-wrapper:focus-within .icon-3d-wrapper {
-            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)) drop-shadow(0 0 12px rgba(245,200,66,0.35));
-            transform: translateY(-50%) scale(1.1);
-        }
-
-        .input-wrapper {
-            position: relative;
-        }
-
-        .input-field {
-            width: 100%;
-            background: rgba(0,0,0,0.25);
-            border: 1px solid rgba(255,255,255,0.08);
-            color: #fff;
-            border-radius: 16px;
-            padding: 13px 16px 13px 16px;
-            padding-right: 46px;
-            font-family: 'Readex Pro', sans-serif;
-            font-size: 0.875rem;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            outline: none;
-            box-shadow: inset 0 2px 6px rgba(0,0,0,0.2), 0 0 0 0 rgba(245,200,66,0);
-            -webkit-font-smoothing: antialiased;
-            text-align: right;
-        }
-
-        .input-field::placeholder {
-            color: rgba(255,255,255,0.2);
-            font-weight: 300;
-        }
-
-        .input-field:focus {
-            border-color: rgba(245,200,66,0.5);
-            background: rgba(0,0,0,0.35);
-            box-shadow:
-                inset 0 2px 6px rgba(0,0,0,0.25),
-                0 0 0 3px rgba(245,200,66,0.1),
-                0 0 20px rgba(245,200,66,0.08);
-        }
-
-        .input-field[dir="ltr"] { text-align: left; }
-
-        .input-label {
-            display: block;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: rgba(200,200,220,0.7);
-            margin-bottom: 8px;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-        }
-
-        .toggle-password-btn {
-            position: absolute;
-            left: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255,255,255,0.25);
-            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            padding: 4px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: none;
-            border: none;
-            cursor: pointer;
-        }
-
-        .toggle-password-btn:hover {
-            color: var(--gold);
-            transform: translateY(-50%) scale(1.15);
-            filter: drop-shadow(0 0 8px rgba(245,200,66,0.5));
-        }
-
-        .submit-btn {
-            width: 100%;
-            position: relative;
-            background: linear-gradient(135deg, #ffe566 0%, #f5c842 40%, #e8b820 100%);
-            color: #1a1200;
-            font-weight: 800;
-            font-family: 'Readex Pro', sans-serif;
-            font-size: 0.95rem;
-            letter-spacing: 0.02em;
-            padding: 14px 24px;
-            border-radius: 16px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow:
-                0 4px 15px rgba(245,200,66,0.35),
-                0 8px 30px rgba(245,200,66,0.2),
-                0 1px 0 rgba(255,255,255,0.3) inset,
-                0 -2px 0 rgba(0,0,0,0.15) inset;
-            transform: translateY(0) scale(1);
-            overflow: hidden;
-        }
-
-        .submit-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(255,255,255,0.2) 0%, transparent 50%);
-            border-radius: inherit;
-            pointer-events: none;
-        }
-
-        .submit-btn::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(ellipse at 50% -20%, rgba(255,255,255,0.3) 0%, transparent 60%);
-            border-radius: inherit;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .submit-btn:hover:not(:disabled) {
-            transform: translateY(-2px) scale(1.01);
-            box-shadow:
-                0 6px 20px rgba(245,200,66,0.45),
-                0 12px 40px rgba(245,200,66,0.25),
-                0 1px 0 rgba(255,255,255,0.35) inset,
-                0 -2px 0 rgba(0,0,0,0.15) inset;
-            background: linear-gradient(135deg, #ffed7a 0%, #f5c842 40%, #e8b820 100%);
-        }
-
-        .submit-btn:hover::after { opacity: 1; }
-
-        .submit-btn:active:not(:disabled) {
-            transform: translateY(1px) scale(0.99);
-            box-shadow:
-                0 2px 8px rgba(245,200,66,0.3),
-                0 4px 15px rgba(245,200,66,0.15),
-                0 1px 0 rgba(255,255,255,0.2) inset;
-        }
-
-        .submit-btn:disabled {
-            opacity: 0.65;
-            cursor: not-allowed;
-        }
-
-        .input-error {
-            border-color: rgba(239,68,68,0.7) !important;
-            box-shadow: 0 0 0 3px rgba(239,68,68,0.1), inset 0 2px 6px rgba(0,0,0,0.2) !important;
-        }
-
-        @keyframes customFadeUp {
-            from { opacity: 0; transform: translateY(24px) scale(0.98); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        @keyframes staggerFade {
-            from { opacity: 0; transform: translateY(16px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-fade-up {
-            opacity: 0;
-            animation: customFadeUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-
-        .stagger-1 { opacity: 0; animation: staggerFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards; }
-        .stagger-2 { opacity: 0; animation: staggerFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.25s forwards; }
-        .stagger-3 { opacity: 0; animation: staggerFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.35s forwards; }
-        .stagger-4 { opacity: 0; animation: staggerFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards; }
-        .stagger-5 { opacity: 0; animation: staggerFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.55s forwards; }
-        .stagger-6 { opacity: 0; animation: staggerFade 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.65s forwards; }
+        .stagger-1 { opacity: 0; animation: premiumFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.1s forwards; }
+        .stagger-2 { opacity: 0; animation: premiumFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s forwards; }
+        .stagger-3 { opacity: 0; animation: premiumFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards; }
+        .stagger-4 { opacity: 0; animation: premiumFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.4s forwards; }
+        .stagger-5 { opacity: 0; animation: premiumFadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards; }
 
         @keyframes shake {
             10%, 90% { transform: translate3d(-1px, 0, 0); }
@@ -398,209 +44,103 @@
             30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
             40%, 60% { transform: translate3d(4px, 0, 0); }
         }
-
         .shake-animation {
             animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
         }
-
-        @keyframes shimmer {
-            0% { background-position: -200% center; }
-            100% { background-position: 200% center; }
-        }
-
-        .logo-shimmer {
-            background: linear-gradient(90deg, #f5c842 0%, #ffe566 30%, #fff8e1 50%, #ffe566 70%, #f5c842 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: shimmer 4s linear infinite;
-        }
-
-        @keyframes pulse-glow {
-            0%, 100% { filter: drop-shadow(0 0 20px rgba(245,200,66,0.35)) drop-shadow(0 0 40px rgba(245,200,66,0.15)); }
-            50% { filter: drop-shadow(0 0 28px rgba(245,200,66,0.5)) drop-shadow(0 0 55px rgba(245,200,66,0.25)); }
-        }
-
-        .logo-glow { animation: pulse-glow 3.5s ease-in-out infinite; }
-
-        .separator-line {
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
-            margin: 1.5rem 0;
-        }
-
-        .register-link {
-            color: var(--gold);
-            font-weight: 700;
-            text-decoration: none;
-            position: relative;
-            transition: all 0.2s;
-        }
-
-        .register-link::after {
-            content: '';
-            position: absolute;
-            bottom: -1px;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: var(--gold);
-            transform: scaleX(0);
-            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .register-link:hover { filter: drop-shadow(0 0 8px rgba(245,200,66,0.6)); }
-        .register-link:hover::after { transform: scaleX(1); }
-
-        .success-msg {
-            color: #4ade80;
-            font-size: 0.75rem;
-            text-align: center;
-            margin-top: 1rem;
-            padding: 10px 14px;
-            background: rgba(74,222,128,0.08);
-            border: 1px solid rgba(74,222,128,0.2);
-            border-radius: 12px;
-            display: none;
-        }
-
-        .error-msg {
-            color: #f87171;
-            font-size: 0.75rem;
-            text-align: center;
-            margin-top: 1rem;
-            padding: 10px 14px;
-            background: rgba(248,113,113,0.08);
-            border: 1px solid rgba(248,113,113,0.2);
-            border-radius: 12px;
-            display: none;
-        }
+        .input-error { border-color: #ef4444 !important; box-shadow: 0 0 15px rgba(239, 68, 68, 0.2) !important; }
 
         @media (prefers-reduced-motion: reduce) {
-            .animate-fade-up, .shake-animation, .stagger-1, .stagger-2, .stagger-3, .stagger-4, .stagger-5, .stagger-6,
-            .ambient-orb-1, .ambient-orb-2, .ambient-orb-3, .logo-shimmer, .logo-glow {
-                animation: none !important;
-                opacity: 1 !important;
-                transform: none !important;
-            }
+            .stagger-1, .stagger-2, .stagger-3, .stagger-4, .stagger-5, .shake-animation { animation: none !important; opacity: 1 !important; transform: none !important; filter: none !important; }
+        }
+
+        .input-glow:focus {
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.15), inset 0 2px 4px rgba(0,0,0,0.4);
         }
     </style>
 </head>
 
-<body class="text-white">
+<body class="text-white min-h-screen flex items-center justify-center p-6 relative">
 
-    <div class="bg-scene">
-        <div class="ambient-orb-1"></div>
-        <div class="ambient-orb-2"></div>
-        <div class="ambient-orb-3"></div>
-    </div>
+    <svg width="0" height="0" class="hidden">
+        <defs>
+            <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#FDE047" />
+                <stop offset="50%" stop-color="#EAB308" />
+                <stop offset="100%" stop-color="#A16207" />
+            </linearGradient>
+            <filter id="soft3D">
+                <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#A16207" flood-opacity="0.4"/>
+                <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000" flood-opacity="0.6"/>
+            </filter>
+        </defs>
+    </svg>
 
-    <div id="loginCard" class="glass-card w-full max-w-md rounded-[2.2rem] p-10 my-auto animate-fade-up" style="max-width: 440px;">
-        <div class="card-noise"></div>
-        <div class="card-content">
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(234,179,8,0.12)_0%,_rgba(5,9,20,1)_70%)] pointer-events-none z-0"></div>
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-600/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none z-0"></div>
 
-            <div class="text-center mb-9 stagger-1">
-                <div class="logo-glow inline-block">
-                    <div class="logo-text logo-shimmer">الدحيح<span class="logo-dot" style="background: linear-gradient(135deg,#fff,rgba(255,255,255,0.6)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">.</span></div>
+    <div id="loginCard" class="glass-card w-full max-w-md rounded-[2.5rem] p-10 relative overflow-hidden stagger-1 my-auto">
+        
+        <div class="text-center mb-10 stagger-2">
+            <div class="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 via-yellow-500 to-yellow-700 drop-shadow-[0_0_20px_rgba(234,179,8,0.4)] mb-3 tracking-tighter">
+                الدحيح<span class="text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">.</span>
+            </div>
+            <h2 class="text-2xl font-bold mt-2 mb-1 text-white/90">تسجيل الدخول</h2>
+            <p class="text-gray-400/80 text-sm font-light">سجل دخولك بواسطة البريد أو رقم الهاتف</p>
+        </div>
+
+        <form id="loginForm">
+
+            <div class="mb-5 stagger-3">
+                <label class="block text-xs font-semibold text-gray-300/80 mb-2 flex justify-between tracking-wide">
+                    <span>البريد أو رقم الهاتف</span>
+                </label>
+                <div class="relative">
+                    <svg class="w-6 h-6 absolute right-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" viewBox="0 0 24 24">
+                        <path fill="url(#goldGrad)" filter="url(#soft3D)" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.64 0-5.05-1.04-6.82-2.73.04-2.26 4.54-3.5 6.82-3.5 2.27 0 6.78 1.24 6.82 3.5C17.05 18.96 14.64 20 12 20z"/>
+                    </svg>
+                    <input type="text" id="loginIdentifier" required autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="example@mail.com أو 010..."
+                        class="w-full bg-black/40 border border-white/5 text-white placeholder-gray-600/70 rounded-2xl pr-12 pl-4 py-4 focus:outline-none focus:border-yellow-500/50 focus:ring-2 focus:ring-yellow-500/20 transition-all duration-300 text-right input-glow shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
+                        dir="ltr">
                 </div>
-                <div class="logo-tagline">PLATFORM</div>
-                <div class="logo-divider"></div>
-                <h2 style="font-size:1.1rem; font-weight:700; color:rgba(255,255,255,0.9); margin-bottom:0.3rem;">تسجيل الدخول</h2>
-                <p style="color:rgba(255,255,255,0.3); font-size:0.72rem; font-weight:300; letter-spacing:0.04em;">سجل دخولك بواسطة البريد أو رقم الهاتف</p>
             </div>
 
-            <form id="loginForm">
-
-                <div class="mb-5 stagger-3">
-                    <label class="input-label">البريد أو رقم الهاتف</label>
-                    <div class="input-wrapper">
-                        <input type="text" id="loginIdentifier" required autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false"
-                            placeholder="example@mail.com أو 010..."
-                            class="input-field" dir="ltr">
-                        <span class="icon-3d-wrapper" style="pointer-events:none;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="mailGrad1" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
-                                        <stop offset="0%" stop-color="#ffe566"/>
-                                        <stop offset="60%" stop-color="#f5c842"/>
-                                        <stop offset="100%" stop-color="#b8912a"/>
-                                    </linearGradient>
-                                    <filter id="mailShadow">
-                                        <feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="rgba(0,0,0,0.5)" flood-opacity="0.6"/>
-                                        <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="rgba(245,200,66,0.3)" flood-opacity="0.8"/>
-                                    </filter>
-                                </defs>
-                                <rect x="2" y="5" width="20" height="14" rx="3" ry="3" fill="url(#mailGrad1)" filter="url(#mailShadow)" opacity="0.95"/>
-                                <rect x="2" y="5" width="20" height="14" rx="3" ry="3" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.5"/>
-                                <path d="M2 8 L12 14 L22 8" stroke="rgba(0,0,0,0.35)" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-                                <path d="M2 7.5 L12 13.5 L22 7.5" stroke="rgba(255,255,255,0.55)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-                            </svg>
-                        </span>
-                    </div>
-                </div>
-
-                <div class="mb-7 stagger-4">
-                    <label class="input-label">كلمة السر</label>
-                    <div class="input-wrapper">
-                        <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••"
-                            class="input-field" dir="ltr" style="padding-left: 42px;">
-                        <span class="icon-3d-wrapper" style="pointer-events:none;">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <defs>
-                                    <linearGradient id="lockGrad1" x1="5" y1="2" x2="19" y2="22" gradientUnits="userSpaceOnUse">
-                                        <stop offset="0%" stop-color="#ffe566"/>
-                                        <stop offset="55%" stop-color="#f5c842"/>
-                                        <stop offset="100%" stop-color="#b8912a"/>
-                                    </linearGradient>
-                                    <linearGradient id="lockBodyGrad" x1="3" y1="11" x2="21" y2="24" gradientUnits="userSpaceOnUse">
-                                        <stop offset="0%" stop-color="#f5c842"/>
-                                        <stop offset="100%" stop-color="#9a7520"/>
-                                    </linearGradient>
-                                    <filter id="lockShadow">
-                                        <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="rgba(0,0,0,0.55)" flood-opacity="0.7"/>
-                                        <feDropShadow dx="0" dy="0" stdDeviation="2.5" flood-color="rgba(245,200,66,0.25)" flood-opacity="0.9"/>
-                                    </filter>
-                                </defs>
-                                <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="url(#lockGrad1)" stroke-width="2" stroke-linecap="round" fill="none" filter="url(#lockShadow)"/>
-                                <path d="M7 10.5V7a5 5 0 0 1 10 0v3.5" stroke="rgba(255,255,255,0.2)" stroke-width="0.5" stroke-linecap="round" fill="none"/>
-                                <rect x="3" y="11" width="18" height="11" rx="3" ry="3" fill="url(#lockBodyGrad)" filter="url(#lockShadow)"/>
-                                <rect x="3" y="11" width="18" height="11" rx="3" ry="3" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
-                                <rect x="3" y="11" width="18" height="4" rx="1" ry="1" fill="rgba(255,255,255,0.08)"/>
-                                <circle cx="12" cy="16" r="2" fill="rgba(0,0,0,0.35)"/>
-                                <circle cx="12" cy="15.5" r="1.8" fill="rgba(255,255,255,0.15)" stroke="rgba(0,0,0,0.2)" stroke-width="0.5"/>
-                                <line x1="12" y1="17" x2="12" y2="19" stroke="rgba(0,0,0,0.4)" stroke-width="1.5" stroke-linecap="round"/>
-                                <line x1="12" y1="16.5" x2="12" y2="18.5" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-linecap="round"/>
-                            </svg>
-                        </span>
-                        <button type="button" id="togglePassword" class="toggle-password-btn" aria-label="إظهار/إخفاء كلمة المرور">
-                            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                                <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="stagger-5">
-                    <button type="submit" id="submitBtn" class="submit-btn">
-                        <span id="btnText">تسجيل الدخول</span>
+            <div class="mb-8 stagger-4">
+                <label class="block text-xs font-semibold text-gray-300/80 mb-2 flex justify-between tracking-wide">
+                    <span>كلمة السر</span>
+                </label>
+                <div class="relative">
+                    <svg class="w-6 h-6 absolute right-4 top-1/2 -translate-y-1/2 z-10 pointer-events-none" viewBox="0 0 24 24">
+                        <path fill="url(#goldGrad)" filter="url(#soft3D)" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                    </svg>
+                    
+                    <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••"
+                        class="w-full bg-black/40 border border-white/5 text-white placeholder-gray-600/70 rounded-2xl pr-12 pl-12 py-4 focus:outline-none focus:border-yellow-500/50 focus:ring-2 focus:ring-yellow-500/20 transition-all duration-300 text-right input-glow shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]"
+                        dir="ltr">
+                    
+                    <button type="button" id="togglePassword" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 hover:scale-110 hover:text-yellow-400 transition-all duration-300 p-2 z-10" aria-label="إظهار/إخفاء كلمة المرور">
+                        <svg id="eyeIcon" class="w-6 h-6" viewBox="0 0 24 24">
+                            <path fill="url(#goldGrad)" filter="url(#soft3D)" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                        </svg>
                     </button>
                 </div>
+            </div>
 
-                <div class="separator-line stagger-6"></div>
+            <button type="submit" id="submitBtn"
+                class="w-full bg-gradient-to-t from-yellow-600 to-yellow-400 text-black font-extrabold text-lg py-4 rounded-2xl transition-all duration-300 shadow-[0_10px_20px_-5px_rgba(234,179,8,0.4),inset_0_-4px_0_rgba(161,98,7,0.6),inset_0_2px_4px_rgba(255,255,255,0.4)] hover:shadow-[0_15px_30px_-5px_rgba(234,179,8,0.6),inset_0_-4px_0_rgba(161,98,7,0.6),inset_0_2px_4px_rgba(255,255,255,0.4)] hover:-translate-y-1 active:translate-y-0 active:shadow-[0_0px_0px_rgba(234,179,8,0.0),inset_0_4px_8px_rgba(161,98,7,0.6)] flex items-center justify-center stagger-5">
+                <span id="btnText">تسجيل الدخول</span>
+            </button>
 
-                <div class="text-center stagger-6" style="margin-top: -0.5rem;">
-                    <p style="color:rgba(255,255,255,0.3); font-size:0.82rem;">معندكش حساب؟ 
-                        <a href="/register.html" class="register-link">اضغط هنا</a>
-                    </p>
-                </div>
+            <div class="mt-8 text-center stagger-5">
+                <p class="text-gray-400/80 text-sm">معندكش حساب؟ 
+                    <a href="/register.html" class="text-yellow-500 font-bold hover:text-yellow-400 hover:drop-shadow-[0_0_8px_rgba(234,179,8,0.5)] transition-all">اضغط هنا</a>
+                </p>
+            </div>
 
-                <p id="successMessage" class="success-msg"></p>
-                <p id="errorMessage" class="error-msg"></p>
+            <p id="successMessage" class="text-green-400 font-medium text-sm text-center mt-6 hidden p-3 bg-green-400/10 border border-green-400/20 rounded-xl backdrop-blur-md"></p>
+            <p id="errorMessage" class="text-red-400 font-medium text-sm text-center mt-6 hidden p-3 bg-red-400/10 border border-red-400/20 rounded-xl backdrop-blur-md"></p>
 
-            </form>
-        </div>
+        </form>
     </div>
 
 <script>
@@ -633,29 +173,37 @@ const successMsg = document.getElementById('successMessage');
 toggleBtn.onclick = () => {
     if (passwordInput.type === 'password') {
         passwordInput.type = 'text';
-        eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path>';
+        eyeIcon.innerHTML = '<path fill="url(#goldGrad)" filter="url(#soft3D)" d="M11.83 9L15 12.16V12a3 3 0 0 0-3-3h-.17zm-4.3.8l1.55 1.55c-.05.21-.08.43-.08.65a3 3 0 0 0 3 3c.22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.47-5.3c3.4 0 6.46 1.81 8.24 4.5a10.05 10.05 0 0 1-2.02 2.28l-2.09-2.09A5.02 5.02 0 0 0 12 7a4.98 4.98 0 0 0-3.34 1.3L6.5 6.13A9.95 9.95 0 0 1 12 4.5zM2 4.27l2.28 2.28.46.46A11.8 11.8 0 0 0 1 12c1.78 2.69 4.84 4.5 8.24 4.5 1.48 0 2.89-.3 4.16-.83l.59.59L17.73 20l1.41-1.41L3.41 2.86 2 4.27z"/>';
     } else {
         passwordInput.type = 'password';
-        eyeIcon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+        eyeIcon.innerHTML = '<path fill="url(#goldGrad)" filter="url(#soft3D)" d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>';
     }
 };
 
 function setLoading(state) {
     if (state) {
-        btnText.innerHTML = `<span style="display:flex;align-items:center;justify-content:center;gap:8px;"><svg style="animation:spin 0.8s linear infinite;width:18px;height:18px;border:2px solid rgba(0,0,0,0.25);border-top-color:#000;border-radius:50%" viewBox="0 0 24 24"></svg>جاري التحقق...</span>`;
+        btnText.innerHTML = `
+            <span class="flex items-center gap-3">
+                <svg class="animate-spin h-6 w-6 border-4 border-black/20 border-t-black rounded-full" viewBox="0 0 24 24"></svg>
+                جاري التحقق...
+            </span>
+        `;
         btn.disabled = true;
-        btn.style.opacity = "0.65";
+        btn.style.opacity = "0.8";
+        btn.style.transform = "translateY(0)";
+        btn.style.boxShadow = "inset 0 4px 8px rgba(161,98,7,0.6)";
     } else {
         btnText.innerText = "تسجيل الدخول";
         btn.disabled = false;
         btn.style.opacity = "1";
+        btn.style.boxShadow = "";
     }
 }
 
 function showError(msg) {
     errorMsg.innerText = msg;
-    errorMsg.style.display = 'block';
-    successMsg.style.display = 'none';
+    errorMsg.classList.remove('hidden');
+    successMsg.classList.add('hidden');
     formContainer.classList.remove('shake-animation');
     void formContainer.offsetWidth;
     formContainer.classList.add('shake-animation');
@@ -666,8 +214,8 @@ function showError(msg) {
 
 function showSuccess(msg) {
     successMsg.innerText = msg;
-    successMsg.style.display = 'block';
-    errorMsg.style.display = 'none';
+    successMsg.classList.remove('hidden');
+    errorMsg.classList.add('hidden');
 }
 
 formContainer.addEventListener('submit', async (event) => {
@@ -699,11 +247,5 @@ formContainer.addEventListener('submit', async (event) => {
     } catch (e) { showError(e.message); setLoading(false); }
 });
 </script>
-
-<style>
-@keyframes spin { to { transform: rotate(360deg); } }
-</style>
-
 </body>
 </html>
-
