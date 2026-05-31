@@ -31,8 +31,11 @@ export async function onRequestPost(context) {
       );
     }
 
+    // 🔄 تعريف المتغير ليدعم الحقلين
+    const phone = data.phone || data.identifier;
+
     // 🔥 تحقق أساسي
-    if (!data.phone || !data.password) {
+    if (!phone || !data.password) {
       return json(
         { message: "يرجى ملء البيانات للاستمرار." },
         400,
@@ -43,7 +46,7 @@ export async function onRequestPost(context) {
     // 🔥 منع تكرار رقم الهاتف
     const exists = await env.DB.prepare(
       "SELECT phone FROM users WHERE phone = ?"
-    ).bind(data.phone).first();
+    ).bind(phone).first();
 
     if (exists) {
       return json(
@@ -75,7 +78,7 @@ export async function onRequestPost(context) {
       data.second_name || "",
       data.third_name || "",
       data.last_name || "",
-      data.phone,
+      phone, // استخدام المتغير الجديد هنا
       data.parent_phone || "",
       data.gender || "",
       data.level || "",
