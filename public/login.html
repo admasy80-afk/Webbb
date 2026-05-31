@@ -13,60 +13,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        html {
-            scroll-behavior: smooth;
-        }
-        * {
-            -webkit-tap-highlight-color: transparent;
-        }
+        html { scroll-behavior: smooth; }
+        * { -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Readex Pro', sans-serif; overflow-x: hidden; overflow-y: auto; background-color: #070b19; }
         
-        body { font-family: 'Readex Pro', sans-serif; overflow-x: hidden; overflow-y: auto; }
-        
-        .bg-animated-gradient {
-            background: linear-gradient(135deg, #070b19, #0f172a, #070b19, #1e1b4b);
-            background-size: 400% 400%;
-            animation: gradientMove 15s ease infinite;
-        }
-        @keyframes gradientMove {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0;
-            background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 4px 4px; 
-            opacity: 0.15;
-            pointer-events: none;
-            z-index: 1;
-        }
-
         .glass-card {
             backdrop-filter: blur(14px); 
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
             position: relative;
             z-index: 2;
-        }
-        
-        .glass-card::before {
-            content: "";
-            position: absolute;
-            inset: -2px;
-            background: linear-gradient(45deg, #eab308, #7c3aed, #0ea5e9);
-            border-radius: inherit;
-            z-index: -1;
-            filter: blur(25px);
-            opacity: 0.25;
-            animation: pulseGlow 6s linear infinite;
-        }
-        @keyframes pulseGlow {
-            0% { transform: rotate(0deg) scale(1); }
-            50% { transform: rotate(180deg) scale(1.03); }
-            100% { transform: rotate(360deg) scale(1); }
         }
 
         @keyframes customFadeUp {
@@ -87,22 +43,15 @@
         .shake-animation {
             animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
         }
-        .input-error {
-            border-color: #ef4444 !important; 
-        }
+        .input-error { border-color: #ef4444 !important; }
 
         @media (prefers-reduced-motion: reduce) {
-            .bg-animated-gradient,
-            .glass-card::before,
-            .animate-fade-up,
-            .shake-animation {
-                animation: none !important;
-            }
+            .animate-fade-up, .shake-animation { animation: none !important; }
         }
     </style>
 </head>
 
-<body class="bg-animated-gradient text-white min-h-screen flex items-center justify-center p-6">
+<body class="text-white min-h-screen flex items-center justify-center p-6">
 
     <div id="loginCard" class="glass-card bg-white/5 w-full max-w-md rounded-[2.5rem] p-10 relative overflow-hidden animate-fade-up my-auto">
         
@@ -129,7 +78,7 @@
                 </label>
                 <div class="relative">
                     <input type="password" id="password" required autocomplete="current-password" placeholder="••••••••"
-                        class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 pl-10 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
+                        class="w-full bg-black/30 border border-white/10 text-white placeholder-gray-600 rounded-xl px-4 py-3 focus:outline-none focus:border-yellow-500 transition-colors text-right"
                         dir="ltr">
                     
                     <button type="button" id="togglePassword" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-yellow-500 transition-colors p-1" aria-label="إظهار/إخفاء كلمة المرور">
@@ -143,7 +92,7 @@
 
             <button type="submit" id="submitBtn"
                 class="w-full bg-yellow-500 text-black font-bold py-3.5 rounded-xl hover:bg-yellow-400 transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.3)] transform hover:scale-[1.02] flex items-center justify-center">
-                تسجيل الدخول
+                <span id="btnText">تسجيل الدخول</span>
             </button>
 
             <div class="mt-6 text-center">
@@ -162,30 +111,14 @@
 async function verifySession() {
     const token = localStorage.getItem('userToken');
     if (!token) return;
-
     try {
-        const res = await fetch('/api/verify-session', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        let data = {};
-        try { data = await res.json(); } catch (_) { data = {}; }
-
-        if (res.ok) {
-            if (data.redirectTo) window.location.replace(data.redirectTo);
-            return;
+        const res = await fetch('/api/verify-session', { headers: { 'Authorization': `Bearer ${token}` } });
+        let data = {}; try { data = await res.json(); } catch (_) { data = {}; }
+        if (res.ok && data.redirectTo) window.location.replace(data.redirectTo);
+        if (['TOKEN_EXPIRED', 'TOKEN_INVALID', 'ACCOUNT_NOT_FOUND'].includes(data.code)) {
+            ['userToken', 'dahih_token', 'userData', 'dahih_user'].forEach(k => localStorage.removeItem(k));
         }
-
-        if (
-            data.code === 'TOKEN_EXPIRED' ||
-            data.code === 'TOKEN_INVALID' ||
-            data.code === 'ACCOUNT_NOT_FOUND'
-        ) {
-            ['userToken', 'dahih_token', 'userData', 'dahih_user']
-                .forEach(k => localStorage.removeItem(k));
-        }
-    } catch (e) {
-    }
+    } catch (e) {}
 }
 verifySession();
 
@@ -194,6 +127,10 @@ const passwordInput = document.getElementById('password');
 const eyeIcon = document.getElementById('eyeIcon');
 const loginIdentifierInput = document.getElementById('loginIdentifier');
 const formContainer = document.getElementById('loginForm');
+const btn = document.getElementById('submitBtn');
+const btnText = document.getElementById('btnText');
+const errorMsg = document.getElementById('errorMessage');
+const successMsg = document.getElementById('successMessage');
 
 toggleBtn.onclick = () => {
     if (passwordInput.type === 'password') {
@@ -205,28 +142,20 @@ toggleBtn.onclick = () => {
     }
 };
 
-const form = document.getElementById('loginForm');
-const btn = document.getElementById('submitBtn');
-const errorMsg = document.getElementById('errorMessage');
-const successMsg = document.getElementById('successMessage');
-
 function setLoading(state) {
     if (state) {
-        btn.innerHTML = `
-            <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-current inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            جاري التحقق...
+        btnText.innerHTML = `
+            <span class="flex items-center gap-2">
+                <svg class="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full" viewBox="0 0 24 24"></svg>
+                جاري التحقق...
+            </span>
         `;
         btn.disabled = true;
         btn.style.opacity = "0.7";
-        btn.classList.remove('hover:scale-[1.02]');
     } else {
-        btn.innerText = "تسجيل الدخول";
+        btnText.innerText = "تسجيل الدخول";
         btn.disabled = false;
         btn.style.opacity = "1";
-        btn.classList.add('hover:scale-[1.02]');
     }
 }
 
@@ -234,18 +163,12 @@ function showError(msg) {
     errorMsg.innerText = msg;
     errorMsg.classList.remove('hidden');
     successMsg.classList.add('hidden');
-    
     formContainer.classList.remove('shake-animation');
     void formContainer.offsetWidth;
     formContainer.classList.add('shake-animation');
-    
     loginIdentifierInput.classList.add('input-error');
     passwordInput.classList.add('input-error');
-    
-    setTimeout(() => {
-        loginIdentifierInput.classList.remove('input-error');
-        passwordInput.classList.remove('input-error');
-    }, 1500);
+    setTimeout(() => { loginIdentifierInput.classList.remove('input-error'); passwordInput.classList.remove('input-error'); }, 1500);
 }
 
 function showSuccess(msg) {
@@ -254,80 +177,32 @@ function showSuccess(msg) {
     errorMsg.classList.add('hidden');
 }
 
-function validate(identifier, password) {
-    if (!identifier) return "اكتب البريد أو رقم الهاتف";
-    
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-    const isPhone = /^[0-9+]{8,15}$/.test(identifier);
-
-    if (!isEmail && !isPhone) return "اكتب إيميل صحيح أو رقم هاتف صحيح";
-    if (!password || password.length < 4) return "كلمة المرور قصيرة جدًا";
-    return null;
-}
-
-form.addEventListener('submit', async (event) => {
+formContainer.addEventListener('submit', async (event) => {
     event.preventDefault();
-    
     if (btn.disabled) return;
-
     const identifier = loginIdentifierInput.value.trim();
     const passwordVal = passwordInput.value;
-
-    const validationError = validate(identifier, passwordVal);
-    if (validationError) { showError(validationError); return; }
+    if (!identifier || passwordVal.length < 4) { showError("تأكد من البيانات"); return; }
 
     setLoading(true);
-    errorMsg.classList.add('hidden');
-    successMsg.classList.add('hidden');
-
-    btn.classList.remove('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]');
-    btn.classList.add('bg-yellow-500', 'hover:bg-yellow-400', 'text-black', 'shadow-[0_0_15px_rgba(234,179,8,0.3)]');
-
     try {
         const response = await fetch('/api/saveUser', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identifier, password: passwordVal })
         });
-
-        const text = await response.text();
-        let result = {};
-        try { result = text ? JSON.parse(text) : {}; } catch (e) { throw new Error("استجابة السيرفر غير صالحة"); }
-
-        if (!response.ok) throw new Error(result.message || "فشل تسجيل الدخول");
-
-        showSuccess("تم بنجاح تسجيل الدخول");
-        btn.innerText = "تم بنجاح";
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.message || "خطأ في الاتصال");
         
-        btn.classList.remove('bg-yellow-500', 'hover:bg-yellow-400', 'text-black', 'shadow-[0_0_15px_rgba(234,179,8,0.3)]');
-        btn.classList.add('bg-green-500', 'hover:bg-green-400', 'text-white', 'shadow-[0_0_15px_rgba(34,197,94,0.4)]'); 
-
-        if (result.token) {
-            localStorage.setItem('userToken', result.token);
-            localStorage.setItem('dahih_token', result.token); 
-        }
-        if (result.userData) {
-            localStorage.setItem('userData', JSON.stringify(result.userData));
-            localStorage.setItem('dahih_user', JSON.stringify(result.userData)); 
-        }
-
+        showSuccess("تم بنجاح");
+        if (result.token) { localStorage.setItem('userToken', result.token); localStorage.setItem('dahih_token', result.token); }
+        if (result.userData) { localStorage.setItem('userData', JSON.stringify(result.userData)); localStorage.setItem('dahih_user', JSON.stringify(result.userData)); }
         setTimeout(() => {
-            const user = result.userData || {};
-            if (user.role === 'dev' || user.role === 'owner') {
-                window.location.replace("/admin.html");
-            } else if (user.status === 'pending' || user.status === 'rejected') {
-                window.location.replace("/status.html");
-            } else {
-                window.location.replace("/student/");
-            }
+            const r = result.userData?.role;
+            const s = result.userData?.status;
+            window.location.replace((r === 'dev' || r === 'owner') ? "/admin.html" : (s === 'pending' || s === 'rejected') ? "/status.html" : "/student/");
         }, 1000);
-
-    } catch (error) {
-        showError(error.message);
-    } finally {
-        if (!successMsg.classList.contains('hidden')) return;
-        setLoading(false);
-    }
+    } catch (e) { showError(e.message); setLoading(false); }
 });
 </script>
 </body>
