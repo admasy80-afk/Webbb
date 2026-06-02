@@ -113,18 +113,33 @@ exports.submitQuiz = async (req, res) => {
         const db = getDb();
         const email = (req.user && req.user.email) ? req.user.email : req.body.email;
         const { studentName, grade, quizId, score, percentage, visitorId, userAnswers } = req.body;
+
+        // التحقق من اكتمال البيانات الأساسية اللازمة لمطابقة الاختبار وحفظ النتيجة
+        if (!grade || !quizId) {
+            return res.status(400).json({ message: "بيانات الاختبار ناقصة (المرحلة الدراسية أو معرّف الاختبار)." });
+        }
+
         const contentCollection = db.collection('curriculum_content');
         const resultObj = { email, studentName, score, percentage, visitorId: visitorId || null, userAnswers: userAnswers || [], date: new Date() };
 
         if (quizId && quizId.startsWith('pub_')) {
             const existingDoc = await contentCollection.findOne({ grade, publicQuizzes: { $elemMatch: { id: quizId, results: { $elemMatch: { $or: [{ visitorId }, { email }] } } } } });
             if (existingDoc) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
-            await contentCollection.updateOne({ grade, "publicQuizzes.id": quizId }, { $push: { "publicQuizzes.$.results": resultObj } });
+            const upd = await contentCollection.updateOne({ grade, "publicQuizzes.id": quizId }, { $push: { "publicQuizzes.$.results": resultObj } });
+            if (upd.matchedCount === 0) return res.status(404).json({ message: "الاختبار غير موجود." });
         } else {
-            await contentCollection.updateOne({ grade, "quizzes.id": quizId }, { $push: { "quizzes.$.results": resultObj } });
+            // منع تكرار المحاولة لنفس الطالب على نفس الاختبار (محاولة واحدة فقط)
+            const dup = await contentCollection.findOne({ grade, quizzes: { $elemMatch: { id: quizId, results: { $elemMatch: { email } } } } });
+            if (dup) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
+
+            const upd = await contentCollection.updateOne({ grade, "quizzes.id": quizId }, { $push: { "quizzes.$.results": resultObj } });
+            if (upd.matchedCount === 0) return res.status(404).json({ message: "الاختبار غير موجود أو غير متاح لمرحلتك الدراسية." });
         }
         res.status(200).json({ message: "تم حفظ النتيجة واعتمادها بنجاح" });
-    } catch (error) { res.status(500).json({ message: "خطأ" }); }
+    } catch (error) {
+        console.error("submitQuiz error:", error);
+        res.status(500).json({ message: "حدث خطأ أثناء حفظ النتيجة." });
+    }
 };
 
 exports.checkStatus = async (req, res) => {
