@@ -10,13 +10,9 @@ const SysUI = (() => {
     const $lerp = (a, b, t) => a + (b - a) * t;
     const $smoothstep = (a, b, t) => { const x = $clamp((t - a) / (b - a), 0, 1); return x * x * (3 - 2 * x); };
     const $hash = (str) => { let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h) + str.charCodeAt(i); return (h >>> 0).toString(36); };
-    const $easeOutExpo = (t) => t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-    const $easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     const $prm = matchMedia('(prefers-reduced-motion: reduce)');
     const $isTouch = matchMedia('(pointer: coarse)').matches;
     const $isHighRefresh = matchMedia('(min-resolution: 120dpi)').matches;
-    const $isMobile = matchMedia('(max-width: 768px)').matches;
-    const $isSmallMobile = matchMedia('(max-width: 480px)').matches;
     let $reducedMotion = $prm.matches;
     $prm.addEventListener?.('change', e => { $reducedMotion = e.matches; });
 
@@ -34,9 +30,7 @@ const SysUI = (() => {
                 springSnappy: 'cubic-bezier(0.22, 1, 0.36, 1)',
                 elastic: 'cubic-bezier(0.68, -0.4, 0.265, 1.4)',
                 smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
-                anticipate: 'cubic-bezier(0.75, -0.5, 0.25, 1.5)',
-                gravity: 'cubic-bezier(0.5, 0, 0.75, 0)',
-                liquid: 'cubic-bezier(0.45, 0, 0.15, 1)'
+                anticipate: 'cubic-bezier(0.75, -0.5, 0.25, 1.5)'
             },
             spring: {
                 gentle: { stiffness: 120, damping: 14, mass: 1 },
@@ -44,9 +38,7 @@ const SysUI = (() => {
                 stiff: { stiffness: 300, damping: 22, mass: 1 },
                 slow: { stiffness: 80, damping: 20, mass: 1 },
                 snappy: { stiffness: 400, damping: 28, mass: 1 },
-                bouncy: { stiffness: 260, damping: 9, mass: 1.1 },
-                molasses: { stiffness: 60, damping: 30, mass: 1.5 },
-                ethereal: { stiffness: 200, damping: 18, mass: 0.8 }
+                bouncy: { stiffness: 260, damping: 9, mass: 1.1 }
             },
             stagger: { tight: 22, normal: 38, relaxed: 60, dramatic: 90 }
         };
@@ -122,8 +114,7 @@ const SysUI = (() => {
             slideLeft: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateX(20px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
             slideRight: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'translateX(-20px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: tokens.duration.emphasized, easing: tokens.ease.spring, ...opts }),
             pop: (el, opts = {}) => spring(el, { transform: ['scale(0.85)', 'scale(1)'], opacity: [0, 1] }, 'bouncy'),
-            blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts }),
-            liquid: (el, opts = {}) => animate(el, [{ opacity: 0, transform: 'scale(0.6) rotate(-8deg)', filter: 'blur(20px)' }, { opacity: 1, transform: 'scale(1) rotate(0)', filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.elastic, ...opts })
+            blur: (el, opts = {}) => animate(el, [{ opacity: 0, filter: 'blur(10px)' }, { opacity: 1, filter: 'blur(0)' }], { duration: tokens.duration.slow, easing: tokens.ease.smooth, ...opts })
         };
 
         const exit = {
@@ -131,7 +122,6 @@ const SysUI = (() => {
             scale: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.94)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
             slideUp: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(-12px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
             slideDown: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(12px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
-            slideLeft: (el, opts = {}) => animate(el, [{ opacity: 1, transform: 'translateX(0)' }, { opacity: 0, transform: 'translateX(20px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts }),
             blur: (el, opts = {}) => animate(el, [{ opacity: 1, filter: 'blur(0)' }, { opacity: 0, filter: 'blur(8px)' }], { duration: tokens.duration.fast, easing: tokens.ease.accelerate, ...opts })
         };
 
@@ -147,15 +137,6 @@ const SysUI = (() => {
             { transform: 'scale(1)', filter: 'brightness(1)' }
         ], { duration: 420, easing: tokens.ease.springSoft });
 
-        const wobble = (el) => animate(el, [
-            { transform: 'rotate(0deg) scale(1)' },
-            { transform: 'rotate(-3deg) scale(1.02)' },
-            { transform: 'rotate(3deg) scale(1.02)' },
-            { transform: 'rotate(-2deg) scale(1.01)' },
-            { transform: 'rotate(2deg) scale(1.01)' },
-            { transform: 'rotate(0deg) scale(1)' }
-        ], { duration: 600, easing: tokens.ease.springSoft });
-
         const flip = (el, from, to) => {
             if ($reducedMotion) return Promise.resolve();
             const dx = from.left - to.left, dy = from.top - to.top;
@@ -166,12 +147,7 @@ const SysUI = (() => {
             ], { duration: tokens.duration.emphasized, easing: tokens.ease.spring });
         };
 
-        const morph = (el, from, to, opts = {}) => animate(el, [
-            { clipPath: from },
-            { clipPath: to }
-        ], { duration: tokens.duration.slow, easing: tokens.ease.liquid, ...opts });
-
-        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, wobble, flip, morph, reduce, springCurve };
+        return { tokens, animate, spring, stagger, enter, exit, shake, pulse, flip, reduce, springCurve };
     })();
 
     const Events = (() => {
@@ -361,9 +337,7 @@ const SysUI = (() => {
             delete: () => { sweep(600, 200, 'sawtooth', 0.18, 0.07); noise(0.15, 0.04, 800); },
             swoosh: () => { sweep(400, 1200, 'sine', 0.12, 0.05); noise(0.12, 0.04, 2400); },
             crystal: () => { tone(2093, 'sine', 0.4, 0.05); tone(3136, 'sine', 0.35, 0.03); tone(4186, 'sine', 0.3, 0.02); },
-            morph: () => sweep(440, 880, 'triangle', 0.2, 0.05, 'lin'),
-            scroll: () => tone(3200, 'sine', 0.006, 0.012),
-            slide: () => { sweep(800, 1400, 'sine', 0.08, 0.03); }
+            morph: () => sweep(440, 880, 'triangle', 0.2, 0.05, 'lin')
         };
         return {
             play: (name) => presets[name]?.(),
@@ -462,7 +436,6 @@ const SysUI = (() => {
                     --sys-ease-spring-snappy: cubic-bezier(0.22, 1, 0.36, 1);
                     --sys-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
                     --sys-ease-elastic: cubic-bezier(0.68, -0.4, 0.265, 1.4);
-                    --sys-ease-liquid: cubic-bezier(0.45, 0, 0.15, 1);
                     --sys-motion-instant: 80ms;
                     --sys-motion-fast: 180ms;
                     --sys-motion-normal: 240ms;
@@ -481,8 +454,6 @@ const SysUI = (() => {
                     --sys-shadow-xl: 0 40px 96px rgba(0,0,0,0.7);
                     --sys-gradient-aurora: linear-gradient(135deg, #a855f7 0%, #ec4899 50%, #06b6d4 100%);
                     --sys-gradient-fire: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%);
-                    --sys-gradient-ocean: linear-gradient(135deg, #06b6d4 0%, #3b82f6 50%, #8b5cf6 100%);
-                    --sys-gradient-sunset: linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #ec4899 100%);
                     --sys-gradient-mesh: radial-gradient(at 40% 20%, rgba(168,85,247,0.15) 0px, transparent 50%), radial-gradient(at 80% 0%, rgba(59,130,246,0.12) 0px, transparent 50%), radial-gradient(at 0% 50%, rgba(236,72,153,0.1) 0px, transparent 50%), radial-gradient(at 80% 50%, rgba(6,182,212,0.1) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(168,85,247,0.12) 0px, transparent 50%);
                 }
                 @media (prefers-reduced-motion: reduce) {
@@ -634,247 +605,6 @@ const SysUI = (() => {
                 .sys-bloom:hover::before { opacity: 1; }
                 @keyframes sysGlowPulse { 0%,100% { box-shadow: 0 0 20px rgba(168,85,247,0.2), 0 0 40px rgba(168,85,247,0.1); } 50% { box-shadow: 0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.2); } }
                 .sys-iridescent { background: linear-gradient(135deg, #a855f7, #ec4899, #06b6d4, #a855f7); background-size: 300% 300%; animation: sysAuroraShift 8s ease infinite; }
-
-                .sys-tabs-scroller {
-                    display: flex !important;
-                    flex-wrap: nowrap !important;
-                    gap: 0.5rem;
-                    overflow-x: auto !important;
-                    overflow-y: hidden;
-                    scrollbar-width: none;
-                    -ms-overflow-style: none;
-                    -webkit-overflow-scrolling: touch;
-                    scroll-snap-type: x proximity;
-                    scroll-padding: 0 1rem;
-                    padding: 0.5rem 1rem 0.75rem 1rem;
-                    mask-image: linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
-                    -webkit-mask-image: linear-gradient(to left, transparent 0%, black 4%, black 96%, transparent 100%);
-                    position: relative;
-                    width: 100%;
-                    max-width: 100vw;
-                    box-sizing: border-box;
-                    overscroll-behavior-x: contain;
-                    scroll-behavior: smooth;
-                }
-                .sys-tabs-scroller::-webkit-scrollbar { display: none !important; width: 0 !important; height: 0 !important; }
-                .sys-tabs-scroller > * {
-                    flex: 0 0 auto !important;
-                    white-space: nowrap !important;
-                    word-break: keep-all !important;
-                    overflow-wrap: normal !important;
-                    -webkit-hyphens: none !important;
-                    hyphens: none !important;
-                    text-overflow: clip !important;
-                    min-width: max-content !important;
-                    width: auto !important;
-                    scroll-snap-align: start;
-                    padding: 0.6rem 1.1rem;
-                    border-radius: 0.75rem;
-                    font-size: 0.875rem;
-                    line-height: 1.4;
-                    transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
-                    cursor: pointer;
-                    user-select: none;
-                    position: relative;
-                    direction: rtl;
-                    unicode-bidi: plaintext;
-                }
-                @media (max-width: 768px) {
-                    .sys-tabs-scroller { padding: 0.5rem 0.75rem; gap: 0.4rem; }
-                    .sys-tabs-scroller > * { padding: 0.55rem 0.9rem; font-size: 0.825rem; }
-                }
-                @media (max-width: 480px) {
-                    .sys-tabs-scroller { padding: 0.5rem 0.5rem; gap: 0.35rem; mask-image: linear-gradient(to left, transparent 0%, black 6%, black 94%, transparent 100%); -webkit-mask-image: linear-gradient(to left, transparent 0%, black 6%, black 94%, transparent 100%); }
-                    .sys-tabs-scroller > * { padding: 0.5rem 0.85rem; font-size: 0.8rem; }
-                }
-                .sys-tab-arrow {
-                    position: absolute;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    width: 32px;
-                    height: 32px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: linear-gradient(135deg, rgba(20,20,24,0.95), rgba(10,10,14,0.95));
-                    backdrop-filter: blur(20px);
-                    border: 1px solid rgba(255,255,255,0.1);
-                    border-radius: 50%;
-                    color: rgba(255,255,255,0.85);
-                    cursor: pointer;
-                    z-index: 5;
-                    opacity: 0;
-                    pointer-events: none;
-                    transition: opacity 240ms var(--sys-ease-spring), transform 220ms var(--sys-ease-spring);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-                }
-                .sys-tab-arrow.sys-visible { opacity: 1; pointer-events: auto; }
-                .sys-tab-arrow:hover { transform: translateY(-50%) scale(1.1); background: linear-gradient(135deg, rgba(168,85,247,0.3), rgba(236,72,153,0.2)); border-color: rgba(168,85,247,0.5); }
-                .sys-tab-arrow.sys-tab-arrow-left { left: 4px; }
-                .sys-tab-arrow.sys-tab-arrow-right { right: 4px; }
-                @media (max-width: 480px) { .sys-tab-arrow { display: none; } }
-
-                * { -webkit-tap-highlight-color: transparent; }
-                @media (max-width: 768px) {
-                    button, [role="button"], a, input, select, textarea { min-height: 40px; }
-                }
-
-                .sys-cmd-mobile {
-                    padding-top: 8vh !important;
-                }
-                @media (max-width: 480px) {
-                    .sys-cmd-mobile { padding-top: 4vh !important; padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
-                }
-
-                .sys-magnetic-glow {
-                    position: absolute;
-                    pointer-events: none;
-                    width: 200px;
-                    height: 200px;
-                    border-radius: 50%;
-                    background: radial-gradient(circle, rgba(168,85,247,0.18), transparent 60%);
-                    opacity: 0;
-                    transition: opacity 300ms;
-                    mix-blend-mode: screen;
-                    z-index: -1;
-                    filter: blur(20px);
-                }
-
-                .sys-particle-trail {
-                    position: fixed;
-                    pointer-events: none;
-                    border-radius: 50%;
-                    background: radial-gradient(circle, currentColor, transparent 70%);
-                    will-change: transform, opacity;
-                    z-index: 10003;
-                    mix-blend-mode: screen;
-                }
-
-                @keyframes sysGlitch {
-                    0%,100% { transform: translate(0); filter: hue-rotate(0deg); }
-                    20% { transform: translate(-2px, 2px); filter: hue-rotate(90deg); }
-                    40% { transform: translate(-2px, -2px); filter: hue-rotate(180deg); }
-                    60% { transform: translate(2px, 2px); filter: hue-rotate(270deg); }
-                    80% { transform: translate(2px, -2px); filter: hue-rotate(360deg); }
-                }
-                .sys-glitch { animation: sysGlitch 300ms steps(2) infinite; }
-
-                @keyframes sysNeonPulse {
-                    0%,100% { text-shadow: 0 0 8px currentColor, 0 0 16px currentColor; }
-                    50% { text-shadow: 0 0 16px currentColor, 0 0 32px currentColor, 0 0 48px currentColor; }
-                }
-                .sys-neon { animation: sysNeonPulse 2s ease-in-out infinite; }
-
-                .sys-3d-card {
-                    transform-style: preserve-3d;
-                    perspective: 1000px;
-                    transition: transform 400ms var(--sys-ease-spring);
-                }
-                .sys-3d-card-inner {
-                    transform-style: preserve-3d;
-                    transition: transform 400ms var(--sys-ease-spring);
-                }
-
-                .sys-liquid-button {
-                    position: relative;
-                    overflow: hidden;
-                    isolation: isolate;
-                }
-                .sys-liquid-button::before {
-                    content: "";
-                    position: absolute;
-                    inset: 0;
-                    background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(168,85,247,0.4), transparent 50%);
-                    opacity: 0;
-                    transition: opacity 280ms;
-                    z-index: -1;
-                }
-                .sys-liquid-button:hover::before { opacity: 1; }
-
-                @keyframes sysOrbitalRing {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                .sys-orbital-ring {
-                    position: absolute;
-                    inset: -8px;
-                    border: 1px dashed rgba(168,85,247,0.3);
-                    border-radius: inherit;
-                    animation: sysOrbitalRing 12s linear infinite;
-                    pointer-events: none;
-                }
-
-                .sys-snap-y { scroll-snap-type: y mandatory; }
-                .sys-snap-item { scroll-snap-align: start; }
-
-                .sys-stagger-child { opacity: 0; transform: translateY(20px); animation: sysStaggerIn 500ms var(--sys-ease-spring) forwards; }
-                @keyframes sysStaggerIn { to { opacity: 1; transform: translateY(0); } }
-
-                @keyframes sysHeartbeat {
-                    0%,100% { transform: scale(1); }
-                    14% { transform: scale(1.1); }
-                    28% { transform: scale(1); }
-                    42% { transform: scale(1.1); }
-                    70% { transform: scale(1); }
-                }
-                .sys-heartbeat { animation: sysHeartbeat 1.5s ease-in-out infinite; }
-
-                .sys-blob {
-                    border-radius: 64% 36% 27% 73% / 55% 58% 42% 45%;
-                    animation: sysBlobMorph 8s ease-in-out infinite;
-                }
-                @keyframes sysBlobMorph {
-                    0%,100% { border-radius: 64% 36% 27% 73% / 55% 58% 42% 45%; }
-                    25% { border-radius: 45% 55% 68% 32% / 38% 62% 38% 62%; }
-                    50% { border-radius: 32% 68% 38% 62% / 65% 35% 65% 35%; }
-                    75% { border-radius: 55% 45% 52% 48% / 42% 58% 42% 58%; }
-                }
-
-                .sys-haze {
-                    position: relative;
-                    overflow: hidden;
-                }
-                .sys-haze::before {
-                    content: "";
-                    position: absolute;
-                    inset: -50%;
-                    background: conic-gradient(from var(--haze-angle, 0deg), transparent 0%, rgba(168,85,247,0.15) 25%, transparent 50%, rgba(236,72,153,0.15) 75%, transparent 100%);
-                    animation: sysHazeRotate 10s linear infinite;
-                    pointer-events: none;
-                    z-index: -1;
-                    filter: blur(40px);
-                }
-                @keyframes sysHazeRotate { to { transform: rotate(360deg); } }
-
-                .sys-input-glow {
-                    transition: all 280ms var(--sys-ease-spring);
-                }
-                .sys-input-glow:focus {
-                    box-shadow: 0 0 0 3px rgba(168,85,247,0.2), 0 0 24px rgba(168,85,247,0.2);
-                    border-color: rgba(168,85,247,0.6);
-                }
-
-                .sys-magic-border {
-                    position: relative;
-                    background-clip: padding-box;
-                    border: 1px solid transparent;
-                }
-                .sys-magic-border::before {
-                    content: "";
-                    position: absolute;
-                    inset: 0;
-                    z-index: -1;
-                    margin: -1px;
-                    border-radius: inherit;
-                    background: conic-gradient(from var(--angle, 0deg), #a855f7, #ec4899, #06b6d4, #a855f7);
-                    animation: sysMagicRotate 4s linear infinite;
-                }
-                @keyframes sysMagicRotate { to { --angle: 360deg; } }
-                @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
-
-                @media (max-width: 768px) {
-                    .sys-glass, .sys-glass-strong { backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
-                }
             `;
             document.head.appendChild(style);
             injected = true;
@@ -965,141 +695,6 @@ const SysUI = (() => {
         }
     });
 
-    const TabsFixer = (() => {
-        const NAV_SELECTORS = [
-            'nav', '[role="tablist"]', '.tabs', '.nav-tabs', '.tab-list',
-            '[class*="tabs"]', '[class*="Tabs"]', '[class*="tab-bar"]',
-            '[class*="navbar"]', '[class*="NavBar"]', '[data-tabs]'
-        ];
-        const arrows = new WeakMap();
-        const fixed = new WeakSet();
-
-        const isLikelyTabBar = (el) => {
-            if (!el || fixed.has(el)) return false;
-            const children = Array.from(el.children).filter(c => c.offsetWidth > 0);
-            if (children.length < 3 || children.length > 20) return false;
-            const styles = getComputedStyle(el);
-            const isFlex = styles.display.includes('flex');
-            const isGrid = styles.display.includes('grid');
-            if (!isFlex && !isGrid) return false;
-            let textChildren = 0;
-            for (const c of children) {
-                const txt = c.textContent?.trim() || '';
-                if (txt.length > 0 && txt.length < 50) textChildren++;
-            }
-            return textChildren >= children.length * 0.6;
-        };
-
-        const fix = (el) => {
-            if (!el || fixed.has(el)) return;
-            fixed.add(el);
-            el.classList.add('sys-tabs-scroller');
-            const children = Array.from(el.children);
-            children.forEach(c => {
-                c.style.flex = '0 0 auto';
-                c.style.whiteSpace = 'nowrap';
-                c.style.wordBreak = 'keep-all';
-                c.style.overflowWrap = 'normal';
-                c.style.minWidth = 'max-content';
-                c.style.width = 'auto';
-                c.style.textOverflow = 'clip';
-            });
-            const wrap = el.parentElement;
-            if (wrap && getComputedStyle(wrap).position === 'static') wrap.style.position = 'relative';
-
-            const leftArrow = DOM.create('button', { class: 'sys-tab-arrow sys-tab-arrow-left', 'aria-label': 'سابق' });
-            const rightArrow = DOM.create('button', { class: 'sys-tab-arrow sys-tab-arrow-right', 'aria-label': 'التالي' });
-            leftArrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>';
-            rightArrow.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
-
-            if (wrap) {
-                wrap.appendChild(leftArrow);
-                wrap.appendChild(rightArrow);
-                arrows.set(el, { left: leftArrow, right: rightArrow });
-            }
-
-            const updateArrows = () => {
-                const isRTL = getComputedStyle(el).direction === 'rtl';
-                const scrollLeft = el.scrollLeft;
-                const maxScroll = el.scrollWidth - el.clientWidth;
-                const atStart = isRTL ? Math.abs(scrollLeft) < 8 : scrollLeft < 8;
-                const atEnd = isRTL ? Math.abs(scrollLeft) >= maxScroll - 8 : scrollLeft >= maxScroll - 8;
-                if (isRTL) {
-                    leftArrow.classList.toggle('sys-visible', !atEnd);
-                    rightArrow.classList.toggle('sys-visible', !atStart);
-                } else {
-                    leftArrow.classList.toggle('sys-visible', !atStart);
-                    rightArrow.classList.toggle('sys-visible', !atEnd);
-                }
-            };
-
-            const scrollBy = (dir) => {
-                const isRTL = getComputedStyle(el).direction === 'rtl';
-                const amount = el.clientWidth * 0.7;
-                el.scrollBy({ left: isRTL ? -dir * amount : dir * amount, behavior: 'smooth' });
-                Audio.play('slide');
-            };
-
-            leftArrow.addEventListener('click', () => scrollBy(-1));
-            rightArrow.addEventListener('click', () => scrollBy(1));
-            el.addEventListener('scroll', $rafThrottle(updateArrows), { passive: true });
-            new ResizeObserver(updateArrows).observe(el);
-            setTimeout(updateArrows, 100);
-
-            let dragStart = null, dragScrollStart = 0, isDragging = false;
-            el.addEventListener('pointerdown', (e) => {
-                if (e.target.closest('button, a, [role="button"], [role="tab"]')) return;
-                dragStart = e.clientX;
-                dragScrollStart = el.scrollLeft;
-                isDragging = false;
-            });
-            el.addEventListener('pointermove', (e) => {
-                if (dragStart === null) return;
-                const dx = e.clientX - dragStart;
-                if (Math.abs(dx) > 5) {
-                    isDragging = true;
-                    el.style.cursor = 'grabbing';
-                    el.scrollLeft = dragScrollStart - dx;
-                }
-            });
-            const endDrag = () => { dragStart = null; el.style.cursor = ''; setTimeout(() => isDragging = false, 50); };
-            el.addEventListener('pointerup', endDrag);
-            el.addEventListener('pointerleave', endDrag);
-            el.addEventListener('pointercancel', endDrag);
-            el.addEventListener('click', (e) => { if (isDragging) { e.preventDefault(); e.stopPropagation(); } }, true);
-
-            el.addEventListener('wheel', (e) => {
-                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); el.scrollLeft += e.deltaY; }
-            }, { passive: false });
-
-            const activeChild = el.querySelector('[aria-selected="true"], .active, .sys-active, [data-active="true"]');
-            if (activeChild) setTimeout(() => activeChild.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 200);
-        };
-
-        const scan = () => {
-            const candidates = new Set();
-            NAV_SELECTORS.forEach(sel => {
-                try { document.querySelectorAll(sel).forEach(el => candidates.add(el)); } catch {}
-            });
-            document.querySelectorAll('div, ul, ol').forEach(el => { if (isLikelyTabBar(el)) candidates.add(el); });
-            candidates.forEach(el => { if (isLikelyTabBar(el) || el.matches?.(NAV_SELECTORS.join(','))) fix(el); });
-        };
-
-        const init = () => {
-            scan();
-            const obs = new MutationObserver($debounce(scan, 200));
-            obs.observe(document.body, { childList: true, subtree: true });
-            window.addEventListener('resize', $debounce(() => {
-                document.querySelectorAll('.sys-tabs-scroller').forEach(el => {
-                    const evt = new Event('scroll');
-                    el.dispatchEvent(evt);
-                });
-            }, 150));
-        };
-
-        return { init, fix, scan };
-    })();
-
     const Magnetic = (() => {
         let cache = [], lastUpdate = 0, raf = null;
         const refresh = $debounce(() => {
@@ -1144,18 +739,18 @@ const SysUI = (() => {
     const Cursor = (() => {
         let cursor, active = false, raf = null, tx = 0, ty = 0, x = 0, y = 0;
         const trails = [];
-        const trailCount = 8;
+        const trailCount = 6;
         const loop = () => {
             x = $lerp(x, tx, 0.22); y = $lerp(y, ty, 0.22);
             if (cursor) cursor.style.transform = `translate3d(${x - 12}px, ${y - 12}px, 0)`;
             for (let i = 0; i < trails.length; i++) {
                 const t = trails[i];
-                t.x = $lerp(t.x, i === 0 ? x : trails[i-1].x, 0.35 - i * 0.03);
-                t.y = $lerp(t.y, i === 0 ? y : trails[i-1].y, 0.35 - i * 0.03);
+                t.x = $lerp(t.x, i === 0 ? x : trails[i-1].x, 0.35 - i * 0.04);
+                t.y = $lerp(t.y, i === 0 ? y : trails[i-1].y, 0.35 - i * 0.04);
                 if (t.el) {
-                    const scale = 1 - i * 0.11;
+                    const scale = 1 - i * 0.13;
                     t.el.style.transform = `translate3d(${t.x - 3}px, ${t.y - 3}px, 0) scale(${scale})`;
-                    t.el.style.opacity = `${0.5 - i * 0.05}`;
+                    t.el.style.opacity = `${0.5 - i * 0.07}`;
                 }
             }
             raf = requestAnimationFrame(loop);
@@ -1407,7 +1002,7 @@ const SysUI = (() => {
                         <div class="flex justify-between"><span class="text-gray-500">📢 TST</span><span class="text-cyan-400">${State.toasts.size}</span></div>
                         <div class="flex justify-between"><span class="text-gray-500">🎯 ACT</span><span class="text-pink-400">${Actions.getAll().length}</span></div>
                         <div class="sys-divider-glow my-1"></div>
-                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v6.0 · ONLINE</div>
+                        <div class="text-[8px] text-gray-500 text-center tracking-[0.3em] sys-shimmer-text">SYS_UI · v5.0 · ONLINE</div>
                     `;
                 }
                 rafId = requestAnimationFrame(loop);
@@ -1496,6 +1091,7 @@ const SysUI = (() => {
             if (!t) return create(type, message, duration);
             Audio.play(sounds[type] || 'pop');
             if (t.timeout) clearTimeout(t.timeout);
+            const old = Array.from(t.el.children);
             Motion.animate(t.el, [{ filter: 'blur(0)' }, { filter: 'blur(4px)' }], { duration: 120, easing: 'ease-out' }).then(() => {
                 t.el.innerHTML = '';
                 t.el.className = t.el.className.replace(/border-\w+-500\/30/g, '') + ' ' + (borders[type] || borders.info);
@@ -1558,7 +1154,7 @@ const SysUI = (() => {
             else box.appendChild(DOM.create('div', { class: 'mb-5' }));
             let input = null, errorEl = null;
             if (inputId) {
-                input = DOM.create('input', { type: 'text', id: inputId, class: 'sys-input-glow w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all mb-2 placeholder-gray-600', placeholder, autocomplete: 'off' });
+                input = DOM.create('input', { type: 'text', id: inputId, class: 'w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-purple-500/60 focus:ring-2 focus:ring-purple-500/20 transition-all mb-2 placeholder-gray-600', placeholder, autocomplete: 'off' });
                 box.appendChild(input);
                 errorEl = DOM.create('p', { class: 'text-xs text-red-400 mb-4 min-h-[16px]' });
                 box.appendChild(errorEl);
@@ -1568,7 +1164,7 @@ const SysUI = (() => {
             const btnRow = DOM.create('div', { class: 'flex justify-end gap-3 mt-2' });
             const cancelBtn = DOM.create('button', { class: 'sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/5 border border-white/10 transition-all outline-none focus:ring-2 focus:ring-white/20', text: cancelLabel });
             const confirmClass = type === 'danger' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white shadow-[0_0_20px_rgba(255,255,255,0.3)]';
-            const confirmBtn = DOM.create('button', { class: `sys-magnetic sys-button-press sys-liquid-button px-5 py-2.5 rounded-xl text-sm font-semibold ${confirmClass} transition-all outline-none focus:ring-2 focus:ring-white/40`, text: confirmLabel });
+            const confirmBtn = DOM.create('button', { class: `sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-semibold ${confirmClass} transition-all outline-none focus:ring-2 focus:ring-white/40`, text: confirmLabel });
             btnRow.append(cancelBtn, confirmBtn);
             box.appendChild(btnRow);
             container.innerHTML = '';
@@ -1719,7 +1315,7 @@ const SysUI = (() => {
             Theme.inject();
             Audio.play('open');
             Haptics.medium();
-            const container = DOM.mount('sys-cmd-root', Layers.cmd, 'sys-cmd-mobile fixed inset-0 hidden items-start justify-center pt-[12vh] px-4 pointer-events-none');
+            const container = DOM.mount('sys-cmd-root', Layers.cmd, 'fixed inset-0 hidden items-start justify-center pt-[12vh] px-4 pointer-events-none');
             const bd = DOM.mount('sys-cmd-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
             State.cmdState = { ...State.cmdState, query: '', selectedIndex: 0, results: [] };
             const box = DOM.create('div', { class: 'w-full max-w-2xl sys-glass-strong rounded-2xl overflow-hidden pointer-events-auto flex flex-col sys-noise-overlay shadow-2xl', style: { transformOrigin: 'center top' } });
@@ -1730,7 +1326,7 @@ const SysUI = (() => {
             header.append(input, escTag);
             const results = DOM.create('div', { id: 'sys-cmd-results', class: 'max-h-[420px] overflow-y-auto sys-no-scroll p-2' });
             const footer = DOM.create('div', { class: 'flex items-center justify-between px-5 py-3 border-t border-white/10 text-[10px] text-gray-500 bg-black/20' });
-            footer.innerHTML = `<div class="flex gap-4 flex-wrap"><span class="flex items-center gap-1.5"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em]">SYS_UI</div>`;
+            footer.innerHTML = `<div class="flex gap-4"><span class="flex items-center gap-1.5"><span class="sys-kbd">↑↓</span> تنقل</span><span class="flex items-center gap-1.5"><span class="sys-kbd">↵</span> تنفيذ</span><span class="flex items-center gap-1.5"><span class="sys-kbd">⇥</span> مفضلة</span></div><div class="sys-shimmer-text font-semibold tracking-[0.3em]">SYS_UI</div>`;
             box.append(header, results, footer);
             container.innerHTML = '';
             container.appendChild(box);
@@ -1948,7 +1544,7 @@ const SysUI = (() => {
             const descEl = DOM.create('p', { class: 'text-gray-500 text-sm mb-6 leading-relaxed', text: desc });
             wrap.append(titleEl, descEl);
             if (actionLabel) {
-                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep sys-liquid-button px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)]', text: actionLabel });
+                const btn = DOM.create('button', { class: 'sys-magnetic sys-button-press sys-shimmer-sweep px-6 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white transition-all shadow-[0_0_24px_rgba(255,255,255,0.25)]', text: actionLabel });
                 if (actionId) btn.addEventListener('click', () => Actions.execute(actionId));
                 wrap.appendChild(btn);
             }
@@ -2126,7 +1722,6 @@ const SysUI = (() => {
         Ripple.attach();
         ScrollProgress.enable();
         Observe.revealOnScroll();
-        TabsFixer.init();
         Hotkeys.bind('mod+k', () => Cmd.toggle());
         Hotkeys.bind('mod+/', () => Cmd.toggle());
         Hotkeys.bind('shift+?', () => Toasts.create('info', 'Cmd+K: بحث · F12: HUD · ESC: إغلاق', 5000));
@@ -2139,8 +1734,8 @@ const SysUI = (() => {
     else boot();
 
     return {
-        version: '6.0.0',
-        Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs, TabsFixer,
+        version: '5.0.0',
+        Events, Actions, Theme, Audio, Haptics, Store, Hotkeys, Observe, Cursor, ContextMenu, Tooltip, ScrollProgress, Motion, Drawer, Accordion, Tabs,
         pageTransition: Page.transition,
         load: SmartLoader.execute,
         spotlight: Spotlight.show,
@@ -2170,7 +1765,6 @@ const SysUI = (() => {
         animate: Motion.animate,
         spring: Motion.spring,
         stagger: Motion.stagger,
-        fixTabs: TabsFixer.fix,
         utils: { esc: $esc, uid: $uid, debounce: $debounce, throttle: $throttle, idle: $idle, clamp: $clamp, lerp: $lerp, smoothstep: $smoothstep, hash: $hash, safeJSON: $safeJSON },
         icons: {
             trash: `<svg class="w-4 h-4 transition-transform hover:scale-110 active:scale-95" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`,
@@ -2189,7 +1783,6 @@ document.addEventListener('DOMContentLoaded', () => {
         { id: 'hud.toggle', title: 'تفعيل/إلغاء أدوات المطوّر (HUD)', shortcut: 'F12', icon: '📊', group: 'النظام', keywords: ['fps', 'performance', 'debug'], handler: SysUI.hud },
         { id: 'cursor.toggle', title: 'تفعيل/إلغاء المؤشر المتقدم', icon: '🎯', group: 'النظام', handler: SysUI.Cursor.toggle },
         { id: 'audio.toggle', title: 'كتم/تفعيل الأصوات', icon: '🔊', group: 'النظام', handler: () => { const m = !SysUI.Audio.isMuted(); SysUI.Audio.mute(m); SysUI.toast('info', m ? 'تم كتم الأصوات' : 'تم تفعيل الأصوات', 2000); } },
-        { id: 'tabs.rescan', title: 'إعادة فحص شرائط التبويبات', icon: '🔄', group: 'النظام', handler: () => { SysUI.TabsFixer.scan(); SysUI.toast('success', 'تم إعادة فحص التبويبات', 2000); } },
         { id: 'settings', title: 'إعدادات النظام', shortcut: 'S', icon: '⚙️', group: 'التطبيق', handler: () => SysUI.toast('info', 'فتح الإعدادات') },
         { id: 'users', title: 'إدارة الطلاب', shortcut: 'U', icon: '👥', group: 'التطبيق', handler: () => SysUI.load(new Promise(r => setTimeout(r, 2500)), 'main-content') },
         { id: 'celebrate', title: 'احتفال!', icon: '🎉', group: 'مرح', handler: () => SysUI.confetti(120) },
