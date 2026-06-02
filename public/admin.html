@@ -17,7 +17,16 @@
         .tab-btn { transition: all 0.3s ease; position: relative; }
         .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); color: white; }
         .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-right: 4px solid #eab308; }
-        @media (max-width: 767px) { .tab-btn.active { border-right: none; border-bottom: 3px solid #eab308; } }
+        @media (max-width: 767px) {
+            /* شريط تبويبات أفقي أنيق على الجوال: حبّات قابلة للتمرير بدل النص المتداخل */
+            .tab-pill { border-radius: 9999px; background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; }
+            .tab-btn.active { border-right: none; background-color: rgba(234,179,8,0.15); color: #eab308; border-color: rgba(234,179,8,0.45); box-shadow: 0 4px 14px rgba(234,179,8,0.18); }
+            .tab-nav-wrap { position: relative; }
+            /* تدرّج تلاشٍ على حافتي الشريط ليوحي بإمكانية التمرير */
+            .tab-nav-wrap::before, .tab-nav-wrap::after { content: ''; position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; z-index: 2; }
+            .tab-nav-wrap::before { right: 0; background: linear-gradient(to left, #070b19, transparent); }
+            .tab-nav-wrap::after { left: 0; background: linear-gradient(to right, #070b19, transparent); }
+        }
         .tab-content { display: none; }
         .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -123,15 +132,16 @@
         window.addScoreRow = function() {
             const container = document.getElementById('scoresContainer');
             const row = document.createElement('div');
-            row.className = 'flex gap-3 items-center animate-fade-in-up mb-3';
+            row.className = 'score-row flex gap-2 sm:gap-3 items-center animate-fade-in-up';
             row.innerHTML = `
-                <input type="text" placeholder="اسم الطالب (رباعي)" required class="test-student-name flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base transition-colors">
-                <input type="number" placeholder="الدرجة" required class="test-student-score w-24 md:w-32 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base text-center transition-colors">
-                <button type="button" onclick="this.parentElement.remove()" class="shrink-0 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 p-3 rounded-xl transition-all font-bold">
+                <input type="text" placeholder="اسم الطالب (رباعي)" required class="test-student-name flex-1 min-w-0 bg-black/30 border border-white/10 rounded-xl px-3 sm:px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base transition-colors">
+                <input type="number" inputmode="numeric" placeholder="الدرجة" required class="test-student-score w-16 sm:w-24 md:w-28 shrink-0 bg-black/30 border border-white/10 rounded-xl px-2 sm:px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base text-center transition-colors">
+                <button type="button" onclick="this.parentElement.remove()" aria-label="حذف الصف" class="shrink-0 grid place-items-center w-11 h-11 sm:w-12 sm:h-12 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             `;
             container.appendChild(row);
+            row.querySelector('.test-student-name')?.focus();
         };
 
         // 🌟 نظام توليد الأسئلة الثكي والديناميكي (4 حقول ثابتة دائماً مع فحص التحقق) 🌟
@@ -209,7 +219,7 @@
                         <label class="block text-xs text-gray-400 mb-2">الإجابة الصحيحة</label>
                         <select class="question-correct-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
                             <option value="1">الخيار الأول</option>
-                            <option value="2">الخيار الثاني</option>
+                            <option value="2">الخيار الث��ني</option>
                             <option value="3" class="extra-opt-target">الخيار الثالث</option>
                             <option value="4" class="extra-opt-target">الخيار الرابع</option>
                         </select>
@@ -328,19 +338,21 @@
             <button onclick="logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors">خروج</button>
         </div>
         
-        <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-1 p-2 md:py-4 md:px-0 scrollbar-hide shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نظرة عامة</button>
-            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
-            <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
-            <button onclick="switchTab('students')" id="btn-students" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
-            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
-            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">كورسات</button>
-            <button onclick="switchTab('content')" id="btn-content" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
-            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار المنصة</button>
-            <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إنشاء اختبار عام</button>
-            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">إدارة المحتوى</button>
-            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-3 md:py-4 font-medium text-gray-300">البث المباشر</button>
+        <div class="tab-nav-wrap md:contents">
+        <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-2 md:gap-1 px-3 py-3 md:py-4 md:px-0 scrollbar-hide shrink-0">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">نظرة عامة</button>
+            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
+            <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
+            <button onclick="switchTab('students')" id="btn-students" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
+            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
+            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">كورسات</button>
+            <button onclick="switchTab('content')" id="btn-content" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
+            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إنشاء اختبار المنصة</button>
+            <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إنشاء اختبار عام</button>
+            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إدارة المحتوى</button>
+            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">البث المباشر</button>
         </nav>
+        </div>
 
         <div class="hidden md:block p-4 border-t border-white/10 shrink-0 mt-auto">
             <button onclick="logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3 rounded-xl text-sm font-bold transition-all">تسجيل الخروج</button>
