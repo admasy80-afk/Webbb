@@ -457,7 +457,7 @@
         </div>
     </main>
 
-    <div id="quizModal" class="hidden"></div>
+    <!-- ملاحظة: نافذة الاختبار يتم إنشاؤها ديناميكياً بواسطة QuizEngine (quiz.js) لتفادي تعارض الـ ID -->
 
     <script>
         window.DahihApp = window.DahihApp || {
@@ -649,7 +649,8 @@
 
             // الدالة الجديدة مع إضافة حماية التكرار !listenersInitialized
             const init = async (dataSource) => {
-                renderSkeleton();
+                // إظهار الهيكل المؤقت فقط عند أول تحميل، لتفادي وميض البطاقات عند المزامنة الدورية في الخلفية
+                if (!quizzesData.length) renderSkeleton();
 
                 if (!listenersInitialized) {
                     setupEventListeners();
@@ -687,7 +688,11 @@
 
             return { init, reload };
         })();
+
+        // إتاحة QuizApp على نطاق window حتى يتمكن script.js و quiz.js من تحديث قائمة الاختبارات
+        window.QuizApp = QuizApp;
     </script>
 </body>
 </html>
+
 
