@@ -216,8 +216,6 @@
             this.speedBtn      = $('speedBtn');
             this.muteBtn       = $('muteBtn');
             this.centerPlay    = $('centerPlay');
-            this.skipIndicator = $('skipIndicator');
-            this.skipText      = $('skipText');
             this.titleEl       = $('playingVideoTitle');
             this.tapLeft       = $('tapLeft');
             this.tapRight      = $('tapRight');
@@ -274,8 +272,13 @@
                 });
             }
 
-            this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, '+10 ثواني'); });
-            this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, '-10 ثواني'); });
+            this.tapLeft.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(-10, 'left'); });
+            this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, 'right'); });
+
+            const playPauseBtn = $('playPauseBtn');
+            if (playPauseBtn) {
+                playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); this.togglePlay(); });
+            }
 
             this.speedBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -463,13 +466,15 @@
             }
         },
 
-        skip(seconds, label) {
+        skip(seconds, side) {
             if (!this.video.src || !isFinite(this.video.duration)) return;
             this.video.currentTime = Math.max(0, Math.min(this.video.duration, this.video.currentTime + seconds));
-            this.skipText.textContent = label;
-            this.skipIndicator.classList.remove('is-active');
-            void this.skipIndicator.offsetWidth;
-            this.skipIndicator.classList.add('is-active');
+            const indicator = side === 'left' ? $('skipIndicatorLeft') : $('skipIndicatorRight');
+            if (indicator) {
+                indicator.classList.remove('is-active');
+                void indicator.offsetWidth;
+                indicator.classList.add('is-active');
+            }
             haptic(35);
             this.resetIdleTimer();
         },
@@ -586,10 +591,17 @@
             if (data.studentGrade) $('studentGrade').textContent = data.studentGrade;
 
             renderCourses(courses, initial);
-            renderQuizzes(quizzes);
+
+            // تنسيق الاختبارات مرة واحدة (تحديد المكتمل + الدرجة من نتائج الطالب)
+            // ثم تمريرها لـ QuizApp وهو المسؤول الوحيد عن عرض هذا القسم لتفادي العرض المزدوج
+            const formattedQuizzes = quizzes.map(q => {
+                const result = q.results ? q.results.find(r => r.email === state.user.email) : null;
+                return { ...q, attempted: !!result, score: result ? result.percentage : 0 };
+            });
+            state.availableQuizzes = formattedQuizzes;
 
             if (window.QuizApp && typeof window.QuizApp.init === 'function') {
-                window.QuizApp.init(quizzes);
+                window.QuizApp.init(formattedQuizzes);
             }
 
             renderPoints(points);
@@ -770,34 +782,9 @@
     function setupGlobalListeners() {
         let lastVisibilityFetch = 0;
 
+        // ملاحظة: عرض الاختبارات + الفلاتر + فتح الاختبار يديرها QuizApp/QuizEngine
+        // (في index.html) لتفادي تكرار المستمعين وفتح الاختبار مرتين.
         document.addEventListener('click', (e) => {
-            const filterBtn = e.target.closest('.filter-btn');
-            if (filterBtn) {
-                document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-                filterBtn.classList.add('active');
-                
-                const filter = filterBtn.getAttribute('data-filter');
-                const cards = document.querySelectorAll('.quiz-card');
-                
-                cards.forEach(card => {
-                    const isNew = card.classList.contains('card-new');
-                    if (filter === 'all') card.hidden = false;
-                    else if (filter === 'new') card.hidden = !isNew;
-                    else if (filter === 'completed') card.hidden = isNew;
-                });
-                return;
-            }
-
-            const quizCard = e.target.closest('.quiz-card');
-            if (quizCard) {
-                const quizId = quizCard.getAttribute('data-id');
-                const quiz = state.availableQuizzes.find(q => String(q.id) === String(quizId));
-                if (quiz && window.QuizEngine) {
-                    window.QuizEngine.open(quiz);
-                }
-                return;
-            }
-
             const coursePlay = e.target.closest('.course-play');
             if (coursePlay) {
                 if (typeof window.switchTab === 'function') window.switchTab('dashboard');
@@ -807,16 +794,6 @@
 
         document.addEventListener('touchstart', () => {}, { passive: true });
         window.addEventListener('scroll', () => {}, { passive: true });
-
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                const quizCard = e.target.closest('.quiz-card');
-                if (quizCard) {
-                    e.preventDefault();
-                    quizCard.click();
-                }
-            }
-        });
 
         document.addEventListener('visibilitychange', async () => {
             if (document.hidden) {
@@ -846,7 +823,7 @@
     function init() {
         if (!authGate()) return;
 
-        const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
+        const firstName = state.user.name ? state.user.name.split(' ')[0] : '��الب';
         $('studentName').textContent = firstName;
         $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
 
