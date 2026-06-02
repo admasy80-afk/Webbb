@@ -605,6 +605,61 @@ const SysUI = (() => {
                 .sys-bloom:hover::before { opacity: 1; }
                 @keyframes sysGlowPulse { 0%,100% { box-shadow: 0 0 20px rgba(168,85,247,0.2), 0 0 40px rgba(168,85,247,0.1); } 50% { box-shadow: 0 0 30px rgba(168,85,247,0.4), 0 0 60px rgba(168,85,247,0.2); } }
                 .sys-iridescent { background: linear-gradient(135deg, #a855f7, #ec4899, #06b6d4, #a855f7); background-size: 300% 300%; animation: sysAuroraShift 8s ease infinite; }
+
+                /* ============================================================
+                   MOBILE / TOUCH OPTIMIZATIONS — bottom sheets, safe-areas,
+                   larger tap targets, and smoother native-feel transitions
+                   ============================================================ */
+                .sys-sheet-handle { display: none; }
+                @keyframes sysSheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+                @keyframes sysSheetOut { from { transform: translateY(0); } to { transform: translateY(100%); } }
+
+                @media (max-width: 640px) {
+                    /* ---- Modals & Cmd as bottom sheets ---- */
+                    #sys-modal-root { align-items: flex-end !important; justify-content: stretch !important; padding: 0 !important; }
+                    #sys-modal-root > div {
+                        width: 100% !important; max-width: 100% !important;
+                        border-radius: 28px 28px 0 0 !important;
+                        padding: 1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) !important;
+                        max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+                        box-shadow: 0 -20px 60px rgba(0,0,0,0.6) !important;
+                    }
+                    /* drag handle visible only on mobile sheets */
+                    .sys-sheet-handle { display: block; width: 42px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.28); margin: 0 auto 1rem; flex-shrink: 0; }
+
+                    /* stacked, full-width, thumb-friendly buttons */
+                    .sys-modal-btnrow { flex-direction: column-reverse !important; gap: 0.625rem !important; margin-top: 1rem !important; }
+                    .sys-modal-btnrow > button { width: 100% !important; padding: 0.9rem 1rem !important; font-size: 0.95rem !important; border-radius: 1rem !important; justify-content: center; }
+
+                    /* prevent iOS zoom-on-focus: inputs must be >= 16px */
+                    #sys-modal-root input, #sys-cmd-root input { font-size: 16px !important; padding-top: 0.85rem !important; padding-bottom: 0.85rem !important; }
+
+                    /* ---- Toasts: bottom-anchored, full width, safe-area aware ---- */
+                    #sys-toasts { top: auto !important; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important; max-width: 100% !important; padding-left: 0.75rem !important; padding-right: 0.75rem !important; flex-direction: column-reverse !important; }
+                    #sys-toasts > div { width: 100%; min-width: 0 !important; padding-top: 0.9rem !important; padding-bottom: 0.9rem !important; }
+                    /* اجعل التوست يدخل من الأسفل بدل الأعلى ليتناسب مع موضعه الجديد */
+                    #sys-toasts .sys-toast-enter { animation: sysToastInMobile 460ms var(--sys-ease-spring-bounce) forwards !important; }
+                    #sys-toasts .sys-toast-exit { animation: sysToastOutMobile 280ms var(--sys-ease-accelerate) forwards !important; }
+                    @keyframes sysToastInMobile { 0% { transform: translate3d(0, 36px, 0) scale(0.86); opacity: 0; filter: blur(4px); } 60% { transform: translate3d(0, -3px, 0) scale(1.02); opacity: 1; filter: blur(0); } 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; } }
+                    @keyframes sysToastOutMobile { to { transform: translate3d(0, 24px, 0) scale(0.9); opacity: 0; filter: blur(3px); } }
+
+                    /* ---- Command palette as a tall bottom sheet ---- */
+                    #sys-cmd-root { padding-top: 0 !important; padding-left: 0 !important; padding-right: 0 !important; align-items: flex-end !important; }
+                    #sys-cmd-root > div { width: 100% !important; max-width: 100% !important; border-radius: 28px 28px 0 0 !important; max-height: 88vh; }
+                    #sys-cmd-root #sys-cmd-results { max-height: 55vh !important; }
+                    #sys-cmd-root [data-idx] { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
+                    /* hide keyboard-only hints on touch */
+                    #sys-cmd-root .sys-kbd { display: none; }
+
+                    /* ---- Context menu: bottom action-sheet on mobile ---- */
+                    #sys-context-menu { left: 0.75rem !important; right: 0.75rem !important; top: auto !important; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important; min-width: 0 !important; width: auto !important; border-radius: 1.25rem !important; padding: 0.5rem !important; }
+                    #sys-context-menu button { padding: 0.9rem 1rem !important; font-size: 0.9rem !important; }
+                }
+
+                /* slightly larger touch feedback on coarse pointers regardless of width */
+                @media (pointer: coarse) {
+                    .sys-toast-enter, #sys-toasts > div { cursor: default; }
+                }
             `;
             document.head.appendChild(style);
             injected = true;
@@ -1143,6 +1198,9 @@ const SysUI = (() => {
             Haptics.medium();
             const container = DOM.mount('sys-modal-root', Layers.modal, 'fixed inset-0 hidden items-center justify-center px-4 pointer-events-none');
             const box = DOM.create('div', { class: 'relative sys-glass-strong p-7 rounded-2xl w-full max-w-md pointer-events-auto sys-noise-overlay', role: 'dialog', 'aria-modal': 'true', tabindex: '-1', style: { transformOrigin: 'center' } });
+            // مقبض السحب (يظهر فقط على الجوال كـ bottom sheet)
+            const handle = DOM.create('div', { class: 'sys-sheet-handle', 'aria-hidden': 'true' });
+            box.appendChild(handle);
             if (icon || type === 'danger') {
                 const iconBox = DOM.create('div', { class: `w-12 h-12 rounded-xl mb-4 flex items-center justify-center ${type === 'danger' ? 'bg-red-500/15 border border-red-500/30' : 'bg-purple-500/15 border border-purple-500/30'} sys-breathe` });
                 iconBox.innerHTML = icon || `<svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
@@ -1161,7 +1219,7 @@ const SysUI = (() => {
                 if (State.sessionDrafts[inputId]) input.value = State.sessionDrafts[inputId];
                 input.addEventListener('input', (e) => { State.sessionDrafts[inputId] = e.target.value; try { localStorage.setItem('sysui_drafts', JSON.stringify(State.sessionDrafts)); } catch {} if (errorEl) errorEl.textContent = ''; });
             }
-            const btnRow = DOM.create('div', { class: 'flex justify-end gap-3 mt-2' });
+            const btnRow = DOM.create('div', { class: 'sys-modal-btnrow flex justify-end gap-3 mt-2' });
             const cancelBtn = DOM.create('button', { class: 'sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-medium text-gray-300 hover:bg-white/5 border border-white/10 transition-all outline-none focus:ring-2 focus:ring-white/20', text: cancelLabel });
             const confirmClass = type === 'danger' ? 'bg-gradient-to-br from-red-500 to-red-600 text-white hover:from-red-400 hover:to-red-500 shadow-[0_0_20px_rgba(239,68,68,0.4)]' : 'bg-gradient-to-br from-white to-gray-200 text-black hover:from-gray-100 hover:to-white shadow-[0_0_20px_rgba(255,255,255,0.3)]';
             const confirmBtn = DOM.create('button', { class: `sys-magnetic sys-button-press px-5 py-2.5 rounded-xl text-sm font-semibold ${confirmClass} transition-all outline-none focus:ring-2 focus:ring-white/40`, text: confirmLabel });
@@ -1171,14 +1229,24 @@ const SysUI = (() => {
             container.appendChild(box);
             container.classList.remove('hidden');
             container.classList.add('flex');
-            Motion.spring(box, { transform: ['scale(0.88) translateY(20px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'bouncy');
+            const isSheet = matchMedia('(max-width: 640px)').matches;
+            if (isSheet) {
+                // دخول كـ bottom sheet من أسفل الشاشة
+                Motion.animate(box, [{ transform: 'translateY(100%)', opacity: 0.6 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 420, easing: Motion.tokens.ease.spring });
+            } else {
+                Motion.spring(box, { transform: ['scale(0.88) translateY(20px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'bouncy');
+            }
             const children = Array.from(box.children);
             Motion.stagger(children, (el) => { Motion.enter.slideUp(el, { duration: 320 }); }, 30);
             const releaseFocus = DOM.trapFocus(box);
             const close = (res) => {
                 if (inputId && res != null) { delete State.sessionDrafts[inputId]; try { localStorage.setItem('sysui_drafts', JSON.stringify(State.sessionDrafts)); } catch {} }
                 Audio.play('close');
-                Motion.animate(box, [{ transform: 'scale(1) translateY(0)', opacity: 1, filter: 'blur(0)' }, { transform: 'scale(0.94) translateY(8px)', opacity: 0, filter: 'blur(4px)' }], { duration: 220, easing: Motion.tokens.ease.accelerate });
+                if (isSheet) {
+                    Motion.animate(box, [{ transform: box.style.transform || 'translateY(0)', opacity: 1 }, { transform: 'translateY(100%)', opacity: 0 }], { duration: 260, easing: Motion.tokens.ease.accelerate });
+                } else {
+                    Motion.animate(box, [{ transform: 'scale(1) translateY(0)', opacity: 1, filter: 'blur(0)' }, { transform: 'scale(0.94) translateY(8px)', opacity: 0, filter: 'blur(4px)' }], { duration: 220, easing: Motion.tokens.ease.accelerate });
+                }
                 toggleBackdrop(false);
                 releaseFocus();
                 setTimeout(() => {
@@ -1187,9 +1255,36 @@ const SysUI = (() => {
                     container.innerHTML = '';
                     if (res !== null && res !== undefined) onConfirm?.(res);
                     else onCancel?.();
-                }, 220);
+                }, isSheet ? 260 : 220);
             };
             DOM.pushOverlay('modal', () => close(null));
+
+            // سحب للأسفل لإغلاق الـ bottom sheet (جوال فقط)
+            if (isSheet) {
+                let dragStartY = 0, dragY = 0, dragging = false;
+                const onDown = (e) => { dragStartY = e.touches ? e.touches[0].clientY : e.clientY; dragging = true; box.style.transition = 'none'; };
+                const onMove = (e) => {
+                    if (!dragging) return;
+                    const y = e.touches ? e.touches[0].clientY : e.clientY;
+                    dragY = Math.max(0, y - dragStartY);
+                    box.style.transform = `translateY(${dragY}px)`;
+                    box.style.opacity = String(Math.max(0.4, 1 - dragY / 400));
+                };
+                const onUp = () => {
+                    if (!dragging) return; dragging = false; box.style.transition = '';
+                    if (dragY > 110) { DOM.popOverlay(); close(null); }
+                    else { Motion.animate(box, [{ transform: `translateY(${dragY}px)` }, { transform: 'translateY(0)' }], { duration: 320, easing: Motion.tokens.ease.spring }); box.style.transform = ''; box.style.opacity = ''; }
+                    dragY = 0;
+                };
+                handle.style.cursor = 'grab';
+                handle.style.touchAction = 'none';
+                handle.addEventListener('touchstart', onDown, { passive: true });
+                handle.addEventListener('touchmove', onMove, { passive: true });
+                handle.addEventListener('touchend', onUp);
+                handle.addEventListener('pointerdown', onDown);
+                window.addEventListener('pointermove', onMove);
+                window.addEventListener('pointerup', onUp);
+            }
             cancelBtn.addEventListener('click', () => { DOM.popOverlay(); close(null); }, { once: true });
             confirmBtn.addEventListener('click', () => {
                 const value = inputId ? input.value : true;
@@ -1319,6 +1414,8 @@ const SysUI = (() => {
             const bd = DOM.mount('sys-cmd-backdrop', Layers.backdrop, 'sys-overlay-backdrop');
             State.cmdState = { ...State.cmdState, query: '', selectedIndex: 0, results: [] };
             const box = DOM.create('div', { class: 'w-full max-w-2xl sys-glass-strong rounded-2xl overflow-hidden pointer-events-auto flex flex-col sys-noise-overlay shadow-2xl', style: { transformOrigin: 'center top' } });
+            const isSheet = matchMedia('(max-width: 640px)').matches;
+            if (isSheet) box.appendChild(DOM.create('div', { class: 'sys-sheet-handle', style: { marginTop: '0.75rem' }, 'aria-hidden': 'true' }));
             const header = DOM.create('div', { class: 'flex items-center px-5 py-4 border-b border-white/10 relative' });
             header.innerHTML = `<svg class="w-5 h-5 text-purple-400 mr-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>`;
             const input = DOM.create('input', { type: 'text', id: 'sys-cmd-input', class: 'w-full bg-transparent text-white text-base outline-none placeholder-gray-500 font-medium', placeholder: 'ابحث، تنقل، أو اطلب من الذكاء الاصطناعي...', autocomplete: 'off', spellcheck: 'false' });
@@ -1333,8 +1430,13 @@ const SysUI = (() => {
             container.classList.remove('hidden');
             container.classList.add('flex');
             requestAnimationFrame(() => bd.classList.add('sys-open'));
-            Motion.spring(box, { transform: ['scale(0.94) translateY(-20px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'snappy');
-            setTimeout(() => input.focus(), 80);
+            if (isSheet) {
+                Motion.animate(box, [{ transform: 'translateY(100%)', opacity: 0.6 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 420, easing: Motion.tokens.ease.spring });
+            } else {
+                Motion.spring(box, { transform: ['scale(0.94) translateY(-20px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'snappy');
+            }
+            // لا نركّز تلقائياً على الجوال حتى لا تقفز لوحة المفاتيح فوق الـ sheet مباشرة
+            if (!isSheet) setTimeout(() => input.focus(), 80);
             input.addEventListener('input', (e) => { State.cmdState.query = e.target.value; State.cmdState.selectedIndex = 0; renderResults(results); });
             input.addEventListener('keydown', (e) => {
                 const len = lastScored.length || 1;
@@ -1781,7 +1883,7 @@ const SysUI = (() => {
 document.addEventListener('DOMContentLoaded', () => {
     SysUI.Actions.registerBatch([
         { id: 'hud.toggle', title: 'تفعيل/إلغاء أدوات المطوّر (HUD)', shortcut: 'F12', icon: '📊', group: 'النظام', keywords: ['fps', 'performance', 'debug'], handler: SysUI.hud },
-        { id: 'cursor.toggle', title: 'تفعيل/إلغاء المؤشر المتقدم', icon: '🎯', group: 'النظام', handler: SysUI.Cursor.toggle },
+        { id: 'cursor.toggle', title: 'ت��عيل/إلغاء المؤشر المتقدم', icon: '🎯', group: 'النظام', handler: SysUI.Cursor.toggle },
         { id: 'audio.toggle', title: 'كتم/تفعيل الأصوات', icon: '🔊', group: 'النظام', handler: () => { const m = !SysUI.Audio.isMuted(); SysUI.Audio.mute(m); SysUI.toast('info', m ? 'تم كتم الأصوات' : 'تم تفعيل الأصوات', 2000); } },
         { id: 'settings', title: 'إعدادات النظام', shortcut: 'S', icon: '⚙️', group: 'التطبيق', handler: () => SysUI.toast('info', 'فتح الإعدادات') },
         { id: 'users', title: 'إدارة الطلاب', shortcut: 'U', icon: '👥', group: 'التطبيق', handler: () => SysUI.load(new Promise(r => setTimeout(r, 2500)), 'main-content') },
