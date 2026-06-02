@@ -1980,3 +1980,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 export const trashSVG = SysUI.icons.trash;
 export { SysUI };
+
