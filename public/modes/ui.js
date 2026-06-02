@@ -608,35 +608,78 @@ const SysUI = (() => {
 
                 /* ============================================================
                    MOBILE / TOUCH OPTIMIZATIONS — bottom sheets, safe-areas,
-                   larger tap targets, and smoother native-feel transitions
+                   larger tap targets, GPU-friendly blur, native-feel motion.
                    ============================================================ */
                 .sys-sheet-handle { display: none; }
                 @keyframes sysSheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
                 @keyframes sysSheetOut { from { transform: translateY(0); } to { transform: translateY(100%); } }
 
+                /* ---- COARSE POINTER (any touch device, any width) ---------- */
+                @media (pointer: coarse) {
+                    /* kill the blue tap flash + clean up text selection on chrome */
+                    * { -webkit-tap-highlight-color: transparent; }
+                    button, [role="button"], a, [data-tab], [data-idx], .sys-magnetic { touch-action: manipulation; }
+
+                    /* heavy backdrop-filters wreck mobile GPUs — dial them back hard */
+                    .sys-glass { backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); }
+                    .sys-glass-strong { backdrop-filter: blur(24px) saturate(160%); -webkit-backdrop-filter: blur(24px) saturate(160%); }
+                    .sys-glass-glow { backdrop-filter: blur(22px) saturate(155%); -webkit-backdrop-filter: blur(22px) saturate(155%); }
+                    .sys-overlay-backdrop.sys-open { backdrop-filter: blur(10px) saturate(130%); -webkit-backdrop-filter: blur(10px) saturate(130%); background: rgba(0,0,0,0.7); }
+                    .sys-drawer { backdrop-filter: blur(24px) saturate(170%); -webkit-backdrop-filter: blur(24px) saturate(170%); }
+
+                    /* hover-only flourishes never trigger on touch — neutralise them
+                       so cards/buttons don't get stuck in a half-hovered state */
+                    .sys-elevate:hover { transform: none; box-shadow: var(--sys-shadow-md); }
+                    .sys-button-press:hover { transform: none; }
+                    .sys-bloom::before { display: none; }
+                    .sys-shimmer-sweep:hover::after { animation: none; }
+                    .sys-tooltip { display: none !important; }
+
+                    /* crisp, satisfying press feedback instead of hover */
+                    .sys-button-press:active { transform: scale(0.96); filter: brightness(0.9); }
+                    .sys-elevate:active { transform: scale(0.985); }
+                    .sys-magnetic:active { transform: scale(0.97); }
+
+                    /* generous minimum tap targets (Apple/Google = 44px) */
+                    button, [role="button"], [data-idx], [data-tab] { min-height: 44px; }
+
+                    /* thinner, quieter scrollbars */
+                    .sys-no-scroll::-webkit-scrollbar { width: 0; height: 0; }
+                }
+
+                /* ---- PHONE WIDTHS (<= 640px) ------------------------------- */
                 @media (max-width: 640px) {
-                    /* ---- Modals & Cmd as bottom sheets ---- */
+                    /* lighten the animated mesh — it repaints the whole viewport */
+                    body::after { animation-duration: 60s; opacity: 0.85; }
+                    body::before { opacity: 0.02; }
+
+                    /* ---- Modals & Cmd as polished bottom sheets ---- */
                     #sys-modal-root { align-items: flex-end !important; justify-content: stretch !important; padding: 0 !important; }
                     #sys-modal-root > div {
                         width: 100% !important; max-width: 100% !important;
-                        border-radius: 28px 28px 0 0 !important;
-                        padding: 1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) !important;
-                        max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
-                        box-shadow: 0 -20px 60px rgba(0,0,0,0.6) !important;
+                        border-radius: 26px 26px 0 0 !important;
+                        padding: 0.75rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) !important;
+                        max-height: 92vh; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+                        box-shadow: 0 -24px 70px rgba(0,0,0,0.65) !important;
                     }
-                    /* drag handle visible only on mobile sheets */
-                    .sys-sheet-handle { display: block; width: 42px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.28); margin: 0 auto 1rem; flex-shrink: 0; }
+                    /* drag handle: bigger hit zone, springy on grab */
+                    .sys-sheet-handle { display: block; width: 44px; height: 5px; border-radius: 999px; background: rgba(255,255,255,0.3); margin: 0 auto 0.875rem; flex-shrink: 0; transition: width 220ms var(--sys-ease-spring), background 220ms; touch-action: none; }
+                    .sys-sheet-handle:active { width: 64px; background: rgba(255,255,255,0.5); }
 
                     /* stacked, full-width, thumb-friendly buttons */
-                    .sys-modal-btnrow { flex-direction: column-reverse !important; gap: 0.625rem !important; margin-top: 1rem !important; }
-                    .sys-modal-btnrow > button { width: 100% !important; padding: 0.9rem 1rem !important; font-size: 0.95rem !important; border-radius: 1rem !important; justify-content: center; }
+                    .sys-modal-btnrow { flex-direction: column-reverse !important; gap: 0.625rem !important; margin-top: 1.25rem !important; }
+                    .sys-modal-btnrow > button { width: 100% !important; padding: 0.95rem 1rem !important; font-size: 1rem !important; border-radius: 1rem !important; justify-content: center; min-height: 50px; }
+
+                    /* readable modal type on small screens */
+                    #sys-modal-root h3 { font-size: 1.2rem !important; }
+                    #sys-modal-root p { font-size: 0.9rem !important; }
 
                     /* prevent iOS zoom-on-focus: inputs must be >= 16px */
-                    #sys-modal-root input, #sys-cmd-root input { font-size: 16px !important; padding-top: 0.85rem !important; padding-bottom: 0.85rem !important; }
+                    #sys-modal-root input, #sys-cmd-root input { font-size: 16px !important; padding-top: 0.9rem !important; padding-bottom: 0.9rem !important; }
 
                     /* ---- Toasts: bottom-anchored, full width, safe-area aware ---- */
-                    #sys-toasts { top: auto !important; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important; max-width: 100% !important; padding-left: 0.75rem !important; padding-right: 0.75rem !important; flex-direction: column-reverse !important; }
-                    #sys-toasts > div { width: 100%; min-width: 0 !important; padding-top: 0.9rem !important; padding-bottom: 0.9rem !important; }
+                    #sys-toasts { top: auto !important; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important; left: 0 !important; right: 0 !important; transform: none !important; max-width: 100% !important; padding-left: 0.875rem !important; padding-right: 0.875rem !important; flex-direction: column-reverse !important; align-items: stretch !important; }
+                    #sys-toasts > div { width: 100% !important; min-width: 0 !important; padding-top: 0.95rem !important; padding-bottom: 0.95rem !important; border-radius: 1.1rem !important; }
                     /* اجعل التوست يدخل من الأسفل بدل الأعلى ليتناسب مع موضعه الجديد */
                     #sys-toasts .sys-toast-enter { animation: sysToastInMobile 460ms var(--sys-ease-spring-bounce) forwards !important; }
                     #sys-toasts .sys-toast-exit { animation: sysToastOutMobile 280ms var(--sys-ease-accelerate) forwards !important; }
@@ -645,20 +688,33 @@ const SysUI = (() => {
 
                     /* ---- Command palette as a tall bottom sheet ---- */
                     #sys-cmd-root { padding-top: 0 !important; padding-left: 0 !important; padding-right: 0 !important; align-items: flex-end !important; }
-                    #sys-cmd-root > div { width: 100% !important; max-width: 100% !important; border-radius: 28px 28px 0 0 !important; max-height: 88vh; }
-                    #sys-cmd-root #sys-cmd-results { max-height: 55vh !important; }
-                    #sys-cmd-root [data-idx] { padding-top: 0.875rem !important; padding-bottom: 0.875rem !important; }
-                    /* hide keyboard-only hints on touch */
+                    #sys-cmd-root > div { width: 100% !important; max-width: 100% !important; border-radius: 26px 26px 0 0 !important; max-height: 90vh; }
+                    #sys-cmd-root #sys-cmd-results { max-height: 56vh !important; padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important; }
+                    #sys-cmd-root [data-idx] { padding-top: 0.95rem !important; padding-bottom: 0.95rem !important; }
+                    #sys-cmd-root [data-idx] .text-sm { font-size: 0.95rem !important; }
+                    /* hide keyboard-only hints + footer chrome on touch */
                     #sys-cmd-root .sys-kbd { display: none; }
+                    #sys-cmd-root input { font-size: 16px !important; }
 
                     /* ---- Context menu: bottom action-sheet on mobile ---- */
-                    #sys-context-menu { left: 0.75rem !important; right: 0.75rem !important; top: auto !important; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important; min-width: 0 !important; width: auto !important; border-radius: 1.25rem !important; padding: 0.5rem !important; }
-                    #sys-context-menu button { padding: 0.9rem 1rem !important; font-size: 0.9rem !important; }
+                    #sys-context-menu { left: 0.75rem !important; right: 0.75rem !important; top: auto !important; bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px)) !important; min-width: 0 !important; width: auto !important; border-radius: 1.25rem !important; padding: 0.5rem !important; box-shadow: 0 -16px 50px rgba(0,0,0,0.6) !important; }
+                    #sys-context-menu button { padding: 0.95rem 1rem !important; font-size: 0.95rem !important; border-radius: 0.85rem !important; }
+
+                    /* ---- Drawer: comfortable on phones ---- */
+                    .sys-drawer { width: 86vw !important; max-width: 360px !important; }
+
+                    /* scroll progress + presence chip sit below the notch */
+                    #sys-scroll-progress { top: env(safe-area-inset-top, 0px) !important; }
+                    #sys-presence-bar { top: calc(0.75rem + env(safe-area-inset-top, 0px)) !important; right: 0.75rem !important; }
+
+                    /* spotlight tooltip bubbles can overflow — let them wrap */
+                    #sys-spotlight-overlay .sys-glass-glow { white-space: normal !important; max-width: 78vw; text-align: center; }
                 }
 
-                /* slightly larger touch feedback on coarse pointers regardless of width */
-                @media (pointer: coarse) {
-                    .sys-toast-enter, #sys-toasts > div { cursor: default; }
+                /* very small / older phones */
+                @media (max-width: 380px) {
+                    #sys-modal-root > div { padding-left: 1rem !important; padding-right: 1rem !important; }
+                    #sys-toasts > div { font-size: 0.85rem !important; }
                 }
             `;
             document.head.appendChild(style);
@@ -1481,18 +1537,31 @@ const SysUI = (() => {
                 menu.appendChild(row);
                 rows.push(row);
             });
-            document.body.appendChild(menu);
-            const rect = menu.getBoundingClientRect();
-            if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
-            if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
             menu.id = 'sys-context-menu';
-            Motion.spring(menu, { transform: ['scale(0.88) translateY(-6px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'snappy');
-            Motion.stagger(rows, (el) => { Motion.animate(el, [{ opacity: 0, transform: 'translateX(-6px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: 200, easing: Motion.tokens.ease.spring }); }, 22);
+            document.body.appendChild(menu);
+            const isSheet = matchMedia('(max-width: 640px)').matches;
+            if (isSheet) {
+                // قائمة سياق كـ action-sheet تنزلق من أسفل الشاشة (الموضع يأتي من CSS)
+                Haptics.medium();
+                Motion.animate(menu, [{ transform: 'translateY(110%)', opacity: 0.5 }, { transform: 'translateY(0)', opacity: 1 }], { duration: 380, easing: Motion.tokens.ease.spring });
+                Motion.stagger(rows, (el) => { Motion.animate(el, [{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 220, easing: Motion.tokens.ease.spring }); }, 26);
+            } else {
+                const rect = menu.getBoundingClientRect();
+                if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+                if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+                Motion.spring(menu, { transform: ['scale(0.88) translateY(-6px)', 'scale(1) translateY(0)'], opacity: [0, 1] }, 'snappy');
+                Motion.stagger(rows, (el) => { Motion.animate(el, [{ opacity: 0, transform: 'translateX(-6px)' }, { opacity: 1, transform: 'translateX(0)' }], { duration: 200, easing: Motion.tokens.ease.spring }); }, 22);
+            }
             setTimeout(() => document.addEventListener('click', close, { once: true }), 50);
         };
         const close = () => {
             const m = document.getElementById('sys-context-menu');
-            if (m) { Motion.animate(m, [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.92)' }], { duration: 160, easing: Motion.tokens.ease.accelerate }).then(() => m.remove()); }
+            if (!m) return;
+            const isSheet = matchMedia('(max-width: 640px)').matches;
+            const frames = isSheet
+                ? [{ opacity: 1, transform: 'translateY(0)' }, { opacity: 0, transform: 'translateY(110%)' }]
+                : [{ opacity: 1, transform: 'scale(1)' }, { opacity: 0, transform: 'scale(0.92)' }];
+            Motion.animate(m, frames, { duration: isSheet ? 240 : 160, easing: Motion.tokens.ease.accelerate }).then(() => m.remove());
         };
         return { show, close };
     })();
@@ -1529,6 +1598,9 @@ const SysUI = (() => {
 
     const Confetti = (count = 120, opts = {}) => {
         const { colors = ['#eab308', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#06b6d4', '#ffffff', '#f59e0b'], spread = 120, originX = 50, gravity = 1, shapes = ['circle', 'square', 'triangle', 'star'] } = opts;
+        if ($reducedMotion) return;
+        // الجوال (المعالج الضعيف) يختنق مع 120 جسيم — نقلّلها تلقائياً للحفاظ على 60fps
+        if ($isTouch || window.innerWidth < 640) count = Math.min(count, 56);
         Theme.inject();
         const layer = DOM.mount('sys-confetti', Layers.particles, 'fixed inset-0 pointer-events-none overflow-hidden');
         Audio.play('success');
@@ -1558,6 +1630,9 @@ const SysUI = (() => {
     };
 
     const Fireworks = (count = 5) => {
+        if ($reducedMotion) return;
+        const mobile = $isTouch || window.innerWidth < 640;
+        if (mobile) count = Math.min(count, 3);
         Theme.inject();
         const layer = DOM.mount('sys-fireworks', Layers.particles, 'fixed inset-0 pointer-events-none overflow-hidden');
         Audio.play('bell');
@@ -1566,7 +1641,7 @@ const SysUI = (() => {
                 const cx = 20 + Math.random() * 60;
                 const cy = 20 + Math.random() * 40;
                 const hue = Math.floor(Math.random() * 360);
-                const particles = 40;
+                const particles = mobile ? 22 : 40;
                 Audio.play('pop');
                 for (let i = 0; i < particles; i++) {
                     const angle = (Math.PI * 2 * i) / particles;
@@ -1816,9 +1891,20 @@ const SysUI = (() => {
         }
     };
 
+    // يضمن أن safe-area-inset (الفتحات/النوتش) تعمل، ويمنع التكبير العرضي على الجوال
+    const ensureViewport = () => {
+        let meta = document.querySelector('meta[name="viewport"]');
+        if (!meta) { meta = document.createElement('meta'); meta.name = 'viewport'; document.head.appendChild(meta); }
+        const content = meta.getAttribute('content') || '';
+        if (!/viewport-fit/.test(content)) {
+            meta.setAttribute('content', (content || 'width=device-width, initial-scale=1.0') + ', viewport-fit=cover');
+        }
+    };
+
     let initialized = false;
     const boot = () => {
         if (initialized) return; initialized = true;
+        ensureViewport();
         Theme.inject();
         Magnetic.init();
         Ripple.attach();
