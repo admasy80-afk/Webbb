@@ -336,6 +336,7 @@
     const QuizEngine = {
         quiz: null, currentIndex: 0, totalTime: 0, timerId: null, answers: {},
         isMobile: false, vDOM: null, pageNodes: [], gestureData: { startX: 0, startY: 0 },
+        modalEl: null,
 
         async open(quiz) {
             this.isMobile = window.innerWidth <= 768;
@@ -359,6 +360,7 @@
             const modal = document.createElement('div');
             modal.id = 'quizModal';
             document.body.appendChild(modal);
+            this.modalEl = modal; // الاحتفاظ بمرجع مباشر للنافذة لتفادي تعارض الـ ID مع العنصر الموجود مسبقاً
 
             modal.innerHTML = `
                 <div class="qe-submitting-overlay" id="qe-submit-layer">
@@ -648,24 +650,48 @@
             Sensory.play('tick');
             
             let score = 0;
-            this.quiz.questions.forEach((q, qi) => { if (parseInt(this.answers[`q_${qi}`]) === q.correctAnswer) score++; });
+            const userAnswers = this.quiz.questions.map((q, qi) => {
+                const ans = this.answers[`q_${qi}`];
+                if (parseInt(ans) === q.correctAnswer) score++;
+                return ans === undefined ? null : parseInt(ans);
+            });
             const percentage = Math.round((score / this.quiz.questions.length) * 100);
 
             try {
                 const appState = typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.getState === 'function' ? window.DahihApp.getState() : {};
-                
+
                 if (typeof window.DahihApp !== 'undefined' && window.DahihApp.fetchWithTimeout) {
-                    await window.DahihApp.fetchWithTimeout('/api/student/submit-quiz', {
+                    const res = await window.DahihApp.fetchWithTimeout('/api/student/submit-quiz', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${appState.token}` },
-                        body: JSON.stringify({ email: appState.user?.email, quizId: this.quiz.id, score, percentage })
+                        body: JSON.stringify({
+                            email: appState.user?.email,
+                            studentName: appState.user?.name,
+                            grade: appState.user?.grade,
+                            quizId: this.quiz.id,
+                            score,
+                            percentage,
+                            userAnswers
+                        })
                     });
+
+                    // التحقق الفعلي من نجاح الحفظ على الخادم (عدا حالة 403 = سبق تقديمه فنعتبره مكتملاً)
+                    if (res && res.ok === false && res.status !== 403) {
+                        let msg = 'تعذر حفظ النتيجة على الخادم. حاول مرة أخرى.';
+                        try { const data = await res.json(); if (data && data.message) msg = data.message; } catch (e) {}
+                        throw new Error(msg);
+                    }
                 }
-                
+
                 this.quiz.attempted = true;
                 this.quiz.score = percentage;
-                
+
                 Scheduler.idle(() => localStorage.removeItem(`dq_${this.quiz.id}`));
+
+                // تحديث بطاقة الاختبار فوراً في القائمة (تحويلها لمكتملة) دون إعادة تحميل الصفحة
+                if (window.QuizApp && typeof window.QuizApp.reload === 'function') {
+                    try { window.QuizApp.reload(this.quiz.id, { score: percentage }); } catch (e) {}
+                }
                 Sensory.success();
 
                 if (overlay) {
@@ -694,20 +720,33 @@
 
                         document.getElementById('qe-finish-btn').onclick = () => {
                             EngineCore.trackInteraction(); Sensory.select();
-                            overlay.style.opacity = '0';
-                            
-                            setTimeout(() => {
-                                window.location.href = 'index.html';
-                            }, 300);
+
+                            // إغلاق النافذة بسلاسة دون عمل ريفرش كامل للصفحة
+                            this.close();
+
+                            // الانتقال لتبويب الاختبارات + مزامنة البيانات من السيرفر في الخلفية
+                            if (typeof window.switchTab === 'function') {
+                                try { window.switchTab('quizzes'); } catch (e) {}
+                            }
+                            if (window.DahihApp && typeof window.DahihApp.refresh === 'function') {
+                                try { window.DahihApp.refresh(); } catch (e) {}
+                            }
                         };
                     }, 500); 
                 } else {
                     this.close();
                 }
 
-            } catch (err) { 
-                alert("عذراً، حدث خطأ أثناء حفظ الإجابات. يرجى مراجعة اتصالك بالإنترنت.");
-                if(overlay) overlay.classList.remove('show');
+            } catch (err) {
+                // فشل حقيقي في الحفظ: نُبقي النافذة مفتوحة ونسمح للطالب بإعادة المحاولة
+                if (overlay) overlay.classList.remove('show');
+                const spinner = document.getElementById('qe-spinner-container');
+                if (spinner) spinner.classList.remove('hide');
+                if (typeof window.DahihApp !== 'undefined' && typeof window.DahihApp.toast === 'function') {
+                    window.DahihApp.toast(err.message || "تعذر حفظ الإجابات. تحقق من اتصالك وحاول مجدداً.", "error");
+                } else {
+                    alert(err.message || "عذراً، حدث خطأ أثناء حفظ الإجابات. يرجى مراجعة اتصالك بالإنترنت.");
+                }
                 UIState.set(UIState.IDLE);
             }
         },
@@ -721,12 +760,14 @@
                 window.DahihApp.setQuizState(false);
             }
 
-            const modal = document.getElementById('quizModal');
+            // استخدام المرجع المباشر للنافذة بدل getElementById لتفادي إغلاق العنصر الخطأ (تعارض الـ ID)
+            const modal = this.modalEl || document.getElementById('quizModal');
             if (modal) {
                 modal.style.opacity = '0';
                 modal.style.transform = 'scale(0.95)';
                 setTimeout(() => { 
                     modal.remove();
+                    this.modalEl = null;
                     this.vDOM = null; 
                     this.pageNodes = []; 
                 }, 300);
@@ -736,3 +777,4 @@
 
     window.QuizEngine = QuizEngine;
 })();
+
