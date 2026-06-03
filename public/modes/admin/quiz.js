@@ -102,22 +102,32 @@ export const FormsEngine = {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = DOM.get('saveTestBtn');
-            const testName = DOM.get('testName').value;
+            const testName = DOM.get('testName').value.trim();
             const grade = DOM.get('testGrade').value;
-            
+            const maxScore = parseFloat(DOM.get('testMaxScore').value);
+
+            if(!testName) return Toast.warning('الرجاء كتابة عنوان الاختبار');
+            if(!grade) return Toast.warning('الرجاء اختيار الصف الدراسي');
+            if(!Number.isFinite(maxScore) || maxScore <= 0) return Toast.warning('الرجاء إدخال الدرجة الكلية للاختبار');
+
             const scores = [];
-            document.getElementById('scoresContainer').querySelectorAll('.flex').forEach(row => {
-                const name = row.querySelector('.test-student-name').value;
-                const score = row.querySelector('.test-student-score').value;
-                if(name && score) scores.push({ studentName: name, score: parseInt(score) });
+            let invalidRow = false;
+            document.getElementById('scoresContainer').querySelectorAll('.score-row').forEach(row => {
+                const name = row.querySelector('.test-student-name').value.trim();
+                const score = parseFloat(row.querySelector('.test-student-score').value);
+                if(name && Number.isFinite(score)) {
+                    if(score > maxScore) invalidRow = true;
+                    scores.push({ studentName: name, score });
+                }
             });
 
             if(scores.length === 0) return Toast.warning('الرجاء إضافة درجة طالب واحد على الأقل');
+            if(invalidRow) return Toast.warning('توجد درجة طالب أكبر من الدرجة الكلية للاختبار');
 
             Anim.triggerRipple(btn);
             btn.disabled = true; btn.textContent = 'جاري النشر...';
             
-            const res = await Http.postJSON(API.SAVE_TEST, { testName, grade, scores }, 'test_add');
+            const res = await Http.postJSON(API.SAVE_TEST, { testName, grade, maxScore, scores }, 'test_add');
             btn.disabled = false; btn.textContent = 'نشر النتائج للطلاب';
             
             if(res) { 
