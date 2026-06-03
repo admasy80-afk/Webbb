@@ -13,7 +13,7 @@ export const Security = (() => {
         if (node.nodeType === 1) { 
             const attrs = node.attributes;
             // القائمة البيضاء للدوال الموثوقة (بحروف صغيرة للمطابقة)
-            const trustedHandlers = ['viewresults', 'deletecontent', 'updatestudentstatus', 'rejectstudent', 'fetchgradecontent'];
+            const trustedHandlers = ['viewresults', 'deletecontent', 'updatestudentstatus', 'rejectstudent', 'fetchgradecontent', 'uploadresultsforquiz', 'closeuploadresultsmodal', 'submituploadresults', 'adduploadresultrow'];
             
             for (let i = attrs.length - 1; i >= 0; i--) {
                 const attr = attrs[i];
