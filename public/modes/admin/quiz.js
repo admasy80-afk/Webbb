@@ -65,15 +65,22 @@ if (typeof window !== 'undefined') {
 }
 
 export const FormsEngine = {
+    bindAll() {
+        this.bindPointsForm();
+        this.bindTestsForm();
+        this.bindContentForm();
+        this.bindQuizForm();
+        this.bindPublicQuizForm();
+    },
     init() {
         if(typeof document === 'undefined') return;
-        document.addEventListener('DOMContentLoaded', () => {
-            this.bindPointsForm();
-            this.bindTestsForm();
-            this.bindContentForm();
-            this.bindQuizForm();
-            this.bindPublicQuizForm();
-        });
+        // إذا كان المستند قد اكتمل تحميله بالفعل (وهو الحال غالباً مع وحدات ES المؤجَّلة)
+        // نربط النماذج فوراً، وإلا ننتظر اكتمال التحميل — لضمان عمل نموذج "نتائج الاختبارات" دائماً
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => this.bindAll());
+        } else {
+            this.bindAll();
+        }
     },
 
     bindPointsForm() {
