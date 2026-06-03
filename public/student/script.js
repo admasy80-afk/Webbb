@@ -587,11 +587,7 @@
             const points = data.content?.points || [];
             const questions = data.content?.questions || [];
 
-            if (data.studentName) {
-                $('studentName').textContent = data.studentName;
-                // حفظ الاسم الرباعي الكامل لمطابقة نتائج الاختبارات الورقية
-                if (state.user) state.user.fullName = data.studentName;
-            }
+            if (data.studentName) $('studentName').textContent = data.studentName;
             if (data.studentGrade) $('studentGrade').textContent = data.studentGrade;
 
             renderCourses(courses, initial);
@@ -716,28 +712,7 @@
         container.innerHTML = !list.length ? '<p class="empty">لا توجد أسئلة.</p>' : `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid #333;border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;color:#fff;margin:0 0 0.5rem;">${i + 1}. ${escapeHTML(q.question)}</h3><p style="color:#aaa;font-size:0.85rem;margin:0;">الإجابة: ${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
     }
 
-    const normalizeName = (n) => String(n || '')
-        .replace(/[\u064B-\u0652]/g, '')      // إزالة التشكيل
-        .replace(/[إأآا]/g, 'ا')              // توحيد الألف
-        .replace(/ى/g, 'ي').replace(/ة/g, 'ه')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .toLowerCase();
-
-    // مطابقة مرنة للأسماء: تتطابق إذا كانت متساوية، أو إذا احتوى أحد الاسمين
-    // على كل أجزاء الاسم الآخر (يعالج اختلاف عدد المقاطع/المسافات/ترتيب بسيط)
-    const namesMatch = (a, b) => {
-        const na = normalizeName(a);
-        const nb = normalizeName(b);
-        if (!na || !nb) return false;
-        if (na === nb) return true;
-        const ta = na.split(' ').filter(Boolean);
-        const tb = nb.split(' ').filter(Boolean);
-        const [shortT, longT] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
-        if (shortT.length < 2) return false; // تفادي المطابقة باسم واحد فقط
-        return shortT.every(tok => longT.includes(tok));
-    };
-
+    // دفتر درجات بسيط: نعرض النتائج كما كتبها المعلّم (اسم + درجة) دون أي مطابقة أسماء
     function renderTestResults(list) {
         const container = $('paperResultsContainer');
         if (!container) return;
@@ -746,119 +721,37 @@
         if (h === state.testResultsHash) return;
         state.testResultsHash = h;
 
-        const myFullName = (state.user && (state.user.fullName || state.user.name)) || '';
-        const myEmail = ((state.user && state.user.email) || '').trim().toLowerCase();
-
-        // مطابقة الطالب: البريد الإلكتروني هو المفتاح الثابت الأساسي،
-        // ونرجع للاسم فقط عند غياب البريد (نتائج قديمة أُدخلت يدوياً)
-        const isMine = (s) => {
-            const sEmail = (s && s.email ? String(s.email) : '').trim().toLowerCase();
-            if (myEmail && sEmail) return sEmail === myEmail;
-            return namesMatch(s && s.studentName, myFullName);
-        };
-
-        // بناء بطاقة لكل اختبار يظهر فيه الطالب — مع لوحة ترتيب الدفعة كاملةً
         const cards = [];
         list.slice().reverse().forEach(test => {
             const scores = Array.isArray(test.scores) ? test.scores : [];
             if (!scores.length) return;
             const maxScore = Number(test.maxScore) > 0 ? Number(test.maxScore) : null;
 
-            const mine = scores.find(isMine);
-            if (!mine) return; // الطالب غير مدرج في نتائج هذا الاختبار
-
-            const myScore = Number(mine.score) || 0;
-            const pct = maxScore ? Math.round((myScore / maxScore) * 100) : null;
-
-            // ترتيب تنازلي حسب الدرجة (الأعلى = الأول)
+            // ترتيب تنازلي حسب الدرجة (الأعلى أولاً)
             const sorted = scores.slice().sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
-            const total = sorted.length;
-            const myRank = sorted.findIndex(isMine) + 1;
 
-            // إحصائيات الدفعة
-            const avg = scores.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / total;
-            const avgPct = maxScore ? Math.round((avg / maxScore) * 100) : null;
-            const topScore = Number(sorted[0].score) || 0;
+            const medals = ['bg-yellow-500 text-black', 'bg-gray-300 text-black', 'bg-orange-400 text-black'];
 
-            // اللون والمستوى حسب نسبة الطالب
-            let accent = 'text-yellow-400', bar = 'bg-yellow-500', ring = 'border-yellow-500/40', level = 'جيد';
-            const refPct = pct != null ? pct : (myScore >= 1 ? 60 : 0);
-            if (refPct >= 85) { accent = 'text-emerald-400'; bar = 'bg-emerald-500'; ring = 'border-emerald-500/40'; level = 'ممتاز'; }
-            else if (refPct >= 65) { accent = 'text-yellow-400'; bar = 'bg-yellow-500'; ring = 'border-yellow-500/40'; level = 'جيد جداً'; }
-            else if (refPct >= 50) { accent = 'text-orange-400'; bar = 'bg-orange-500'; ring = 'border-orange-500/40'; level = 'مقبول'; }
-            else { accent = 'text-red-400'; bar = 'bg-red-500'; ring = 'border-red-500/40'; level = 'يحتاج إلى تحسين'; }
-
-            // صفوف ترتيب الدفعة كاملةً — صفّ الطالب مميّز بشريط ذهبي
-            const rowsHTML = sorted.map((s, i) => {
-                const rank = i + 1;
-                const isMe = isMine(s);
-                const sc = Number(s.score) || 0;
-                const rPct = maxScore ? Math.round((sc / maxScore) * 100) : null;
-
-                const medal = rank === 1 ? 'bg-yellow-500 text-black'
-                    : rank === 2 ? 'bg-gray-300 text-black'
-                    : rank === 3 ? 'bg-amber-700 text-white'
-                    : 'bg-white/10 text-gray-400';
-
-                const rowCls = isMe
-                    ? 'relative overflow-hidden bg-yellow-500/10 border border-yellow-500/50 shadow-[0_0_22px_rgba(234,179,8,0.18)]'
-                    : 'bg-black/20 border border-white/5 hover:border-white/15';
-
-                const meBar = isMe ? '<span class="absolute right-0 top-0 bottom-0 w-1.5 bg-yellow-500"></span>' : '';
-                const meBadge = isMe ? '<span class="shrink-0 text-[0.6rem] font-black text-black bg-yellow-500 px-2 py-0.5 rounded-md">أنت</span>' : '';
-
+            const rows = sorted.map((s, i) => {
+                const score = Number(s.score) || 0;
+                const pct = maxScore ? Math.round((score / maxScore) * 100) : null;
+                const rankClass = medals[i] || 'bg-white/10 text-gray-300';
                 return `
-                    <div class="${rowCls} rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all">
-                        ${meBar}
-                        <span class="shrink-0 w-7 h-7 grid place-items-center rounded-full text-xs font-black ${medal}">${rank}</span>
-                        <div class="flex-1 min-w-0 flex items-center gap-2">
-                            <span class="truncate text-sm font-bold ${isMe ? 'text-yellow-300' : 'text-gray-200'}">${escapeHTML(s.studentName || 'طالب')}</span>
-                            ${meBadge}
-                        </div>
-                        <div class="shrink-0 text-left leading-none">
-                            <span class="text-sm font-black ${isMe ? 'text-yellow-300' : 'text-white'}">${sc}${maxScore ? `<span class="text-[0.7rem] text-gray-500">/${maxScore}</span>` : ''}</span>
-                            ${rPct != null ? `<span class="block text-[0.65rem] text-gray-500 mt-1">${rPct}%</span>` : ''}
-                        </div>
-                    </div>`;
+                    <li class="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-white/5 transition-colors">
+                        <span class="shrink-0 w-7 h-7 grid place-items-center rounded-lg text-xs font-bold ${rankClass}">${i + 1}</span>
+                        <span class="flex-1 min-w-0 truncate text-white text-sm md:text-base">${escapeHTML(s.studentName || '—')}</span>
+                        <span class="shrink-0 font-bold text-yellow-400">${score}${maxScore ? `<span class="text-xs text-gray-500">/${maxScore}</span>` : ''}</span>
+                        ${pct != null ? `<span class="shrink-0 text-[0.7rem] text-gray-400 w-10 text-left">${pct}%</span>` : ''}
+                    </li>`;
             }).join('');
 
             cards.push(`
-                <article class="glass-panel rounded-2xl p-5 md:p-6 border-t-4 border-yellow-500 animate-fade flex flex-col gap-5">
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="min-w-0">
-                            <h3 class="text-lg font-bold text-white leading-snug truncate">${escapeHTML(test.testName || 'اختبار')}</h3>
-                            <p class="text-xs text-gray-400 mt-1">${total} طالب في الدفعة</p>
-                        </div>
-                        <span class="shrink-0 text-xs font-bold text-black bg-yellow-500 px-2.5 py-1 rounded-md">ترتيبك ${myRank} / ${total}</span>
+                <article class="glass-panel rounded-2xl p-5 md:p-6 border-t-4 border-yellow-500 animate-fade flex flex-col gap-3">
+                    <div class="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
+                        <h3 class="text-lg font-bold text-white leading-snug">${escapeHTML(test.testName || 'اختبار')}</h3>
+                        <span class="text-xs font-bold text-gray-300 bg-white/10 px-2.5 py-1 rounded-md shrink-0">${scores.length} طالب</span>
                     </div>
-
-                    <div class="flex items-center gap-5 bg-black/30 rounded-2xl p-4 border ${ring}">
-                        <div class="shrink-0 w-20 h-20 rounded-full border-4 ${ring} flex flex-col items-center justify-center bg-black/40">
-                            <span class="text-xl font-black ${accent} leading-none">${myScore}${maxScore ? `<span class="text-xs text-gray-500">/${maxScore}</span>` : ''}</span>
-                            ${pct != null ? `<span class="text-[0.65rem] text-gray-400 mt-0.5">${pct}%</span>` : ''}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <span class="inline-block text-xs font-bold ${accent} mb-2">${level}</span>
-                            ${pct != null ? `
-                            <div class="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
-                                <div class="${bar} h-full rounded-full transition-all duration-700" style="width:${Math.min(pct, 100)}%"></div>
-                            </div>` : ''}
-                            <div class="flex items-center justify-between text-[0.7rem] text-gray-400 mt-3 gap-2">
-                                <span>متوسط الدفعة: <b class="text-white">${Math.round(avg)}</b>${avgPct != null ? ` (${avgPct}%)` : ''}</span>
-                                <span>الأعلى: <b class="text-white">${topScore}${maxScore ? `/${maxScore}` : ''}</b></span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="text-sm font-bold text-gray-300">ترتيب الدفعة كاملاً</h4>
-                            <span class="text-[0.65rem] text-gray-500">من الأعلى إلى الأقل</span>
-                        </div>
-                        <div class="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
-                            ${rowsHTML}
-                        </div>
-                    </div>
+                    <ul class="flex flex-col gap-0.5">${rows}</ul>
                 </article>`);
         });
 
@@ -866,7 +759,7 @@
             container.className = 'grid grid-cols-1 gap-5';
             container.innerHTML = `
                 <div class="text-center py-16 text-gray-400 bg-white/5 rounded-2xl border border-white/10 w-full">
-                    لم يتم رصد أي نتائج ورقية باسمك حتى الآن.
+                    لم يتم رصد أي نتائج ورقية حتى الآن.
                 </div>`;
             return;
         }
@@ -1026,3 +919,4 @@
         init();
     }
 })();
+
