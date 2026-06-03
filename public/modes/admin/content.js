@@ -1,3 +1,6 @@
+// ==========================================
+// 📚 [MODULE] CONTENT MANAGEMENT & RESULTS MODAL
+// ==========================================
 import { API, ITEM_TYPE } from './config.js';
 import { Http } from './http.js';
 import { DOM } from './dom.js';
@@ -184,17 +187,19 @@ export async function uploadResultsForQuiz(grade, itemType, identifier) {
     if (!results.length) return Toast.warning('لم يقم أي طالب بحل هذا الاختبار بعد');
 
     // تحويل نتائج الاختبار الإلكتروني إلى درجات قابلة للنشر (النسبة من 100)
+    // نمرّر البريد الإلكتروني كمفتاح ثابت لمطابقة الطالب بدقة (بدل الاعتماد على الاسم فقط)
     const scores = results
         .map(r => ({
             studentName: (r.studentName || '').trim(),
+            email: (r.email || '').trim().toLowerCase(),
             score: Math.round(Number(r.percentage) || 0)
         }))
-        .filter(s => s.studentName);
+        .filter(s => s.studentName || s.email);
 
     if (!scores.length) return Toast.warning('لا توجد أسماء طلاب صالحة في النتائج');
 
     if (typeof SysUI === 'undefined') return;
-    SysUI.confirm(`سيتم نشر نتائج "${quiz.title}" (${scores.length} طالب) ${grade}. متابعة؟`, async (confirmed) => {
+    SysUI.confirm(`سيتم نشر نتائج "${quiz.title}" (${scores.length} طالب) كلوحة ترتيب لدفعة ${grade}. متابعة؟`, async (confirmed) => {
         if (!confirmed) return;
 
         const res = await Http.postJSON(
