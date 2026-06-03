@@ -194,7 +194,7 @@ export async function uploadResultsForQuiz(grade, itemType, identifier) {
     if (!scores.length) return Toast.warning('لا توجد أسماء طلاب صالحة في النتائج');
 
     if (typeof SysUI === 'undefined') return;
-    SysUI.confirm(`سيتم نشر نتائج "${quiz.title}" (${scores.length} طالب) كلوحة ترتيب لدفعة ${grade}. متابعة؟`, async (confirmed) => {
+    SysUI.confirm(`سيتم نشر نتائج "${quiz.title}" (${scores.length} طالب) ${grade}. متابعة؟`, async (confirmed) => {
         if (!confirmed) return;
 
         const res = await Http.postJSON(
