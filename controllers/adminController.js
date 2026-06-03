@@ -454,6 +454,53 @@ exports.addMcqQuiz = async (req, res) => {
     }
 };
 
+exports.addTestResults = async (req, res) => {
+    try {
+        const db = getDb();
+        const { grade } = req.body;
+        // قبول الاسمين (testName/title) و (scores/results) لمرونة التوافق
+        const testName = req.body.testName ?? req.body.title;
+        const rawScores = req.body.scores ?? req.body.results;
+        const maxScoreNum = Number(req.body.maxScore);
+        const maxScore = Number.isFinite(maxScoreNum) && maxScoreNum > 0 ? maxScoreNum : null;
+
+        if (!grade)    return res.status(400).json({ message: "المرحلة الدراسية مطلوبة" });
+        if (!testName) return res.status(400).json({ message: "عنوان الاختبار مطلوب" });
+        if (!Array.isArray(rawScores) || rawScores.length === 0)
+            return res.status(400).json({ message: "يجب إضافة درجة طالب واحد على الأقل" });
+
+        // تنقية وتطبيع الدرجات: اسم نصّي + درجة رقمية صالحة
+        const scores = rawScores
+            .map(s => ({
+                studentName: String(s.studentName ?? s.name ?? "").trim(),
+                score: Number(s.score)
+            }))
+            .filter(s => s.studentName.length > 0 && Number.isFinite(s.score));
+
+        if (scores.length === 0)
+            return res.status(400).json({ message: "بيانات الطلاب غير صالحة (تأكد من الأسماء والدرجات)" });
+
+        const testObj = {
+            id: 'test_' + Date.now(),
+            testName: String(testName).trim(),
+            maxScore,
+            scores,
+            createdAt: new Date()
+        };
+
+        await db.collection('curriculum_content').updateOne(
+            { grade },
+            { $push: { tests: testObj } },
+            { upsert: true }
+        );
+
+        res.status(200).json({ success: true, message: "تم نشر النتائج للطلاب بنجاح", testId: testObj.id, count: scores.length });
+    } catch (error) {
+        console.error("addTestResults error:", error);
+        res.status(500).json({ message: error.message });
+    }
+};
+
 exports.addPublicQuiz = async (req, res) => {
     try {
         const db = getDb();
@@ -530,3 +577,4 @@ exports.deleteItem = async (req, res) => {
         res.status(500).json({ message: error.message }); 
     }
 };
+
