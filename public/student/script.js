@@ -720,6 +720,20 @@
         .trim()
         .toLowerCase();
 
+    // مطابقة مرنة للأسماء: تتطابق إذا كانت متساوية، أو إذا احتوى أحد الاسمين
+    // على كل أجزاء الاسم الآخر (يعالج اختلاف عدد المقاطع/المسافات/ترتيب بسيط)
+    const namesMatch = (a, b) => {
+        const na = normalizeName(a);
+        const nb = normalizeName(b);
+        if (!na || !nb) return false;
+        if (na === nb) return true;
+        const ta = na.split(' ').filter(Boolean);
+        const tb = nb.split(' ').filter(Boolean);
+        const [shortT, longT] = ta.length <= tb.length ? [ta, tb] : [tb, ta];
+        if (shortT.length < 2) return false; // تفادي المطابقة باسم واحد فقط
+        return shortT.every(tok => longT.includes(tok));
+    };
+
     function renderTestResults(list) {
         const container = $('paperResultsContainer');
         if (!container) return;
@@ -728,52 +742,87 @@
         if (h === state.testResultsHash) return;
         state.testResultsHash = h;
 
-        const myName = normalizeName(state.user && state.user.name);
+        const myFullName = state.user && state.user.name;
 
-        // بناء بطاقة لكل اختبار يملك الطالب درجة فيه
+        // بناء بطاقة لكل اختبار يظهر فيه الطالب — مع لوحة ترتيب الدفعة كاملةً
         const cards = [];
         list.slice().reverse().forEach(test => {
             const scores = Array.isArray(test.scores) ? test.scores : [];
+            if (!scores.length) return;
             const maxScore = Number(test.maxScore) > 0 ? Number(test.maxScore) : null;
 
-            const mine = scores.find(s => normalizeName(s.studentName) === myName);
-            if (!mine) return;
+            const mine = scores.find(s => namesMatch(s.studentName, myFullName));
+            if (!mine) return; // الطالب غير مدرج في نتائج هذا الاختبار
 
             const myScore = Number(mine.score) || 0;
             const pct = maxScore ? Math.round((myScore / maxScore) * 100) : null;
 
-            // الترتيب (الأعلى درجة = الأول)، مع التعادل
+            // ترتيب تنازلي حسب الدرجة (الأعلى = الأول)
             const sorted = scores.slice().sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
-            const rank = sorted.findIndex(s => normalizeName(s.studentName) === myName) + 1;
+            const total = sorted.length;
+            const myRank = sorted.findIndex(s => namesMatch(s.studentName, myFullName)) + 1;
 
-            const avg = scores.length
-                ? scores.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / scores.length
-                : 0;
+            // إحصائيات الدفعة
+            const avg = scores.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / total;
             const avgPct = maxScore ? Math.round((avg / maxScore) * 100) : null;
+            const topScore = Number(sorted[0].score) || 0;
 
-            // اللون والمستوى حسب النسبة
-            let accent = 'text-yellow-400', bar = 'bg-yellow-500', ring = 'border-yellow-500/30', level = 'جيد';
+            // اللون والمستوى حسب نسبة الطالب
+            let accent = 'text-yellow-400', bar = 'bg-yellow-500', ring = 'border-yellow-500/40', level = 'جيد';
             const refPct = pct != null ? pct : (myScore >= 1 ? 60 : 0);
-            if (refPct >= 85) { accent = 'text-emerald-400'; bar = 'bg-emerald-500'; ring = 'border-emerald-500/30'; level = 'ممتاز'; }
-            else if (refPct >= 65) { accent = 'text-yellow-400'; bar = 'bg-yellow-500'; ring = 'border-yellow-500/30'; level = 'جيد جداً'; }
-            else if (refPct >= 50) { accent = 'text-orange-400'; bar = 'bg-orange-500'; ring = 'border-orange-500/30'; level = 'مقبول'; }
-            else { accent = 'text-red-400'; bar = 'bg-red-500'; ring = 'border-red-500/30'; level = 'يحتاج إلى تحسين'; }
+            if (refPct >= 85) { accent = 'text-emerald-400'; bar = 'bg-emerald-500'; ring = 'border-emerald-500/40'; level = 'ممتاز'; }
+            else if (refPct >= 65) { accent = 'text-yellow-400'; bar = 'bg-yellow-500'; ring = 'border-yellow-500/40'; level = 'جيد جداً'; }
+            else if (refPct >= 50) { accent = 'text-orange-400'; bar = 'bg-orange-500'; ring = 'border-orange-500/40'; level = 'مقبول'; }
+            else { accent = 'text-red-400'; bar = 'bg-red-500'; ring = 'border-red-500/40'; level = 'يحتاج إلى تحسين'; }
 
-            const rankBadge = rank === 1
-                ? '<span class="text-xs font-bold text-black bg-yellow-500 px-2.5 py-1 rounded-md">الأول على الفصل</span>'
-                : `<span class="text-xs font-bold text-gray-300 bg-white/10 px-2.5 py-1 rounded-md">الترتيب ${rank} من ${scores.length}</span>`;
+            // صفوف ترتيب الدفعة كاملةً — صفّ الطالب مميّز بشريط ذهبي
+            const rowsHTML = sorted.map((s, i) => {
+                const rank = i + 1;
+                const isMe = namesMatch(s.studentName, myFullName);
+                const sc = Number(s.score) || 0;
+                const rPct = maxScore ? Math.round((sc / maxScore) * 100) : null;
+
+                const medal = rank === 1 ? 'bg-yellow-500 text-black'
+                    : rank === 2 ? 'bg-gray-300 text-black'
+                    : rank === 3 ? 'bg-amber-700 text-white'
+                    : 'bg-white/10 text-gray-400';
+
+                const rowCls = isMe
+                    ? 'relative overflow-hidden bg-yellow-500/10 border border-yellow-500/50 shadow-[0_0_22px_rgba(234,179,8,0.18)]'
+                    : 'bg-black/20 border border-white/5 hover:border-white/15';
+
+                const meBar = isMe ? '<span class="absolute right-0 top-0 bottom-0 w-1.5 bg-yellow-500"></span>' : '';
+                const meBadge = isMe ? '<span class="shrink-0 text-[0.6rem] font-black text-black bg-yellow-500 px-2 py-0.5 rounded-md">أنت</span>' : '';
+
+                return `
+                    <div class="${rowCls} rounded-xl px-3 py-2.5 flex items-center gap-3 transition-all">
+                        ${meBar}
+                        <span class="shrink-0 w-7 h-7 grid place-items-center rounded-full text-xs font-black ${medal}">${rank}</span>
+                        <div class="flex-1 min-w-0 flex items-center gap-2">
+                            <span class="truncate text-sm font-bold ${isMe ? 'text-yellow-300' : 'text-gray-200'}">${escapeHTML(s.studentName || 'طالب')}</span>
+                            ${meBadge}
+                        </div>
+                        <div class="shrink-0 text-left leading-none">
+                            <span class="text-sm font-black ${isMe ? 'text-yellow-300' : 'text-white'}">${sc}${maxScore ? `<span class="text-[0.7rem] text-gray-500">/${maxScore}</span>` : ''}</span>
+                            ${rPct != null ? `<span class="block text-[0.65rem] text-gray-500 mt-1">${rPct}%</span>` : ''}
+                        </div>
+                    </div>`;
+            }).join('');
 
             cards.push(`
-                <article class="glass-panel rounded-2xl p-5 md:p-6 border-t-4 border-yellow-500 animate-fade flex flex-col gap-4">
+                <article class="glass-panel rounded-2xl p-5 md:p-6 border-t-4 border-yellow-500 animate-fade flex flex-col gap-5">
                     <div class="flex items-start justify-between gap-3">
-                        <h3 class="text-lg font-bold text-white leading-snug">${escapeHTML(test.testName || 'اختبار')}</h3>
-                        ${rankBadge}
+                        <div class="min-w-0">
+                            <h3 class="text-lg font-bold text-white leading-snug truncate">${escapeHTML(test.testName || 'اختبار')}</h3>
+                            <p class="text-xs text-gray-400 mt-1">${total} طالب في الدفعة</p>
+                        </div>
+                        <span class="shrink-0 text-xs font-bold text-black bg-yellow-500 px-2.5 py-1 rounded-md">ترتيبك ${myRank} / ${total}</span>
                     </div>
 
-                    <div class="flex items-center gap-5">
-                        <div class="shrink-0 w-24 h-24 rounded-full border-4 ${ring} flex flex-col items-center justify-center bg-black/30">
-                            <span class="text-2xl font-black ${accent} leading-none">${myScore}${maxScore ? `<span class="text-sm text-gray-500">/${maxScore}</span>` : ''}</span>
-                            ${pct != null ? `<span class="text-[0.7rem] text-gray-400 mt-1">${pct}%</span>` : ''}
+                    <div class="flex items-center gap-5 bg-black/30 rounded-2xl p-4 border ${ring}">
+                        <div class="shrink-0 w-20 h-20 rounded-full border-4 ${ring} flex flex-col items-center justify-center bg-black/40">
+                            <span class="text-xl font-black ${accent} leading-none">${myScore}${maxScore ? `<span class="text-xs text-gray-500">/${maxScore}</span>` : ''}</span>
+                            ${pct != null ? `<span class="text-[0.65rem] text-gray-400 mt-0.5">${pct}%</span>` : ''}
                         </div>
                         <div class="flex-1 min-w-0">
                             <span class="inline-block text-xs font-bold ${accent} mb-2">${level}</span>
@@ -781,10 +830,20 @@
                             <div class="w-full h-2.5 bg-white/10 rounded-full overflow-hidden">
                                 <div class="${bar} h-full rounded-full transition-all duration-700" style="width:${Math.min(pct, 100)}%"></div>
                             </div>` : ''}
-                            <div class="flex items-center justify-between text-xs text-gray-400 mt-3">
-                                <span>درجتك: <b class="text-white">${myScore}</b></span>
-                                ${avgPct != null ? `<span>متوسط الفصل: <b class="text-white">${Math.round(avg)}</b> (${avgPct}%)</span>` : ''}
+                            <div class="flex items-center justify-between text-[0.7rem] text-gray-400 mt-3 gap-2">
+                                <span>متوسط الدفعة: <b class="text-white">${Math.round(avg)}</b>${avgPct != null ? ` (${avgPct}%)` : ''}</span>
+                                <span>الأعلى: <b class="text-white">${topScore}${maxScore ? `/${maxScore}` : ''}</b></span>
                             </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="text-sm font-bold text-gray-300">ترتيب الدفعة كاملاً</h4>
+                            <span class="text-[0.65rem] text-gray-500">من الأعلى إلى الأقل</span>
+                        </div>
+                        <div class="flex flex-col gap-2 max-h-80 overflow-y-auto pr-1">
+                            ${rowsHTML}
                         </div>
                     </div>
                 </article>`);
