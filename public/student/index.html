@@ -277,6 +277,7 @@
             <button onclick="switchTab('dashboard')" data-tab-target="dashboard" id="btn-dashboard" class="tab-btn active shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">لوحة المذاكرة</button>
             <button onclick="switchTab('courses')" data-tab-target="courses" id="btn-courses" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">المحاضرات والحصص</button>
             <button onclick="switchTab('quizzes')" data-tab-target="quizzes" id="btn-quizzes" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الاختبارات الإلكترونية</button>
+            <button onclick="switchTab('results')" data-tab-target="results" id="btn-results" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">نتائج الاختبارات الورقية</button>
             <button onclick="switchTab('points')" data-tab-target="points" id="btn-points" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">أهم نقاط المنهج</button>
             <button onclick="switchTab('questions')" data-tab-target="questions" id="btn-questions" class="tab-btn shrink-0 md:w-full text-sm md:text-base text-center md:text-right px-5 py-3 md:py-4 rounded-xl font-medium text-gray-300 border border-transparent md:border-white/5 bg-white/5 md:bg-transparent">الأسئلة المقالية</button>
         </nav>
@@ -438,6 +439,12 @@
 
                 <div id="onlineQuizzesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"></div>
             </div>
+        </div>
+
+        <div id="tab-results" class="tab-content">
+            <h1 class="text-2xl font-bold mb-2">نتائج الاختبارات الورقية</h1>
+            <p class="text-gray-400 text-sm mb-6">درجاتك في الاختبارات الورقية التي رصدها المعلّم، مع ترتيبك ومستواك في كل اختبار.</p>
+            <div id="paperResultsContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-5"></div>
         </div>
 
         <div id="tab-points" class="tab-content">
