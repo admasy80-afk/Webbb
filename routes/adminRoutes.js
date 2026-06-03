@@ -19,6 +19,7 @@ router.post('/add-content', adminController.addContent);
 router.post('/update-points', adminController.updatePoints);
 router.post('/toggle-stream', adminController.toggleStream);
 router.post('/add-mcq-quiz', adminController.addMcqQuiz);
+router.post('/add-test-results', adminController.addTestResults);
 router.post('/add-public-quiz', adminController.addPublicQuiz);
 router.post('/get-grade-content', adminController.getGradeContent);
 router.post('/delete-item', adminController.deleteItem);
