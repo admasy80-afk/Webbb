@@ -587,7 +587,11 @@
             const points = data.content?.points || [];
             const questions = data.content?.questions || [];
 
-            if (data.studentName) $('studentName').textContent = data.studentName;
+            if (data.studentName) {
+                $('studentName').textContent = data.studentName;
+                // حفظ الاسم الرباعي الكامل لمطابقة نتائج الاختبارات الورقية
+                if (state.user) state.user.fullName = data.studentName;
+            }
             if (data.studentGrade) $('studentGrade').textContent = data.studentGrade;
 
             renderCourses(courses, initial);
@@ -742,7 +746,16 @@
         if (h === state.testResultsHash) return;
         state.testResultsHash = h;
 
-        const myFullName = state.user && state.user.name;
+        const myFullName = (state.user && (state.user.fullName || state.user.name)) || '';
+        const myEmail = ((state.user && state.user.email) || '').trim().toLowerCase();
+
+        // مطابقة الطالب: البريد الإلكتروني هو المفتاح الثابت الأساسي،
+        // ونرجع للاسم فقط عند غياب البريد (نتائج قديمة أُدخلت يدوياً)
+        const isMine = (s) => {
+            const sEmail = (s && s.email ? String(s.email) : '').trim().toLowerCase();
+            if (myEmail && sEmail) return sEmail === myEmail;
+            return namesMatch(s && s.studentName, myFullName);
+        };
 
         // بناء بطاقة لكل اختبار يظهر فيه الطالب — مع لوحة ترتيب الدفعة كاملةً
         const cards = [];
@@ -751,7 +764,7 @@
             if (!scores.length) return;
             const maxScore = Number(test.maxScore) > 0 ? Number(test.maxScore) : null;
 
-            const mine = scores.find(s => namesMatch(s.studentName, myFullName));
+            const mine = scores.find(isMine);
             if (!mine) return; // الطالب غير مدرج في نتائج هذا الاختبار
 
             const myScore = Number(mine.score) || 0;
@@ -760,7 +773,7 @@
             // ترتيب تنازلي حسب الدرجة (الأعلى = الأول)
             const sorted = scores.slice().sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
             const total = sorted.length;
-            const myRank = sorted.findIndex(s => namesMatch(s.studentName, myFullName)) + 1;
+            const myRank = sorted.findIndex(isMine) + 1;
 
             // إحصائيات الدفعة
             const avg = scores.reduce((acc, s) => acc + (Number(s.score) || 0), 0) / total;
@@ -778,7 +791,7 @@
             // صفوف ترتيب الدفعة كاملةً — صفّ الطالب مميّز بشريط ذهبي
             const rowsHTML = sorted.map((s, i) => {
                 const rank = i + 1;
-                const isMe = namesMatch(s.studentName, myFullName);
+                const isMe = isMine(s);
                 const sc = Number(s.score) || 0;
                 const rPct = maxScore ? Math.round((sc / maxScore) * 100) : null;
 
