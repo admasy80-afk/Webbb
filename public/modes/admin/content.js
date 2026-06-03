@@ -1,6 +1,3 @@
-// ==========================================
-// 📚 [MODULE] CONTENT MANAGEMENT & RESULTS MODAL
-// ==========================================
 import { API, ITEM_TYPE } from './config.js';
 import { Http } from './http.js';
 import { DOM } from './dom.js';
