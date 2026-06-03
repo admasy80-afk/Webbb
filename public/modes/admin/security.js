@@ -16,6 +16,25 @@ export const Security = (() => {
         return String(str).replace(escapeRegex, (m) => escapeMap.get(m));
     };
 
+    // القائمة البيضاء للدوال المسموح بتشغيلها من الـ HTML (متطابقة مع النطاق العام)
+    const trustedHandlers = new Set([
+        'fetchstats', 
+        'fetchpendingrequests', 
+        'updatestudentstatus', 
+        'rejectstudent',
+        'fetchstudentsbygrade', 
+        'fetchgradecontent', 
+        'rendermanagecontent', 
+        'deletecontent',
+        'viewresults', 
+        'logout',
+        // دوال الاختبارات (Quiz)
+        'uploadresultsforquiz', 
+        'closeuploadresultsmodal', 
+        'submituploadresults', 
+        'adduploadresultrow'
+    ]);
+
     const _sanitizeNode = (node) => {
         if (node.nodeType === 1) {
             const attrs = node.attributes;
@@ -25,7 +44,19 @@ export const Security = (() => {
                 const name = attr.name.toLowerCase();
                 const value = attr.value.trim().toLowerCase();
                 
-                if (name.startsWith('on') || value.startsWith('javascript:')) {
+                if (name.startsWith('on')) {
+                    // التحقق مما إذا كان الحدث يستدعي دالة من القائمة الموثوقة
+                    let isTrusted = false;
+                    for (const fn of trustedHandlers) {
+                        if (value.startsWith(fn)) {
+                            isTrusted = true;
+                            break;
+                        }
+                    }
+                    if (!isTrusted) {
+                        node.removeAttribute(attr.name); // إزالة المعالجات غير المعروفة
+                    }
+                } else if (value.startsWith('javascript:')) {
                     node.removeAttribute(attr.name);
                 }
             }
