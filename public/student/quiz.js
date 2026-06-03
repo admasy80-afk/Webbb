@@ -649,10 +649,20 @@
             if(overlay) overlay.classList.add('show');
             Sensory.play('tick');
             
+            // مساعد لاستخراج الإجابات الصحيحة سواء كانت مخزّنة كـ correctAnswer (مفرد)
+            // أو correctAnswers (مصفوفة) — توافقاً مع كل بُناة الاختبارات في لوحة الإدارة
+            const getCorrectIndexes = (q) => {
+                if (q.correctAnswers && Array.isArray(q.correctAnswers)) return q.correctAnswers.map(Number);
+                if (q.correctAnswer !== undefined && q.correctAnswer !== null) return [Number(q.correctAnswer)];
+                if (q.correct !== undefined && q.correct !== null) return [Number(q.correct)];
+                return [];
+            };
+
             let score = 0;
             const userAnswers = this.quiz.questions.map((q, qi) => {
                 const ans = this.answers[`q_${qi}`];
-                if (parseInt(ans) === q.correctAnswer) score++;
+                const correct = getCorrectIndexes(q);
+                if (ans !== undefined && correct.includes(parseInt(ans))) score++;
                 return ans === undefined ? null : parseInt(ans);
             });
             const percentage = Math.round((score / this.quiz.questions.length) * 100);
