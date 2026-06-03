@@ -469,10 +469,11 @@ exports.addTestResults = async (req, res) => {
         if (!Array.isArray(rawScores) || rawScores.length === 0)
             return res.status(400).json({ message: "يجب إضافة درجة طالب واحد على الأقل" });
 
-        // تنقية وتطبيع الدرجات: اسم نصّي + درجة رقمية صالحة
+        // تنقية وتطبيع الدرجات: اسم نصّي + درجة رقمية صالحة + بريد إلكتروني (مفتاح ثابت للمطابقة)
         const scores = rawScores
             .map(s => ({
                 studentName: String(s.studentName ?? s.name ?? "").trim(),
+                email: String(s.email ?? "").trim().toLowerCase(),
                 score: Number(s.score)
             }))
             .filter(s => s.studentName.length > 0 && Number.isFinite(s.score));
