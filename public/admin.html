@@ -316,7 +316,7 @@
             input.select();
             input.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(input.value);
-            window.showToast('تم نسخ رابط الاختبار بنجاح! 📋');
+            window.showToast('تم نسخ رابط الاختبار بنجاح!');
         };
 
         // دالة إغلاق مودال النتائج
@@ -473,7 +473,7 @@
                         <div class="md:col-span-2">
                             <select id="testGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base">
                                 <option value="" disabled selected>اختر الصف...</option>
-                                <option value="الصف الأول الابتدائي">الصف الأ��ل الابتدائي</option>
+                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
                                 <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
                                 <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
                                 <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
@@ -887,7 +887,7 @@
                 if (xhr.status === 200) {
                     progressText.textContent = 'تم الرفع بنجاح! ✅';
                     progressBar.style.backgroundColor = '#22c55e';
-                    window.showToast("تم رفع الدورة بنجاح السيرفر!");
+                    window.showToast("تم رفع الكورس بنجاح السيرفر!");
                     
                     setTimeout(() => {
                         progressContainer.classList.add('hidden');
@@ -967,7 +967,7 @@
 
         // 5. دالة حذف الكورس
         window.deleteCourse = async function(id) {
-            if(!confirm('هل أنت متأكد من حذف هذه المحاضرة نهائياً من السيرفر؟')) return;
+            if(!confirm('هل أنت متأكد من حذف هذا الكورس نهائياً من السيرفر؟')) return;
             const token = localStorage.getItem('dahih_token');
             
             try {
