@@ -5,75 +5,166 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة التحكم | منصة الدحيح</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Readex Pro', sans-serif; background-color: #070b19; color: white; }
-        
-        html { background-color: #070b19; overscroll-behavior: none; }
-        * { -webkit-tap-highlight-color: transparent; }
-        *:focus, button:focus, input:focus, select:focus, textarea:focus { outline: none !important; box-shadow: none !important; }
-
-        .glass-panel { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); }
-        .tab-btn { transition: all 0.3s ease; position: relative; }
-        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.05); color: white; }
-        .tab-btn.active { background-color: rgba(234, 179, 8, 0.1); color: #eab308; border-right: 4px solid #eab308; }
-        @media (max-width: 767px) {
-            /* شريط تبويبات أفقي أنيق على الجوال: حبّات قابلة للتمرير بدل النص المتداخل */
-            .tab-pill { border-radius: 9999px; background-color: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; }
-            .tab-btn.active { border-right: none; background-color: rgba(234,179,8,0.15); color: #eab308; border-color: rgba(234,179,8,0.45); box-shadow: 0 4px 14px rgba(234,179,8,0.18); }
-            .tab-nav-wrap { position: relative; }
-            /* تدرّج تلاشٍ على حافتي الشريط ليوحي بإمكانية التمرير */
-            .tab-nav-wrap::before, .tab-nav-wrap::after { content: ''; position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none; z-index: 2; }
-            .tab-nav-wrap::before { right: 0; background: linear-gradient(to left, #070b19, transparent); }
-            .tab-nav-wrap::after { left: 0; background: linear-gradient(to right, #070b19, transparent); }
+        :root {
+            --bg-main: #030712;
+            --bg-panel: rgba(17, 24, 39, 0.6);
+            --accent: #eab308;
+            --accent-glow: rgba(234, 179, 8, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.05);
+            --text-muted: #9ca3af;
         }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.4s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        body {
+            font-family: 'Readex Pro', sans-serif;
+            background-color: var(--bg-main);
+            color: white;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(234, 179, 8, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(234, 179, 8, 0.04) 0%, transparent 50%);
+            background-attachment: fixed;
+        }
+        html { background-color: var(--bg-main); overscroll-behavior: none; }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+        *:focus, button:focus, input:focus, select:focus, textarea:focus { 
+            outline: none !important; 
+            box-shadow: 0 0 0 2px var(--accent-glow) !important; 
+        }
+        .glass-panel { 
+            background: var(--bg-panel); 
+            border: 1px solid var(--glass-border); 
+            backdrop-filter: blur(16px) saturate(180%); 
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        .tab-btn { 
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative; 
+            overflow: hidden;
+        }
+        .tab-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+            transition: left 0.5s ease;
+        }
+        .tab-btn:hover::before { left: 100%; }
+        .tab-btn:hover { background-color: rgba(255, 255, 255, 0.03); color: white; transform: translateX(-4px); }
+        .tab-btn.active { 
+            background: linear-gradient(90deg, rgba(234, 179, 8, 0.15) 0%, transparent 100%); 
+            color: var(--accent); 
+            border-right: 4px solid var(--accent); 
+            font-weight: 700;
+            text-shadow: 0 0 10px rgba(234, 179, 8, 0.3);
+        }
+        @media (max-width: 767px) {
+            .tab-btn:hover { transform: translateY(-2px); }
+            .tab-pill { border-radius: 9999px; background-color: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); font-size: 0.85rem; padding: 0.6rem 1.2rem; }
+            .tab-btn.active { 
+                border-right: none; 
+                background: linear-gradient(135deg, rgba(234,179,8,0.2) 0%, rgba(234,179,8,0.05) 100%); 
+                border-color: rgba(234,179,8,0.5); 
+                box-shadow: 0 4px 20px rgba(234,179,8,0.2); 
+            }
+            .tab-nav-wrap { position: relative; }
+            .tab-nav-wrap::before, .tab-nav-wrap::after { content: ''; position: absolute; top: 0; bottom: 0; width: 40px; pointer-events: none; z-index: 2; }
+            .tab-nav-wrap::before { right: 0; background: linear-gradient(to left, var(--bg-main), transparent); }
+            .tab-nav-wrap::after { left: 0; background: linear-gradient(to right, var(--bg-main), transparent); }
+        }
+        .tab-content { display: none; opacity: 0; transform: translateY(15px); transition: opacity 0.4s ease, transform 0.4s ease; }
+        .tab-content.active { display: block; opacity: 1; transform: translateY(0); animation: contentFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes contentFadeIn { from { opacity: 0; transform: translateY(20px); filter: blur(4px); } to { opacity: 1; transform: translateY(0); filter: blur(0); } }
         @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in-up { animation: fadeInUp 0.4s ease-out forwards; }
-        select option { background-color: #0f172a; color: white; }
+        .animate-fade-in-up { animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        input, select, textarea {
+            transition: all 0.3s ease;
+            background-color: rgba(0, 0, 0, 0.4) !important;
+            border: 1px solid rgba(255,255,255,0.08) !important;
+        }
+        input:hover, select:hover, textarea:hover { border-color: rgba(255,255,255,0.15) !important; background-color: rgba(0, 0, 0, 0.6) !important; }
+        select option { background-color: #0f172a; color: white; padding: 10px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(234, 179, 8, 0.5); }
         .scrollbar-hide::-webkit-scrollbar { display: none; }
         .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-        .trash-icon { transition: all 0.2s ease; cursor: pointer; color: #64748b; }
-        .trash-icon:hover { color: #ef4444; transform: scale(1.1); }
-        .pulse-live { animation: pulseLive 2s infinite; }
-        @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+        .trash-icon { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; color: var(--text-muted); }
+        .trash-icon:hover { color: #ef4444; transform: scale(1.15) rotate(5deg); filter: drop-shadow(0 0 8px rgba(239,68,68,0.4)); }
+        .pulse-live { animation: pulseLive 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulseLive { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.6); } 70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
         #videoContainer:fullscreen { background-color: #000; display: flex; align-items: center; justify-content: center; }
         #videoContainer:fullscreen video { height: 100vh; width: 100vw; object-fit: contain; border: none; border-radius: 0; }
-        
-        .student-details { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, padding 0.4s ease; opacity: 0; }
-        .student-details.open { max-height: 2000px; padding-top: 1rem; opacity: 1; border-top: 1px solid rgba(255,255,255,0.1); margin-top: 1rem; }
+        .student-details { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), padding 0.5s ease, opacity 0.4s ease; opacity: 0; }
+        .student-details.open { max-height: 2500px; padding-top: 1.5rem; opacity: 1; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 1rem; }
+        .btn-primary {
+            background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+            color: #000;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(234, 179, 8, 0.2);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(234, 179, 8, 0.4);
+            filter: brightness(1.1);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.2);
+        }
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+            filter: brightness(1.1);
+        }
+        .form-floating-label { position: relative; }
+        .ambient-light {
+            position: absolute;
+            width: 40vw; height: 40vw;
+            background: radial-gradient(circle, rgba(234,179,8,0.05) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            top: -10vw; right: -10vw;
+            animation: float 20s ease-in-out infinite alternate;
+        }
+        @keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-5%, 5%) scale(1.1); } }
     </style>
 
     <script>
-        // الحماية الوقائية لمنع الـ Refresh اللانهائي في حال عدم وجود توكن
         if (!localStorage.getItem('dahih_token') && !window.location.href.includes('login.html')) {
             window.location.href = 'login.html'; 
         }
 
-        // 🌟 نظام الإشعارات الجديد (Toast) 🌟
         window.showToast = function(msg, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
+            const bgClass = type === 'error' ? 'bg-gradient-to-r from-red-600 to-red-500' : 'bg-gradient-to-r from-green-500 to-emerald-400';
+            const shadowClass = type === 'error' ? 'shadow-red-500/30' : 'shadow-emerald-500/30';
             const icon = type === 'error' 
-                ? `<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
-                : `<svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                ? `<svg class="w-6 h-6 shrink-0 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`
+                : `<svg class="w-6 h-6 shrink-0 text-white drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
                 
-            toast.className = `${bgColor} text-white px-4 md:px-6 py-3 rounded-xl shadow-2xl transform transition-all duration-300 translate-y-10 opacity-0 flex items-center gap-3 font-bold text-sm z-50`;
-            toast.innerHTML = `${icon} <span>${msg}</span>`;
+            toast.className = `${bgClass} text-white px-5 md:px-7 py-4 rounded-2xl shadow-2xl ${shadowClass} transform transition-all duration-500 translate-y-12 opacity-0 flex items-center gap-4 font-bold text-sm backdrop-blur-md border border-white/20 z-50`;
+            toast.innerHTML = `${icon} <span class="tracking-wide">${msg}</span>`;
             
             container.appendChild(toast);
             
             requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-10', 'opacity-0');
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-y-12', 'opacity-0');
+                    toast.classList.add('translate-y-0', 'opacity-100');
+                });
             });
             
             setTimeout(() => {
-                toast.classList.add('opacity-0', 'translate-y-2');
-                setTimeout(() => toast.remove(), 300);
-            }, 4000);
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('opacity-0', 'translate-y-4', 'scale-95');
+                setTimeout(() => toast.remove(), 500);
+            }, 4500);
         }
 
         window.addEventListener('error', function(e) {
@@ -83,7 +174,6 @@
             window.showToast("خطأ في الاتصال بالسيرفر", 'error');
         });
 
-        // دالة تسجيل الخروج الآمنة بدون تكرار ريفريش
         window.logout = function() {
             localStorage.removeItem('dahih_token');
             window.location.href = 'login.html'; 
@@ -93,20 +183,21 @@
             document.querySelectorAll('.tab-content').forEach(el => {
                 el.classList.remove('active');
                 el.style.opacity = '0';
-                el.style.transform = 'translateY(10px)';
-                el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                el.style.transform = 'translateY(15px)';
             });
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             
             const activeTab = document.getElementById(`tab-${tabId}`);
-            if(activeTab) {
-                activeTab.classList.add('active');
-                document.getElementById(`btn-${tabId}`).classList.add('active');
+            const btn = document.getElementById(`btn-${tabId}`);
+            if(activeTab && btn) {
+                btn.classList.add('active');
+                activeTab.style.display = 'block';
                 
-                setTimeout(() => {
-                    activeTab.style.opacity = '1';
-                    activeTab.style.transform = 'translateY(0)';
-                }, 50);
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        activeTab.classList.add('active');
+                    });
+                });
 
                 if(tabId === 'requests' && typeof window.fetchPendingRequests === 'function') window.fetchPendingRequests();
                 if(tabId === 'dashboard' && typeof window.fetchStats === 'function') window.fetchStats();
@@ -122,69 +213,116 @@
 
             if(type !== 'point') {
                 pointF.style.opacity = '0';
-                setTimeout(() => { pointF.classList.add('hidden'); qFields.classList.remove('hidden'); qFields.style.opacity = '0'; setTimeout(() => { qFields.style.transition = 'opacity 0.3s'; qFields.style.opacity = '1'; }, 50); }, 150);
+                pointF.style.transform = 'scale(0.98)';
+                setTimeout(() => { 
+                    pointF.classList.add('hidden'); 
+                    qFields.classList.remove('hidden'); 
+                    qFields.style.opacity = '0'; 
+                    qFields.style.transform = 'scale(0.98)';
+                    setTimeout(() => { 
+                        qFields.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; 
+                        qFields.style.opacity = '1'; 
+                        qFields.style.transform = 'scale(1)';
+                    }, 50); 
+                }, 300);
             } else {
                 qFields.style.opacity = '0';
-                setTimeout(() => { qFields.classList.add('hidden'); pointF.classList.remove('hidden'); pointF.style.opacity = '0'; setTimeout(() => { pointF.style.transition = 'opacity 0.3s'; pointF.style.opacity = '1'; }, 50); }, 150);
+                qFields.style.transform = 'scale(0.98)';
+                setTimeout(() => { 
+                    qFields.classList.add('hidden'); 
+                    pointF.classList.remove('hidden'); 
+                    pointF.style.opacity = '0'; 
+                    pointF.style.transform = 'scale(0.98)';
+                    setTimeout(() => { 
+                        pointF.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)'; 
+                        pointF.style.opacity = '1'; 
+                        pointF.style.transform = 'scale(1)';
+                    }, 50); 
+                }, 300);
             }
         };
 
         window.addScoreRow = function() {
             const container = document.getElementById('scoresContainer');
             const row = document.createElement('div');
-            row.className = 'score-row flex gap-2 sm:gap-3 items-center animate-fade-in-up';
+            const uniqueId = Date.now() + Math.floor(Math.random() * 10000); 
+            
+            row.className = 'score-row flex gap-3 sm:gap-4 items-center animate-fade-in-up bg-white/[0.02] p-2 rounded-2xl border border-white/5 shadow-inner hover:bg-white/[0.04] transition-colors';
             row.innerHTML = `
-                <input type="text" placeholder="اسم الطالب (رباعي)" required class="test-student-name flex-1 min-w-0 bg-black/30 border border-white/10 rounded-xl px-3 sm:px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base transition-colors">
-                <input type="number" inputmode="numeric" placeholder="الدرجة" required class="test-student-score w-16 sm:w-24 md:w-28 shrink-0 bg-black/30 border border-white/10 rounded-xl px-2 sm:px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base text-center transition-colors">
-                <button type="button" onclick="this.parentElement.remove()" aria-label="حذف الصف" class="shrink-0 grid place-items-center w-11 h-11 sm:w-12 sm:h-12 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <div class="relative flex-1">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-yellow-500/50">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <input type="text" id="student_name_${uniqueId}" name="student_name_${uniqueId}" placeholder="اسم الطالب (رباعي)" required class="test-student-name w-full bg-black/40 border border-white/10 rounded-xl pr-11 pl-4 py-3.5 text-white outline-none focus:border-yellow-500 text-sm md:text-base transition-all shadow-inner focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+                </div>
+                <div class="relative shrink-0 w-24 sm:w-28 md:w-32">
+                    <input type="number" id="student_score_${uniqueId}" name="student_score_${uniqueId}" inputmode="numeric" placeholder="الدرجة" required class="test-student-score w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3.5 text-white outline-none focus:border-yellow-500 text-sm md:text-base text-center transition-all shadow-inner focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+                </div>
+                <button type="button" onclick="const p = this.parentElement; p.style.opacity='0'; p.style.transform='scale(0.95)'; setTimeout(()=>p.remove(), 300)" aria-label="حذف الصف" class="shrink-0 grid place-items-center w-12 h-12 sm:w-14 sm:h-14 bg-red-500/10 text-red-500 hover:bg-gradient-to-br hover:from-red-500 hover:to-red-600 hover:text-white border border-red-500/20 rounded-xl transition-all shadow-lg hover:shadow-red-500/30">
+                    <svg class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                 </button>
             `;
             container.appendChild(row);
             row.querySelector('.test-student-name')?.focus();
         };
 
-        // 🌟 نظام توليد الأسئلة الثكي والديناميكي (4 حقول ثابتة دائماً مع فحص التحقق) 🌟
         let platformQuizCounter = 0;
         window.addMCQBlock = function() {
             platformQuizCounter++;
             const container = document.getElementById('dynamicQuestionsContainer');
             const block = document.createElement('div');
-            block.className = 'quiz-question-block bg-black/40 border border-white/10 p-5 rounded-2xl space-y-4 relative animate-fade-in-up';
+            block.className = 'quiz-question-block glass-panel p-6 rounded-[2rem] space-y-5 relative animate-fade-in-up border-t border-l border-white/10 shadow-2xl';
             block.innerHTML = `
-                <div class="flex justify-between items-center border-b border-white/5 pb-3">
-                    <span class="text-sm font-bold text-yellow-500">سؤال منصة رقم #${platformQuizCounter}</span>
-                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-500 bg-red-500/10 p-2 rounded-xl transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-500 font-black shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                            ${platformQuizCounter}
+                        </div>
+                        <span class="text-base font-bold text-white tracking-wide">سؤال منصة إلكتروني</span>
+                    </div>
+                    <button type="button" onclick="const p = this.parentElement.parentElement; p.style.opacity='0'; p.style.transform='translateY(20px)'; setTimeout(()=>p.remove(), 400)" class="text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 p-2.5 rounded-xl transition-all shadow-lg hover:shadow-red-500/40 border border-red-500/20 hover:border-red-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-400 mb-2">نص السؤال الإلكتروني</label>
-                    <input type="text" required class="question-text-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="اكتب السؤال هنا...">
+                    <label class="block text-sm font-semibold text-gray-300 mb-2 ml-1">نص السؤال</label>
+                    <textarea required class="question-text-input w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-sm md:text-base resize-none min-h-[100px] shadow-inner focus:shadow-[0_0_20px_rgba(234,179,8,0.15)] transition-all" placeholder="اكتب السؤال بوضوح هنا..."></textarea>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-xs text-gray-400 mb-2">نوع الخيارات</label>
-                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                        <label class="block text-sm font-semibold text-gray-300 mb-2 ml-1">نوع الخيارات</label>
+                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer shadow-inner appearance-none transition-all focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]">
                             <option value="4">4 خيارات (اختيار من متعدد)</option>
                             <option value="2">خيارين فقط (صح / خطأ)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-400 mb-2">الإجابة الصحيحة</label>
-                        <select class="question-correct-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
-                            <option value="1">الخيار الأول</option>
-                            <option value="2">الخيار الثاني</option>
-                            <option value="3" class="extra-opt-target">الخيار الثالث</option>
-                            <option value="4" class="extra-opt-target">الخيار الرابع</option>
+                        <label class="block text-sm font-semibold text-gray-300 mb-2 ml-1">الإجابة الصحيحة المعيارية</label>
+                        <select class="question-correct-select w-full bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-5 py-3.5 text-yellow-400 font-bold outline-none focus:border-yellow-500 text-sm cursor-pointer shadow-[0_0_15px_rgba(234,179,8,0.05)] appearance-none transition-all">
+                            <option value="1">الخيار الأول هو الصحيح</option>
+                            <option value="2">الخيار الثاني هو الصحيح</option>
+                            <option value="3" class="extra-opt-target">الخيار الثالث هو الصحيح</option>
+                            <option value="4" class="extra-opt-target">الخيار الرابع هو الصحيح</option>
                         </select>
                     </div>
                 </div>
-                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول">
-                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني">
-                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثالث">
-                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الرابع">
+                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-white/5">
+                    <div class="relative">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">أ</span>
+                        <input type="text" required class="opt-1-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-yellow-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="محتوى الخيار الأول">
+                    </div>
+                    <div class="relative">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">ب</span>
+                        <input type="text" required class="opt-2-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-yellow-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="محتوى الخيار الثاني">
+                    </div>
+                    <div class="relative extra-opt-target-container">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">ج</span>
+                        <input type="text" required class="opt-3-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-yellow-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="محتوى الخيار الثالث">
+                    </div>
+                    <div class="relative extra-opt-target-container">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">د</span>
+                        <input type="text" required class="opt-4-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-yellow-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="محتوى الخيار الرابع">
+                    </div>
                 </div>
             `;
             container.appendChild(block);
@@ -195,47 +333,63 @@
             publicQuizCounter++;
             const container = document.getElementById('dynamicPublicQuestionsContainer');
             const block = document.createElement('div');
-            block.className = 'quiz-question-block bg-black/40 border border-white/10 p-5 rounded-2xl space-y-4 relative animate-fade-in-up';
+            block.className = 'quiz-question-block glass-panel p-6 rounded-[2rem] space-y-5 relative animate-fade-in-up border-t border-l border-emerald-500/20 shadow-[0_10px_30px_rgba(16,185,129,0.05)]';
             block.innerHTML = `
-                <div class="flex justify-between items-center border-b border-white/5 pb-3">
-                    <span class="text-sm font-bold text-yellow-500">سؤال عام رقم #${publicQuizCounter}</span>
-                    <button type="button" onclick="this.parentElement.parentElement.remove()" class="text-red-400 hover:text-red-500 bg-red-500/10 p-2 rounded-xl transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                <div class="flex justify-between items-center border-b border-white/5 pb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-black shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                            ${publicQuizCounter}
+                        </div>
+                        <span class="text-base font-bold text-white tracking-wide">سؤال مسابقة عامة</span>
+                    </div>
+                    <button type="button" onclick="const p = this.parentElement.parentElement; p.style.opacity='0'; p.style.transform='translateY(20px)'; setTimeout(()=>p.remove(), 400)" class="text-red-400 hover:text-white bg-red-500/10 hover:bg-red-500 p-2.5 rounded-xl transition-all shadow-lg hover:shadow-red-500/40 border border-red-500/20 hover:border-red-400">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
                 <div>
-                    <label class="block text-xs text-gray-400 mb-2">نص السؤال العام</label>
-                    <input type="text" required class="question-text-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="اكتب السؤال هنا...">
+                    <label class="block text-sm font-semibold text-gray-300 mb-2 ml-1">نص السؤال العام</label>
+                    <textarea required class="question-text-input w-full bg-black/40 border border-emerald-500/20 rounded-2xl px-5 py-4 text-white outline-none focus:border-emerald-500 text-sm md:text-base resize-none min-h-[100px] shadow-inner focus:shadow-[0_0_20px_rgba(16,185,129,0.15)] transition-all" placeholder="اكتب السؤال المشوق هنا..."></textarea>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div>
-                        <label class="block text-xs text-gray-400 mb-2">نوع الخيارات</label>
-                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                        <label class="block text-sm font-semibold text-gray-300 mb-2 ml-1">نوع الخيارات</label>
+                        <select onchange="adjustQuestionOptions(this)" class="question-type-select w-full bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 text-white outline-none focus:border-emerald-500 text-sm cursor-pointer shadow-inner appearance-none transition-all focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]">
                             <option value="4">4 خيارات (اختيار من متعدد)</option>
                             <option value="2">خيارين فقط (صح / خطأ)</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-400 mb-2">الإجابة الصحيحة</label>
-                        <select class="question-correct-select w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
+                        <label class="block text-sm font-semibold text-gray-300 mb-2 ml-1">الإجابة الصحيحة</label>
+                        <select class="question-correct-select w-full bg-emerald-500/5 border border-emerald-500/30 rounded-xl px-5 py-3.5 text-emerald-400 font-bold outline-none focus:border-emerald-500 text-sm cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.1)] appearance-none transition-all">
                             <option value="1">الخيار الأول</option>
-                            <option value="2">الخيار الث��ني</option>
+                            <option value="2">الخيار الثاني</option>
                             <option value="3" class="extra-opt-target">الخيار الثالث</option>
                             <option value="4" class="extra-opt-target">الخيار الرابع</option>
                         </select>
                     </div>
                 </div>
-                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                    <input type="text" required class="opt-1-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الأول">
-                    <input type="text" required class="opt-2-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثاني">
-                    <input type="text" required class="opt-3-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الثالث">
-                    <input type="text" required class="opt-4-input w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="الخيار الرابع">
+                <div class="options-inputs-grid grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-white/5">
+                    <div class="relative">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">1</span>
+                        <input type="text" required class="opt-1-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-emerald-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]" placeholder="الخيار الأول">
+                    </div>
+                    <div class="relative">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">2</span>
+                        <input type="text" required class="opt-2-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-emerald-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]" placeholder="الخيار الثاني">
+                    </div>
+                    <div class="relative extra-opt-target-container">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">3</span>
+                        <input type="text" required class="opt-3-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-emerald-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]" placeholder="الخيار الثالث">
+                    </div>
+                    <div class="relative extra-opt-target-container">
+                        <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm bg-black/50 px-2 py-1 rounded-md">4</span>
+                        <input type="text" required class="opt-4-input w-full bg-black/40 border border-white/10 rounded-xl pr-14 pl-4 py-3.5 text-white outline-none focus:border-emerald-500 text-sm shadow-inner transition-all focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]" placeholder="الخيار الرابع">
+                    </div>
                 </div>
             `;
             container.appendChild(block);
         };
 
-        // دالة التحكم المحسنة تماماً للكتابة السريعة وإدارة التحقق مع الحفاظ على الحقول الأربعة
         window.adjustQuestionOptions = function(selectElement) {
             const block = selectElement.closest('.quiz-question-block');
             const mode = selectElement.value;
@@ -246,36 +400,46 @@
             const opt4 = block.querySelector('.opt-4-input');
             
             const extraSelectOpts = block.querySelectorAll('.extra-opt-target');
+            const extraContainers = block.querySelectorAll('.extra-opt-target-container');
             const correctSelect = block.querySelector('.question-correct-select');
 
             if (mode === "2") {
-                // ميزة الكتابة السريعة التلقائية المحدثة
                 opt1.value = "صح";
                 opt2.value = "خطأ";
                 opt3.value = ""; 
                 opt4.value = "";
                 
-                // إلغاء تفعيل الـ required للحقلين الثالث والرابع لتجاوز الفحص البرمجي
                 opt3.removeAttribute('required');
                 opt4.removeAttribute('required');
                 
-                // إخفاء الخيار الثالث والرابع من قائمة تحديد الإجابة الصحيحة
+                extraContainers.forEach(c => {
+                    c.style.opacity = '0';
+                    c.style.transform = 'scale(0.95)';
+                    setTimeout(() => c.classList.add('hidden'), 300);
+                });
+
                 extraSelectOpts.forEach(o => o.classList.add('hidden'));
                 if (correctSelect.value === "3" || correctSelect.value === "4") {
                     correctSelect.value = "1";
                 }
             } else {
-                // إرجاع الوضع الافتراضي لـ 4 خيارات
                 if(opt1.value === "صح") opt1.value = "";
                 if(opt2.value === "خطأ") opt2.value = "";
                 
                 opt3.setAttribute('required', 'true');
                 opt4.setAttribute('required', 'true');
+                
+                extraContainers.forEach(c => {
+                    c.classList.remove('hidden');
+                    setTimeout(() => {
+                        c.style.opacity = '1';
+                        c.style.transform = 'scale(1)';
+                    }, 50);
+                });
                 extraSelectOpts.forEach(o => o.classList.remove('hidden'));
             }
         };
 
-        // دالة فحص والتحقق من عدد الحقول المعبأة بدقة تامة (السماح بـ 2 أو 4 فقط، ورفض 1 أو 3)
         function validateQuizInputs(containerId) {
             const container = document.getElementById(containerId);
             const blocks = container.querySelectorAll('.quiz-question-block');
@@ -287,7 +451,6 @@
                 const v3 = block.querySelector('.opt-3-input').value.trim();
                 const v4 = block.querySelector('.opt-4-input').value.trim();
                 
-                // حساب عدد الحقول المكتوبة فعلياً
                 let filledCount = 0;
                 if(v1 !== "") filledCount++;
                 if(v2 !== "") filledCount++;
@@ -297,11 +460,17 @@
                 if (mode === "2") {
                     if (filledCount !== 2) {
                         window.showToast("خطأ: يرجى إدخال خيارين فقط (تم اكتشاف حقول زائدة أو ناقصة)!", "error");
+                        block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        block.classList.add('ring-2', 'ring-red-500', 'ring-offset-2', 'ring-offset-[#030712]');
+                        setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'ring-offset-2', 'ring-offset-[#030712]'), 2000);
                         return false;
                     }
                 } else {
                     if (filledCount !== 4) {
                         window.showToast("خطأ: يرجى ملء الحقول الأربعة كاملة أو تحويل نوع السؤال لخيارين فقط!", "error");
+                        block.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        block.classList.add('ring-2', 'ring-red-500', 'ring-offset-2', 'ring-offset-[#030712]');
+                        setTimeout(() => block.classList.remove('ring-2', 'ring-red-500', 'ring-offset-2', 'ring-offset-[#030712]'), 2000);
                         return false;
                     }
                 }
@@ -309,7 +478,6 @@
             return true;
         }
 
-        // دالة نسخ رابط الاختبار العام
         window.copyPublicLink = function() {
             const input = document.getElementById('publicQuizLinkInput');
             if(!input || !input.value) return;
@@ -317,96 +485,171 @@
             input.setSelectionRange(0, 99999);
             navigator.clipboard.writeText(input.value);
             window.showToast('تم نسخ رابط الاختبار بنجاح! 📋');
+            
+            const btn = document.getElementById('copyLinkBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<svg class="w-5 h-5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> تم النسخ';
+            btn.classList.add('bg-green-500', 'text-white');
+            btn.classList.remove('bg-white', 'text-black');
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.remove('bg-green-500', 'text-white');
+                btn.classList.add('bg-white', 'text-black');
+            }, 3000);
         };
 
-        // دالة إغلاق مودال النتائج
         window.closeResultsModal = function() {
-            document.getElementById('resultsModal').classList.add('hidden');
+            const modal = document.getElementById('resultsModal');
+            const content = modal.querySelector('div');
+            content.style.transform = 'scale(0.95) translateY(20px)';
+            content.style.opacity = '0';
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                content.style.transform = '';
+                content.style.opacity = '';
+            }, 300);
+        };
+        
+        window.openResultsModal = function() {
+            const modal = document.getElementById('resultsModal');
+            modal.classList.remove('hidden');
+            const content = modal.querySelector('div');
+            content.style.opacity = '0';
+            content.style.transform = 'scale(0.95) translateY(20px)';
+            requestAnimationFrame(() => {
+                content.style.transition = 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)';
+                content.style.opacity = '1';
+                content.style.transform = 'scale(1) translateY(0)';
+            });
         };
     </script>
 </head>
-<body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500 selection:text-black">
+<body class="flex flex-col md:flex-row h-screen overflow-hidden selection:bg-yellow-500/30 selection:text-yellow-200">
 
-    <div id="toast-container" class="fixed bottom-5 left-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+    <div class="ambient-light"></div>
 
-    <aside class="w-full md:w-72 glass-panel h-auto md:h-full flex flex-col border-b md:border-b-0 md:border-l border-white/10 shrink-0 z-10 md:overflow-y-auto">
-        <div class="p-4 md:p-6 border-b border-white/10 shrink-0 flex justify-between items-center">
-            <div>
-                <div class="text-xl md:text-2xl font-black text-yellow-500 tracking-tight">الدحيح<span class="text-white">.</span></div>
-                <p class="text-xs text-gray-400 mt-1">إدارة المنصة</p>
+    <div id="toast-container" class="fixed bottom-6 left-6 z-[9999] flex flex-col gap-4 pointer-events-none"></div>
+
+    <aside class="w-full md:w-80 glass-panel h-auto md:h-full flex flex-col border-b md:border-b-0 md:border-l border-white/5 shrink-0 z-10 md:overflow-y-auto shadow-[4px_0_24px_rgba(0,0,0,0.5)]">
+        <div class="p-6 md:p-8 border-b border-white/5 shrink-0 flex justify-between items-center relative overflow-hidden">
+            <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-50"></div>
+            <div class="relative z-10">
+                <div class="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 tracking-tight drop-shadow-[0_0_10px_rgba(234,179,8,0.3)]">الدحيح<span class="text-white">.</span></div>
+                <div class="flex items-center gap-2 mt-2">
+                    <span class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e] animate-pulse"></span>
+                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest">إدارة النظام الخارق</p>
+                </div>
             </div>
-            <button onclick="logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-4 py-2 rounded-xl text-sm font-bold transition-colors">خروج</button>
+            <button onclick="logout()" class="md:hidden relative z-10 text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all border border-red-500/20 shadow-lg">خروج</button>
         </div>
         
         <div class="tab-nav-wrap md:contents">
-        <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-2 md:gap-1 px-3 py-3 md:py-4 md:px-0 scrollbar-hide shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">نظرة عامة</button>
-            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
-            <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
-            <button onclick="switchTab('students')" id="btn-students" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
-            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">نتائج الاختبارات</button>
-            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">كورسات</button>
-            <button onclick="switchTab('content')" id="btn-content" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">المحتوى المقالي</button>
-            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إنشاء اختبار المنصة</button>
-            <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إنشاء اختبار عام</button>
-            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إدارة المحتوى</button>
-            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">البث المباشر</button>
+        <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-3 md:gap-2 px-4 py-4 md:py-6 md:px-3 scrollbar-hide shrink-0 relative z-10">
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                نظرة عامة
+            </button>
+            <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path></svg>
+                طلبات التسجيل
+            </button>
+            <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                قائمة الطلاب
+            </button>
+            <button onclick="switchTab('students')" id="btn-students" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                التقييم المستمر
+            </button>
+            <button onclick="switchTab('tests')" id="btn-tests" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                نتائج الاختبارات
+            </button>
+            <button onclick="switchTab('videos')" id="btn-videos" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                كورسات
+            </button>
+            <button onclick="switchTab('content')" id="btn-content" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                المحتوى المقالي
+            </button>
+            <button onclick="switchTab('quiz')" id="btn-quiz" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                إنشاء اختبار المنصة
+            </button>
+            <button onclick="switchTab('public-quiz')" id="btn-public-quiz" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                إنشاء اختبار عام
+            </button>
+            <button onclick="switchTab('manage')" id="btn-manage" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                إدارة المحتوى
+            </button>
+            <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-5 md:px-6 py-3 md:py-4 font-semibold text-gray-300 rounded-2xl flex items-center gap-3">
+                <svg class="w-5 h-5 opacity-70 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                البث المباشر
+            </button>
         </nav>
         </div>
 
-        <div class="hidden md:block p-4 border-t border-white/10 shrink-0 mt-auto">
-            <button onclick="logout()" class="w-full text-red-400 bg-red-400/10 hover:bg-red-400/20 py-3 rounded-xl text-sm font-bold transition-all">تسجيل الخروج</button>
+        <div class="hidden md:block p-6 border-t border-white/5 shrink-0 mt-auto">
+            <button onclick="logout()" class="w-full text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white py-4 rounded-2xl text-sm font-bold transition-all border border-red-500/20 shadow-lg hover:shadow-red-500/30 flex justify-center items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                تسجيل الخروج
+            </button>
         </div>
     </aside>
 
-    <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 relative">
-        <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-
+    <main class="flex-grow h-full overflow-y-auto p-4 md:p-10 relative z-0 scrollbar-hide">
         <div id="tab-stream" class="tab-content">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-5 relative z-10">
                 <div>
-                    <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">البث المباشر</h1>
-                    <p class="text-gray-400 text-sm">اضغط لبدء البث المباشر علي الزر أدناه.</p>
+                    <h1 class="text-3xl md:text-4xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">البث المباشر <span class="text-red-500">Live</span></h1>
+                    <p class="text-gray-400 text-sm font-medium">ابدأ البث المباشر لطلابك بدقة عالية ومعدل تأخير شبه معدوم.</p>
                 </div>
-                <div id="streamStatusBadge" class="bg-gray-800 border border-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-3">
-                    <span class="w-2.5 h-2.5 rounded-full bg-gray-500 block"></span> النظام في وضع الاستعداد
+                <div id="streamStatusBadge" class="bg-black/40 border border-white/10 text-gray-300 px-5 py-3 rounded-2xl text-sm font-bold flex items-center gap-3 shadow-inner backdrop-blur-md">
+                    <span class="w-3 h-3 rounded-full bg-gray-500 block shadow-[0_0_8px_rgba(107,114,128,0.5)]"></span> النظام في وضع الاستعداد
                 </div>
             </div>
             
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl mx-auto border-t-4 border-yellow-500 animate-fade-in-up">
+            <div class="glass-panel rounded-[2rem] p-5 md:p-8 max-w-6xl mx-auto border-t-4 border-yellow-500 animate-fade-in-up shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
                 
-                <div id="videoContainer" class="relative w-full aspect-video bg-[#0a0f1c] rounded-xl border border-white/10 mb-6 overflow-hidden group shadow-xl">
+                <div id="videoContainer" class="relative w-full aspect-video bg-[#030712] rounded-2xl border border-white/10 mb-8 overflow-hidden group shadow-[inset_0_0_50px_rgba(0,0,0,0.8)]">
                     <video id="localVideo" autoplay muted playsinline class="w-full h-full object-cover"></video>
                     
-                    <div id="camOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-[#070b19]/90 text-center p-4">
-                        <svg class="w-14 h-14 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                        <h3 class="text-lg font-bold text-gray-300 mb-2">الكاميرا في وضع الإيقاف</h3>
-                        <p class="text-gray-500 text-xs">يرجى بدء البث ومنح الصلاحيات لعرض المعاينة.</p>
+                    <div id="camOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm text-center p-6 transition-all duration-500">
+                        <div class="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(255,255,255,0.05)]">
+                            <svg class="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-200 mb-3 tracking-wide">الكاميرا في وضع الإيقاف</h3>
+                        <p class="text-gray-500 text-sm max-w-md leading-relaxed">يرجى النقر على بدء البث ومنح المتصفح صلاحيات الوصول للكاميرا والميكروفون للبدء.</p>
                     </div>
 
-                    <div id="videoControlsOverlay" class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div class="flex gap-2">
-                            <button id="toggleMicBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="كتم/تشغيل المايك">
-                                <svg id="micIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                    <div id="videoControlsOverlay" class="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/80 to-transparent flex justify-between items-center opacity-0 group-hover:opacity-100 transition-all duration-400 translate-y-4 group-hover:translate-y-0">
+                        <div class="flex gap-3">
+                            <button id="toggleMicBtn" class="bg-white/10 hover:bg-white/20 text-white p-3.5 rounded-xl transition-all border border-white/10 backdrop-blur-md shadow-lg" title="كتم/تشغيل المايك">
+                                <svg id="micIconOn" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
                             </button>
-                            <button id="toggleCamBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="إيقاف/تشغيل الكاميرا">
-                                <svg id="camIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                            <button id="toggleCamBtn" class="bg-white/10 hover:bg-white/20 text-white p-3.5 rounded-xl transition-all border border-white/10 backdrop-blur-md shadow-lg" title="إيقاف/تشغيل الكاميرا">
+                                <svg id="camIconOn" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
                             </button>
                         </div>
-                        <button id="fullscreenBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="ملء الشاشة">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                        <button id="fullscreenBtn" class="bg-white/10 hover:bg-white/20 text-white p-3.5 rounded-xl transition-all border border-white/10 backdrop-blur-md shadow-lg" title="ملء الشاشة">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                         </button>
                     </div>
                 </div>
                 
-                <div class="flex justify-center border-t border-white/5 pt-6 mt-2">
-                    <button id="startStreamBtn" class="w-full md:w-auto bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 px-10 rounded-xl transition-all shadow-lg flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        بدء البث المباشر
+                <div class="flex justify-center border-t border-white/5 pt-8 mt-4 relative">
+                    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-1/3 h-px bg-gradient-to-r from-transparent via-yellow-500/50 to-transparent"></div>
+                    <button id="startStreamBtn" class="w-full md:w-auto btn-primary font-black py-4 px-14 rounded-2xl text-lg flex items-center justify-center gap-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        بدء البث المباشر الآن
                     </button>
-                    <button id="stopStreamBtn" class="w-full md:w-auto bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-10 rounded-xl transition-all shadow-lg hidden flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
-                        إنهاء البث الحالي
+                    <button id="stopStreamBtn" class="w-full md:w-auto btn-danger font-black py-4 px-14 rounded-2xl text-lg hidden items-center justify-center gap-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+                        إنهاء البث فوراً
                     </button>
                 </div>
 
@@ -414,179 +657,45 @@
         </div>
 
         <div id="tab-dashboard" class="tab-content active">
-            <h1 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-500 transition-transform hover:scale-[1.02]"><p class="text-gray-400 text-sm mb-1">الطلاب المقبولين</p><h3 id="stats-students" class="text-3xl font-black text-white">0</h3></div>
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-600 transition-transform hover:scale-[1.02]"><p class="text-gray-400 text-sm mb-1">طلبات قيد المراجعة</p><h3 id="stats-pending" class="text-3xl font-black text-yellow-500">0</h3></div>
+            <h1 class="text-3xl md:text-5xl font-black mb-8 md:mb-12 tracking-tight">أهلاً بك في المستقبل يا <span id="adminWelcomeName" class="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600">إدارة</span> ✨</h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 relative z-10">
+                <div class="glass-panel p-8 rounded-[2.5rem] border-t-4 border-t-green-500 transition-all duration-500 hover:scale-[1.03] hover:shadow-[0_20px_40px_rgba(34,197,94,0.15)] group relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all"></div>
+                    <p class="text-gray-400 text-sm font-bold mb-3 uppercase tracking-wider">الطلاب المقبولين</p>
+                    <h3 id="stats-students" class="text-5xl font-black text-white drop-shadow-md">0</h3>
+                </div>
+                <div class="glass-panel p-8 rounded-[2.5rem] border-t-4 border-t-yellow-500 transition-all duration-500 hover:scale-[1.03] hover:shadow-[0_20px_40px_rgba(234,179,8,0.15)] group relative overflow-hidden">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-yellow-500/10 rounded-full blur-2xl group-hover:bg-yellow-500/20 transition-all"></div>
+                    <p class="text-gray-400 text-sm font-bold mb-3 uppercase tracking-wider">طلبات قيد المراجعة</p>
+                    <h3 id="stats-pending" class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-yellow-600 drop-shadow-md">0</h3>
+                </div>
+                <div class="glass-panel p-8 rounded-[2.5rem] border-t-4 border-t-blue-500 transition-all duration-500 hover:scale-[1.03] hover:shadow-[0_20px_40px_rgba(59,130,246,0.15)] group relative overflow-hidden md:col-span-2 lg:col-span-1">
+                    <div class="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
+                    <p class="text-gray-400 text-sm font-bold mb-3 uppercase tracking-wider">حالة النظام</p>
+                    <h3 class="text-3xl font-black text-blue-400 drop-shadow-md mt-2 flex items-center gap-3">
+                        <span class="relative flex h-5 w-5">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-5 w-5 bg-blue-500"></span>
+                        </span>
+                        مستقر تماماً
+                    </h3>
+                </div>
             </div>
         </div>
 
         <div id="tab-requests" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">طلبات التسجيل</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">مراجعة بيانات الطلاب الجدد.</p>
-            <div id="pendingRequestsContainer" class="space-y-4 min-h-[300px]"></div>
+            <h1 class="text-3xl md:text-4xl font-black mb-3">طلبات التسجيل الجديدة</h1>
+            <p class="text-gray-400 mb-8 font-medium">مراجعة والتدقيق في بيانات الطلاب الجدد بدقة عالية.</p>
+            <div id="pendingRequestsContainer" class="space-y-5 min-h-[400px] relative z-10"></div>
         </div>
 
         <div id="tab-students-list" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">قائمة الطلاب الحاليين</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">عرض بيانات الطلاب المسجلين بالاسم الرباعي.</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl border-t-4 border-yellow-500">
-                <select id="listGradeSelect" onchange="fetchStudentsByGrade()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
-                    <option value="" disabled selected>اختر الصف لعرض الطلاب...</option>
-                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                </select>
-                <div id="studentsListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <p class="text-gray-500 text-sm text-center py-10 col-span-full">يرجى اختيار الصف لعرض البيانات.</p>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-students" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">التقييم المستمر</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl border-t-4 border-yellow-500">
-                <form id="pointsForm" class="space-y-5">
-                    <div><label class="block text-sm text-gray-400 mb-2">بريد الطالب</label><input type="email" id="studentEmail" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" dir="ltr"></div>
-                    <div><label class="block text-sm text-gray-400 mb-2">النسبة المئوية (%)</label><input type="number" id="pointsAmount" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base"></div>
-                    <button type="submit" id="savePointsBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors">تحديث التقييم</button>
-                </form>
-            </div>
-        </div>
-
-        <div id="tab-tests" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">نتائج الاختبارات الورقية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="testsForm" class="space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div><input type="text" id="testName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار"></div>
-                        <div><input type="number" inputmode="numeric" min="1" id="testMaxScore" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="الدرجة الكلية للاختبار (مثال: 40)"></div>
-                        <div class="md:col-span-2">
-                            <select id="testGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base">
-                                <option value="" disabled selected>اختر الصف...</option>
-                                <option value="الصف الأول الابتدائي">الصف الأ��ل الابتدائي</option>
-                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div id="scoresContainer" class="space-y-3"></div>
-                    <button type="button" onclick="addScoreRow()" class="w-full bg-white/5 border border-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base">+ إضافة اسم طالب ودرجته</button>
-                    <button type="submit" id="saveTestBtn" class="w-full bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10">نشر النتائج للطلاب</button>
-                </form>
-            </div>
-        </div>
-
-        <div id="tab-videos" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة الكورسات</h1>
-            <p class="text-gray-400 mb-6">يرجي ملئ البيانات بالأسفل لرفع الكورس.</p>
-            
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 h-fit animate-fade-in-up">
-                    <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2">
-                        <span>.</span> رفع كورس جديد
-                    </h2>
-                    
-                    <form id="uploadVideoForm" class="space-y-5">
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">اسم الحصة / المحاضرة</label>
-                            <input type="text" id="courseName" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm transition-colors" placeholder="مثال: الباب الأول - المحاضرة الثالثة">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">السنة الدراسية المستهدفة</label>
-                            <select id="videoGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer transition-colors">
-                                <option value="" disabled selected>اختر الدفعة...</option>
-                                <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                                <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                                <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                                <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                                <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                                <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                                <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                                <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                                <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                                <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">صورة غلاف الكورس (اختياري)</label>
-                            <label for="courseImageFile" class="w-full flex items-center justify-center gap-2 bg-black/30 border border-white/10 border-dashed rounded-xl px-4 py-4 text-gray-400 hover:text-white hover:border-yellow-500 cursor-pointer transition-colors text-sm">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                <span>اضغط لاختيار صورة</span>
-                            </label>
-                            <input type="file" id="courseImageFile" accept="image/*" class="hidden">
-                            
-                            <div class="mt-3 rounded-xl overflow-hidden hidden relative" id="previewContainer">
-                                <img id="imagePreview" src="" alt="معاينة" class="w-full h-32 object-cover opacity-80 hover:opacity-100 transition-opacity border border-white/10 rounded-xl">
-                                <button type="button" id="removeImageBtn" class="absolute top-2 right-2 bg-black/70 hover:bg-red-500 text-white p-1 rounded-md transition-colors">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">وصف أو محتوى الحصة (اختياري)</label>
-                            <textarea id="videoDescription" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm transition-colors" placeholder="اكتب مخرجات التعلم أو ملفات الشرح المرفقة هنا..."></textarea>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs text-gray-400 mb-2">اختر ملف الفيديو</label>
-                            <input type="file" id="videoFile" accept="video/*" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-yellow-500 text-sm transition-colors">
-                            </div>
-
-                        <div id="videoProgressContainer" class="hidden bg-black/40 p-4 rounded-xl border border-white/5 space-y-2">
-                            <div class="flex justify-between text-xs font-semibold">
-                                <span class="text-yellow-500">جاري الرفع ...</span>
-                                <span id="videoProgressText" class="text-yellow-500">0%</span>
-                            </div>
-                            <div class="w-full bg-white/5 rounded-full h-2">
-                                <div id="videoProgressBar" class="bg-yellow-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                            </div>
-                        </div>
-
-                        <button type="submit" id="videoSubmitBtn" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition-all shadow-lg shadow-yellow-500/10 text-sm">
-                             ابدأ الرفع
-                        </button>
-                    </form>
-                </div>
-
-                <div class="glass-panel p-6 rounded-2xl border-t-4 border-yellow-500 lg:col-span-2 h-fit">
-                    <h2 class="text-lg font-bold text-white mb-5 flex items-center gap-2"> أرشيف الكورسات المنشورة</h2>
-                    <div id="coursesList" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1 scrollbar-hide">
-                        <div class="text-center py-10 text-gray-500 col-span-full">جاري قراءة الملفات ...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="tab-content" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">المحتوى والأسئلة المقالية</h1>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-2xl border-t-4 border-yellow-500">
-                <form id="contentForm" class="space-y-5">
-                    <select id="contentGrade" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500">
-                        <option value="" disabled selected>اختر الصف...</option>
+            <h1 class="text-3xl md:text-4xl font-black mb-3 text-white">قاعدة بيانات الطلاب</h1>
+            <p class="text-gray-400 mb-8 font-medium">استعراض وإدارة جميع الطلاب المقبولين في المنصة مصنفين حسب الصف.</p>
+            <div class="glass-panel rounded-[2rem] p-6 md:p-10 max-w-6xl border-t-4 border-yellow-500 shadow-2xl relative z-10">
+                <div class="relative mb-8">
+                    <select id="listGradeSelect" onchange="fetchStudentsByGrade()" class="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white outline-none focus:border-yellow-500 cursor-pointer text-base md:text-lg font-bold shadow-inner appearance-none transition-all focus:shadow-[0_0_20px_rgba(234,179,8,0.15)]">
+                        <option value="" disabled selected>اختر الصف الدراسي للعرض...</option>
                         <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
                         <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
                         <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
@@ -600,62 +709,232 @@
                         <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
                         <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
                     </select>
-                    <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500">
-                        <option value="point">نقطة هامة في المنهج</option>
-                        <option value="question">سؤال متوقع بالحل</option>
-                    </select>
-                    <div id="pointField"><textarea id="pointText" rows="3" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="اكتب الملاحظة هنا..."></textarea></div>
-                    <div id="questionFields" class="hidden space-y-5"><textarea id="questionText" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="نص السؤال المقالي..."></textarea><textarea id="questionHint" rows="2" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none text-sm md:text-base focus:border-yellow-500" placeholder="الإجابة النموذجية..."></textarea></div>
-                    <button type="submit" id="saveContentBtn" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-all">نشر المحتوى</button>
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-6 pointer-events-none text-yellow-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
+                <div id="studentsListContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="col-span-full py-20 flex flex-col items-center justify-center text-gray-500">
+                        <svg class="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        <p class="font-bold text-lg">يرجى اختيار الصف الدراسي من القائمة أعلاه</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-students" class="tab-content">
+            <h1 class="text-3xl md:text-4xl font-black mb-3 text-white">التقييم المستمر الذكي</h1>
+            <p class="text-gray-400 mb-8 font-medium">تحديث تقييمات الطلاب ونسب إنجازهم بشكل فوري.</p>
+            <div class="glass-panel rounded-[2rem] p-6 md:p-10 max-w-2xl border-t-4 border-yellow-500 shadow-2xl relative z-10 mx-auto">
+                <form id="pointsForm" class="space-y-6">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-300 mb-3 ml-1">البريد الإلكتروني للطالب</label>
+                        <input type="email" id="studentEmail" required class="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-base md:text-lg transition-all shadow-inner focus:shadow-[0_0_20px_rgba(234,179,8,0.15)]" dir="ltr" placeholder="student@example.com">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-300 mb-3 ml-1">النسبة المئوية للإنجاز (%)</label>
+                        <div class="relative">
+                            <input type="number" id="pointsAmount" required class="w-full bg-black/50 border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-base md:text-lg transition-all shadow-inner focus:shadow-[0_0_20px_rgba(234,179,8,0.15)]" placeholder="مثال: 95">
+                            <span class="absolute left-5 top-1/2 -translate-y-1/2 text-yellow-500 font-black text-xl">%</span>
+                        </div>
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" id="savePointsBtn" class="w-full btn-primary font-black py-4 rounded-2xl text-lg">تحديث وتوثيق التقييم</button>
+                    </div>
                 </form>
             </div>
         </div>
 
-        <div id="tab-quiz" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إنشاء اختبار إلكتروني</h1>
-            <p class="text-gray-400 mb-6">هذا الاختبار يظهر فقط للطلاب المسجلين بالمنصة فقط.</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="quizForm" onsubmit="return validateQuizInputs('dynamicQuestionsContainer')" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
-                        <select id="quizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
-                            <option value="" disabled selected>الدفعة المستهدفة...</option>
-                            <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                            <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                            <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                            <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
-                            <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                            <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                            <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                            <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
-                            <option value="الص�� الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                            <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                            <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                            <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                        </select>
-                        <input type="text" id="quizTitle" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار الشامل">
+        <div id="tab-tests" class="tab-content">
+            <h1 class="text-3xl md:text-4xl font-black mb-3">رصد نتائج الاختبارات الورقية</h1>
+            <p class="text-gray-400 mb-8 font-medium">أدخل درجات الطلاب في الاختبارات المعيارية لنشرها فوراً على حساباتهم.</p>
+            <div class="glass-panel rounded-[2rem] p-6 md:p-10 max-w-5xl mx-auto border-t-4 border-yellow-500 shadow-2xl relative z-10">
+                <form id="testsForm" class="space-y-8">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-black/20 p-6 rounded-[1.5rem] border border-white/5">
+                        <div class="form-floating-label">
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 uppercase">عنوان الاختبار</label>
+                            <input type="text" id="testName" required class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-base transition-all shadow-inner focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="مثال: امتحان شامل الباب الأول">
+                        </div>
+                        <div class="form-floating-label">
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 uppercase">الدرجة النهائية</label>
+                            <input type="number" inputmode="numeric" min="1" id="testMaxScore" required class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-base transition-all shadow-inner focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="مثال: 50">
+                        </div>
+                        <div class="md:col-span-2 form-floating-label">
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1 uppercase">الصف الدراسي</label>
+                            <div class="relative">
+                                <select id="testGrade" required class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 cursor-pointer text-base appearance-none transition-all shadow-inner focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+                                    <option value="" disabled selected>حدد الصف المستهدف...</option>
+                                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                                </select>
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-yellow-500">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-
-                    <div id="dynamicQuestionsContainer" class="space-y-6 mt-6"></div>
-
-                    <div class="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-6 mt-4">
-                        <button type="button" onclick="addMCQBlock()" class="flex-1 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base flex items-center justify-center gap-2">
-                            + إضافة سؤال جديد
+                    
+                    <div class="bg-black/30 p-6 rounded-[1.5rem] border border-white/5 relative">
+                        <div class="flex justify-between items-end mb-6 border-b border-white/10 pb-4">
+                            <div>
+                                <h3 class="text-xl font-bold text-white">درجات الطلاب</h3>
+                                <p class="text-xs text-gray-500 mt-1">أضف سجلات الطلاب ودرجاتهم تباعاً</p>
+                            </div>
+                            <span class="text-xs font-bold bg-yellow-500/10 text-yellow-500 px-3 py-1 rounded-full border border-yellow-500/20">جاهز للرصد</span>
+                        </div>
+                        
+                        <div id="scoresContainer" class="space-y-4 mb-6 min-h-[100px]"></div>
+                        
+                        <button type="button" onclick="addScoreRow()" class="w-full bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base border-dashed hover:border-yellow-500/50 hover:text-yellow-400 flex items-center justify-center gap-2 group">
+                            <svg class="w-5 h-5 group-hover:scale-125 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            إضافة سجل طالب جديد
                         </button>
-                        <button type="submit" id="saveQuizBtn" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/10">نشر الاختبار للطلاب</button>
+                    </div>
+
+                    <div class="pt-2">
+                        <button type="submit" id="saveTestBtn" class="w-full btn-primary font-black py-5 rounded-2xl text-lg flex items-center justify-center gap-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            اعتماد ونشر النتائج فوراً
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
 
-        <div id="tab-public-quiz" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-yellow-500">إنشاء اختبار عام</h1>
-            <p class="text-gray-400 mb-6">الاختبار العام يمكن لأي طالب حله من خلال رابط خارجي .</p>
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-4xl border-t-4 border-yellow-500">
-                <form id="publicQuizForm" onsubmit="return validateQuizInputs('dynamicPublicQuestionsContainer')" class="space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-black/20 p-5 rounded-2xl border border-white/5">
-                        <select id="publicQuizGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer text-sm md:text-base transition-colors">
-                            <option value="" disabled selected>السنة الدراسية للتصنيف...</option>
-                            <option value="عام">اختبار عام لجميع المستويات</option>
+        <div id="tab-videos" class="tab-content">
+            <h1 class="text-3xl md:text-4xl font-black mb-3 text-white">استوديو الكورسات والمحاضرات</h1>
+            <p class="text-gray-400 mb-8 font-medium">نظام رفع ذكي وسريع لمعالجة ونشر المحتوى المرئي لطلابك.</p>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-[90rem] mx-auto relative z-10">
+                <div class="glass-panel p-6 md:p-8 rounded-[2rem] border-t-4 border-yellow-500 h-fit animate-fade-in-up shadow-2xl relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-yellow-500/5 rounded-full blur-3xl"></div>
+                    <h2 class="text-xl font-black text-white mb-6 flex items-center gap-3 border-b border-white/5 pb-4">
+                        <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                        رفع محاضرة جديدة
+                    </h2>
+                    
+                    <form id="uploadVideoForm" class="space-y-6 relative z-10">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1">اسم الحصة / المحاضرة</label>
+                            <input type="text" id="courseName" required class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-sm transition-all shadow-inner focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="مثال: الباب الأول - المحاضرة الثالثة - الفيزياء الحديثة">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1">السنة الدراسية المستهدفة</label>
+                            <div class="relative">
+                                <select id="videoGrade" required class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer transition-all shadow-inner appearance-none focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+                                    <option value="" disabled selected>اختر الدفعة...</option>
+                                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                                </select>
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-gray-400">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1">صورة غلاف احترافية (اختياري)</label>
+                            <label for="courseImageFile" class="w-full flex flex-col items-center justify-center gap-3 bg-black/30 border-2 border-white/10 border-dashed rounded-xl p-6 text-gray-400 hover:text-white hover:border-yellow-500 hover:bg-yellow-500/5 cursor-pointer transition-all text-sm group">
+                                <div class="p-3 bg-white/5 rounded-full group-hover:bg-yellow-500/20 group-hover:scale-110 transition-all">
+                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </div>
+                                <span class="font-bold tracking-wide">اسحب الصورة هنا أو اضغط للاختيار</span>
+                            </label>
+                            <input type="file" id="courseImageFile" accept="image/*" class="hidden">
+                            
+                            <div class="mt-4 rounded-xl overflow-hidden hidden relative shadow-[0_10px_20px_rgba(0,0,0,0.4)] group" id="previewContainer">
+                                <img id="imagePreview" src="" alt="معاينة" class="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105 border border-white/10 rounded-xl">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm">
+                                    <button type="button" id="removeImageBtn" class="bg-red-500 hover:bg-red-600 text-white p-3 rounded-full transition-all transform hover:scale-110 shadow-lg">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1">وصف أو محتوى الحصة (مرفقات، روابط، ملاحظات)</label>
+                            <textarea id="videoDescription" rows="3" class="w-full bg-black/40 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-sm transition-all shadow-inner resize-none focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="اكتب مخرجات التعلم أو روابط الـ PDF المرفقة هنا..."></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 mb-2 ml-1">ملف الفيديو المصدر</label>
+                            <div class="relative w-full bg-black/40 border border-white/10 rounded-xl p-2 focus-within:border-yellow-500 focus-within:shadow-[0_0_15px_rgba(234,179,8,0.15)] transition-all">
+                                <input type="file" id="videoFile" accept="video/*" required class="w-full text-white text-sm file:mr-4 file:py-2.5 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-white/10 file:text-white hover:file:bg-white/20 hover:file:text-yellow-400 file:transition-all file:cursor-pointer outline-none cursor-pointer p-1">
+                            </div>
+                        </div>
+
+                        <div id="videoProgressContainer" class="hidden bg-black/60 p-5 rounded-2xl border border-white/10 space-y-3 backdrop-blur-md shadow-2xl">
+                            <div class="flex justify-between items-center text-sm font-bold">
+                                <span class="text-yellow-500 flex items-center gap-2">
+                                    <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                    جاري المعالجة والرفع...
+                                </span>
+                                <span id="videoProgressText" class="text-white bg-white/10 px-3 py-1 rounded-full border border-white/10">0%</span>
+                            </div>
+                            <div class="w-full bg-black/50 rounded-full h-3 overflow-hidden shadow-inner border border-white/5 relative">
+                                <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+CgkJPHJlY3Qgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiBmaWxsPSIjZmZmZmZmIiBmaWxsLW9wYWNpdHk9IjAiLz4KCQk8cGF0aCBkPSJNMCAyMEwyMCAwSDEwTDAgMTBaTTIwIDIwTDEwIDIwTDIwIDEwWiIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIwLjA1Ii8+Cjwvc3ZnPg==')] z-10 pointer-events-none opacity-50"></div>
+                                <div id="videoProgressBar" class="bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-500 h-full rounded-full transition-all duration-300 relative z-0 shadow-[0_0_10px_rgba(234,179,8,0.8)]" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="videoSubmitBtn" class="w-full btn-primary font-black py-4 rounded-xl text-base flex justify-center items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                            بدء دورة الرفع والنشر
+                        </button>
+                    </form>
+                </div>
+
+                <div class="glass-panel p-6 md:p-8 rounded-[2rem] border-t-4 border-yellow-500 lg:col-span-2 h-fit shadow-2xl relative z-10">
+                    <div class="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+                        <h2 class="text-xl font-black text-white flex items-center gap-3">
+                            <svg class="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            أرشيف الكورسات السحابي
+                        </h2>
+                        <button onclick="loadCoursesUI()" class="text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 p-2 rounded-lg transition-all" title="تحديث القائمة">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        </button>
+                    </div>
+                    
+                    <div id="coursesList" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 max-h-[700px] overflow-y-auto pr-2 custom-scroll pb-4">
+                        <div class="col-span-full py-20 flex flex-col items-center justify-center text-gray-500 animate-pulse">
+                            <svg class="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg>
+                            <p class="font-bold tracking-wide">جاري الاتصال بقاعدة البيانات واستدعاء الملفات...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-content" class="tab-content">
+            <h1 class="text-3xl md:text-4xl font-black mb-3">بنك المحتوى المقالي والنظري</h1>
+            <p class="text-gray-400 mb-8 font-medium">أضف نقاط هامة وتلخيصات أو أسئلة مقالية متوقعة لتعزيز الفهم.</p>
+            <div class="glass-panel rounded-[2rem] p-6 md:p-10 max-w-3xl border-t-4 border-yellow-500 shadow-2xl relative z-10 mx-auto">
+                <form id="contentForm" class="space-y-6">
+                    <div class="relative">
+                        <select id="contentGrade" required class="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-white outline-none text-base md:text-lg focus:border-yellow-500 shadow-inner appearance-none transition-all focus:shadow-[0_0_20px_rgba(234,179,8,0.15)]">
+                            <option value="" disabled selected>تحديد النطاق الدراسي (الصف)...</option>
                             <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
                             <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
                             <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
@@ -669,26 +948,182 @@
                             <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
                             <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
                         </select>
-                        <input type="text" id="publicQuizTitle" required class="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm md:text-base" placeholder="عنوان الاختبار العام (مثال: مسابقة نص السنة)">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-6 pointer-events-none text-yellow-500">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </div>
                     </div>
-
-                    <div id="smart-import-btn-container" class="mt-6 flex justify-end"></div>
-
-                    <div id="dynamicPublicQuestionsContainer" class="space-y-6 mt-6"></div>
-
-                    <div class="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-6 mt-4">
-                        <button type="button" onclick="addPublicMCQBlock()" class="flex-1 bg-white/5 border border-white/10 text-white font-bold py-4 rounded-xl hover:bg-white/10 transition-all text-sm md:text-base flex items-center justify-center gap-2">
-                            + إضافة سؤال جديد
+                    
+                    <div class="relative">
+                        <select id="contentType" onchange="toggleContentFields()" class="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-4 text-yellow-400 font-bold outline-none text-base md:text-lg focus:border-yellow-500 shadow-inner appearance-none transition-all focus:shadow-[0_0_20px_rgba(234,179,8,0.15)] cursor-pointer">
+                            <option value="point">نقطة هامة / تلخيص في المنهج</option>
+                            <option value="question">سؤال مقالي متوقع مع نموذج الإجابة</option>
+                        </select>
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-6 pointer-events-none text-yellow-500">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path></svg>
+                        </div>
+                    </div>
+                    
+                    <div id="pointField" class="transition-all duration-300">
+                        <label class="block text-sm font-bold text-gray-300 mb-2 ml-1">النص / المحتوى</label>
+                        <textarea id="pointText" rows="5" class="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white outline-none text-base focus:border-yellow-500 shadow-inner resize-y transition-all focus:shadow-[0_0_20px_rgba(234,179,8,0.15)]" placeholder="اكتب الملاحظة، القاعدة، أو نقطة المراجعة هنا بوضوح..."></textarea>
+                    </div>
+                    
+                    <div id="questionFields" class="hidden space-y-6 transition-all duration-300">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-2 ml-1">نص السؤال المقالي</label>
+                            <textarea id="questionText" rows="3" class="w-full bg-black/40 border border-red-500/30 rounded-2xl px-6 py-4 text-white outline-none text-base focus:border-red-500 shadow-inner resize-y transition-all focus:shadow-[0_0_20px_rgba(239,68,68,0.15)]" placeholder="اكتب السؤال كما سيظهر للطالب..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-300 mb-2 ml-1">الإجابة النموذجية المعيارية</label>
+                            <textarea id="questionHint" rows="4" class="w-full bg-black/40 border border-green-500/30 rounded-2xl px-6 py-4 text-white outline-none text-base focus:border-green-500 shadow-inner resize-y transition-all focus:shadow-[0_0_20px_rgba(34,197,94,0.15)]" placeholder="اكتب عناصر الإجابة والحل النموذجي بالتفصيل..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-white/5">
+                        <button type="submit" id="saveContentBtn" class="w-full btn-primary font-black py-4 rounded-2xl text-lg flex items-center justify-center gap-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                            نشر المحتوى وتعميمه للطلاب
                         </button>
-                        <button type="submit" id="savePublicQuizBtn" class="flex-1 bg-yellow-500 text-black font-black py-4 rounded-xl hover:bg-yellow-400 transition-all text-sm md:text-base shadow-lg shadow-yellow-500/20">حفظ وتوليد رابط الاختبار</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-quiz" class="tab-content">
+            <h1 class="text-3xl md:text-4xl font-black mb-3 text-white">منشئ الاختبارات الإلكترونية المغلقة</h1>
+            <p class="text-gray-400 mb-8 font-medium">أداة احترافية لتصميم اختبارات (MCQ) حصرية لطلاب المنصة المسجلين فقط.</p>
+            <div class="glass-panel rounded-[2rem] p-6 md:p-10 max-w-5xl mx-auto border-t-4 border-yellow-500 shadow-2xl relative z-10">
+                <form id="quizForm" onsubmit="return validateQuizInputs('dynamicQuestionsContainer')" class="space-y-8">
+                    
+                    <div class="bg-black/30 p-6 rounded-[1.5rem] border border-white/10 shadow-inner relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-transparent pointer-events-none"></div>
+                        <h3 class="text-lg font-black text-white mb-5 flex items-center gap-2 relative z-10">
+                            <svg class="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            الإعدادات الأساسية للاختبار
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+                            <div class="relative">
+                                <select id="quizGrade" required class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 cursor-pointer text-base appearance-none shadow-inner transition-all focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]">
+                                    <option value="" disabled selected>الدفعة المستهدفة...</option>
+                                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                                </select>
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-yellow-500">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                            <input type="text" id="quizTitle" required class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-yellow-500 text-base shadow-inner transition-all focus:shadow-[0_0_15px_rgba(234,179,8,0.15)]" placeholder="عنوان الاختبار الشامل المعبر">
+                        </div>
                     </div>
 
-                    <div id="publicQuizLinkArea" class="hidden mt-6 p-5 bg-green-500/10 border border-green-500/30 rounded-2xl text-center">
-                        <p class="text-green-400 font-bold mb-3 text-lg">تم إنشاء الاختبار العام بنجاح!</p>
-                        <p class="text-gray-400 text-sm mb-3">انسخ الرابط التالي من فضلك:</p>
-                        <div class="flex flex-col md:flex-row gap-2">
-                            <input type="text" id="publicQuizLinkInput" readonly class="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-green-300 font-bold outline-none text-center md:text-left" dir="ltr">
-                            <button type="button" onclick="copyPublicLink()" class="bg-white text-black hover:bg-gray-200 px-6 py-3 rounded-xl text-sm font-bold transition whitespace-nowrap">نسخ الرابط</button>
+                    <div id="dynamicQuestionsContainer" class="space-y-6 min-h-[150px]">
+                        <div class="flex flex-col items-center justify-center p-10 border-2 border-dashed border-white/10 rounded-[2rem] bg-white/[0.01]">
+                            <svg class="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            <p class="text-gray-400 font-bold">لا يوجد أسئلة حالياً. ابدأ بإضافة سؤال جديد للاختبار.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 pt-4">
+                        <button type="button" onclick="document.querySelector('#dynamicQuestionsContainer .border-dashed')?.remove(); addMCQBlock()" class="flex-[0.7] bg-black/40 border border-white/10 text-white font-bold py-5 rounded-2xl hover:bg-white/10 hover:border-yellow-500/50 transition-all text-base flex items-center justify-center gap-3 group shadow-lg">
+                            <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-yellow-500 group-hover:text-black transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                            </span>
+                            إضافة بناء سؤال جديد
+                        </button>
+                        <button type="submit" id="saveQuizBtn" class="flex-1 btn-primary text-black font-black py-5 rounded-2xl transition-all text-lg shadow-[0_10px_30px_rgba(234,179,8,0.3)] flex items-center justify-center gap-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            اعتماد وتفعيل الاختبار للمنصة
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="tab-public-quiz" class="tab-content">
+            <h1 class="text-3xl md:text-4xl font-black mb-3 text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-600">منشئ المسابقات والاختبارات العامة</h1>
+            <p class="text-gray-400 mb-8 font-medium">نظام توليد روابط ذكية للاختبارات التي يمكن مشاركتها مع أي طالب خارج المنصة.</p>
+            <div class="glass-panel rounded-[2rem] p-6 md:p-10 max-w-5xl mx-auto border-t-4 border-emerald-500 shadow-2xl relative z-10">
+                <form id="publicQuizForm" onsubmit="return validateQuizInputs('dynamicPublicQuestionsContainer')" class="space-y-8">
+                    
+                    <div class="bg-black/30 p-6 rounded-[1.5rem] border border-emerald-500/20 shadow-inner relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none"></div>
+                        <h3 class="text-lg font-black text-white mb-5 flex items-center gap-2 relative z-10">
+                            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            خصائص المسابقة العامة
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+                            <div class="relative">
+                                <select id="publicQuizGrade" required class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-emerald-500 cursor-pointer text-base appearance-none shadow-inner transition-all focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]">
+                                    <option value="" disabled selected>مستوى تصنيف المسابقة...</option>
+                                    <option value="عام" class="font-bold text-emerald-400">🔥 مسابقة مفتوحة לجميع المستويات</option>
+                                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                                    <option value="الصف الرابع الابتدائي">الصف الرابع الابتدائي</option>
+                                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                                    <option value="الصف الثاني الإعدادي">الصف الثاني الإعدادي</option>
+                                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                                </select>
+                                <div class="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-emerald-500">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                            <input type="text" id="publicQuizTitle" required class="w-full bg-black/50 border border-white/10 rounded-xl px-5 py-4 text-white outline-none focus:border-emerald-500 text-base shadow-inner transition-all focus:shadow-[0_0_15px_rgba(16,185,129,0.15)]" placeholder="عنوان تفاعلي للمسابقة (مثال: تحدي الأبطال)">
+                        </div>
+                    </div>
+
+                    <div id="smart-import-btn-container" class="mt-2 flex justify-end empty:hidden"></div>
+
+                    <div id="dynamicPublicQuestionsContainer" class="space-y-6 min-h-[150px]">
+                        <div class="flex flex-col items-center justify-center p-10 border-2 border-dashed border-white/10 rounded-[2rem] bg-white/[0.01]">
+                            <svg class="w-16 h-16 text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+                            <p class="text-gray-400 font-bold">نموذج المسابقة فارغ حالياً. ابدأ التشكيل الآن.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row gap-4 pt-4">
+                        <button type="button" onclick="document.querySelector('#dynamicPublicQuestionsContainer .border-dashed')?.remove(); addPublicMCQBlock()" class="flex-[0.7] bg-black/40 border border-white/10 text-white font-bold py-5 rounded-2xl hover:bg-white/10 hover:border-emerald-500/50 transition-all text-base flex items-center justify-center gap-3 group shadow-lg">
+                            <span class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-black transition-colors">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"></path></svg>
+                            </span>
+                            إضافة حقل سؤال عام
+                        </button>
+                        <button type="submit" id="savePublicQuizBtn" class="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-400 text-black font-black py-5 rounded-2xl hover:brightness-110 hover:-translate-y-1 transition-all text-lg shadow-[0_10px_30px_rgba(16,185,129,0.3)] flex items-center justify-center gap-3">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                            توليد واعتماد رابط المشاركة
+                        </button>
+                    </div>
+
+                    <div id="publicQuizLinkArea" class="hidden mt-8 p-8 bg-black/50 border border-emerald-500/40 rounded-[2rem] text-center shadow-[inset_0_0_50px_rgba(16,185,129,0.1)] relative overflow-hidden backdrop-blur-md">
+                        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9IiMxMGI5ODEiIGZpbGwtb3BhY2l0eT0iMC4yIi8+PC9zdmc+')] opacity-50"></div>
+                        <div class="relative z-10">
+                            <div class="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-emerald-500/50 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                                <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <h4 class="text-2xl text-emerald-400 font-black mb-2 tracking-wide">الرابط جاهز للانطلاق!</h4>
+                            <p class="text-gray-400 text-sm mb-6 max-w-md mx-auto">انسخ الرابط أدناه وشاركه في المجموعات والمنصات. أي طالب يمتلك الرابط سيتمكن من خوض المسابقة فوراً.</p>
+                            <div class="flex flex-col md:flex-row gap-3 max-w-2xl mx-auto">
+                                <input type="text" id="publicQuizLinkInput" readonly class="w-full bg-black/80 border border-emerald-500/30 rounded-2xl px-6 py-4 text-emerald-300 font-mono font-bold outline-none text-center md:text-left text-sm md:text-base shadow-inner focus:border-emerald-500 transition-colors" dir="ltr">
+                                <button type="button" id="copyLinkBtn" onclick="copyPublicLink()" class="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-2xl text-base font-bold transition-all whitespace-nowrap shadow-lg flex items-center justify-center hover:-translate-y-1">
+                                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    نسخ سريع
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -696,65 +1131,107 @@
         </div>
 
         <div id="tab-manage" class="tab-content">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-white">إدارة المحتوى والمتابعة</h1>
-            <p class="text-gray-400 mb-6 md:mb-8">استعرض نتائج الطلاب في الاختبارات الإلكترونية واحذف المحتوى القديم.</p>
+            <h1 class="text-3xl md:text-4xl font-black mb-3 text-white">مركز القيادة والتحكم</h1>
+            <p class="text-gray-400 mb-8 font-medium">مراقبة شاملة للنتائج وإدارة دورة حياة المحتوى لجميع الفئات عبر النظام السحابي.</p>
             
-            <div class="glass-panel rounded-2xl p-4 md:p-6 max-w-5xl border-t-4 border-yellow-500">
-                <select id="manageGradeSelect" onchange="fetchGradeContent()" class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 cursor-pointer mb-6 text-sm md:text-base">
-                    <option value="" disabled selected>اختر الصف لعرض بياناته...</option>
-                    <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
-                    <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
-                    <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
-                    <option value="الصف الراب�� الابتدائي">الصف الرابع الابتدائي</option>
-                    <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
-                    <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
-                    <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
-                    <option value="الصف الثاني ا��إعدادي">الصف الثاني الإعدادي</option>
-                    <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
-                    <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-                    <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-                    <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
-                    <option value="عام">الاختبارات العامة (بدون صف محدد)</option>
-                </select>
+            <div class="glass-panel rounded-[2rem] p-6 md:p-10 max-w-6xl mx-auto border-t-4 border-yellow-500 shadow-2xl relative z-10">
+                <div class="relative mb-10 border-b border-white/10 pb-10">
+                    <label class="block text-sm font-bold text-gray-400 mb-3 ml-1">فلترة البيانات والتوجيه السريع</label>
+                    <select id="manageGradeSelect" onchange="fetchGradeContent()" class="w-full bg-black/50 border border-white/10 rounded-2xl px-6 py-5 text-white outline-none focus:border-yellow-500 cursor-pointer text-base md:text-lg font-bold shadow-inner appearance-none transition-all focus:shadow-[0_0_20px_rgba(234,179,8,0.15)] hover:border-white/20">
+                        <option value="" disabled selected>استعرض بيانات صف دراسي أو فئة...</option>
+                        <option value="الصف الأول الابتدائي">الصف الأول الابتدائي</option>
+                        <option value="الصف الثاني الابتدائي">الصف الثاني الابتدائي</option>
+                        <option value="الصف الثالث الابتدائي">الصف الثالث الابتدائي</option>
+                        <option value="الصف الراب الابتدائي">الصف الرابع الابتدائي</option>
+                        <option value="الصف الخامس الابتدائي">الصف الخامس الابتدائي</option>
+                        <option value="الصف السادس الابتدائي">الصف السادس الابتدائي</option>
+                        <option value="الصف الأول الإعدادي">الصف الأول الإعدادي</option>
+                        <option value="الصف الثاني اإعدادي">الصف الثاني الإعدادي</option>
+                        <option value="الصف الثالث الإعدادي">الصف الثالث الإعدادي</option>
+                        <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                        <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+                        <option value="الصف الثالث الثانوي">الصف الثالث الثانوي</option>
+                        <option value="عام" class="text-yellow-500 font-black">🌟 مسابقات ومحتوى الفئة العامة (بدون صف محدد)</option>
+                    </select>
+                    <div class="absolute bottom-16 left-0 flex items-center pl-6 pointer-events-none text-yellow-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </div>
+                </div>
 
-                <div id="manageContainer" class="hidden space-y-8">
-                    <section>
-                        <h2 class="text-xl font-bold text-yellow-500 border-b border-white/10 pb-2 mb-4">الاختبارات العامة (بالرابط)</h2>
-                        <div id="managePublicQuizzes" class="space-y-3"></div>
+                <div id="manageContainer" class="hidden space-y-12">
+                    <section class="bg-black/20 p-6 md:p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                        <div class="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <h2 class="text-2xl font-black text-emerald-400 border-b border-white/10 pb-4 mb-6 flex items-center gap-3 relative z-10">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>
+                            إدارة روابط الاختبارات العامة
+                        </h2>
+                        <div id="managePublicQuizzes" class="space-y-4 relative z-10"></div>
                     </section>
 
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">اختبارات المنصة (MCQ)</h2>
-                        <div id="manageQuizzes" class="space-y-3"></div>
+                    <section class="bg-black/20 p-6 md:p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group hover:border-yellow-500/30 transition-all">
+                        <div class="absolute inset-0 bg-gradient-to-r from-yellow-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <h2 class="text-2xl font-black text-white border-b border-white/10 pb-4 mb-6 flex items-center gap-3 relative z-10">
+                            <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                            اختبارات المنصة المغلقة (MCQ)
+                        </h2>
+                        <div id="manageQuizzes" class="space-y-4 relative z-10"></div>
                     </section>
                     
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">درجات الاختبارات الورقية</h2>
-                        <div id="manageTests" class="space-y-3"></div>
+                    <section class="bg-black/20 p-6 md:p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all">
+                        <div class="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <h2 class="text-2xl font-black text-white border-b border-white/10 pb-4 mb-6 flex items-center gap-3 relative z-10">
+                            <svg class="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            قوائم رصد الاختبارات الورقية
+                        </h2>
+                        <div id="manageTests" class="space-y-4 relative z-10"></div>
                     </section>
 
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">الأسئلة المقالية</h2>
-                        <div id="manageQuestions" class="space-y-3"></div>
+                    <section class="bg-black/20 p-6 md:p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group hover:border-blue-500/30 transition-all">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <h2 class="text-2xl font-black text-white border-b border-white/10 pb-4 mb-6 flex items-center gap-3 relative z-10">
+                            <svg class="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            بنك الأسئلة المقالية
+                        </h2>
+                        <div id="manageQuestions" class="space-y-4 relative z-10"></div>
                     </section>
 
-                    <section>
-                        <h2 class="text-xl font-bold text-white border-b border-white/10 pb-2 mb-4">أهم نقاط المنهج</h2>
-                        <div id="managePoints" class="space-y-3"></div>
+                    <section class="bg-black/20 p-6 md:p-8 rounded-[2rem] border border-white/5 relative overflow-hidden group hover:border-purple-500/30 transition-all">
+                        <div class="absolute inset-0 bg-gradient-to-r from-purple-500/5 to-transparent pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <h2 class="text-2xl font-black text-white border-b border-white/10 pb-4 mb-6 flex items-center gap-3 relative z-10">
+                            <svg class="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            ملخصات ونقاط المنهج
+                        </h2>
+                        <div id="managePoints" class="space-y-4 relative z-10"></div>
                     </section>
                 </div>
                 
-                <p id="manageLoading" class="text-gray-500 text-center py-10 hidden">جاري جلب البيانات من السيرفر...</p>
+                <div id="manageLoading" class="py-24 hidden flex-col items-center justify-center relative z-10">
+                    <div class="relative w-20 h-20">
+                        <div class="absolute inset-0 border-4 border-white/10 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-yellow-500 rounded-full border-t-transparent animate-spin"></div>
+                    </div>
+                    <p class="text-yellow-500 font-bold tracking-widest mt-6 animate-pulse">جاري سحب ومعالجة البيانات العملاقة ...</p>
+                </div>
             </div>
         </div>
 
     </main>
 
-    <div id="resultsModal" class="fixed inset-0 z-[100] bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-md">
-        <div class="bg-gray-900 border border-white/10 w-full max-w-4xl rounded-[2rem] p-6 max-h-[90vh] overflow-y-auto relative shadow-2xl">
-            <button onclick="closeResultsModal()" class="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/5 rounded-full w-10 h-10 flex items-center justify-center font-bold">X</button>
-            <h2 id="resultsModalTitle" class="text-2xl font-bold text-yellow-500 mb-6 pr-8">نتائج الطلاب</h2>
-            <div id="resultsModalContent" class="space-y-4"></div>
+    <div id="resultsModal" class="fixed inset-0 z-[100] bg-black/80 hidden flex items-center justify-center p-4 backdrop-blur-xl transition-all duration-300">
+        <div class="bg-gray-900 border border-white/10 w-full max-w-5xl rounded-[2.5rem] p-8 md:p-10 max-h-[90vh] overflow-y-auto relative shadow-[0_0_50px_rgba(0,0,0,0.8)] custom-scroll">
+            <button onclick="closeResultsModal()" class="absolute top-6 right-6 text-gray-400 hover:text-white bg-white/5 hover:bg-red-500/20 hover:text-red-400 rounded-full w-12 h-12 flex items-center justify-center font-bold transition-all hover:rotate-90">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <div class="flex items-center gap-4 mb-8 pr-14 border-b border-white/5 pb-6">
+                <div class="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.2)]">
+                    <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                </div>
+                <div>
+                    <h2 id="resultsModalTitle" class="text-3xl font-black text-white tracking-wide">النتائج التحليلية الشاملة</h2>
+                    <p class="text-gray-400 text-sm mt-1">تقرير مفصل لأداء الطلاب وتفاعلهم</p>
+                </div>
+            </div>
+            <div id="resultsModalContent" class="space-y-4 relative z-10"></div>
         </div>
     </div>
 
@@ -762,7 +1239,6 @@
         let calculatedDuration = "غير محدد"; 
         let courseImageBase64 = "";
 
-        // 1. نظام رفع وضغط صورة الغلاف من المتصفح مباشرة
         document.getElementById('courseImageFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const container = document.getElementById('previewContainer');
@@ -779,8 +1255,8 @@
                 const img = new Image();
                 img.onload = function() {
                     const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800; 
-                    const MAX_HEIGHT = 800;
+                    const MAX_WIDTH = 1200; 
+                    const MAX_HEIGHT = 1200;
                     let width = img.width;
                     let height = img.height;
 
@@ -796,7 +1272,7 @@
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
                     
-                    courseImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    courseImageBase64 = canvas.toDataURL('image/jpeg', 0.85);
                     
                     imgEl.src = courseImageBase64;
                     container.classList.remove('hidden');
@@ -806,14 +1282,14 @@
             reader.readAsDataURL(file);
         });
 
-        // زر مسح الصورة
-        document.getElementById('removeImageBtn').addEventListener('click', function() {
+        document.getElementById('removeImageBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             document.getElementById('courseImageFile').value = '';
             document.getElementById('previewContainer').classList.add('hidden');
             courseImageBase64 = "";
         });
 
-        // 2. حساب مدة الفيديو بصمت في الخلفية
         document.getElementById('videoFile').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) {
@@ -828,15 +1304,16 @@
                 window.URL.revokeObjectURL(videoElement.src);
                 const totalSeconds = videoElement.duration;
                 if (isFinite(totalSeconds)) {
-                    const m = Math.floor(totalSeconds / 60);
+                    const h = Math.floor(totalSeconds / 3600);
+                    const m = Math.floor((totalSeconds % 3600) / 60);
                     const s = Math.floor(totalSeconds % 60);
-                    calculatedDuration = `${m} دقيقة و ${s} ثانية`;
+                    if(h > 0) calculatedDuration = `${h} ساعة و ${m} دقيقة`;
+                    else calculatedDuration = `${m} دقيقة و ${s} ثانية`;
                 }
             };
             videoElement.src = URL.createObjectURL(file);
         });
 
-        // 3. رفع الكورس (شريط تقدم حقيقي باستخدام XMLHttpRequest)
         document.getElementById('uploadVideoForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const btn = document.getElementById('videoSubmitBtn');
@@ -850,7 +1327,7 @@
             const description = document.getElementById('videoDescription').value;
             const fileInput = document.getElementById('videoFile');
 
-            if (!fileInput.files.length) return window.showToast('الرجاء اختيار ملف فيديو!', 'error');
+            if (!fileInput.files.length) return window.showToast('لم يتم الكشف عن ملف فيديو! يرجى إدراج المادة العلمية أولاً.', 'error');
 
             const file = fileInput.files[0];
             
@@ -863,10 +1340,13 @@
             formData.append('video', file);
 
             btn.disabled = true;
-            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            btn.innerHTML = `<svg class="w-5 h-5 animate-spin mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> جاري المعالجة...`;
+            btn.classList.add('opacity-70', 'cursor-not-allowed', 'pointer-events-none');
+            
             progressContainer.classList.remove('hidden');
             progressBar.style.width = '0%';
             progressText.textContent = '0%';
+            progressBar.className = 'bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-500 h-full rounded-full transition-all duration-300 relative z-0 shadow-[0_0_10px_rgba(234,179,8,0.8)]';
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `/api/admin/upload-course`, true);
@@ -877,56 +1357,68 @@
                     const percentComplete = Math.round((event.loaded / event.total) * 100);
                     progressBar.style.width = percentComplete + '%';
                     progressText.textContent = percentComplete + '%';
+                    
+                    if(percentComplete > 98) {
+                        progressText.innerHTML = 'جاري التشفير والحفظ السحابي <span class="animate-pulse">...</span>';
+                    }
                 }
             };
 
             xhr.onload = function() {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
+                btn.classList.remove('opacity-70', 'cursor-not-allowed', 'pointer-events-none');
+                btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> بدء دورة الرفع والنشر`;
                 
                 if (xhr.status === 200) {
-                    progressText.textContent = 'تم الرفع بنجاح! ✅';
-                    progressBar.style.backgroundColor = '#22c55e';
-                    window.showToast("تم رفع الدورة بنجاح السيرفر!");
+                    progressText.textContent = 'اكتملت العملية بنجاح! ✅';
+                    progressBar.className = 'bg-gradient-to-r from-green-500 to-emerald-400 h-full rounded-full transition-all duration-300 relative z-0 shadow-[0_0_15px_rgba(16,185,129,0.8)]';
+                    window.showToast("تم رفع ونشر الدورة التعليمية بنجاح على خوادم المنصة!");
                     
                     setTimeout(() => {
                         progressContainer.classList.add('hidden');
-                        progressBar.style.backgroundColor = '#eab308';
                         document.getElementById('uploadVideoForm').reset();
                         document.getElementById('previewContainer').classList.add('hidden');
                         courseImageBase64 = "";
                         calculatedDuration = "غير محدد";
                         loadCoursesUI(); 
-                    }, 2000);
+                    }, 3000);
                 } else {
                     try {
                         const res = JSON.parse(xhr.responseText);
-                        window.showToast("فشل الرفع: " + res.message, 'error');
+                        window.showToast("تعذر الرفع: " + res.message, 'error');
+                        progressBar.className = 'bg-gradient-to-r from-red-600 to-red-500 h-full rounded-full transition-all duration-300 relative z-0 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
+                        progressText.textContent = 'فشلت العملية ❌';
                     } catch(e) {
-                        window.showToast("حدث خطأ أثناء الرفع.", 'error');
+                        window.showToast("حدث عطل تقني غير متوقع أثناء الاتصال بالخادم.", 'error');
                     }
-                    progressContainer.classList.add('hidden');
+                    setTimeout(() => progressContainer.classList.add('hidden'), 4000);
                 }
             };
 
             xhr.onerror = function() {
                 btn.disabled = false;
-                btn.classList.remove('opacity-50', 'cursor-not-allowed');
-                progressContainer.classList.add('hidden');
-                window.showToast("حدث خطأ في الاتصال بالشبكة.", 'error');
+                btn.classList.remove('opacity-70', 'cursor-not-allowed', 'pointer-events-none');
+                btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg> بدء دورة الرفع والنشر`;
+                progressBar.className = 'bg-gradient-to-r from-red-600 to-red-500 h-full rounded-full transition-all duration-300 relative z-0 shadow-[0_0_15px_rgba(239,68,68,0.8)]';
+                progressText.textContent = 'خطأ في الشبكة ❌';
+                window.showToast("تم قطع الاتصال بالشبكة أو الخادم يرفض الاستجابة.", 'error');
+                setTimeout(() => progressContainer.classList.add('hidden'), 4000);
             };
 
             xhr.send(formData);
         });
 
-        // 4. دالة جلب وتحديث قائمة الكورسات
         async function loadCoursesUI() {
             const listContainer = document.getElementById('coursesList');
             const token = localStorage.getItem('dahih_token');
             if(!token) return;
 
             try {
-                listContainer.innerHTML = '<div class="text-center py-10 text-gray-500 col-span-full">جاري قراءة الملفات...</div>';
+                listContainer.innerHTML = `
+                    <div class="col-span-full py-20 flex flex-col items-center justify-center text-yellow-500 animate-pulse">
+                        <svg class="w-14 h-14 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        <p class="font-black text-xl tracking-wide">جاري تزامن السجلات...</p>
+                    </div>`;
                 
                 const res = await fetch('/api/admin/get-all-courses?page=1&limit=50', {
                     headers: { 'Authorization': `Bearer ${token}` }
@@ -936,38 +1428,57 @@
                 if (!res.ok) throw new Error(data.message || 'خطأ في جلب الكورسات');
 
                 if (!data.courses || data.courses.length === 0) {
-                    listContainer.innerHTML = '<div class="text-center py-10 text-gray-500 col-span-full">لم يتم رفع أي كورسات حتى الآن.</div>';
+                    listContainer.innerHTML = `
+                        <div class="col-span-full py-20 flex flex-col items-center justify-center text-gray-500 bg-black/20 rounded-[2rem] border border-white/5 border-dashed">
+                            <svg class="w-20 h-20 mb-6 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                            <p class="font-bold text-xl">خزينة الكورسات فارغة تماماً.</p>
+                            <p class="text-sm mt-2">قم برفع أول حصة تدريبية من اللوحة المجاورة.</p>
+                        </div>`;
                     return;
                 }
 
-                listContainer.innerHTML = data.courses.map(c => `
-                    <div class="bg-black/30 border border-white/5 rounded-xl overflow-hidden flex flex-col group relative">
-                        <div class="h-24 bg-gray-800 relative">
+                listContainer.innerHTML = data.courses.map((c, index) => `
+                    <div class="bg-black/40 border border-white/10 rounded-[1.5rem] overflow-hidden flex flex-col group relative transform transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.6)] hover:border-white/20 animate-fade-in-up" style="animation-delay: ${index * 50}ms">
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black/80 z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div class="h-44 bg-gray-900 relative overflow-hidden">
                             ${c.image && c.image.length > 10 
-                                ? `<img src="${c.image}" class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">` 
-                                : `<div class="w-full h-full flex items-center justify-center text-gray-600 font-bold">بدون غلاف</div>`
+                                ? `<img src="${c.image}" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700">` 
+                                : `<div class="w-full h-full flex flex-col items-center justify-center text-gray-700 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0iI2ZmZmZmZiIgZmlsbC1vcGFjaXR5PSIwLjAzIi8+PC9zdmc+')]">
+                                    <svg class="w-12 h-12 mb-2 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                    <span class="font-bold tracking-widest uppercase text-xs opacity-50">بدون غلاف مرئي</span>
+                                   </div>`
                             }
-                            <span class="absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded border border-white/10">${c.grade}</span>
+                            <span class="absolute top-3 right-3 bg-black/60 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-xl border border-white/10 font-bold z-20 shadow-lg">${c.grade}</span>
                         </div>
-                        <div class="p-4 flex-grow flex flex-col">
-                            <h3 class="font-bold text-white mb-1 truncate">${c.courseName}</h3>
-                            <p class="text-xs text-gray-400 mb-3 truncate">${c.description || 'لا يوجد وصف'}</p>
-                            <div class="flex items-center justify-between mt-auto pt-3 border-t border-white/5">
-                                <span class="text-xs text-yellow-500 font-bold">⏱ ${c.duration || 'غير محدد'}</span>
-                                <button onclick="deleteCourse('${c.id}')" class="text-red-400 hover:text-red-500 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">حذف الكورس</button>
+                        <div class="p-5 flex-grow flex flex-col relative z-20 bg-black/60 backdrop-blur-sm">
+                            <h3 class="text-lg font-black text-white mb-2 line-clamp-2 leading-tight group-hover:text-yellow-400 transition-colors">${c.courseName}</h3>
+                            <p class="text-sm text-gray-400 mb-5 line-clamp-2 leading-relaxed flex-grow">${c.description || 'لا يوجد وصف تعريفي متاح لهذا الكورس.'}</p>
+                            <div class="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
+                                <span class="text-sm bg-yellow-500/10 text-yellow-500 font-bold px-3 py-1.5 rounded-lg border border-yellow-500/20 flex items-center gap-1.5">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    ${c.duration || 'غير محدد'}
+                                </span>
+                                <button onclick="deleteCourse('${c.id}')" class="text-red-400 hover:text-white bg-red-500/10 hover:bg-red-600 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-red-500/20 hover:border-red-500 shadow-md hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] flex items-center gap-1.5">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    محو السجل
+                                </button>
                             </div>
                         </div>
                     </div>
                 `).join('');
 
             } catch (error) {
-                listContainer.innerHTML = `<div class="text-center py-10 text-red-500 col-span-full">فشل جلب الكورسات: ${error.message}</div>`;
+                listContainer.innerHTML = `
+                    <div class="col-span-full py-20 flex flex-col items-center justify-center text-red-500 bg-red-500/5 rounded-[2rem] border border-red-500/20">
+                        <svg class="w-16 h-16 mb-4 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <p class="font-black text-xl">فشل حرج في النظام السحابي</p>
+                        <p class="text-sm mt-2 opacity-80">${error.message}</p>
+                    </div>`;
             }
         }
 
-        // 5. دالة حذف الكورس
         window.deleteCourse = async function(id) {
-            if(!confirm('هل أنت متأكد من حذف هذه المحاضرة نهائياً من السيرفر؟')) return;
+            if(!confirm('🚨 تحذير أمني: هل أنت واثق تماماً من رغبتك في تدمير هذه المحاضرة ومسحها بشكل لا رجعة فيه من السيرفر الأساسي؟')) return;
             const token = localStorage.getItem('dahih_token');
             
             try {
@@ -977,14 +1488,14 @@
                 });
                 
                 if (res.ok) {
-                    window.showToast('تم مسح الكورس نهائياً من السيرفر');
+                    window.showToast('تم تنفيذ أمر الحذف الكلي من قواعد البيانات بنجاح.');
                     loadCoursesUI();
                 } else {
                     const data = await res.json();
-                    window.showToast('فشل الحذف: ' + data.message, 'error');
+                    window.showToast('إخفاق في تنفيذ الإزالة: ' + data.message, 'error');
                 }
             } catch (err) {
-                window.showToast('خطأ في الاتصال بالشبكة', 'error');
+                window.showToast('فشل في إنشاء قناة اتصال آمنة لإجراء الحذف.', 'error');
             }
         }
     </script>
