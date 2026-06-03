@@ -16,6 +16,9 @@ exports.getDashboardData = async (req, res) => {
 
         const user = await db.collection('users').findOne({ email: req.user.email });
         const studentPoints = user?.points || 0;
+        // الاسم الكامل (رباعي) لمطابقة نتائج الاختبارات الورقية التي يكتبها المستر
+        const studentName = [user?.first_name, user?.second_name, user?.third_name, user?.last_name]
+            .filter(Boolean).join(' ').trim();
 
         const rawContent = await db.collection('curriculum_content').findOne({ grade }) || {};
         const content = {
@@ -53,7 +56,7 @@ exports.getDashboardData = async (req, res) => {
             };
         }));
 
-        res.status(200).json({ studentPoints, content, courses });
+        res.status(200).json({ studentPoints, content, courses, studentName, studentGrade: grade });
     } catch (error) {
         console.error("getDashboardData error:", error);
         res.status(500).json({ message: "فشل جلب البيانات." });
@@ -160,4 +163,5 @@ exports.verifyPhone = async (req, res) => {
         res.status(200).json({ message: "تم توثيق الهاتف بنجاح" });
     } catch (error) { res.status(500).json({ message: "خطأ" }); }
 };
+
 
