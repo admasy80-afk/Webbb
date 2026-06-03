@@ -1,4 +1,3 @@
-// ==================== الملف الرئيسي المجمع للمنصة ====================
 import { SysUI } from './ui.js';
 import './state.js'; 
 import { 
@@ -87,7 +86,6 @@ export function toggleContentFields() {
 }
 window.toggleContentFields = toggleContentFields;
 
-// ==================== المساعد الصوتي (تم تصحيح الـ IDs المطابقة للـ HTML) ====================
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition) {
     const recognition = new SpeechRecognition();
@@ -123,26 +121,28 @@ if (SpeechRecognition) {
     };
 
     recognition.onresult = (event) => {
-        const command = event.results[0][0].transcript.toLowerCase();
+        const rawResult = event?.results?.[0]?.[0]?.transcript;
+        if (!rawResult) return; 
+        
+        const command = rawResult.toLowerCase();
 
-        // 🌟 تم تصحيح أسماء التابات هنا لتطابق الـ HTML (quiz و public-quiz)
         if(command.includes('سؤال جديد') || command.includes('اضف سؤال') || command.includes('إضافة سؤال')) {
-            if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) addMCQBlock();
-            else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) addPublicMCQBlock();
+            if(document.getElementById('tab-quiz')?.classList.contains('active')) addMCQBlock();
+            else if (document.getElementById('tab-public-quiz')?.classList.contains('active')) addPublicMCQBlock();
             SysUI.toast('success', 'حاضر، تم إضافة سؤال جديد.');
         } else if (command.includes('احفظ الامتحان') || command.includes('ارفع الامتحان') || command.includes('نشر')) {
-            if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) {
-                document.getElementById('saveQuizBtn').click();
-            } else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) {
-                document.getElementById('savePublicQuizBtn').click();
+            if(document.getElementById('tab-quiz')?.classList.contains('active')) {
+                document.getElementById('saveQuizBtn')?.click();
+            } else if (document.getElementById('tab-public-quiz')?.classList.contains('active')) {
+                document.getElementById('savePublicQuizBtn')?.click();
             }
             SysUI.toast('success', 'جاري تنفيذ أمر الحفظ!');
         } else if (command.includes('افتح الطلبات') || command.includes('طلبات التسجيل')) {
             switchTab('requests');
             SysUI.toast('success', 'تم فتح قسم الطلبات.');
-        } else if (command.includes('افتح المحاضرات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) {
+        } else if (command.includes('افتح الكورسات') || command.includes('رفع فيديو') || command.includes('الفيديوهات')) {
             switchTab('videos');
-            SysUI.toast('success', 'تم فتح قسم الكورسات سحابياً.');
+            SysUI.toast('success', 'تم فتح قسم الكورسات .');
         } else {
             SysUI.toast('error', `لم أفهم الأمر: "${command}"`);
         }
@@ -157,32 +157,36 @@ if (SpeechRecognition) {
     };
 }
 
-// ==================== اختصارات الكيبورد ====================
 document.addEventListener('keydown', (e) => {
-    const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+    const targetTag = e?.target?.tagName;
+    if (!targetTag) return;
 
-    if (e.altKey && e.key.toLowerCase() === 'n') {
+    const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(targetTag);
+    
+    const pressedKey = e?.key?.toLowerCase();
+    if (!pressedKey) return; 
+
+    if (e.altKey && pressedKey === 'n') {
         e.preventDefault();
-        if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) {
+        if(document.getElementById('tab-quiz')?.classList.contains('active')) {
             addMCQBlock();
             SysUI.toast('success', 'تم إضافة سؤال منصة جديد');
-        } else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) {
+        } else if (document.getElementById('tab-public-quiz')?.classList.contains('active')) {
             addPublicMCQBlock();
             SysUI.toast('success', 'تم إضافة سؤال عام جديد');
         }
     }
 
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+    if ((e.ctrlKey || e.metaKey) && pressedKey === 's') {
         e.preventDefault();
-        if(document.getElementById('tab-quiz') && document.getElementById('tab-quiz').classList.contains('active')) {
-            document.getElementById('quizForm').dispatchEvent(new Event('submit', { cancelable: true }));
-        } else if (document.getElementById('tab-public-quiz') && document.getElementById('tab-public-quiz').classList.contains('active')) {
-            document.getElementById('publicQuizForm').dispatchEvent(new Event('submit', { cancelable: true }));
+        if(document.getElementById('tab-quiz')?.classList.contains('active')) {
+            document.getElementById('quizForm')?.dispatchEvent(new Event('submit', { cancelable: true }));
+        } else if (document.getElementById('tab-public-quiz')?.classList.contains('active')) {
+            document.getElementById('publicQuizForm')?.dispatchEvent(new Event('submit', { cancelable: true }));
         }
     }
 });
 
-// ==================== الأحداث الأساسية والتحميل ====================
 const quizForm = document.getElementById('quizForm');
 if(quizForm) {
     quizForm.addEventListener('input', () => DraftSystem.save());
