@@ -1,7 +1,6 @@
 (function () {
     'use strict';
 
-    // منع تكرار تهيئة السكربت لو تم حقنه أكثر من مرة
     if (window.__DAHIH_INITIALIZED__) return;
     window.__DAHIH_INITIALIZED__ = true;
 
@@ -14,18 +13,19 @@
         quizzesHash: '',
         pointsHash: '',
         questionsHash: '',
-        lastDataHash: null, // 🚀 [تحسين]: تخزين بصمة البيانات كاملة لمنع الـ Re-render الوهمي
+        testResultsHash: '',
+        lastDataHash: null,
         availableQuizzes: [],
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
-        isTesting: false, // 🚀 [تحسين]: حالة الاختبار لمنع جلب البيانات أثناء حل الكويز
+        isTesting: false,
         dashboardAbortController: null,
         videoAbortController: null, 
         videoRequestId: 0, 
         reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
     };
 
-    // 🚀 [تحسين]: نظام Polling آمن لا يتكرر ولا يتراكم
+    const isMobile = window.matchMedia('(hover: none)').matches || window.innerWidth < 1024;
     const poller = { timer: null };
 
     const $ = (id) => document.getElementById(id);
@@ -136,7 +136,7 @@
                 player.video.removeAttribute('src');
                 player.video.load();
             } catch (e) {
-                console.error("Error clearing video on logout:", e);
+                console.error(e);
             }
         }
         localStorage.removeItem('dahih_user');
@@ -194,14 +194,223 @@
         }
     }
 
+    function initCursorEffect() {
+        if (isMobile || state.reduceMotion) return;
+        const cursorGlow = $('cursorGlow');
+        const cursorDot = $('cursorDot');
+        let mouseX = 0, mouseY = 0;
+        let glowX = 0, glowY = 0;
+        let dotX = 0, dotY = 0;
+
+        const updateCursor = () => {
+            glowX += (mouseX - glowX) * 0.12;
+            glowY += (mouseY - glowY) * 0.12;
+            dotX += (mouseX - dotX) * 0.35;
+            dotY += (mouseY - dotY) * 0.35;
+
+            if (cursorGlow) cursorGlow.style.transform = `translate(${glowX}px, ${glowY}px)`;
+            if (cursorDot) cursorDot.style.transform = `translate(${dotX}px, ${dotY}px)`;
+            requestAnimationFrame(updateCursor);
+        };
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            if (cursorGlow) cursorGlow.classList.add('active');
+            if (cursorDot) cursorDot.classList.add('active');
+        }, { passive: true });
+
+        document.addEventListener('mouseleave', () => {
+            if (cursorGlow) cursorGlow.classList.remove('active');
+            if (cursorDot) cursorDot.classList.remove('active');
+        });
+
+        const hoverables = 'a, button, .btn, .icon-btn, .quiz-card, .course-card, .filter-btn, .poster-icon, .section-head, label.quiz-option, input, textarea, select';
+        document.addEventListener('mouseover', (e) => {
+            if (e.target.closest(hoverables)) {
+                cursorGlow?.classList.add('hover');
+                cursorDot?.classList.add('hover');
+            }
+        });
+        document.addEventListener('mouseout', (e) => {
+            if (e.target.closest(hoverables)) {
+                cursorGlow?.classList.remove('hover');
+                cursorDot?.classList.remove('hover');
+            }
+        });
+
+        updateCursor();
+    }
+
+    function initParticleField() {
+        if (isMobile || state.reduceMotion) return;
+        const field = $('particleField');
+        if (field) {
+            const count = 18;
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (12 + Math.random() * 18) + 's';
+                p.style.animationDelay = (Math.random() * 15) + 's';
+                p.style.width = p.style.height = (1 + Math.random() * 3) + 'px';
+                field.appendChild(p);
+            }
+        }
+    }
+
+    function initBackgroundParallax() {
+        if (state.reduceMotion || isMobile) return;
+        const appBg = document.querySelector('.app-bg');
+        if (appBg) {
+            let bgX = 0, bgY = 0, tx = 0, ty = 0;
+            document.addEventListener('mousemove', (e) => {
+                bgX = (e.clientX / window.innerWidth - 0.5) * 20;
+                bgY = (e.clientY / window.innerHeight - 0.5) * 20;
+            }, { passive: true });
+            const animateBg = () => {
+                tx += (bgX - tx) * 0.04;
+                ty += (bgY - ty) * 0.04;
+                appBg.style.transform = `translate(${tx}px, ${ty}px)`;
+                requestAnimationFrame(animateBg);
+            };
+            animateBg();
+        }
+    }
+
+    const attachSpotlight = (el) => {
+        if (el.dataset.spotlight) return;
+        el.dataset.spotlight = '1';
+        el.addEventListener('mousemove', (e) => {
+            const rect = el.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            el.style.setProperty('--mouse-x', x + 'px');
+            el.style.setProperty('--mouse-y', y + 'px');
+        }, { passive: true });
+    };
+
+    const attachTilt = (el, strength = 6) => {
+        if (el.dataset.tilt || isMobile) return;
+        el.dataset.tilt = '1';
+        let rafId = null;
+        el.addEventListener('mousemove', (e) => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                const rect = el.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const rotateY = (x / rect.width - 0.5) * strength;
+                const rotateX = -(y / rect.height - 0.5) * strength;
+                el.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-4px) translateZ(10px)`;
+            });
+        }, { passive: true });
+        el.addEventListener('mouseleave', () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            el.style.transform = '';
+        });
+    };
+
+    const applyInteractiveEffects = () => {
+        document.querySelectorAll('.quiz-card, .course-card, .panel').forEach(attachSpotlight);
+        if (!isMobile && !state.reduceMotion) {
+            document.querySelectorAll('.quiz-card, .course-card').forEach(el => attachTilt(el, 5));
+        }
+    };
+
+    function initScrollReveals() {
+        if (state.reduceMotion) return;
+        const io = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    io.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+        const markReveal = () => {
+            document.querySelectorAll('.panel, .quiz-card, .course-card, .score-display, .hero').forEach((el, i) => {
+                if (!el.classList.contains('reveal') && !el.dataset.revealed) {
+                    el.dataset.revealed = '1';
+                    el.classList.add('reveal');
+                    if (i % 4 !== 0) el.classList.add('reveal-delay-' + ((i % 4) + 1));
+                    io.observe(el);
+                }
+            });
+        };
+        markReveal();
+        new MutationObserver(markReveal).observe(document.body, { childList: true, subtree: true });
+    }
+
+    const animateCounter = (el, target, duration = 1500) => {
+        if (state.reduceMotion) {
+            el.textContent = target;
+            return;
+        }
+        const start = performance.now();
+        const startVal = 0;
+        const suffix = String(el.textContent).replace(/[\d.,\s]/g, '') || '';
+        const step = (now) => {
+            const elapsed = now - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 4);
+            const current = Math.round(startVal + (target - startVal) * eased);
+            el.textContent = current + suffix;
+            if (progress < 1) requestAnimationFrame(step);
+            else el.textContent = target + suffix;
+        };
+        requestAnimationFrame(step);
+    };
+
+    function initCounterObservers() {
+        const counterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const el = entry.target;
+                    const raw = el.textContent.replace(/[^\d.]/g, '');
+                    const target = parseFloat(raw);
+                    if (!isNaN(target)) animateCounter(el, target, 1600);
+                    counterObserver.unobserve(el);
+                }
+            });
+        }, { threshold: 0.4 });
+
+        const markCounters = () => {
+            document.querySelectorAll('.score-value:not([data-counted])').forEach(el => {
+                el.dataset.counted = '1';
+                counterObserver.observe(el);
+            });
+        };
+        markCounters();
+        new MutationObserver(markCounters).observe(document.body, { childList: true, subtree: true });
+    }
+
+    window.fireConfetti = (count = 60) => {
+        if (state.reduceMotion) return;
+        const container = $('confettiContainer');
+        if (!container) return;
+        const colors = ['#eab308', '#fde047', '#22c55e', '#3b82f6', '#ffffff', '#f59e0b'];
+        for (let i = 0; i < count; i++) {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            piece.style.left = Math.random() * 100 + '%';
+            piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.width = piece.style.height = (6 + Math.random() * 10) + 'px';
+            piece.style.animationDelay = (Math.random() * 0.4) + 's';
+            piece.style.animationDuration = (1.8 + Math.random() * 1.2) + 's';
+            piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            container.appendChild(piece);
+            setTimeout(() => piece.remove(), 3500);
+        }
+    };
+
     const player = {
         video: null, poster: null, container: null, progress: null, progressBar: null,
         currentTimeEl: null, durationEl: null, speedBtn: null, muteBtn: null,
         centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
-        
-        // 🚀 [تحسين]: متغيرات إدارة ونظام الخمول الذكي لرفع الأداء
         idleTimer: null,
         idleTimeout: 3000, 
 
@@ -222,7 +431,6 @@
 
             if (!this.video) return;
 
-            // 🚀 [تحسين الجرافيكس]: حقن كود ستايل ديناميكي لإلغاء العمليات الرسومية المعقدة أثناء الخمول تماماً وتفعيل تسريع الهاردوير للفيديو
             const styleId = 'dahih-player-perf-boost';
             if (!$(styleId)) {
                 const style = document.createElement('style');
@@ -232,7 +440,6 @@
                         will-change: transform;
                         transform: translateZ(0);
                     }
-                    /* تعطيل عمليات الفلاتر والبلور المجهدة للمعالج وكارت الشاشة عندما يختفي شريط التحكم */
                     #videoContainer.is-idle * {
                         backdrop-filter: none !important;
                         -webkit-backdrop-filter: none !important;
@@ -257,7 +464,6 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
-            // 🚀 [تحسين]: رصد الحركة واللمس لتصفير عداد الخمول فوراً وإعادة إظهار الشريط بسلاسة
             if (this.container) {
                 const triggerActivity = () => this.resetIdleTimer();
                 this.container.addEventListener('mousemove', triggerActivity);
@@ -307,14 +513,12 @@
             });
         },
 
-        // 🚀 [تحسين أداء]: دالة تصفير مؤقت الخمول الذكية مع مزامنة فجائية للـ DOM عند الاستيقاظ
         resetIdleTimer() {
             if (!this.container) return;
 
             if (this.container.classList.contains('is-idle')) {
                 this.container.classList.remove('is-idle');
                 
-                // تحديث خاطف وفوري لشريط التقدم والنصوص بمجرد ظهور الواجهة لضمان دقة العرض دون تعليق مسبق
                 if (this.video && isFinite(this.video.duration)) {
                     const pct = (this.video.currentTime / this.video.duration) * 100;
                     if (this.progressBar) this.progressBar.style.width = pct + '%';
@@ -393,7 +597,7 @@
             } catch (err) {
                 if (err.name === 'AbortError') return; 
                 if (currentReqId !== state.videoRequestId) return; 
-                console.error("Video Access Error:", err);
+                console.error(err);
                 showToast("🚨 تعذر جلب رابط الفيديو. يرجى المحاولة لاحقاً.", "error");
             }
         },
@@ -424,7 +628,6 @@
         onTimeUpdate() {
             if (!isFinite(this.video.duration)) return;
 
-            // 🚀 [تحسين فائق للأداء]: منع تعديل الـ DOM للـ Progress Bar نهائياً إذا كان الشريط مخفياً لتفادي الـ Reflows العشوائية
             const isIdle = this.container && this.container.classList.contains('is-idle');
             if (!isIdle) {
                 const pct = (this.video.currentTime / this.video.duration) * 100;
@@ -461,7 +664,7 @@
         onError() {
             const err = this.video.error;
             if(err) {
-                console.error(`Video Error: ${err.code} - ${err.message}`);
+                console.error(err);
                 showToast("🚨 تعذر تشغيل الفيديو. يرجى التحقق من اتصالك بالإنترنت.", "error");
             }
         },
@@ -592,8 +795,6 @@
 
             renderCourses(courses, initial);
 
-            // تنسيق الاختبارات مرة واحدة (تحديد المكتمل + الدرجة من نتائج الطالب)
-            // ثم تمريرها لـ QuizApp وهو المسؤول الوحيد عن عرض هذا القسم لتفادي العرض المزدوج
             const formattedQuizzes = quizzes.map(q => {
                 const result = q.results ? q.results.find(r => r.email === state.user.email) : null;
                 return { ...q, attempted: !!result, score: result ? result.percentage : 0 };
@@ -610,7 +811,7 @@
             renderScore(parseInt(data.studentPoints || 0));
 
         } catch(e) {
-            console.error("DOM Render Error:", e);
+            console.error(e);
         }
     }
 
@@ -712,7 +913,6 @@
         container.innerHTML = !list.length ? '<p class="empty">لا توجد أسئلة.</p>' : `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid #333;border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;color:#fff;margin:0 0 0.5rem;">${i + 1}. ${escapeHTML(q.question)}</h3><p style="color:#aaa;font-size:0.85rem;margin:0;">الإجابة: ${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
     }
 
-    // دفتر درجات بسيط: نعرض النتائج كما كتبها المعلّم (اسم + درجة) دون أي مطابقة أسماء
     function renderTestResults(list) {
         const container = $('paperResultsContainer');
         if (!container) return;
@@ -727,7 +927,6 @@
             if (!scores.length) return;
             const maxScore = Number(test.maxScore) > 0 ? Number(test.maxScore) : null;
 
-            // ترتيب تنازلي حسب الدرجة (الأعلى أولاً)
             const sorted = scores.slice().sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
 
             const medals = ['bg-yellow-500 text-black', 'bg-gray-300 text-black', 'bg-orange-400 text-black'];
@@ -839,14 +1038,21 @@
     function setupGlobalListeners() {
         let lastVisibilityFetch = 0;
 
-        // ملاحظة: عرض الاختبارات + الفلاتر + فتح الاختبار يديرها QuizApp/QuizEngine
-        // (في index.html) لتفادي تكرار المستمعين وفتح الاختبار مرتين.
         document.addEventListener('click', (e) => {
             const coursePlay = e.target.closest('.course-play');
             if (coursePlay) {
                 if (typeof window.switchTab === 'function') window.switchTab('dashboard');
                 player.load(coursePlay.dataset.msgid, coursePlay.dataset.title);
             }
+        });
+
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn');
+            if (!btn) return;
+            btn.classList.remove('ripple');
+            void btn.offsetWidth;
+            btn.classList.add('ripple');
+            setTimeout(() => btn.classList.remove('ripple'), 800);
         });
 
         document.addEventListener('touchstart', () => {}, { passive: true });
@@ -880,11 +1086,21 @@
     function init() {
         if (!authGate()) return;
 
-        const firstName = state.user.name ? state.user.name.split(' ')[0] : '��الب';
+        const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
         $('studentName').textContent = firstName;
         $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
 
         player.init();
+        initCursorEffect();
+        initParticleField();
+        initBackgroundParallax();
+        applyInteractiveEffects();
+        
+        const observer = new MutationObserver(() => applyInteractiveEffects());
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        initScrollReveals();
+        initCounterObservers();
         setupGlobalListeners();
         
         fetchData(true).then(() => {
@@ -919,4 +1135,3 @@
         init();
     }
 })();
-
