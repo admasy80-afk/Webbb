@@ -15,277 +15,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@200;300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="player.css">
+    <link rel="stylesheet" href="style.css">
+
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/dashjs@latest/dist/dash.all.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js" defer></script>
     
     <script src="quiz.js" defer></script>
     <script src="script.js" defer></script>
-
-    <style>
-        /* ============================================================
-           Design Tokens & Theming
-           ============================================================ */
-        :root {
-            --bg: #060912;
-            --bg-elev-1: #0a0f1c;
-            --bg-elev-2: #0f1729;
-            --bg-elev-3: #16203a;
-            --border: rgba(255, 255, 255, 0.07);
-            --border-strong: rgba(255, 255, 255, 0.12);
-            --text: #f8fafc;
-            --text-muted: #9aa6b8;
-            --text-faint: #64748b;
-            --accent: #f5c518;
-            --accent-hover: #eab308;
-            --accent-soft: rgba(245, 197, 24, 0.12);
-            --success: #22c55e;
-            --danger: #ef4444;
-
-            /* Z-Index Scale */
-            --z-bg: -10;
-            --z-base: 1;
-            --z-sidebar: 40;
-            --z-modal: 100;
-            --z-toast: 200;
-
-            /* Motion */
-            --d-fast: 300ms;
-            --d-base: 500ms;
-            --d-slow: 800ms;
-            --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-            
-            --shadow-md: 0 10px 30px rgba(0,0,0,.25);
-            --shadow-lg: 0 24px 60px -12px rgba(0,0,0,.55);
-            --shadow-accent: 0 8px 26px rgba(245,197,24,.28);
-            --grad-accent: linear-gradient(135deg, #f5c518, #f59e0b);
-        }
-
-        * {
-            font-family: 'Readex Pro', sans-serif !important;
-            -webkit-tap-highlight-color: transparent;
-            box-sizing: border-box;
-        }
-
-        body, html {
-            background-color: var(--bg);
-            color: var(--text);
-            overscroll-behavior-y: none;
-            overflow-x: hidden;
-            text-rendering: optimizeLegibility;
-        }
-
-        *:focus-visible {
-            outline: 2px solid rgba(234, 179, 8, 0.6);
-            outline-offset: 2px;
-            border-radius: 4px;
-        }
-        button { cursor: pointer; }
-
-        body::before {
-            content: '';
-            position: fixed;
-            inset: 0;
-            background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
-            opacity: 0.03;
-            pointer-events: none;
-            z-index: var(--z-bg);
-        }
-
-        @media (max-width: 768px) {
-            body::before { display: none; }
-            .glass-panel {
-                backdrop-filter: none;
-                -webkit-backdrop-filter: none;
-                background: #0f172aee;
-            }
-        }
-
-        .soft-border { border: 1px solid rgba(255, 255, 255, 0.03); }
-
-        .glass-panel {
-            background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.012));
-            border: 1px solid var(--border);
-            backdrop-filter: blur(14px) saturate(140%);
-            -webkit-backdrop-filter: blur(14px) saturate(140%);
-            box-shadow: var(--shadow-lg);
-        }
-
-        #mainGrid { contain: content; }
-
-        .tab-btn {
-            transition: background-color var(--d-base) var(--ease-out),
-                        color var(--d-base) var(--ease-out),
-                        transform var(--d-fast) var(--ease-out);
-            position: relative;
-            will-change: transform;
-            scroll-snap-align: start;
-        }
-        @media (hover: hover) {
-            .tab-btn:hover { background-color: rgba(255,255,255,.05); }
-        }
-        .tab-btn:active { transform: scale(.98); }
-        .tab-btn.active {
-            color: var(--text);
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--accent-soft), rgba(255,255,255,.02));
-            border-inline-start: 3px solid var(--accent);
-            box-shadow: inset 0 0 0 1px rgba(245,197,24,.08);
-        }
-        @media (min-width: 768px) {
-            .tab-btn.active::after {
-                content: '';
-                position: absolute;
-                inset-inline-end: 12px;
-                top: 50%;
-                transform: translateY(-50%);
-                width: 6px; height: 6px;
-                border-radius: 999px;
-                background: var(--accent);
-                box-shadow: 0 0 10px var(--accent);
-            }
-        }
-
-        @keyframes fadeInTab {
-            from { opacity: 0; transform: translateY(20px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .tab-content {
-            display: none;
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            height: 0;
-            overflow: hidden;
-        }
-        .tab-content.active {
-            display: block;
-            opacity: 1;
-            visibility: visible;
-            pointer-events: auto;
-            height: auto;
-            overflow: visible;
-            animation: fadeInTab var(--d-slow) var(--ease-out) forwards;
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translate3d(0, 20px, 0); }
-            to   { opacity: 1; transform: translate3d(0, 0, 0); }
-        }
-        .animate-fade-in-up { animation: fadeInUp var(--d-slow) var(--ease-out) both; }
-        .animate-fade { animation: fadeInUp var(--d-slow) var(--ease-out) both; }
-
-        .animate-fade:nth-child(1)  { animation-delay: 40ms; }
-        .animate-fade:nth-child(2)  { animation-delay: 80ms; }
-        .animate-fade:nth-child(3)  { animation-delay: 120ms; }
-        .animate-fade:nth-child(n+4){ animation-delay: 160ms; }
-
-        @keyframes softBounce {
-            0%, 100% { transform: translateY(0); }
-            50%      { transform: translateY(-6px); }
-        }
-        .animate-soft-bounce {
-            animation: softBounce 2.4s var(--ease-out) infinite;
-            will-change: transform;
-        }
-
-        .quiz-card {
-            background: linear-gradient(160deg, rgba(255,255,255,.04), rgba(255,255,255,.012)), var(--bg-elev-2);
-            border: 1px solid rgba(255,255,255,.06);
-            border-radius: 18px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            min-height: 160px;
-            position: relative;
-            overflow: hidden;
-            transform: translate3d(0, 0, 0);
-            box-shadow: 0 8px 24px -10px rgba(0,0,0,.5);
-            transition: transform var(--d-base) var(--ease-out),
-                        background-color var(--d-base),
-                        box-shadow var(--d-base),
-                        border-color var(--d-base);
-        }
-        .quiz-card:not(.completed-card)::before {
-            content: '';
-            position: absolute;
-            inset: 0 0 auto 0;
-            height: 3px;
-            background: var(--grad-accent);
-            opacity: 0;
-            transition: opacity var(--d-base) var(--ease-out);
-        }
-        @media (hover: hover) {
-            .quiz-card:not(.completed-card):hover::before { opacity: 1; }
-        }
-        
-        @media (hover: hover) {
-            .quiz-card:not(.completed-card):hover {
-                transform: translate3d(0, -6px, 0);
-                border-color: rgba(245,197,24,.28);
-                box-shadow: 0 20px 40px -16px rgba(0,0,0,.7), var(--shadow-accent);
-            }
-            html[dir="rtl"] .quiz-card:not(.completed-card):hover .action-icon {
-                transform: translateX(-3px); 
-            }
-        }
-        .quiz-card:not(.completed-card):active { transform: translate3d(0, -1px, 0); }
-
-        .completed-card {
-            border-color: rgba(34,197,94,.12);
-            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-2);
-            cursor: not-allowed;
-            opacity: 0.85;
-        }
-        .completed-card:hover {
-            background: linear-gradient(180deg, rgba(34,197,94,.03), transparent), var(--bg-elev-3);
-            border-color: rgba(34,197,94,.25);
-        }
-
-        .action-icon { 
-            transition: transform var(--d-fast) var(--ease-out),
-                        background-color var(--d-fast) var(--ease-out),
-                        color var(--d-fast) var(--ease-out); 
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50%      { opacity: .4; }
-        }
-        .skeleton {
-            animation: pulse 1.5s var(--ease-out) infinite;
-            background: rgba(255,255,255,.04);
-        }
-
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        .filter-btn {
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-size: .875rem;
-            font-weight: 500;
-            color: var(--text-muted);
-            background: transparent;
-            white-space: nowrap;
-            transition: background-color var(--d-fast) var(--ease-out), color var(--d-fast) var(--ease-out);
-        }
-        .filter-btn:hover { color: var(--text); background: rgba(255,255,255,.04); }
-        .filter-btn.active {
-            background: var(--accent-soft);
-            color: var(--accent);
-            box-shadow: inset 0 0 0 1px rgba(245,197,24,.25);
-        }
-
-        .video-container { position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; }
-        .video-poster { position: absolute; inset: 0; background: #070b19; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 20; }
-        
-        @media (prefers-reduced-motion: reduce) {
-            * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-        }
-    </style>
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
     
@@ -517,8 +254,7 @@
         </div>
     </main>
 
-    <!-- ملاحظة: نافذة الاختبار يتم إنشاؤها ديناميكياً بواسطة QuizEngine (quiz.js) لتفادي تعارض الـ ID -->
-
+    > 
     <script>
         window.DahihApp = window.DahihApp || {
             token: "secure_default_session_token",
@@ -707,9 +443,7 @@
                 });
             };
 
-            // الدالة الجديدة مع إضافة حماية التكرار !listenersInitialized
             const init = async (dataSource) => {
-                // إظهار الهيكل المؤقت فقط عند أول تحميل، لتفادي وميض البطاقات عند المزامنة الدورية في الخلفية
                 if (!quizzesData.length) renderSkeleton();
 
                 if (!listenersInitialized) {
@@ -724,7 +458,6 @@
                 }
             };
 
-            // الدالة الجديدة بديلة للقديمة وتم حذف الكود العشوائي
             const reload = (quizId, result = null) => {
                 if (!quizId) {
                     updateStats(quizzesData);
@@ -749,10 +482,7 @@
             return { init, reload };
         })();
 
-        // إتاحة QuizApp على نطاق window حتى يتمكن script.js و quiz.js من تحديث قائمة الاختبارات
         window.QuizApp = QuizApp;
     </script>
 </body>
 </html>
-
-
