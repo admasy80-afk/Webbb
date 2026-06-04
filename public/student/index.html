@@ -260,20 +260,6 @@
     </main>
 
     <script>
-        window.DahihApp = window.DahihApp || {
-            token: "secure_default_session_token",
-            user: { email: "student@dahih-edu.com", name: "طالب الدحيح" },
-            getState() { return { token: this.token, user: this.user }; },
-            fetchWithTimeout: async function(url, options) {
-                console.log(`%c[DahihAPI] جاري تسجيل وحفظ النتيجة في: ${url}`, "color: #22c55e; font-weight: bold;");
-                return new Promise(resolve => setTimeout(() => resolve({ ok: true }), 400));
-            },
-            refresh() {
-                console.log("%c[Dashboard] تحديث حالة واجهة الطالب وتأمين الاختبارات...", "color: #eab308;");
-                if (typeof QuizApp !== 'undefined' && QuizApp.reload) { QuizApp.reload(); }
-            }
-        };
-
         window.switchTab = function(tabId) {
             const activeTab = localStorage.getItem('activeTab');
             if (activeTab === tabId && document.querySelector(`#tab-${tabId}`).classList.contains('active')) return;
@@ -309,7 +295,7 @@
             const emptyState = document.getElementById('empty-state');
             let quizzesData = [];
             let currentFilter = 'all';
-            let listenersInitialized = false; // ← إضافة المتغير لمنع تكرار الـ listeners
+            let listenersInitialized = false;
 
             const renderSkeleton = () => {
                 let html = '';
