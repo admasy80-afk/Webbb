@@ -26,6 +26,11 @@
 </head>
 <body class="flex flex-col md:flex-row h-[100dvh] overflow-hidden selection:bg-yellow-500 selection:text-black">
     
+    <div class="cursor-glow" id="cursorGlow"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+    <div class="particle-field" id="particleField"></div>
+    <div class="confetti-container" id="confettiContainer"></div>
+
     <div class="fixed inset-0 pointer-events-none" style="z-index: var(--z-bg);">
         <div class="fixed top-[-12%] right-[-6%] w-[42rem] h-[42rem] bg-yellow-500/[0.07] rounded-full blur-[130px] -z-10"></div>
         <div class="fixed bottom-[-12%] left-[-6%] w-[36rem] h-[36rem] bg-amber-600/[0.05] rounded-full blur-[130px] -z-10"></div>
@@ -254,7 +259,6 @@
         </div>
     </main>
 
-    > 
     <script>
         window.DahihApp = window.DahihApp || {
             token: "secure_default_session_token",
