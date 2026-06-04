@@ -600,9 +600,12 @@
             });
             state.availableQuizzes = formattedQuizzes;
 
-            if (window.QuizApp && typeof window.QuizApp.init === 'function') {
-                window.QuizApp.init(formattedQuizzes);
-            }
+            // 🚀 [تحسين]: تأخير بسيط لضمان تحميل QuizApp
+            setTimeout(() => {
+                if (window.QuizApp && typeof window.QuizApp.init === 'function') {
+                    window.QuizApp.init(formattedQuizzes);
+                }
+            }, 0);
 
             renderPoints(points);
             renderQuestions(questions);
@@ -662,36 +665,6 @@
         }).join('');
 
         if (state.currentMsgId) updateActiveCourseCard(state.currentMsgId);
-    }
-
-    function renderQuizzes(list) {
-        const container = $('onlineQuizzesContainer');
-        if (!container) return;
-        
-        const h = fastHash(list, ['id', 'updatedAt']);
-        if (h === state.quizzesHash) return;
-        state.quizzesHash = h;
-        state.availableQuizzes = list;
-
-        if (!list.length) {
-            container.innerHTML = '<div id="empty-state" class="flex justify-center items-center py-10 w-full text-gray-500">لا توجد اختبارات متاحة حالياً.</div>';
-            return;
-        }
-
-        const html = list.slice().reverse().map(quiz => {
-            const result = quiz.results ? quiz.results.find(r => r.email === state.user.email) : null;
-            const formattedQuiz = {
-                ...quiz,
-                attempted: !!result,
-                score: result ? result.percentage : 0,
-                attempts: result ? 1 : 0, 
-                questionsCount: quiz.questions ? quiz.questions.length : 0,
-                duration: quiz.duration || 15
-            };
-            return generateQuizCardHTML(formattedQuiz);
-        }).join('');
-        
-        container.innerHTML = `<div class="fade-in-stagger grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">${html}</div>`;
     }
 
     function renderPoints(list) {
@@ -775,51 +748,6 @@
         state.currentPoints = newPoints;
     }
 
-    const generateQuizCardHTML = (quiz) => {
-        const titleSafe = escapeHTML(quiz.title) || 'بدون عنوان';
-        if (!quiz.attempted) {
-            return `
-            <div tabindex="0" role="button" aria-label="بدء اختبار: ${titleSafe}" class="quiz-card card-new animate-fade bg-white/5 border border-white/10 p-5 rounded-2xl hover:-translate-y-1 hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
-                <div class="flex-grow">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="text-[11px] font-bold text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md tracking-wider">جديد</span>
-                        <span class="text-xs text-gray-500">${quiz.duration || 0} دقيقة</span>
-                    </div>
-                    <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${titleSafe}</h3>
-                    <p class="text-sm text-gray-400 flex items-center gap-1.5">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        ${quiz.questionsCount || 0} سؤال
-                    </p>
-                </div>
-                <div class="flex items-center justify-between mt-auto pt-5 border-t border-white/5">
-                    <span class="text-sm font-medium text-gray-400">اضغط للبدء</span>
-                    <div class="action-icon w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center text-gray-400">
-                        <svg class="w-4 h-4 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                    </div>
-                </div>
-            </div>`;
-        } else {
-            return `
-            <div tabindex="0" role="button" aria-label="عرض نتيجة اختبار: ${titleSafe}" class="quiz-card animate-fade bg-white/5 border border-white/10 border-r-4 border-r-green-500/80 p-5 rounded-2xl hover:-translate-y-1 hover:shadow-lg transition-all duration-300 flex flex-col h-full cursor-pointer" data-id="${quiz.id}">
-                <div class="flex justify-between items-start mb-3 flex-grow">
-                    <div>
-                        <span class="text-[11px] font-bold text-green-400 bg-green-400/10 px-2 py-1 rounded-md tracking-wider mb-3 inline-block">مكتمل</span>
-                        <h3 class="text-base font-semibold text-white mb-2 line-clamp-2 leading-snug">${titleSafe}</h3>
-                    </div>
-                </div>
-                <div class="text-xs text-gray-500 space-y-1 mb-4 flex-grow">
-                    ${quiz.attempts ? `<p>المحاولات: ${quiz.attempts}</p>` : ''}
-                </div>
-                <div class="mt-auto pt-4 border-t border-white/5 flex items-end justify-between">
-                    <span class="text-xs text-gray-400 mb-1">النتيجة النهائية</span>
-                    <div class="text-3xl font-black ${quiz.score >= 50 ? 'text-green-400' : 'text-red-400'} leading-none">
-                        ${quiz.score || 0}%
-                    </div>
-                </div>
-            </div>`;
-        }
-    };
-
     function startDashboardPolling() {
         if (poller.timer) return;
 
@@ -880,7 +808,7 @@
     function init() {
         if (!authGate()) return;
 
-        const firstName = state.user.name ? state.user.name.split(' ')[0] : '��الب';
+        const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
         $('studentName').textContent = firstName;
         $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
 
