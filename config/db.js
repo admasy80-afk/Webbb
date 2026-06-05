@@ -41,7 +41,17 @@ async function connectMongo() {
         await db.collection('courses').createIndex({ grade: 1 }, { background: true });
         await db.collection('courses').createIndex({ telegramMsgId: 1 }, { background: true });
         await db.collection('curriculum_content').createIndex({ grade: 1 }, { background: true });
-        
+
+        // ═══════════ نظام الرصيد والاشتراكات ═══════════
+        await db.collection('charge_cards').createIndex({ code: 1 }, { unique: true, background: true });
+        await db.collection('charge_cards').createIndex({ status: 1, createdAt: -1 }, { background: true });
+        await db.collection('wallet_transactions').createIndex({ email: 1, createdAt: -1 }, { background: true });
+        await db.collection('system_logs').createIndex({ createdAt: -1 }, { background: true });
+        await db.collection('system_logs').createIndex({ action: 1 }, { background: true });
+        await db.collection('system_logs').createIndex({ actor: 1 }, { background: true });
+        await db.collection('subscription_plans').createIndex({ price: 1 }, { background: true });
+        await db.collection('users').createIndex({ subscriptionEnd: 1 }, { background: true });
+
         logger.info("🔥 قاعدة البيانات والـ Indexes جاهزة للعمل");
     } catch (error) {
         logger.fatal({ err: error }, "فشل الاتصال بمونجو");
