@@ -4,20 +4,15 @@
     if (window.__DAHIH_INITIALIZED__) return;
     window.__DAHIH_INITIALIZED__ = true;
 
-    (function detectAndApplyPerf() {
-        const cores  = navigator.hardwareConcurrency || 2;
+    (function () {
+        const cores = navigator.hardwareConcurrency || 2;
         const memory = navigator.deviceMemory || 1;
         const isTouch = navigator.maxTouchPoints > 0;
-
         let tier = 'high';
         if (cores <= 2 || memory <= 1) tier = 'low';
         else if (cores <= 4 || memory <= 3) tier = 'medium';
-
         if (isTouch && tier === 'high') tier = 'medium';
-
-        if (tier !== 'high') {
-            document.documentElement.classList.add(`perf-${tier}`);
-        }
+        if (tier !== 'high') document.documentElement.classList.add(`perf-${tier}`);
     })();
 
     const state = {
@@ -35,50 +30,43 @@
         speeds: [1, 1.25, 1.5, 2],
         isTesting: false,
         dashboardAbortController: null,
-        videoAbortController: null, 
-        videoRequestId: 0, 
+        videoAbortController: null,
+        videoRequestId: 0,
         reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-        perfTier: document.documentElement.classList.contains('perf-low') 
-            ? 'low' 
-            : document.documentElement.classList.contains('perf-medium') 
-                ? 'medium' 
-                : 'high'
+        perfTier: document.documentElement.classList.contains('perf-low') ? 'low' : document.documentElement.classList.contains('perf-medium') ? 'medium' : 'high'
     };
 
     const poller = { timer: null };
-
     const $ = (id) => document.getElementById(id);
 
     const showToast = (message, type = 'info') => {
-        let container = $('toastContainer');
+        let container = document.querySelector('.toast-container');
         if (!container) {
             container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.className = 'fixed bottom-5 left-5 z-[9999] flex flex-col gap-2 pointer-events-none';
+            container.className = 'toast-container';
             document.body.appendChild(container);
         }
 
         const toast = document.createElement('div');
-        const baseClass = 'pointer-events-auto flex items-center gap-3 px-5 py-3.5 rounded-xl border font-bold text-sm shadow-2xl backdrop-blur-md translate-y-4 opacity-0 transition-all duration-300';
-        const themes = {
-            success: 'bg-green-500/10 border-green-500/20 text-green-400',
-            error: 'bg-red-500/10 border-red-500/20 text-red-400',
-            info: 'bg-blue-500/10 border-blue-500/20 text-blue-400'
-        };
+        toast.className = `premium-toast ${type}`;
+        toast.innerHTML = `
+            <div class="toast-content">
+                <span>${message}</span>
+            </div>
+            <div class="toast-progress-bar">
+                <div class="toast-progress"></div>
+            </div>
+        `;
 
-        toast.className = `${baseClass} ${themes[type] || themes.info}`;
-        toast.textContent = message;
         container.appendChild(toast);
 
-        void toast.offsetHeight;
-        toast.classList.remove('translate-y-4', 'opacity-0');
+        requestAnimationFrame(() => {
+            toast.classList.add('active');
+        });
 
         setTimeout(() => {
-            toast.classList.add('translate-y-2', 'opacity-0');
-            const fallbackTimer = setTimeout(() => toast.remove(), 1000);
-            
+            toast.classList.remove('active');
             toast.addEventListener('transitionend', () => {
-                clearTimeout(fallbackTimer);
                 toast.remove();
             }, { once: true });
         }, 4000);
@@ -96,23 +84,16 @@
 
     const fastHash = (list, keys = ['id']) => {
         if (!Array.isArray(list)) return String(list);
-        return list.map(item =>
-            keys.map(k => String(item?.[k] ?? '')).join(':')
-        ).join('|');
+        return list.map(item => keys.map(k => String(item?.[k] ?? '')).join(':')).join('|');
     };
 
     const getSafeImageUrl = (url) => {
         const defaultImg = 'https://images.unsplash.com/photo-1632516643720-e7f5d7d6ecc9?q=80&w=600&auto=format&fit=crop';
         if (!url || typeof url !== 'string') return defaultImg;
-        
         try {
             const parsed = new URL(url.trim(), location.origin);
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-                return parsed.href;
-            }
-            if (parsed.origin === location.origin) {
-                return parsed.pathname;
-            }
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') return parsed.href;
+            if (parsed.origin === location.origin) return parsed.pathname;
             return defaultImg;
         } catch {
             return defaultImg;
@@ -129,6 +110,36 @@
     const haptic = (ms = 30) => {
         if (state.reduceMotion) return;
         if ('vibrate' in navigator) { try { navigator.vibrate(ms); } catch (e) {} }
+    };
+
+    const initObservers = () => {
+        if (!window.__REVEAL_OBSERVER__) {
+            window.__REVEAL_OBSERVER__ = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        window.__REVEAL_OBSERVER__.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+        }
+        
+        document.querySelectorAll('.reveal:not(.revealed)').forEach(el => {
+            window.__REVEAL_OBSERVER__.observe(el);
+        });
+
+        requestAnimationFrame(() => {
+            document.querySelectorAll('img[loading="lazy"]:not(.lazy-load)').forEach(img => {
+                img.classList.add('lazy-load');
+                if (img.complete) {
+                    img.classList.add('loaded');
+                } else {
+                    img.addEventListener('load', () => {
+                        img.classList.add('loaded');
+                    }, { once: true });
+                }
+            });
+        });
     };
 
     function authGate() {
@@ -154,9 +165,7 @@
                 player.video.pause();
                 player.video.removeAttribute('src');
                 player.video.load();
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) {}
         }
         localStorage.removeItem('dahih_user');
         localStorage.removeItem('dahih_token');
@@ -177,16 +186,10 @@
         }
 
         try {
-            return await fetch(url, {
-                ...options,
-                signal: controller.signal,
-                credentials: 'omit'
-            });
+            return await fetch(url, { ...options, signal: controller.signal, credentials: 'omit' });
         } finally {
             clearTimeout(timeoutId);
-            if (options.signal) {
-                options.signal.removeEventListener('abort', abortHandler);
-            }
+            if (options.signal) options.signal.removeEventListener('abort', abortHandler);
         }
     }
 
@@ -219,24 +222,23 @@
         centerPlay: null, skipIndicator: null, skipText: null, titleEl: null,
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
-        
         idleTimer: null,
-        idleTimeout: 3000, 
+        idleTimeout: 3000,
 
         init() {
-            this.video         = $('dahihPlayer');
-            this.poster        = $('videoPoster');
-            this.container     = $('videoContainer');
-            this.progress      = $('progressContainer');
-            this.progressBar   = $('progressBar');
+            this.video = $('dahihPlayer');
+            this.poster = $('videoPoster');
+            this.container = $('videoContainer');
+            this.progress = $('progressContainer');
+            this.progressBar = $('progressBar');
             this.currentTimeEl = $('currentTimeDisplay');
-            this.durationEl    = $('durationDisplay');
-            this.speedBtn      = $('speedBtn');
-            this.muteBtn       = $('muteBtn');
-            this.centerPlay    = $('centerPlay');
-            this.titleEl       = $('playingVideoTitle');
-            this.tapLeft       = $('tapLeft');
-            this.tapRight      = $('tapRight');
+            this.durationEl = $('durationDisplay');
+            this.speedBtn = $('speedBtn');
+            this.muteBtn = $('muteBtn');
+            this.centerPlay = $('centerPlay');
+            this.titleEl = $('playingVideoTitle');
+            this.tapLeft = $('tapLeft');
+            this.tapRight = $('tapRight');
 
             if (!this.video) return;
 
@@ -245,15 +247,7 @@
                 const style = document.createElement('style');
                 style.id = styleId;
                 style.textContent = `
-                    #dahihPlayer {
-                        will-change: transform;
-                        transform: translateZ(0);
-                    }
-                    #videoContainer.is-idle * {
-                        backdrop-filter: none !important;
-                        -webkit-backdrop-filter: none !important;
-                        pointer-events: none !important;
-                    }
+                    #dahihPlayer { will-change: transform; transform: translateZ(0); }
                 `;
                 document.head.appendChild(style);
             }
@@ -265,12 +259,10 @@
 
             this.video.addEventListener('click', () => this.togglePlay());
             this.centerPlay.addEventListener('click', () => this.togglePlay());
-            this.video.addEventListener('play',  () => this.onPlay());
+            this.video.addEventListener('play', () => this.onPlay());
             this.video.addEventListener('pause', () => { this.onPause(); this.forceSaveProgress(); });
             this.video.addEventListener('timeupdate', () => this.onTimeUpdate());
-            this.video.addEventListener('loadedmetadata', () => {
-                this.durationEl.textContent = formatTime(this.video.duration);
-            });
+            this.video.addEventListener('loadedmetadata', () => { this.durationEl.textContent = formatTime(this.video.duration); });
             this.video.addEventListener('error', () => this.onError());
 
             if (this.container) {
@@ -279,11 +271,8 @@
                 this.container.addEventListener('pointermove', triggerActivity);
                 this.container.addEventListener('touchmove', triggerActivity, { passive: true });
                 this.container.addEventListener('touchstart', triggerActivity, { passive: true });
-
                 this.container.addEventListener('mouseleave', () => {
-                    if (this.video && !this.video.paused) {
-                        this.container.classList.add('is-idle');
-                    }
+                    if (this.video && !this.video.paused) this.container.classList.add('is-idle');
                 });
             }
 
@@ -291,9 +280,7 @@
             this.tapRight.addEventListener('dblclick', (e) => { e.preventDefault(); this.skip(10, 'right'); });
 
             const playPauseBtn = $('playPauseBtn');
-            if (playPauseBtn) {
-                playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); this.togglePlay(); });
-            }
+            if (playPauseBtn) playPauseBtn.addEventListener('click', (e) => { e.stopPropagation(); this.togglePlay(); });
 
             this.speedBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -315,32 +302,24 @@
                 if (!this.video.src) return;
                 const r = this.progress.getBoundingClientRect();
                 const pos = (e.clientX - r.left) / r.width;
-                if (isFinite(this.video.duration)) {
-                    this.video.currentTime = pos * this.video.duration;
-                }
+                if (isFinite(this.video.duration)) this.video.currentTime = pos * this.video.duration;
                 this.resetIdleTimer();
             });
         },
 
         resetIdleTimer() {
             if (!this.container) return;
-
             if (this.container.classList.contains('is-idle')) {
                 this.container.classList.remove('is-idle');
-                
                 if (this.video && isFinite(this.video.duration)) {
                     const pct = (this.video.currentTime / this.video.duration) * 100;
                     if (this.progressBar) this.progressBar.style.width = pct + '%';
                     if (this.currentTimeEl) this.currentTimeEl.textContent = formatTime(this.video.currentTime);
                 }
             }
-            
             clearTimeout(this.idleTimer);
-
             if (this.video && !this.video.paused) {
-                this.idleTimer = setTimeout(() => {
-                    this.container.classList.add('is-idle');
-                }, this.idleTimeout);
+                this.idleTimer = setTimeout(() => this.container.classList.add('is-idle'), this.idleTimeout);
             }
         },
 
@@ -355,14 +334,12 @@
             this.titleEl.textContent = title || 'جاري التحميل...';
             this.lastSentTime = -1;
 
-            if (state.videoAbortController) {
-                state.videoAbortController.abort();
-            }
+            if (state.videoAbortController) state.videoAbortController.abort();
             state.videoAbortController = new AbortController();
 
             const currentReqId = ++state.videoRequestId;
 
-            this.poster.classList.add('hidden', 'is-hidden'); 
+            this.poster.classList.add('hidden', 'is-hidden');
             this.video.classList.remove('hidden');
             this.video.style.display = 'block';
             this.container.classList.add('is-active');
@@ -377,10 +354,7 @@
                     signal: state.videoAbortController.signal
                 }, 15000);
 
-                if (!response.ok) {
-                    throw new Error('فشل الوصول إلى مسار الفيديو');
-                }
-
+                if (!response.ok) throw new Error('فشل الوصول إلى مسار الفيديو');
                 if (currentReqId !== state.videoRequestId) return;
 
                 if (this.video.src !== videoUrl) {
@@ -400,19 +374,18 @@
 
                 updateActiveCourseCard(msgId);
                 this.container.scrollIntoView({ behavior: state.reduceMotion ? 'auto' : 'smooth', block: 'center' });
-                
                 this.resetIdleTimer();
 
             } catch (err) {
-                if (err.name === 'AbortError') return; 
-                if (currentReqId !== state.videoRequestId) return; 
+                if (err.name === 'AbortError' || currentReqId !== state.videoRequestId) return;
                 showToast("🚨 تعذر جلب رابط الفيديو. يرجى المحاولة لاحقاً.", "error");
             }
         },
 
         togglePlay() {
             if (!this.video.src) return;
-            if (this.video.paused) { this.video.play().catch(() => {}); } else { this.video.pause(); }
+            if (this.video.paused) this.video.play().catch(() => {});
+            else this.video.pause();
         },
 
         onPlay() {
@@ -428,21 +401,18 @@
             this.centerPlay.style.opacity = "1";
             this.centerPlay.style.transform = "scale(1)";
             this.centerPlay.style.pointerEvents = "auto";
-            
             if (this.container) this.container.classList.remove('is-idle');
             clearTimeout(this.idleTimer);
         },
 
         onTimeUpdate() {
             if (!isFinite(this.video.duration)) return;
-
             const isIdle = this.container && this.container.classList.contains('is-idle');
             if (!isIdle) {
                 const pct = (this.video.currentTime / this.video.duration) * 100;
                 if (this.progressBar) this.progressBar.style.width = pct + '%';
                 if (this.currentTimeEl) this.currentTimeEl.textContent = formatTime(this.video.currentTime);
             }
-
             const currentSec = Math.floor(this.video.currentTime);
             if (currentSec > 0 && currentSec % 10 === 0 && this.lastSentTime !== currentSec) {
                 this.lastSentTime = currentSec;
@@ -451,29 +421,23 @@
         },
 
         forceSaveProgress() {
-            if (this.video && this.video.currentTime > 0) {
-                this.saveProgressBackground(true);
-            }
+            if (this.video && this.video.currentTime > 0) this.saveProgressBackground(true);
         },
 
         saveProgressBackground(force = false) {
             const now = Date.now();
             if (!force && now - this.lastProgressSave < 5000) return;
             this.lastProgressSave = now;
-
             fetch('/api/student/save-progress', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
                 body: JSON.stringify({ msgId: state.currentMsgId, currentTime: this.video.currentTime }),
-                keepalive: true 
+                keepalive: true
             }).catch(() => {});
         },
 
         onError() {
-            const err = this.video.error;
-            if(err) {
-                showToast("🚨 تعذر تشغيل الفيديو. يرجى التحقق من اتصالك بالإنترنت.", "error");
-            }
+            if(this.video.error) showToast("🚨 تعذر تشغيل الفيديو. يرجى التحقق من اتصالك بالإنترنت.", "error");
         },
 
         skip(seconds, side) {
@@ -503,9 +467,7 @@
             const req = wrapper.requestFullscreen || wrapper.webkitRequestFullscreen;
             if (req) {
                 req.call(wrapper).then(() => {
-                    if (screen.orientation && typeof screen.orientation.lock === 'function') { 
-                        screen.orientation.lock('landscape').catch(() => {}); 
-                    }
+                    if (screen.orientation && typeof screen.orientation.lock === 'function') screen.orientation.lock('landscape').catch(() => {});
                 }).catch(() => {});
             }
         } else {
@@ -528,11 +490,8 @@
     }
 
     async function fetchData(initial = false) {
-        if (state.isTesting) return; 
-
-        if (state.dashboardAbortController) {
-            state.dashboardAbortController.abort();
-        }
+        if (state.isTesting) return;
+        if (state.dashboardAbortController) state.dashboardAbortController.abort();
         state.dashboardAbortController = new AbortController();
 
         const container = $('studentCoursesContainer');
@@ -550,34 +509,23 @@
         try {
             const res = await fetchWithTimeout('/api/student/dashboard-data', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${state.token}`
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${state.token}` },
                 body: JSON.stringify({ email: state.user.email, grade: state.user.grade }),
                 signal: state.dashboardAbortController.signal
             }, 15000);
 
             if (!res.ok) {
-                if (res.status === 401 || res.status === 403) {
-                    logout();
-                    return;
-                }
+                if (res.status === 401 || res.status === 403) return logout();
                 throw new Error(res.status);
             }
 
             const data = await res.json();
-
             const newDataHash = JSON.stringify(data.content || data);
-            if (!initial && state.lastDataHash === newDataHash) {
-                return; 
-            }
+            if (!initial && state.lastDataHash === newDataHash) return;
             state.lastDataHash = newDataHash;
-
             renderAll(data, initial);
-            
         } catch (err) {
-            if (err.name === 'AbortError') return; 
+            if (err.name === 'AbortError') return;
             if (container && initial) {
                 container.innerHTML = `
                     <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full">
@@ -617,10 +565,7 @@
             renderQuestions(questions);
             renderTestResults(data.content?.tests || []);
             renderScore(parseInt(data.studentPoints || 0));
-
-        } catch(e) {
-            console.error(e);
-        }
+        } catch(e) {}
     }
 
     function renderCourses(list, initial) {
@@ -653,9 +598,9 @@
                 : '<div class="h-8 mb-4"></div>';
 
             return `
-                <div class="flex flex-col bg-white/5 border ${isActive ? 'border-yellow-500/40 shadow-[0_4px_20px_rgba(234,179,8,0.1)]' : 'border-white/10 shadow-lg'} rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 course-card-v4" id="course_${id}">
+                <div class="premium-card course-card-v4 flex flex-col bg-white/5 border ${isActive ? 'border-yellow-500/40 shadow-[0_4px_20px_rgba(234,179,8,0.1)]' : 'border-white/10 shadow-lg'} rounded-xl overflow-hidden" id="course_${id}">
                     <div class="relative h-36 p-4 flex flex-col justify-between overflow-hidden">
-                        <img src="${safeImage}" loading="lazy" class="absolute inset-0 w-full h-full object-cover z-0 filter brightness-50" alt="">
+                        <img loading="lazy" src="${safeImage}" class="absolute inset-0 w-full h-full object-cover z-0 filter brightness-50" alt="">
                         <div class="relative z-10 flex flex-col justify-between h-full">
                             <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white'}">${num}</span>
                         </div>
@@ -664,11 +609,21 @@
                         <h3 class="text-lg font-bold text-white mb-3 truncate" title="${title}">${title}</h3>
                         ${lastWatchedHTML}
                         <div class="mt-auto pt-4 border-t border-white/10 course-play cursor-pointer" data-msgid="${id}" data-title="${title}">
-                            <button class="w-full ${isActive ? 'bg-yellow-500 text-black' : 'bg-white/5 text-white border border-white/10'} font-bold py-2.5 rounded-lg transition-colors"></button>
+                            <button class="w-full ${isActive ? 'bg-yellow-500 text-black' : 'bg-white/5 text-white border border-white/10'} font-bold py-2.5 rounded-lg transition-colors">${isActive ? 'استكمال المشاهدة' : 'تشغيل المحاضرة'}</button>
                         </div>
                     </div>
                 </div>`;
         }).join('');
+
+        requestAnimationFrame(() => {
+            container.querySelectorAll('.course-card-v4').forEach(card => card.classList.add('reveal'));
+            initObservers();
+            requestAnimationFrame(() => {
+                container.querySelectorAll('.reveal').forEach(card => {
+                    setTimeout(() => card.classList.add('revealed'), 50);
+                });
+            });
+        });
 
         if (state.currentMsgId) updateActiveCourseCard(state.currentMsgId);
     }
@@ -704,9 +659,7 @@
             const scores = Array.isArray(test.scores) ? test.scores : [];
             if (!scores.length) return;
             const maxScore = Number(test.maxScore) > 0 ? Number(test.maxScore) : null;
-
             const sorted = scores.slice().sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
-
             const medals = ['bg-yellow-500 text-black', 'bg-gray-300 text-black', 'bg-orange-400 text-black'];
 
             const rows = sorted.map((s, i) => {
@@ -734,9 +687,7 @@
 
         if (!cards.length) {
             container.className = 'grid grid-cols-1 gap-5';
-            container.innerHTML = `
-                <div class="text-center py-16 text-gray-400 bg-white/5 rounded-2xl border border-white/10 w-full">
-                </div>`;
+            container.innerHTML = `<div class="text-center py-16 text-gray-400 bg-white/5 rounded-2xl border border-white/10 w-full"></div>`;
             return;
         }
 
@@ -753,11 +704,10 @@
 
     function startDashboardPolling() {
         if (poller.timer) return;
-
         poller.timer = setInterval(async () => {
             if (state.isTesting) return;
             await fetchData(false);
-        }, 30000); 
+        }, 30000);
     }
 
     function stopDashboardPolling() {
@@ -769,6 +719,20 @@
 
     function setupGlobalListeners() {
         let lastVisibilityFetch = 0;
+        let isMoving = false;
+
+        document.addEventListener('mousemove', (e) => {
+            if (isMoving) return;
+            isMoving = true;
+            requestAnimationFrame(() => {
+                document.querySelectorAll('.premium-card').forEach(card => {
+                    const rect = card.getBoundingClientRect();
+                    card.style.setProperty('--x', `${e.clientX - rect.left}px`);
+                    card.style.setProperty('--y', `${e.clientY - rect.top}px`);
+                });
+                isMoving = false;
+            });
+        }, { passive: true });
 
         document.addEventListener('click', (e) => {
             const coursePlay = e.target.closest('.course-play');
@@ -778,20 +742,13 @@
             }
         });
 
-        document.addEventListener('touchstart', () => {}, { passive: true });
-        window.addEventListener('scroll', () => {}, { passive: true });
-
         document.addEventListener('visibilitychange', async () => {
             if (document.hidden) {
                 stopDashboardPolling();
-                if (player.video && !player.video.paused) {
-                    player.saveProgressBackground(true);
-                }
+                if (player.video && !player.video.paused) player.saveProgressBackground(true);
                 return;
             }
-
             startDashboardPolling();
-
             const now = Date.now();
             if (now - lastVisibilityFetch > 15000) {
                 lastVisibilityFetch = now;
@@ -808,7 +765,6 @@
 
     function init() {
         if (!authGate()) return;
-
         const firstName = state.user.name ? state.user.name.split(' ')[0] : '';
         $('studentName').textContent = firstName;
         $('studentGrade').textContent = state.user.grade || '';
@@ -817,28 +773,24 @@
         setupGlobalListeners();
         
         fetchData(true).then(() => {
-            if (!document.hidden) {
-                startDashboardPolling();
-            }
+            if (!document.hidden) startDashboardPolling();
+            setTimeout(initObservers, 500);
         });
     }
 
     Object.freeze(window.DahihApp = {
-        logout, 
-        toggleFullscreen, 
+        logout,
+        toggleFullscreen,
         refresh: () => fetchData(true),
         getState: () => state,
-        fetchWithTimeout: fetchWithTimeout,
+        fetchWithTimeout,
         toast: showToast,
         startDashboardPolling,
         stopDashboardPolling,
-        setQuizState: (isTesting) => { 
-            state.isTesting = isTesting; 
-            if (isTesting) {
-                stopDashboardPolling();
-            } else {
-                startDashboardPolling();
-            }
+        setQuizState: (isTesting) => {
+            state.isTesting = isTesting;
+            if (isTesting) stopDashboardPolling();
+            else startDashboardPolling();
         }
     });
 
