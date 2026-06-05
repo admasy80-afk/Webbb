@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
+const walletController = require('../controllers/walletController');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { uploadLimiter } = require('../middleware/rateLimiters');
 
@@ -23,6 +24,29 @@ router.post('/add-test-results', adminController.addTestResults);
 router.post('/add-public-quiz', adminController.addPublicQuiz);
 router.post('/get-grade-content', adminController.getGradeContent);
 router.post('/delete-item', adminController.deleteItem);
+
+// ═══════════ نظام الرصيد والاشتراكات ═══════════
+
+// الباقات (Subscription Plans)
+router.get('/plans', walletController.listPlans);
+router.post('/plans', walletController.createPlan);
+router.put('/plans/:id', walletController.updatePlan);
+router.delete('/plans/:id', walletController.deletePlan);
+
+// بطاقات الشحن (Charge Cards)
+router.get('/cards', walletController.listCards);
+router.post('/cards', walletController.createCards);
+router.delete('/cards/:id', walletController.deleteCard);
+
+// إدارة الرصيد اليدوية
+router.post('/adjust-balance', walletController.adjustBalance);
+
+// لوحة مراقبة الرصيد (Wallet Management)
+router.get('/wallet-stats', walletController.walletStats);
+
+// سجل النظام (System Logs)
+router.get('/logs', walletController.listLogs);
+router.get('/logs/export', walletController.exportLogs);
 
 module.exports = router;
 
