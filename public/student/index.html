@@ -40,7 +40,7 @@
             <div class="flex justify-between w-full items-center">
                 <div class="flex items-center gap-2.5" title="منصة الدحيح">
                     <div class="w-9 h-9 md:w-10 md:h-10 rounded-xl grid place-items-center bg-yellow-500 text-black font-black text-lg md:text-xl shadow-[0_6px_18px_rgba(245,197,24,0.35)] shrink-0 transition-transform duration-300 hover:scale-110 hover:rotate-3">د</div>
-                    <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight leading-none drop-shadow-md">الدحيح<span class="text-white animate-pulse"></span></div>
+                    <div class="text-2xl md:text-3xl font-black text-yellow-500 tracking-tight leading-none drop-shadow-md">الدحيح<span class="text-white animate-pulse">.</span></div>
                 </div>
                 <button onclick="DahihApp.logout()" class="md:hidden text-red-400 bg-red-400/10 hover:bg-red-400/20 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-red-500/20 active:scale-95" aria-label="تسجيل الخروج">خروج</button>
             </div>
@@ -163,7 +163,7 @@
                         
                         <h2 class="text-lg font-black mb-8 text-white flex items-center justify-center gap-2.5 relative z-10 tracking-wide">
                             <svg class="w-6 h-6 text-yellow-500 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-                            مؤشر الأداء الحالي
+                            مؤشر الأداء العام للمنصة
                         </h2>
                         
                         <div class="relative w-48 h-48 mx-auto mb-8 grid place-items-center transform transition-transform duration-500 hover:scale-110 z-10">
@@ -183,14 +183,14 @@
             <header class="mb-10 relative">
                 <div class="absolute w-24 h-24 bg-yellow-500/10 rounded-full blur-3xl -top-6 -right-6 pointer-events-none"></div>
                 <h1 class="text-3xl md:text-4xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-l from-white to-gray-400 drop-shadow-sm">المحاضرات والحصص</h1>
-                <p class="text-gray-400 text-base max-w-2xl font-medium leading-relaxed"></p>
+                <p class="text-gray-400 text-base max-w-2xl font-medium leading-relaxed">استعرض جميع المحاضرات المتاحة للمرحلة الدراسية الخاصة بك، منظمة بطريقة احترافية لتسهيل رحلة تعلمك وضمان التفوق.</p>
             </header>
             <div id="studentCoursesContainer" class="flex flex-col gap-8">
                 <div class="text-center py-24 text-gray-500 flex flex-col items-center justify-center glass-panel rounded-3xl border border-white/10 animate-fade-in-up shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden">
                     <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent w-[200%] animate-shimmer" style="transform: translateX(-100%);"></div>
                     <svg class="w-20 h-20 mb-6 text-white/20 animate-pulse drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
-                    <p class="font-black text-2xl text-white/80 tracking-wide">جاري جلب الفيديو...</p>
-                    <p class="text-base text-gray-500 mt-3 font-medium">يرجي الانتظار</p>
+                    <p class="font-black text-2xl text-white/80 tracking-wide">جاري جلب المحاضرات الرائعة...</p>
+                    <p class="text-base text-gray-500 mt-3 font-medium">لحظات ونبدأ متعة التعلم والاستكشاف</p>
                 </div>
             </div>
         </section>
@@ -203,7 +203,7 @@
                     </div>
                     <h1 class="text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-md">الاختبارات الإلكترونية</h1>
                 </div>
-                <p class="text-gray-400 text-base max-w-3xl font-medium leading-relaxed"></p>
+                <p class="text-gray-400 text-base max-w-3xl font-medium leading-relaxed">اختبر مستواك وتحدى نفسك بأسئلة مصممة بعناية. يتم تسجيل المحاولة مرة واحدة فقط لضمان دقة التقييم وتحفيزك على التركيز المطلق.</p>
             </header>
 
             <div class="max-w-[1400px] mx-auto">
@@ -255,7 +255,7 @@
                         <svg class="w-12 h-12 text-gray-400 drop-shadow-md" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                     </div>
                     <h3 class="text-2xl font-black text-white mb-3 tracking-wide">لا توجد اختبارات حالياً</h3>
-                    <p class="text-base text-gray-400 max-w-md font-medium leading-relaxed">لم يتم العثور على اختبارات حتي الان.</p>
+                    <p class="text-base text-gray-400 max-w-md font-medium leading-relaxed">لم يتم العثور على اختبارات تطابق هذا التصنيف. تأكد من مراجعة المحاضرات لبدء تحديات واختبارات جديدة.</p>
                 </div>
 
                 <div id="onlineQuizzesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-8"></div>
@@ -265,7 +265,7 @@
         <section id="tab-results" class="tab-content" role="tabpanel">
             <header class="mb-10">
                 <h1 class="text-3xl md:text-4xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-l from-white to-gray-400 drop-shadow-sm">نتائج الاختبارات الورقية</h1>
-                <p class="text-gray-400 text-base max-w-2xl font-medium leading-relaxed"></p>
+                <p class="text-gray-400 text-base max-w-2xl font-medium leading-relaxed">درجاتك في الاختبارات الورقية التي رصدها المعلّم بدقة، استعرض ترتيبك ومستواك التحليلي التفصيلي في كل اختبار.</p>
             </header>
             <div id="paperResultsContainer" class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8"></div>
         </section>
@@ -273,7 +273,7 @@
         <section id="tab-points" class="tab-content" role="tabpanel">
             <header class="mb-10">
                 <h1 class="text-3xl md:text-4xl font-black mb-4 text-transparent bg-clip-text bg-gradient-to-l from-white to-gray-400 drop-shadow-sm">أهم نقاط المنهج</h1>
-                <p class="text-gray-400 text-base max-w-2xl font-medium leading-relaxed"></p>
+                <p class="text-gray-400 text-base max-w-2xl font-medium leading-relaxed">خلاصة ذهبية، ملاحظات دقيقة، وتلخيصات سريعة لتثبيت المعلومات الأساسية في ذهنك بشكل دائم.</p>
             </header>
             <div class="glass-panel rounded-[2rem] p-6 md:p-10 border-t-4 border-yellow-500 shadow-[0_20px_50px_rgba(0,0,0,0.4)] bg-gradient-to-br from-white/[0.03] to-transparent relative overflow-hidden">
                 <div class="absolute -right-20 -top-20 w-64 h-64 bg-yellow-500/5 blur-3xl rounded-full pointer-events-none"></div>
@@ -309,7 +309,7 @@
                 return new Promise(resolve => setTimeout(() => resolve({ ok: true }), 400));
             },
             refresh() {
-                console.log("%c[Dashboard] تحديث حالة واجهة الطالب ...", "color: #eab308; font-weight: bold; font-size: 14px;");
+                console.log("%c[Dashboard] تحديث حالة واجهة الطالب وتأمين الاختبارات...", "color: #eab308; font-weight: bold; font-size: 14px;");
                 if (typeof QuizApp !== 'undefined' && QuizApp.reload) { QuizApp.reload(); }
             }
         };
@@ -426,7 +426,7 @@
                         <h3 class="text-xl font-black text-white mb-3 line-clamp-2 leading-snug group-hover:text-yellow-400 transition-colors duration-300 drop-shadow-md">${quiz.title}</h3>
                         <p class="text-base text-gray-400 flex items-center gap-2 font-medium bg-white/5 w-fit px-3 py-1.5 rounded-lg border border-white/5">
                             <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            ${quiz.questions ? quiz.questions.length : 0} سؤال 
+                            ${quiz.questions ? quiz.questions.length : 0} سؤال شامل
                         </p>
                     </div>
                     <div class="relative z-10 flex items-center justify-between mt-8 pt-5 border-t border-white/10 group-hover:border-yellow-500/40 transition-colors duration-300">
@@ -506,7 +506,7 @@
                     if(card.classList.contains('completed-card')) {
                         showPremiumToast(
                             'error', 
-                            'عذراً، لقد أنهيت هذا الاختبار مسبقاً.',
+                            'عذراً، لقد أنهيت هذا الاختبار مسبقاً. يُسمح بمحاولة واحدة فقط لضمان دقة التقييم.',
                             '<svg class="w-7 h-7 text-red-500 shrink-0 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
                         );
                         return;
@@ -521,7 +521,7 @@
                         } else {
                             showPremiumToast(
                                 'success',
-                                'جاري الاتصال!',
+                                'جاري الاتصال بمحرك الاختبارات الذكي... استعد للتحدي!',
                                 '<svg class="w-7 h-7 text-yellow-500 animate-spin shrink-0 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>'
                             );
                         }
