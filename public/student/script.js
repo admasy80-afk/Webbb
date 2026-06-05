@@ -1,9 +1,24 @@
 (function () {
     'use strict';
 
-    // منع تكرار تهيئة السكربت لو تم حقنه أكثر من مرة
     if (window.__DAHIH_INITIALIZED__) return;
     window.__DAHIH_INITIALIZED__ = true;
+
+    (function detectAndApplyPerf() {
+        const cores  = navigator.hardwareConcurrency || 2;
+        const memory = navigator.deviceMemory || 1;
+        const isTouch = navigator.maxTouchPoints > 0;
+
+        let tier = 'high';
+        if (cores <= 2 || memory <= 1) tier = 'low';
+        else if (cores <= 4 || memory <= 3) tier = 'medium';
+
+        if (isTouch && tier === 'high') tier = 'medium';
+
+        if (tier !== 'high') {
+            document.documentElement.classList.add(`perf-${tier}`);
+        }
+    })();
 
     const state = {
         user: null,
@@ -14,18 +29,22 @@
         quizzesHash: '',
         pointsHash: '',
         questionsHash: '',
-        lastDataHash: null, // 🚀 [تحسين]: تخزين بصمة البيانات كاملة لمنع الـ Re-render الوهمي
+        lastDataHash: null,
         availableQuizzes: [],
         speedIndex: 0,
         speeds: [1, 1.25, 1.5, 2],
-        isTesting: false, // 🚀 [تحسين]: حالة الاختبار لمنع جلب البيانات أثناء حل الكويز
+        isTesting: false,
         dashboardAbortController: null,
         videoAbortController: null, 
         videoRequestId: 0, 
-        reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+        perfTier: document.documentElement.classList.contains('perf-low') 
+            ? 'low' 
+            : document.documentElement.classList.contains('perf-medium') 
+                ? 'medium' 
+                : 'high'
     };
 
-    // 🚀 [تحسين]: نظام Polling آمن لا يتكرر ولا يتراكم
     const poller = { timer: null };
 
     const $ = (id) => document.getElementById(id);
@@ -136,7 +155,7 @@
                 player.video.removeAttribute('src');
                 player.video.load();
             } catch (e) {
-                console.error("Error clearing video on logout:", e);
+                console.error(e);
             }
         }
         localStorage.removeItem('dahih_user');
@@ -201,7 +220,6 @@
         tapLeft: null, tapRight: null, lastSentTime: -1, debounceTimer: null,
         lastProgressSave: 0,
         
-        // 🚀 [تحسين]: متغيرات إدارة ونظام الخمول الذكي لرفع الأداء
         idleTimer: null,
         idleTimeout: 3000, 
 
@@ -222,7 +240,6 @@
 
             if (!this.video) return;
 
-            // 🚀 [تحسين الجرافيكس]: حقن كود ستايل ديناميكي لإلغاء العمليات الرسومية المعقدة أثناء الخمول تماماً وتفعيل تسريع الهاردوير للفيديو
             const styleId = 'dahih-player-perf-boost';
             if (!$(styleId)) {
                 const style = document.createElement('style');
@@ -232,7 +249,6 @@
                         will-change: transform;
                         transform: translateZ(0);
                     }
-                    /* تعطيل عمليات الفلاتر والبلور المجهدة للمعالج وكارت الشاشة عندما يختفي شريط التحكم */
                     #videoContainer.is-idle * {
                         backdrop-filter: none !important;
                         -webkit-backdrop-filter: none !important;
@@ -257,7 +273,6 @@
             });
             this.video.addEventListener('error', () => this.onError());
 
-            // 🚀 [تحسين]: رصد الحركة واللمس لتصفير عداد الخمول فوراً وإعادة إظهار الشريط بسلاسة
             if (this.container) {
                 const triggerActivity = () => this.resetIdleTimer();
                 this.container.addEventListener('mousemove', triggerActivity);
@@ -307,14 +322,12 @@
             });
         },
 
-        // 🚀 [تحسين أداء]: دالة تصفير مؤقت الخمول الذكية مع مزامنة فجائية للـ DOM عند الاستيقاظ
         resetIdleTimer() {
             if (!this.container) return;
 
             if (this.container.classList.contains('is-idle')) {
                 this.container.classList.remove('is-idle');
                 
-                // تحديث خاطف وفوري لشريط التقدم والنصوص بمجرد ظهور الواجهة لضمان دقة العرض دون تعليق مسبق
                 if (this.video && isFinite(this.video.duration)) {
                     const pct = (this.video.currentTime / this.video.duration) * 100;
                     if (this.progressBar) this.progressBar.style.width = pct + '%';
@@ -393,7 +406,6 @@
             } catch (err) {
                 if (err.name === 'AbortError') return; 
                 if (currentReqId !== state.videoRequestId) return; 
-                console.error("Video Access Error:", err);
                 showToast("🚨 تعذر جلب رابط الفيديو. يرجى المحاولة لاحقاً.", "error");
             }
         },
@@ -424,7 +436,6 @@
         onTimeUpdate() {
             if (!isFinite(this.video.duration)) return;
 
-            // 🚀 [تحسين فائق للأداء]: منع تعديل الـ DOM للـ Progress Bar نهائياً إذا كان الشريط مخفياً لتفادي الـ Reflows العشوائية
             const isIdle = this.container && this.container.classList.contains('is-idle');
             if (!isIdle) {
                 const pct = (this.video.currentTime / this.video.duration) * 100;
@@ -461,7 +472,6 @@
         onError() {
             const err = this.video.error;
             if(err) {
-                console.error(`Video Error: ${err.code} - ${err.message}`);
                 showToast("🚨 تعذر تشغيل الفيديو. يرجى التحقق من اتصالك بالإنترنت.", "error");
             }
         },
@@ -533,7 +543,7 @@
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    <p class="font-bold text-lg text-gray-300">جاري جلب البيانات من السيرفر...</p>
+                    <p class="font-bold text-lg text-gray-300"></p>
                 </div>`;
         }
 
@@ -553,7 +563,7 @@
                     logout();
                     return;
                 }
-                throw new Error(`رفض السيرفر الطلب برمز الحالة: ${res.status}`);
+                throw new Error(res.status);
             }
 
             const data = await res.json();
@@ -568,15 +578,14 @@
             
         } catch (err) {
             if (err.name === 'AbortError') return; 
-            console.error(err);
             if (container && initial) {
                 container.innerHTML = `
                     <div class="text-center py-16 text-red-400 bg-red-500/5 rounded-2xl border border-red-500/20 w-full">
-                        <p class="font-bold text-xl mb-2">فشل تحميل المحاضرات 😔</p>
-                        <button onclick="DahihApp.refresh()" class="mt-4 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-6 py-2 rounded-xl transition-colors font-bold">🔄 أعد المحاولة</button>
+                        <p class="font-bold text-xl mb-2"></p>
+                        <button onclick="DahihApp.refresh()" class="mt-4 bg-red-500/20 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 px-6 py-2 rounded-xl transition-colors font-bold">🔄</button>
                     </div>`;
             }
-            showToast("⚠️ حدث خطأ أثناء الاتصال بالسيرفر لتحديث البيانات.", "error");
+            showToast("⚠️", "error");
         }
     }
 
@@ -592,15 +601,12 @@
 
             renderCourses(courses, initial);
 
-            // تنسيق الاختبارات مرة واحدة (تحديد المكتمل + الدرجة من نتائج الطالب)
-            // ثم تمريرها لـ QuizApp وهو المسؤول الوحيد عن عرض هذا القسم لتفادي العرض المزدوج
             const formattedQuizzes = quizzes.map(q => {
                 const result = q.results ? q.results.find(r => r.email === state.user.email) : null;
                 return { ...q, attempted: !!result, score: result ? result.percentage : 0 };
             });
             state.availableQuizzes = formattedQuizzes;
 
-            // 🚀 [تحسين]: تأخير بسيط لضمان تحميل QuizApp
             setTimeout(() => {
                 if (window.QuizApp && typeof window.QuizApp.init === 'function') {
                     window.QuizApp.init(formattedQuizzes);
@@ -613,7 +619,7 @@
             renderScore(parseInt(data.studentPoints || 0));
 
         } catch(e) {
-            console.error("DOM Render Error:", e);
+            console.error(e);
         }
     }
 
@@ -630,7 +636,7 @@
 
         if (list.length === 0) {
             container.className = "flex flex-col gap-8";
-            container.innerHTML = '<div class="text-center py-16 text-gray-400 bg-white/5 rounded-2xl border border-white/10 w-full">لا توجد محاضرات متاحة حالياً.</div>';
+            container.innerHTML = '<div class="text-center py-16 text-gray-400 bg-white/5 rounded-2xl border border-white/10 w-full"></div>';
             return;
         }
 
@@ -640,25 +646,25 @@
             const id = course.telegramMsgId;
             const num = idx + 1;
             const isActive = String(state.currentMsgId) === String(id);
-            const title = escapeHTML(course.courseName || 'محاضرة');
+            const title = escapeHTML(course.courseName || '');
             const safeImage = getSafeImageUrl(course.image);
             const lastWatchedHTML = course.lastWatched 
-                ? `<div class="inline-flex items-center gap-2 text-[0.75rem] text-white bg-white/5 px-3 py-1.5 rounded-md mb-4 border border-white/10 w-fit"><span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>آخر مشاهدة: الدقيقة ${course.lastWatched}</div>` 
+                ? `<div class="inline-flex items-center gap-2 text-[0.75rem] text-white bg-white/5 px-3 py-1.5 rounded-md mb-4 border border-white/10 w-fit"><span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>${course.lastWatched}</div>` 
                 : '<div class="h-8 mb-4"></div>';
 
             return `
                 <div class="flex flex-col bg-white/5 border ${isActive ? 'border-yellow-500/40 shadow-[0_4px_20px_rgba(234,179,8,0.1)]' : 'border-white/10 shadow-lg'} rounded-xl overflow-hidden hover:-translate-y-1 transition-all duration-300 course-card-v4" id="course_${id}">
                     <div class="relative h-36 p-4 flex flex-col justify-between overflow-hidden">
-                        <img src="${safeImage}" loading="lazy" class="absolute inset-0 w-full h-full object-cover z-0 filter brightness-50" alt="غلاف الكورس">
+                        <img src="${safeImage}" loading="lazy" class="absolute inset-0 w-full h-full object-cover z-0 filter brightness-50" alt="">
                         <div class="relative z-10 flex flex-col justify-between h-full">
-                            <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white'}">الدرس ${num}</span>
+                            <span class="self-start px-2.5 py-1 rounded-md text-[0.7rem] font-bold bg-black/50 backdrop-blur-sm border ${isActive ? 'border-yellow-500/40 text-yellow-500' : 'border-white/10 text-white'}">${num}</span>
                         </div>
                     </div>
                     <div class="p-5 flex flex-col flex-grow">
                         <h3 class="text-lg font-bold text-white mb-3 truncate" title="${title}">${title}</h3>
                         ${lastWatchedHTML}
                         <div class="mt-auto pt-4 border-t border-white/10 course-play cursor-pointer" data-msgid="${id}" data-title="${title}">
-                            <button class="w-full ${isActive ? 'bg-yellow-500 text-black' : 'bg-white/5 text-white border border-white/10'} font-bold py-2.5 rounded-lg transition-colors">${isActive ? 'استكمال المشاهدة' : 'تشغيل المحاضرة'}</button>
+                            <button class="w-full ${isActive ? 'bg-yellow-500 text-black' : 'bg-white/5 text-white border border-white/10'} font-bold py-2.5 rounded-lg transition-colors"></button>
                         </div>
                     </div>
                 </div>`;
@@ -673,7 +679,7 @@
         const h = fastHash(list);
         if (h === state.pointsHash) return;
         state.pointsHash = h;
-        container.innerHTML = !list.length ? '<p class="empty">لا توجد ملاحظات.</p>' : `<ul class="fade-in-stagger" style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.65rem;">${list.map(p => `<li style="color:#cbd5e1;font-size:0.9rem;">▸ ${escapeHTML(p)}</li>`).join('')}</ul>`;
+        container.innerHTML = !list.length ? '<p class="empty"></p>' : `<ul class="fade-in-stagger" style="list-style:none;padding:0;display:flex;flex-direction:column;gap:0.65rem;">${list.map(p => `<li style="color:#cbd5e1;font-size:0.9rem;">▸ ${escapeHTML(p)}</li>`).join('')}</ul>`;
     }
 
     function renderQuestions(list) {
@@ -682,10 +688,9 @@
         const h = fastHash(list, ['question']);
         if (h === state.questionsHash) return;
         state.questionsHash = h;
-        container.innerHTML = !list.length ? '<p class="empty">لا توجد أسئلة.</p>' : `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid #333;border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;color:#fff;margin:0 0 0.5rem;">${i + 1}. ${escapeHTML(q.question)}</h3><p style="color:#aaa;font-size:0.85rem;margin:0;">الإجابة: ${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
+        container.innerHTML = !list.length ? '<p class="empty"></p>' : `<div class="fade-in-stagger" style="display:flex;flex-direction:column;gap:0.75rem;">${list.map((q, i) => `<article style="background:rgba(0,0,0,0.3);border:1px solid #333;border-radius:0.75rem;padding:1rem;"><h3 style="font-size:0.9rem;color:#fff;margin:0 0 0.5rem;">${i + 1}. ${escapeHTML(q.question)}</h3><p style="color:#aaa;font-size:0.85rem;margin:0;">${escapeHTML(q.hint)}</p></article>`).join('')}</div>`;
     }
 
-    // دفتر درجات بسيط: نعرض النتائج كما كتبها المعلّم (اسم + درجة) دون أي مطابقة أسماء
     function renderTestResults(list) {
         const container = $('paperResultsContainer');
         if (!container) return;
@@ -700,7 +705,6 @@
             if (!scores.length) return;
             const maxScore = Number(test.maxScore) > 0 ? Number(test.maxScore) : null;
 
-            // ترتيب تنازلي حسب الدرجة (الأعلى أولاً)
             const sorted = scores.slice().sort((a, b) => (Number(b.score) || 0) - (Number(a.score) || 0));
 
             const medals = ['bg-yellow-500 text-black', 'bg-gray-300 text-black', 'bg-orange-400 text-black'];
@@ -721,8 +725,8 @@
             cards.push(`
                 <article class="glass-panel rounded-2xl p-5 md:p-6 border-t-4 border-yellow-500 animate-fade flex flex-col gap-3">
                     <div class="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
-                        <h3 class="text-lg font-bold text-white leading-snug">${escapeHTML(test.testName || 'اختبار')}</h3>
-                        <span class="text-xs font-bold text-gray-300 bg-white/10 px-2.5 py-1 rounded-md shrink-0">${scores.length} طالب</span>
+                        <h3 class="text-lg font-bold text-white leading-snug">${escapeHTML(test.testName || '')}</h3>
+                        <span class="text-xs font-bold text-gray-300 bg-white/10 px-2.5 py-1 rounded-md shrink-0">${scores.length}</span>
                     </div>
                     <ul class="flex flex-col gap-0.5">${rows}</ul>
                 </article>`);
@@ -732,7 +736,6 @@
             container.className = 'grid grid-cols-1 gap-5';
             container.innerHTML = `
                 <div class="text-center py-16 text-gray-400 bg-white/5 rounded-2xl border border-white/10 w-full">
-                    لم يتم رصد أي نتائج ورقية حتى الآن.
                 </div>`;
             return;
         }
@@ -767,8 +770,6 @@
     function setupGlobalListeners() {
         let lastVisibilityFetch = 0;
 
-        // ملاحظة: عرض الاختبارات + الفلاتر + فتح الاختبار يديرها QuizApp/QuizEngine
-        // (في index.html) لتفادي تكرار المستمعين وفتح الاختبار مرتين.
         document.addEventListener('click', (e) => {
             const coursePlay = e.target.closest('.course-play');
             if (coursePlay) {
@@ -808,9 +809,9 @@
     function init() {
         if (!authGate()) return;
 
-        const firstName = state.user.name ? state.user.name.split(' ')[0] : 'طالب';
+        const firstName = state.user.name ? state.user.name.split(' ')[0] : '';
         $('studentName').textContent = firstName;
-        $('studentGrade').textContent = state.user.grade || 'الصف غير محدد';
+        $('studentGrade').textContent = state.user.grade || '';
 
         player.init();
         setupGlobalListeners();
