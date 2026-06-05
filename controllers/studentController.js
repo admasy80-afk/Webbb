@@ -4,6 +4,7 @@ const { pipeline } = require('stream');
 const { getDb } = require('../config/db');
 const { r2Client, R2_BUCKET_NAME } = require('../config/r2');
 const { z } = require('zod');
+const { _helpers: walletHelpers } = require('./walletController');
 
 const gradeSchema = z.object({ grade: z.string().min(2).max(50) });
 
@@ -16,6 +17,15 @@ exports.getDashboardData = async (req, res) => {
 
         const user = await db.collection('users').findOne({ email: req.user.email });
         const studentPoints = user?.points || 0;
+        // حالة الاشتراك والرصيد — تُحدّد على الخادم فقط
+        const subActive = !!(user?.subscriptionEnd && new Date(user.subscriptionEnd).getTime() > Date.now());
+        const subscription = {
+            isActive: subActive,
+            balance: Number(user?.balance || 0),
+            subscriptionStart: user?.subscriptionStart || null,
+            subscriptionEnd: user?.subscriptionEnd || null,
+            avatar: user?.avatar || null
+        };
         // الاسم الكامل (رباعي) لمطابقة نتائج الاختبارات الورقية التي يكتبها المستر
         const studentName = [user?.first_name, user?.second_name, user?.third_name, user?.last_name]
             .filter(Boolean).join(' ').trim();
@@ -56,7 +66,7 @@ exports.getDashboardData = async (req, res) => {
             };
         }));
 
-        res.status(200).json({ studentPoints, content, courses, studentName, studentGrade: grade });
+        res.status(200).json({ studentPoints, content, courses, studentName, studentGrade: grade, subscription });
     } catch (error) {
         console.error("getDashboardData error:", error);
         res.status(500).json({ message: "فشل جلب البيانات." });
@@ -131,6 +141,11 @@ exports.submitQuiz = async (req, res) => {
             const upd = await contentCollection.updateOne({ grade, "publicQuizzes.id": quizId }, { $push: { "publicQuizzes.$.results": resultObj } });
             if (upd.matchedCount === 0) return res.status(404).json({ message: "الاختبار غير موجود." });
         } else {
+            // اختبارات المنصة تتطلب اشتراكاً فعّالاً — يُتحقق منه على الخادم
+            const active = await walletHelpers.checkActiveByEmail(db, email);
+            if (!active) {
+                return res.status(403).json({ message: "اشتراكك غير مفعّل. يرجى شحن كود السنتر أولاً.", code: "SUBSCRIPTION_EXPIRED" });
+            }
             // منع تكرار المحاولة لنفس الطالب على نفس الاختبار (محاولة واحدة فقط)
             const dup = await contentCollection.findOne({ grade, quizzes: { $elemMatch: { id: quizId, results: { $elemMatch: { email } } } } });
             if (dup) return res.status(403).json({ message: "عفواً، لقد قمت بتقديم هذا الاختبار مسبقاً!" });
