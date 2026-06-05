@@ -9,6 +9,7 @@ const {
     JWT_AUDIENCE
 } = require('../middleware/auth');
 const { delay } = require('../utils/helpers');
+const { logEvent, ACTIONS } = require('../utils/systemLog');
 
 const TOKEN_TTL = '30d';
 const BCRYPT_ROUNDS = 10;
@@ -127,7 +128,10 @@ exports.login = async (req, res) => {
 
         // 1) Admin / Owner
         const adminResp = await tryAdminLogin(identifier, password, fingerprint);
-        if (adminResp) return res.status(200).json(adminResp);
+        if (adminResp) {
+            logEvent(req, { action: ACTIONS.LOGIN, details: `دخول الإدارة (${identifier})`, actor: identifier, role: adminResp.userData.role, status: 'success' });
+            return res.status(200).json(adminResp);
+        }
 
         // 2) Student
         const user = await usersCollection.findOne({
@@ -136,16 +140,19 @@ exports.login = async (req, res) => {
 
         if (user && (await verifyAndUpgradePassword(usersCollection, user, password))) {
             if (user.status !== 'accepted') {
+                logEvent(req, { action: ACTIONS.LOGIN_FAILED, details: `محاولة دخول لحساب غير مفعّل (${identifier})`, actor: identifier, status: 'warning' });
                 return res.status(403).json({
                     message: 'الحساب قيد المراجعة أو مرفوض.',
                     code: 'ACCOUNT_NOT_ACTIVE'
                 });
             }
             const token = signToken({ email: user.email, role: 'student', fingerprint });
+            logEvent(req, { action: ACTIONS.LOGIN, details: `دخول الطالب ${user.email}`, actor: user.email, role: 'student', status: 'success' });
             return res.status(200).json(buildStudentResponse(user, token));
         }
 
         // فشل — تأخير ثابت لمقاومة هجمات التعداد.
+        logEvent(req, { action: ACTIONS.LOGIN_FAILED, details: `بيانات دخول خاطئة (${identifier})`, actor: identifier, status: 'warning' });
         await delay(1500);
         return res.status(401).json({ message: 'خطأ في بيانات الدخول', code: 'INVALID_CREDENTIALS' });
     } catch (error) {
@@ -181,10 +188,18 @@ exports.register = async (req, res) => {
             status: 'pending',
             role: 'student',
             points: 0,
+            // نظام الرصيد والاشتراك — تُدار بالكامل من قاعدة البيانات
+            balance: 0,
+            subscriptionStart: null,
+            subscriptionEnd: null,
+            codesUsedCount: 0,
+            avatar: null,
             phoneVerified: false,
             createdAt: new Date()
         };
         await usersCollection.insertOne(newUser);
+
+        logEvent(req, { action: ACTIONS.REGISTER, details: `حساب جديد: ${data.email} (${data.grade || '—'})`, actor: data.email, role: 'student', status: 'success' });
 
         const token = signToken({ email: data.email, role: 'student', fingerprint });
         return res.status(200).json({
@@ -211,7 +226,7 @@ exports.register = async (req, res) => {
  * - data.first_name  → register
  * - غير ذلك          → 400
  *
- * يبقي الـ frontend القديم (/api/saveUser) شغّال بدون تعديل.
+ * يبقي الـ frontend القديم (/api/saveUser) شغّال ب��ون تعديل.
  */
 exports.saveUser = async (req, res) => {
     const data = req.body || {};
@@ -227,6 +242,8 @@ exports.saveUser = async (req, res) => {
  * (لو احتجنا لاحقًا blacklist للتوكنات، نضيفه هنا في collection خاص.)
  */
 exports.logout = async (req, res) => {
+    const actor = (req.user && req.user.email) || (req.body && req.body.email) || 'مستخدم';
+    logEvent(req, { action: ACTIONS.LOGOUT, details: `تسجيل خروج (${actor})`, actor, status: 'info' });
     return res.status(200).json({ message: 'تم تسجيل الخروج', code: 'OK' });
 };
 
