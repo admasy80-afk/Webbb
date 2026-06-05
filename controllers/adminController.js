@@ -12,6 +12,7 @@ const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
 const { getDb, logger } = require('../config/db');
 const { r2Client, R2_BUCKET_NAME, providerHealth } = require('../config/r2');
 const { formatBytes, isProviderHealthy } = require('../utils/helpers');
+const { logEvent, ACTIONS } = require('../utils/systemLog');
 const { z } = require('zod');
 
 const courseSchema = z.object({
@@ -182,6 +183,7 @@ exports.uploadCourse = async (req, res) => {
                     createdAt: new Date()
                 });
 
+                logEvent(req, { action: ACTIONS.COURSE_CREATE, details: `رفع كورس "${courseData.courseName}" (${courseData.grade})`, status: 'success' });
                 return sendResponse(200, { message: "تم الرفع بنجاح 🎉", courseId: insertResult.insertedId.toString(), duration: finalDuration, image: finalImageUrl });
 
             } catch (err) {
@@ -260,6 +262,7 @@ exports.deleteCourse = async (req, res) => {
         }
         
         await db.collection('courses').deleteOne({ _id: new ObjectId(courseId) });
+        logEvent(req, { action: ACTIONS.COURSE_DELETE, details: `حذف كورس: ${course.courseName} (${course.grade})`, status: 'warning' });
         res.status(200).json({ message: "تم حذف المحاضرة بنجاح" });
     } catch (error) { 
         console.error("deleteCourse error:", error);
@@ -316,7 +319,8 @@ exports.updateStatus = async (req, res) => {
         if (result.matchedCount === 0) {
             return res.status(404).json({ message: "المستخدم غير موجود" });
         }
-        
+
+        logEvent(req, { action: ACTIONS.STUDENT_UPDATE, details: `تغيير حالة ${studentEmail} إلى "${newStatus}"${reason ? ` (${reason})` : ''}`, status: 'success' });
         res.status(200).json({ message: "تم التحديث بنجاح" });
     } catch (error) { 
         console.error("updateStatus error:", error);
@@ -388,7 +392,8 @@ exports.updatePoints = async (req, res) => {
         if (result.matchedCount === 0) {
             return res.status(404).json({ message: "المستخدم غير موجود" });
         }
-        
+
+        logEvent(req, { action: ACTIONS.STUDENT_UPDATE, details: `تحديث تقييم ${studentEmail} إلى ${safePoints}%`, status: 'success' });
         res.status(200).json({ message: "تم تحديث النقاط بنجاح" });
     } catch (error) { 
         console.error("updatePoints error:", error);
@@ -447,6 +452,7 @@ exports.addMcqQuiz = async (req, res) => {
             { upsert: true }
         );
         
+        logEvent(req, { action: ACTIONS.QUIZ_CREATE, details: `اختبار منصة "${quizTitle}" (${grade}) — ${questionsArray.length} سؤال`, status: 'success' });
         res.status(200).json({ message: "تمت إضافة الاختبار بنجاح", quizId });
     } catch (error) { 
         console.error("addMcqQuiz error:", error);
@@ -571,7 +577,9 @@ exports.deleteItem = async (req, res) => {
         if (result.modifiedCount === 0) {
             return res.status(404).json({ message: "العنصر غير موجود أو تم حذفه مسبقاً" });
         }
-        
+
+        const isQuiz = (itemType === 'quiz' || itemType === 'publicQuiz');
+        logEvent(req, { action: isQuiz ? ACTIONS.QUIZ_DELETE : ACTIONS.STUDENT_UPDATE, details: `حذف (${itemType}) من ${grade}: ${identifier}`, status: 'warning' });
         res.status(200).json({ message: "تم الحذف بنجاح" });
     } catch (error) { 
         console.error("deleteItem error:", error);
