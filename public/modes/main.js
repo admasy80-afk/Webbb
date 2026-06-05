@@ -15,6 +15,9 @@ import {
 import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPublicLink, removeBlock } from './quiz.js';
 import './stream.js'; 
 import { VideoSystem } from './video.js'; 
+import { WalletAdmin } from './admin/wallet.js';
+
+window.WalletAdmin = WalletAdmin;
 
 window.addMCQBlock = addMCQBlock;
 window.addPublicMCQBlock = addPublicMCQBlock;
