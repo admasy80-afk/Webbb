@@ -3,10 +3,10 @@ const jwt = require('jsonwebtoken');
 const { getDb } = require('../config/db');
 const {
     generateFingerprint,
-    JWT_SECRET,
-    JWT_ALGORITHM,
-    JWT_ISSUER,
-    JWT_AUDIENCE
+    generateAuthTokens,
+    CONFIG,
+    JWT_SECRETS,
+    ACTIVE_KEY_ID
 } = require('../middleware/auth');
 const { delay } = require('../utils/helpers');
 const { logEvent, ACTIONS } = require('../utils/systemLog');
@@ -19,11 +19,11 @@ const BCRYPT_ROUNDS = 10;
    ============================================================ */
 
 const signToken = (payload) =>
-    jwt.sign(payload, JWT_SECRET, {
-        algorithm: JWT_ALGORITHM,
+    jwt.sign(payload, JWT_SECRETS[ACTIVE_KEY_ID], {
+        algorithm: CONFIG.alg,
         expiresIn: TOKEN_TTL,
-        issuer: JWT_ISSUER,
-        audience: JWT_AUDIENCE
+        issuer: CONFIG.iss,
+        audience: CONFIG.aud
     });
 
 /**
@@ -226,7 +226,7 @@ exports.register = async (req, res) => {
  * - data.first_name  → register
  * - غير ذلك          → 400
  *
- * يبقي الـ frontend القديم (/api/saveUser) شغّال ب��ون تعديل.
+ * يبقي الـ frontend القديم (/api/saveUser) شغّال بدون تعديل.
  */
 exports.saveUser = async (req, res) => {
     const data = req.body || {};
