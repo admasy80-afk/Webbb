@@ -1,45 +1,148 @@
+const { ObjectId } = require('mongodb');
 const { getDb } = require('../config/db');
 
-/**
- * يسمح للإدارة دائماً. للطلاب: يتطلب اشتراكاً فعّالاً (subscriptionEnd > الآن).
- */
+const ADMIN_ROLES = new Set(['owner', 'dev', 'admin']);
+const CACHE = new Map();
+const CACHE_TTL = 120000;
+const MAX_CACHE_SIZE = 5000;
+
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of CACHE.entries()) {
+        if (now > value.expiry) {
+            CACHE.delete(key);
+        }
+    }
+}, 60000).unref();
+
+function invalidateUserCache(userId) {
+    if (userId) {
+        CACHE.delete(userId.toString());
+    }
+}
+
+function isSubscriptionActive(user, now) {
+    const endTime = Date.parse(user.subscriptionEnd);
+    return (
+        Number.isFinite(endTime) &&
+        endTime > now &&
+        (user.subscriptionStatus === 'active' || !user.subscriptionStatus)
+    );
+}
+
 async function requireActiveSubscription(req, res, next) {
     try {
-        // الإدارة لا تخضع للقفل
-        if (req.user && (req.user.role === 'dev' || req.user.role === 'owner')) {
-            return next();
-        }
-
-        const email = req.user && req.user.email;
-        if (!email) {
+        const userId = req.user?.id;
+        
+        if (!userId) {
             return res.status(401).json({ message: 'غير مصرح.', code: 'UNAUTHORIZED' });
         }
 
-        const db = getDb();
-        const user = await db.collection('users').findOne(
-            { email },
-            { projection: { subscriptionEnd: 1, restricted: 1 } }
-        );
+        const cacheKey = userId.toString();
+        const now = Date.now();
+        const cachedUser = CACHE.get(cacheKey);
 
-        if (user && user.restricted) {
-            return res.status(403).json({
-                message: 'تم تقييد حسابك من قبل الإدارة. يرجى التواصل مع المستر.',
-                code: 'ACCOUNT_RESTRICTED'
-            });
-        }
+        if (cachedUser && now < cachedUser.expiry) {
+            const user = cachedUser.data;
 
-        const active = user && user.subscriptionEnd && new Date(user.subscriptionEnd).getTime() > Date.now();
-        if (!active) {
+            if (user.role && ADMIN_ROLES.has(user.role)) {
+                return next();
+            }
+
+            if (user.restricted) {
+                return res.status(403).json({
+                    message: 'تم تقييد حسابك من قبل الإدارة. يرجى التواصل مع المستر.',
+                    code: 'ACCOUNT_RESTRICTED'
+                });
+            }
+
+            if (isSubscriptionActive(user, now)) {
+                req.subscription = {
+                    active: true,
+                    end: user.subscriptionEnd,
+                    expiresAt: Date.parse(user.subscriptionEnd),
+                    status: user.subscriptionStatus || 'active'
+                };
+                return next();
+            }
+
             return res.status(403).json({
                 message: 'اشتراكك غير مفعّل. يرجى شحن كود السنتر لتفعيل المنصة.',
                 code: 'SUBSCRIPTION_EXPIRED'
             });
         }
 
-        next();
+        let query;
+        try {
+            query = { _id: ObjectId.isValid(userId) ? new ObjectId(userId) : userId };
+        } catch {
+            query = { _id: userId };
+        }
+
+        const db = getDb();
+        const user = await db.collection('users').findOne(query, {
+            projection: {
+                role: 1,
+                subscriptionEnd: 1,
+                subscriptionStatus: 1,
+                restricted: 1
+            }
+        });
+
+        if (!user) {
+            return res.status(401).json({ message: 'غير مصرح.', code: 'UNAUTHORIZED' });
+        }
+
+        if (CACHE.size >= MAX_CACHE_SIZE) {
+            const oldestKey = CACHE.keys().next().value;
+            if (oldestKey) {
+                CACHE.delete(oldestKey);
+            }
+        }
+
+        CACHE.set(cacheKey, {
+            expiry: now + CACHE_TTL,
+            data: {
+                role: user.role,
+                restricted: !!user.restricted,
+                subscriptionEnd: user.subscriptionEnd,
+                subscriptionStatus: user.subscriptionStatus
+            }
+        });
+
+        if (user.role && ADMIN_ROLES.has(user.role)) {
+            return next();
+        }
+
+        if (user.restricted) {
+            return res.status(403).json({
+                message: 'تم تقييد حسابك من قبل الإدارة. يرجى التواصل مع المستر.',
+                code: 'ACCOUNT_RESTRICTED'
+            });
+        }
+
+        if (isSubscriptionActive(user, now)) {
+            req.subscription = {
+                active: true,
+                end: user.subscriptionEnd,
+                expiresAt: Date.parse(user.subscriptionEnd),
+                status: user.subscriptionStatus || 'active'
+            };
+            return next();
+        }
+
+        return res.status(403).json({
+            message: 'اشتراكك غير مفعّل. يرجى شحن كود السنتر لتفعيل المنصة.',
+            code: 'SUBSCRIPTION_EXPIRED'
+        });
+
     } catch (error) {
+        console.error('[SUBSCRIPTION_MIDDLEWARE]', error);
         return res.status(500).json({ message: 'خطأ في التحقق من الاشتراك.', code: 'INTERNAL_ERROR' });
     }
 }
 
-module.exports = { requireActiveSubscription };
+module.exports = { 
+    requireActiveSubscription, 
+    invalidateUserCache 
+};
