@@ -1,444 +1,83 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const net = require('net');
 
-const parseSecrets = () => {
-    try {
-        if (process.env.JWT_SECRETS) return JSON.parse(process.env.JWT_SECRETS);
-        if (process.env.JWT_SECRET) return { 'key-1': process.env.JWT_SECRET };
-        throw new Error('JWT_SECRETS_REQUIRED');
-    } catch (e) {
-        throw new Error('INVALID_JWT_SECRETS_FORMAT');
-    }
-};
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_ALGORITHM = 'HS256';
+const JWT_ISSUER = 'eld7e7-platform';
+const JWT_AUDIENCE = 'eld7e7-users';
 
-const JWT_SECRETS = parseSecrets();
-const ACTIVE_KEY_ID = process.env.JWT_ACTIVE_KEY_ID || Object.keys(JWT_SECRETS)[0];
-const REDIS_URL = process.env.REDIS_URL;
+/**
+ * بصمة بسيطة على User-Agent — تساعد كطبقة إضافية لكنها ليست بديلًا عن JWT.
+ */
+const generateFingerprint = (req) =>
+    crypto.createHash('sha256').update((req.headers['user-agent'] || '')).digest('hex');
 
-if (!JWT_SECRETS[ACTIVE_KEY_ID]) throw new Error('MISSING_ACTIVE_SECRET');
-
-const CONFIG = Object.freeze({
-    alg: process.env.JWT_ALGORITHM || 'HS256',
-    iss: process.env.JWT_ISSUER || 'eld7e7-platform',
-    aud: process.env.JWT_AUDIENCE || 'eld7e7-users',
-    clockTolerance: Number(process.env.JWT_CLOCK_TOLERANCE) || 5,
-    maxTokenLength: Number(process.env.JWT_MAX_TOKEN_LENGTH) || 4096,
-    maxPayloadLength: Number(process.env.JWT_MAX_PAYLOAD_LENGTH) || 4096,
-    bruteWindow: Number(process.env.JWT_BRUTE_WINDOW) || 900,
-    bruteMax: Number(process.env.JWT_BRUTE_MAX) || 50,
-    gracePeriod: Number(process.env.JWT_GRACE_PERIOD) || 15,
-    accessTtl: process.env.JWT_ACCESS_TTL || '15m',
-    refreshTtl: process.env.JWT_REFRESH_TTL || '30d',
-    lruMaxSize: Number(process.env.JWT_LRU_MAX_SIZE) || 100000
-});
-
-const ROLE_RANK = Object.freeze({ user: 0, vip: 1, moderator: 2, admin: 3, dev: 4, owner: 5 });
-const ADMIN_ROLES = new Set(['dev', 'owner']);
-
-class EnterpriseHybridStore {
-    constructor() {
-        this.redis = null;
-        this.memory = new Map();
-        this.isRedisReady = false;
-
-        if (REDIS_URL) {
-            try {
-                const Redis = require('ioredis');
-                this.redis = new Redis(REDIS_URL, {
-                    maxRetriesPerRequest: 3,
-                    enableOfflineQueue: false,
-                    retryStrategy: (times) => Math.min(times * 100, 3000),
-                    reconnectOnError: (err) => err.message.includes('READONLY')
-                });
-                this.redis.on('ready', () => {
-                    this.isRedisReady = true;
-                    this.redis.defineCommand('rateLimit', {
-                        numberOfKeys: 1,
-                        lua: `
-                            local current = redis.call('INCR', KEYS[1])
-                            if current == 1 then
-                                redis.call('EXPIRE', KEYS[1], ARGV[1])
-                            end
-                            return current
-                        `
-                    });
-                });
-                this.redis.on('error', () => { this.isRedisReady = false; });
-            } catch (err) {
-                this.isRedisReady = false;
-            }
-        }
-        setInterval(() => this.prune(), 30000).unref();
-    }
-
-    prune() {
-        const now = Date.now();
-        const keysToDelete = [];
-        for (const [key, val] of this.memory) {
-            if (now > val.exp) keysToDelete.push(key);
-        }
-        for (const k of keysToDelete) this.memory.delete(k);
-
-        if (this.memory.size > CONFIG.lruMaxSize) {
-            const sorted = [...this.memory.entries()].sort((a, b) => a[1].exp - b[1].exp);
-            const toEvict = sorted.slice(0, Math.floor(CONFIG.lruMaxSize * 0.2));
-            for (const [k] of toEvict) this.memory.delete(k);
-        }
-    }
-
-    async set(key, value, ttlSeconds) {
-        const validTtl = Math.max(1, Number(ttlSeconds) || 3600);
-        this.memory.set(key, { data: value, exp: Date.now() + validTtl * 1000 });
-        if (this.isRedisReady) {
-            await this.redis.set(key, JSON.stringify(value), 'EX', validTtl).catch(() => null);
-        }
-    }
-
-    async setGraceAtomic(key, value, ttlSeconds) {
-        const validTtl = Math.max(1, Number(ttlSeconds) || CONFIG.gracePeriod);
-        if (this.isRedisReady) {
-            try {
-                const result = await this.redis.set(key, JSON.stringify(value), 'EX', validTtl, 'NX');
-                if (result === 'OK') {
-                    this.memory.set(key, { data: value, exp: Date.now() + validTtl * 1000 });
-                    return true;
-                }
-                return false;
-            } catch (e) {
-                return false;
-            }
-        }
-        if (this.memory.has(key) && this.memory.get(key).exp > Date.now()) return false;
-        this.memory.set(key, { data: value, exp: Date.now() + validTtl * 1000 });
-        return true;
-    }
-
-    async get(key) {
-        if (this.isRedisReady) {
-            try {
-                const data = await this.redis.get(key);
-                if (data) {
-                    const parsed = JSON.parse(data);
-                    this.memory.set(key, { data: parsed, exp: Date.now() + 60000 });
-                    return parsed;
-                }
-            } catch (e) {}
-        }
-        const local = this.memory.get(key);
-        if (local && local.exp > Date.now()) return local.data;
-        this.memory.delete(key);
-        return null;
-    }
-
-    async delete(key) {
-        this.memory.delete(key);
-        if (this.isRedisReady) {
-            await this.redis.del(key).catch(() => null);
-        }
-    }
-
-    async increment(key, ttlSeconds) {
-        const validTtl = Math.max(1, Number(ttlSeconds) || 3600);
-        if (this.isRedisReady && this.redis.rateLimit) {
-            try {
-                return await this.redis.rateLimit(key, validTtl);
-            } catch (e) {}
-        }
-        const now = Date.now();
-        const record = this.memory.get(key);
-        if (record && now <= record.exp) {
-            record.data += 1;
-            return record.data;
-        }
-        this.memory.set(key, { data: 1, exp: now + validTtl * 1000 });
-        return 1;
-    }
-}
-
-const store = new EnterpriseHybridStore();
-
-const safeEqual = (a, b) => {
-    if (typeof a !== 'string' || typeof b !== 'string') return false;
-    const bufA = Buffer.from(a);
-    const bufB = Buffer.from(b);
-    if (bufA.length !== bufB.length) return false;
-    return crypto.timingSafeEqual(bufA, bufB);
-};
-
-const hashString = (input) => crypto.createHash('sha3-256').update(String(input)).digest('hex');
-
-const extractNormalizedIp = (req) => {
-    const xff = req.headers['x-forwarded-for'];
-    const rawIp = xff ? String(xff).split(',')[0].trim() : req.ip || req.connection?.remoteAddress || 'unknown';
-    if (net.isIPv6(rawIp) && rawIp.startsWith('::ffff:')) return rawIp.substring(7);
-    return rawIp;
-};
-
-const generateFingerprint = (req) => {
-    const devId = req.headers['x-device-id'];
-    const uaInfo = [
-        req.headers['user-agent'] || 'ua_missing',
-        req.headers['accept-language'] || 'lang_missing',
-        req.headers['sec-ch-ua'] || 'sec_missing'
-    ].join('|');
-    const ip = extractNormalizedIp(req);
-    
-    return {
-        strict: devId ? hashString(devId) : hashString(uaInfo),
-        medium: hashString(uaInfo),
-        soft: hashString(ip)
-    };
-};
-
-const verifyFingerprint = (tokenFp, currentFp) => {
-    if (!tokenFp) return true;
-    if (tokenFp.strict && safeEqual(tokenFp.strict, currentFp.strict)) return true;
-    if (tokenFp.medium && safeEqual(tokenFp.medium, currentFp.medium)) return true;
-    return false;
-};
-
-const getTTL = (expAt) => {
-    if (!expAt) return 2592000;
-    const nowSec = Math.floor(Date.now() / 1000);
-    return Math.max(1, expAt - nowSec);
-};
-
-const isRevoked = async (jti) => !!(await store.get(`rev:${hashString(jti)}`));
-
-const revokeToken = async (decoded) => {
-    if (decoded?.jti && decoded?.exp) await store.set(`rev:${hashString(decoded.jti)}`, true, getTTL(decoded.exp));
-};
-
-const revokeFamily = async (familyId, exp) => {
-    if (familyId) await store.set(`fam:${hashString(familyId)}`, true, getTTL(exp));
-};
-
-const isFamilyRevoked = async (familyId) => !!(await store.get(`fam:${hashString(familyId)}`));
-
-const recordFailure = async (key) => await store.increment(`throttle:${key}`, CONFIG.bruteWindow);
-const isThrottled = async (key) => (await store.get(`throttle:${key}`)) >= CONFIG.bruteMax;
-const clearFailures = async (key) => await store.delete(`throttle:${key}`);
-
+/**
+ * استخراج التوكن من Authorization header أو من query (?token=) كـ fallback.
+ */
 const extractToken = (req) => {
     const authHeader = req.headers['authorization'];
-    if (authHeader && authHeader.startsWith('Bearer ')) return authHeader.slice(7).trim();
-    if (req.headers['x-access-token']) return String(req.headers['x-access-token']).trim();
-    if (req.cookies?.token) return String(req.cookies.token).trim();
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return authHeader.slice(7).trim();
+    }
+    if (req.query && req.query.token) return String(req.query.token).trim();
     return null;
 };
 
-const deny = (res, status, message, code) => res.status(status).json({ success: false, message, code });
+/**
+ * Middleware للمصادقة بـ JWT.
+ * يرد بأكواد واضحة (code) حتى يتعامل الفرونت بدقة بدل ما يفسّر الرسائل النصية.
+ *
+ *   401 + code=TOKEN_MISSING   → ما فيه توكن أصلًا (طبيعي للزوار، لا يجب عرض رسالة "انتهت الجلسة")
+ *   401 + code=TOKEN_EXPIRED   → التوكن انتهى → الفرونت يمسح storage ويعيد توجيه إلى /login.html
+ *   401 + code=TOKEN_INVALID   → توقيع غير صالح / issuer / audience خطأ → نفس التصرف
+ */
+const authenticateToken = (req, res, next) => {
+    const token = extractToken(req);
 
-const getKeyResolver = (header, callback) => {
-    const key = JWT_SECRETS[header.kid] || JWT_SECRETS[ACTIVE_KEY_ID];
-    if (!key) return callback(new Error('INVALID_KEY_ID'));
-    callback(null, key);
-};
-
-const verifyTokenAsyncSafe = (token) => {
-    return new Promise((resolve, reject) => {
-        jwt.verify(token, getKeyResolver, {
-            algorithms: [CONFIG.alg],
-            issuer: CONFIG.iss,
-            audience: CONFIG.aud,
-            clockTolerance: CONFIG.clockTolerance
-        }, (err, decoded) => {
-            if (err) return reject(err);
-            resolve(decoded);
+    if (!token || token === 'null' || token === 'undefined') {
+        return res.status(401).json({
+            message: 'غير مصرح بالوصول.',
+            code: 'TOKEN_MISSING'
         });
-    });
-};
-
-const signTokenAsyncSafe = (payload, options) => {
-    return new Promise((resolve, reject) => {
-        jwt.sign(payload, JWT_SECRETS[ACTIVE_KEY_ID], {
-            algorithm: CONFIG.alg,
-            issuer: CONFIG.iss,
-            audience: CONFIG.aud,
-            expiresIn: options.expiresIn || CONFIG.accessTtl,
-            jwtid: options.jwtid,
-            subject: options.subject ? String(options.subject) : undefined,
-            keyid: ACTIVE_KEY_ID
-        }, (err, token) => {
-            if (err) return reject(err);
-            resolve(token);
-        });
-    });
-};
-
-const generateAuthTokens = async (payload, existingFamilyId = null) => {
-    if (Buffer.byteLength(JSON.stringify(payload)) > CONFIG.maxPayloadLength) throw new Error('JWT_PAYLOAD_TOO_LARGE');
-    
-    const accessJti = crypto.randomUUID();
-    const refreshJti = crypto.randomUUID();
-    const familyId = existingFamilyId || crypto.randomUUID();
-
-    const accessToken = await signTokenAsyncSafe({ ...payload, typ: 'access' }, { jwtid: accessJti, expiresIn: CONFIG.accessTtl });
-    const refreshToken = await signTokenAsyncSafe({ ...payload, typ: 'refresh', fam: familyId }, { jwtid: refreshJti, expiresIn: CONFIG.refreshTtl });
-
-    return { accessToken, refreshToken };
-};
-
-const rotateTokens = async (refreshToken, req = null) => {
-    const decoded = await verifyTokenAsyncSafe(refreshToken);
-    if (decoded.typ !== 'refresh') throw new Error('ERR_INVALID_TYPE');
-    
-    if (await isRevoked(decoded.jti) || (decoded.fam && await isFamilyRevoked(decoded.fam))) {
-        if (decoded.fam) await revokeFamily(decoded.fam, decoded.exp);
-        throw new Error('ERR_REVOKED_FAMILY_BREACH');
     }
 
-    const graceKey = `grace:${hashString(decoded.jti)}`;
-    const existingGraceData = await store.get(graceKey);
-    if (existingGraceData) return existingGraceData;
-
-    const payload = {
-        id: decoded.id,
-        _id: decoded._id,
-        sub: decoded.sub,
-        role: decoded.role || 'user',
-        tv: decoded.tv || 1,
-        fp: req ? generateFingerprint(req) : decoded.fp
-    };
-
-    const newTokens = await generateAuthTokens(payload, decoded.fam);
-
-    const locked = await store.setGraceAtomic(graceKey, newTokens, CONFIG.gracePeriod);
-    if (!locked) {
-        const raceData = await store.get(graceKey);
-        if (raceData) return raceData;
-        throw new Error('ERR_ROTATION_RACE_CONDITION');
-    }
-
-    await revokeToken(decoded);
-    return newTokens;
-};
-
-const authenticateToken = async (req, res, next) => {
-    try {
-        const ip = extractNormalizedIp(req);
-        const throttleKey = hashString(`auth_limit|${ip}`);
-
-        if (await isThrottled(throttleKey)) {
-            res.setHeader('Retry-After', CONFIG.bruteWindow);
-            return deny(res, 429, 'تم حظر الطلبات مؤقتًا.', 'TOO_MANY_REQUESTS');
+    jwt.verify(
+        token,
+        JWT_SECRET,
+        {
+            algorithms: [JWT_ALGORITHM],
+            issuer: JWT_ISSUER,
+            audience: JWT_AUDIENCE,
+            clockTolerance: 5
+        },
+        (err, decoded) => {
+            if (err) {
+                const isExpired = err.name === 'TokenExpiredError';
+                return res.status(401).json({
+                    message: isExpired ? 'انتهت صلاحية الجلسة.' : 'جلسة غير صالحة.',
+                    code: isExpired ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID'
+                });
+            }
+            req.user = decoded;
+            next();
         }
-
-        const token = extractToken(req);
-        if (!token || token === 'null' || token === 'undefined') {
-            return deny(res, 401, 'غير مصرح بالوصول.', 'TOKEN_MISSING');
-        }
-
-        if (token.length > CONFIG.maxTokenLength || token.split('.').length !== 3) {
-            await recordFailure(throttleKey);
-            return deny(res, 401, 'جلسة غير صالحة.', 'TOKEN_MALFORMED');
-        }
-
-        let decoded;
-        try {
-            decoded = await verifyTokenAsyncSafe(token);
-        } catch (err) {
-            await recordFailure(throttleKey);
-            if (err.name === 'TokenExpiredError') return deny(res, 401, 'انتهت صلاحية الجلسة.', 'TOKEN_EXPIRED');
-            if (err.name === 'NotBeforeError') return deny(res, 401, 'الجلسة غير مفعّلة بعد.', 'TOKEN_NOT_ACTIVE');
-            return deny(res, 401, 'جلسة غير صالحة.', 'TOKEN_INVALID');
-        }
-
-        if (decoded.typ === 'refresh') return deny(res, 401, 'نوع التوكن غير صالح.', 'TOKEN_TYPE_MISMATCH');
-        if (!decoded.id && !decoded._id && !decoded.sub) return deny(res, 401, 'بيانات الجلسة غير مكتملة.', 'TOKEN_INVALID_SUBJECT');
-        if (await isRevoked(decoded.jti)) return deny(res, 401, 'تم إنهاء الجلسة مسبقًا.', 'TOKEN_REVOKED');
-        if (decoded.fam && await isFamilyRevoked(decoded.fam)) return deny(res, 401, 'تم إنهاء الجلسة مسبقًا.', 'TOKEN_REVOKED');
-        
-        const currentFp = generateFingerprint(req);
-        if (decoded.fp && !verifyFingerprint(decoded.fp, currentFp)) {
-            await recordFailure(throttleKey);
-            return deny(res, 401, 'تعذّر التحقق من الهوية.', 'FINGERPRINT_MISMATCH');
-        }
-
-        await clearFailures(throttleKey);
-
-        req.user = decoded;
-        req.token = token;
-        req.tokenId = decoded.jti;
-        req.auth = {
-            id: decoded.id || decoded._id || decoded.sub,
-            role: decoded.role || 'user',
-            rank: ROLE_RANK[decoded.role] ?? 0,
-            tokenVersion: decoded.tv || 1,
-            fingerprint: currentFp,
-            ip,
-            issuedAt: decoded.iat,
-            expiresAt: decoded.exp
-        };
-
-        next();
-    } catch (error) {
-        return deny(res, 500, 'خطأ داخلي في الخادم.', 'INTERNAL_ERROR');
-    }
-};
-
-const requireRole = (...roles) => {
-    const allowed = new Set(roles);
-    return (req, res, next) => {
-        if (!req.user) return deny(res, 401, 'غير مصرح بالوصول.', 'TOKEN_MISSING');
-        if (!allowed.has(req.user.role)) return deny(res, 403, 'صلاحيات غير كافية.', 'FORBIDDEN');
-        next();
-    };
-};
-
-const requireMinRank = (minRole) => {
-    const min = ROLE_RANK[minRole] ?? Infinity;
-    return (req, res, next) => {
-        if (!req.user) return deny(res, 401, 'غير مصرح بالوصول.', 'TOKEN_MISSING');
-        if ((ROLE_RANK[req.user.role] ?? -1) < min) return deny(res, 403, 'صلاحيات غير كافية.', 'FORBIDDEN');
-        next();
-    };
+    );
 };
 
 const requireAdmin = (req, res, next) => {
-    if (!req.user || !ADMIN_ROLES.has(req.user.role)) return deny(res, 403, 'مطلوب صلاحيات مسؤول.', 'FORBIDDEN');
-    next();
-};
-
-const optionalAuth = async (req, res, next) => {
-    try {
-        const token = extractToken(req);
-        if (!token || token === 'null' || token === 'undefined') {
-            req.user = null;
-            return next();
-        }
-        
-        const decoded = await verifyTokenAsyncSafe(token);
-        if (decoded.typ === 'refresh' || await isRevoked(decoded.jti) || (decoded.fam && await isFamilyRevoked(decoded.fam))) {
-            req.user = null;
-            req.authError = 'TOKEN_REVOKED_OR_INVALID_TYPE';
-        } else {
-            req.user = decoded;
-        }
-        next();
-    } catch (error) {
-        req.user = null;
-        req.authError = 'TOKEN_VERIFICATION_FAILED';
-        next();
+    if (req.user?.role !== 'dev' && req.user?.role !== 'owner') {
+        return res.status(403).json({ message: 'مطلوب صلاحيات مسؤول.', code: 'FORBIDDEN' });
     }
+    next();
 };
 
 module.exports = {
     authenticateToken,
-    optionalAuth,
     requireAdmin,
-    requireRole,
-    requireMinRank,
     generateFingerprint,
-    generateAuthTokens,
-    verifyTokenAsyncSafe,
-    rotateTokens,
-    revokeToken,
-    revokeFamily,
-    isRevoked,
-    isFamilyRevoked,
-    store,
-    CONFIG,
-    JWT_SECRETS
+    JWT_SECRET,
+    JWT_ALGORITHM,
+    JWT_ISSUER,
+    JWT_AUDIENCE
 };
