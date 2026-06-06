@@ -565,6 +565,15 @@
             renderQuestions(questions);
             renderTestResults(data.content?.tests || []);
             renderScore(parseInt(data.studentPoints || 0));
+
+            if (window.DahihExtras) {
+                if (typeof window.DahihExtras.setRestricted === 'function') {
+                    window.DahihExtras.setRestricted(!!data.restricted);
+                }
+                if (typeof window.DahihExtras.setUnread === 'function') {
+                    window.DahihExtras.setUnread(Number(data.unreadMessages || 0));
+                }
+            }
         } catch(e) {}
     }
 
