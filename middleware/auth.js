@@ -4,11 +4,17 @@ const net = require('net');
 
 const parseSecrets = () => {
     try {
-        if (process.env.JWT_SECRETS) return JSON.parse(process.env.JWT_SECRETS);
+        if (process.env.JWT_SECRETS) {
+            const parsed = JSON.parse(process.env.JWT_SECRETS);
+            if (typeof parsed !== 'object' || parsed === null || !Object.keys(parsed).length) {
+                throw new Error();
+            }
+            return parsed;
+        }
         if (process.env.JWT_SECRET) return { 'key-1': process.env.JWT_SECRET };
-        throw new Error('JWT_SECRETS_REQUIRED');
+        throw new Error();
     } catch (e) {
-        throw new Error('INVALID_JWT_SECRETS_FORMAT');
+        process.exit(1);
     }
 };
 
@@ -51,8 +57,8 @@ class EnterpriseHybridStore {
                     retryStrategy: (times) => Math.min(times * 100, 3000),
                     reconnectOnError: (err) => err.message.includes('READONLY')
                 });
-                this.redis.on('ready', () => {
-                    this.isRedisReady = true;
+                
+                const defineRedisCommands = () => {
                     this.redis.defineCommand('rateLimit', {
                         numberOfKeys: 1,
                         lua: `
@@ -63,8 +69,23 @@ class EnterpriseHybridStore {
                             return current
                         `
                     });
+                };
+
+                this.redis.on('connect', () => {
+                    defineRedisCommands();
                 });
-                this.redis.on('error', () => { this.isRedisReady = false; });
+
+                this.redis.on('ready', () => {
+                    this.isRedisReady = true;
+                });
+
+                this.redis.on('reconnecting', () => {
+                    this.isRedisReady = false;
+                });
+
+                this.redis.on('error', () => { 
+                    this.isRedisReady = false; 
+                });
             } catch (err) {
                 this.isRedisReady = false;
             }
@@ -74,6 +95,11 @@ class EnterpriseHybridStore {
 
     prune() {
         const now = Date.now();
+        if (this.memory.size > CONFIG.lruMaxSize * 1.5) {
+            this.memory.clear();
+            return;
+        }
+
         const keysToDelete = [];
         for (const [key, val] of this.memory) {
             if (now > val.exp) keysToDelete.push(key);
@@ -89,7 +115,7 @@ class EnterpriseHybridStore {
 
     async set(key, value, ttlSeconds) {
         const validTtl = Math.max(1, Number(ttlSeconds) || 3600);
-        this.memory.set(key, { data: value, exp: Date.now() + validTtl * 1000 });
+        this.memory.set(key, { data: value, exp: Date.now() + (validTtl * 1000) });
         if (this.isRedisReady) {
             await this.redis.set(key, JSON.stringify(value), 'EX', validTtl).catch(() => null);
         }
@@ -101,7 +127,7 @@ class EnterpriseHybridStore {
             try {
                 const result = await this.redis.set(key, JSON.stringify(value), 'EX', validTtl, 'NX');
                 if (result === 'OK') {
-                    this.memory.set(key, { data: value, exp: Date.now() + validTtl * 1000 });
+                    this.memory.set(key, { data: value, exp: Date.now() + (validTtl * 1000) });
                     return true;
                 }
                 return false;
@@ -110,7 +136,7 @@ class EnterpriseHybridStore {
             }
         }
         if (this.memory.has(key) && this.memory.get(key).exp > Date.now()) return false;
-        this.memory.set(key, { data: value, exp: Date.now() + validTtl * 1000 });
+        this.memory.set(key, { data: value, exp: Date.now() + (validTtl * 1000) });
         return true;
     }
 
@@ -151,26 +177,20 @@ class EnterpriseHybridStore {
             record.data += 1;
             return record.data;
         }
-        this.memory.set(key, { data: 1, exp: now + validTtl * 1000 });
+        this.memory.set(key, { data: 1, exp: now + (validTtl * 1000) });
         return 1;
     }
 }
 
 const store = new EnterpriseHybridStore();
 
-const safeEqual = (a, b) => {
-    if (typeof a !== 'string' || typeof b !== 'string') return false;
-    const bufA = Buffer.from(a);
-    const bufB = Buffer.from(b);
-    if (bufA.length !== bufB.length) return false;
-    return crypto.timingSafeEqual(bufA, bufB);
-};
-
 const hashString = (input) => crypto.createHash('sha3-256').update(String(input)).digest('hex');
 
 const extractNormalizedIp = (req) => {
-    const xff = req.headers['x-forwarded-for'];
-    const rawIp = xff ? String(xff).split(',')[0].trim() : req.ip || req.connection?.remoteAddress || 'unknown';
+    const rawIp = req.headers['x-forwarded-for']?.split(',')[0].trim() ||
+                  req.socket?.remoteAddress ||
+                  req.ip ||
+                  '0.0.0.0';
     if (net.isIPv6(rawIp) && rawIp.startsWith('::ffff:')) return rawIp.substring(7);
     return rawIp;
 };
@@ -193,8 +213,8 @@ const generateFingerprint = (req) => {
 
 const verifyFingerprint = (tokenFp, currentFp) => {
     if (!tokenFp) return true;
-    if (tokenFp.strict && safeEqual(tokenFp.strict, currentFp.strict)) return true;
-    if (tokenFp.medium && safeEqual(tokenFp.medium, currentFp.medium)) return true;
+    if (tokenFp.strict && tokenFp.strict === currentFp.strict) return true;
+    if (tokenFp.medium && tokenFp.medium === currentFp.medium) return true;
     return false;
 };
 
@@ -284,6 +304,10 @@ const rotateTokens = async (refreshToken, req = null) => {
     const decoded = await verifyTokenAsyncSafe(refreshToken);
     if (decoded.typ !== 'refresh') throw new Error('ERR_INVALID_TYPE');
     
+    if (!store.isRedisReady) {
+        throw new Error('REDIS_REQUIRED_FOR_ROTATION');
+    }
+
     if (await isRevoked(decoded.jti) || (decoded.fam && await isFamilyRevoked(decoded.fam))) {
         if (decoded.fam) await revokeFamily(decoded.fam, decoded.exp);
         throw new Error('ERR_REVOKED_FAMILY_BREACH');
