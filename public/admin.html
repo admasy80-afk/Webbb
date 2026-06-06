@@ -112,7 +112,8 @@
 
                 if(tabId === 'requests' && typeof window.fetchPendingRequests === 'function') window.fetchPendingRequests();
                 if(tabId === 'dashboard' && typeof window.fetchStats === 'function') window.fetchStats();
-                if(tabId === 'videos') loadCoursesUI(); 
+                if(tabId === 'videos') loadCoursesUI();
+                if(window.Teacher && typeof window.Teacher.onTab === 'function') window.Teacher.onTab(tabId);
             }
         };
 
@@ -342,7 +343,18 @@
         
         <div class="tab-nav-wrap md:contents">
         <nav class="flex-row md:flex-col overflow-x-auto md:overflow-visible flex gap-2 md:gap-1 px-3 py-3 md:py-4 md:px-0 scrollbar-hide shrink-0">
-            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn active tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">نظرة عامة</button>
+            <span class="hidden md:block px-6 pt-2 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-600">مركز المستر</span>
+            <button onclick="switchTab('command')" id="btn-command" class="tab-btn active tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">لوحة القيادة</button>
+            <button onclick="switchTab('roster')" id="btn-roster" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إدارة الطلاب</button>
+            <button onclick="switchTab('analytics')" id="btn-analytics" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">التحليلات</button>
+            <button onclick="switchTab('course-analytics')" id="btn-course-analytics" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">تحليل الكورسات</button>
+            <button onclick="switchTab('exam-analytics')" id="btn-exam-analytics" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">تحليل الاختبارات</button>
+            <button onclick="switchTab('homework')" id="btn-homework" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">الواجبات</button>
+            <button onclick="switchTab('messages')" id="btn-messages" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">التواصل</button>
+
+            <div class="hidden md:block h-px w-full bg-white/10 my-2"></div>
+            <span class="hidden md:block px-6 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-600">المحتوى والإدارة</span>
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">نظرة عامة</button>
             <button onclick="switchTab('requests')" id="btn-requests" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">طلبات التسجيل</button>
             <button onclick="switchTab('students-list')" id="btn-students-list" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">قائمة الطلاب</button>
             <button onclick="switchTab('students')" id="btn-students" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">التقييم المستمر</button>
@@ -355,7 +367,7 @@
             <button onclick="switchTab('stream')" id="btn-stream" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">البث المباشر</button>
 
             <div class="hidden md:block h-px w-full bg-white/10 my-2"></div>
-
+            <span class="hidden md:block px-6 pt-1 pb-1 text-[10px] font-bold uppercase tracking-widest text-gray-600">المال والنظام</span>
             <button onclick="switchTab('wallet')" id="btn-wallet" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">إدارة المحفظة</button>
             <button onclick="switchTab('cards')" id="btn-cards" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">بطاقات الشحن</button>
             <button onclick="switchTab('plans')" id="btn-plans" class="tab-btn tab-pill shrink-0 whitespace-nowrap w-auto md:w-full text-center md:text-right px-4 md:px-6 py-2.5 md:py-4 font-medium text-gray-300">الباقات</button>
@@ -370,6 +382,94 @@
 
     <main class="flex-grow h-full overflow-y-auto p-4 md:p-8 relative">
         <div class="absolute top-0 right-0 w-64 h-64 md:w-96 md:h-96 bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none -z-10"></div>
+
+        <!-- ═══════════ 🎓 مركز قيادة المستر ═══════════ -->
+        <div id="tab-command" class="tab-content active">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">لوحة القيادة</h1>
+                    <p class="text-gray-400 text-sm" id="command-greeting">نظرة شاملة على منصتك في لحظة واحدة.</p>
+                </div>
+                <button onclick="Teacher.loadCommand()" class="text-sm px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition">تحديث</button>
+            </div>
+            <div id="command-body"><div class="text-center py-20 text-gray-500">جارٍ التحميل…</div></div>
+        </div>
+
+        <!-- ═══════════ إدارة الطلاب التفصيلية ═══════════ -->
+        <div id="tab-roster" class="tab-content">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">إدارة الطلاب</h1>
+                    <p class="text-gray-400 text-sm">ادخل على أي طالب لتعرف كل شيء عنه وتتحكم به من مكان واحد.</p>
+                </div>
+            </div>
+            <div id="roster-body"></div>
+            <div id="student-profile-modal" class="fixed inset-0 z-50 hidden items-start justify-center bg-black/70 backdrop-blur-sm overflow-y-auto p-3 md:p-6">
+                <div class="w-full max-w-5xl bg-[#0f0f12] border border-white/10 rounded-2xl my-4 shadow-2xl">
+                    <div id="student-profile-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════ التحليلات العامة ═══════════ -->
+        <div id="tab-analytics" class="tab-content">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">التحليلات</h1>
+                    <p class="text-gray-400 text-sm">أفضل وأسوأ الطلاب، أصعب الدروس، وتطور الأداء مع الوقت.</p>
+                </div>
+                <button onclick="Teacher.loadAnalytics()" class="text-sm px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition">تحديث</button>
+            </div>
+            <div id="analytics-body"><div class="text-center py-20 text-gray-500">جارٍ التحميل…</div></div>
+        </div>
+
+        <!-- ═══════════ تحليل الكورسات ═══════════ -->
+        <div id="tab-course-analytics" class="tab-content">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">تحليل الكورسات</h1>
+                    <p class="text-gray-400 text-sm">أداء كل كورس، نسبة الإكمال، وأكثر الدروس صعوبة.</p>
+                </div>
+                <button onclick="Teacher.loadCourseAnalytics()" class="text-sm px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition">تحديث</button>
+            </div>
+            <div id="course-analytics-body"><div class="text-center py-20 text-gray-500">جارٍ التحميل…</div></div>
+        </div>
+
+        <!-- ═══════════ تحليل الاختبارات ═══════════ -->
+        <div id="tab-exam-analytics" class="tab-content">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">تحليل الاختبارات</h1>
+                    <p class="text-gray-400 text-sm">متوسط الدرجات، الأسئلة الصعبة، وتحليل الأخطاء لكل اختبار.</p>
+                </div>
+                <button onclick="Teacher.loadExamAnalytics()" class="text-sm px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 transition">تحديث</button>
+            </div>
+            <div id="exam-analytics-body"><div class="text-center py-20 text-gray-500">جارٍ التحميل…</div></div>
+        </div>
+
+        <!-- ═══════════ الواجبات ═══════════ -->
+        <div id="tab-homework" class="tab-content">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">الواجبات</h1>
+                    <p class="text-gray-400 text-sm">أنشئ واجبًا، اربطه بدرس، تابع التسليم وصحّح الدرجات.</p>
+                </div>
+                <button onclick="Teacher.openHomeworkForm()" class="text-sm px-4 py-2 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition">+ واجب جديد</button>
+            </div>
+            <div id="homework-body"><div class="text-center py-20 text-gray-500">جارٍ التحميل…</div></div>
+        </div>
+
+        <!-- ═══════════ التواصل ═══════════ -->
+        <div id="tab-messages" class="tab-content">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold mb-1 text-white">التواصل</h1>
+                    <p class="text-gray-400 text-sm">أرسل رسائل وتنبيهات لطلابك بشكل فردي أو جماعي.</p>
+                </div>
+                <button onclick="Teacher.openMessageForm()" class="text-sm px-4 py-2 rounded-xl bg-yellow-500 text-black font-bold hover:bg-yellow-400 transition">+ رسالة جديدة</button>
+            </div>
+            <div id="messages-body"><div class="text-center py-20 text-gray-500">جارٍ التحميل…</div></div>
+        </div>
 
         <div id="tab-stream" class="tab-content">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
@@ -395,7 +495,7 @@
 
                     <div id="videoControlsOverlay" class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <div class="flex gap-2">
-                            <button id="toggleMicBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="كتم/تشغيل المايك">
+                            <button id="toggleMicBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="كت��/تشغيل المايك">
                                 <svg id="micIconOn" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
                             </button>
                             <button id="toggleCamBtn" class="bg-black/50 hover:bg-black text-white p-2.5 rounded-lg transition-all border border-white/10" title="إيقاف/تشغيل الكاميرا">
@@ -422,7 +522,7 @@
             </div>
         </div>
 
-        <div id="tab-dashboard" class="tab-content active">
+        <div id="tab-dashboard" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-6 md:mb-8">أهلاً بك يا <span id="adminWelcomeName" class="text-yellow-500">إدارة</span></h1>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div class="glass-panel p-6 rounded-2xl border-t-4 border-t-yellow-500 transition-transform hover:scale-[1.02]"><p class="text-gray-400 text-sm mb-1">الطلاب المقبولين</p><h3 id="stats-students" class="text-3xl font-black text-white">0</h3></div>
@@ -792,7 +892,7 @@
         <!-- ═══════════ بطاقات الشحن (Charge Cards) ═══════════ -->
         <div id="tab-cards" class="tab-content">
             <h1 class="text-2xl md:text-3xl font-bold mb-2">بطاقات الشحن</h1>
-            <p class="text-gray-400 mb-6 md:mb-8 text-sm">توليد أكواد شحن آمنة لمرة واحدة وربطها بقيمة ومدة اشتراك.</p>
+            <p class="text-gray-400 mb-6 md:mb-8 text-sm">توليد أكواد شحن آمنة لمرة واحدة وربطها بقيمة ومدة اشت��اك.</p>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="glass-panel rounded-2xl p-5 md:p-6 border-t-4 border-yellow-500 h-fit">
@@ -851,7 +951,7 @@
                             <div><label class="block text-xs text-gray-400 mb-2">السعر (جنيه)</label><input type="number" id="planPrice" min="0" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="20"></div>
                             <div><label class="block text-xs text-gray-400 mb-2">المدة (يوم)</label><input type="number" id="planDuration" min="1" required class="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 text-sm" placeholder="30"></div>
                         </div>
-                        <button type="submit" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors">إضافة الباقة</button>
+                        <button type="submit" class="w-full bg-yellow-500 text-black font-bold py-3 rounded-xl hover:bg-yellow-400 transition-colors">إض��فة الباقة</button>
                     </form>
                 </div>
                 <div class="lg:col-span-2">
@@ -876,7 +976,7 @@
             <div class="glass-panel rounded-2xl p-4 md:p-5 border border-white/10 mb-5">
                 <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
                     <input type="text" id="logSearch" placeholder="بحث (مستخدم / تفاصيل / IP)" class="md:col-span-2 bg-black/30 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-yellow-500 text-sm">
-                    <select id="logActionFilter" class="bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer"><option value="">كل الأحداث</option></select>
+                    <select id="logActionFilter" class="bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer"><option value="">كل ا��أحداث</option></select>
                     <select id="logStatusFilter" class="bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-white outline-none focus:border-yellow-500 text-sm cursor-pointer">
                         <option value="all">كل الحالات</option>
                         <option value="success">نجاح</option>
