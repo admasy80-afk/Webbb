@@ -12,37 +12,86 @@ const redisOptions = {
     maxRetriesPerRequest: 2,
     connectTimeout: 10000,
     keepAlive: 10000,
-    retryStrategy: (times) => Math.min(Math.exp(times) * 50, 2000),
-    reconnectOnError: (err) => err.message.includes('READONLY') || err.message.includes('ECONNRESET')
+    retryStrategy: (times) => Math.min(Math.exp(times) * 50, 2000)
 };
 
 const redisClient = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', redisOptions);
 
-redisClient.on('error', () => {});
+redisClient.on('error', (err) => console.error('Redis Error:', err.message));
+redisClient.on('ready', () => console.log('Redis Security Layer Active'));
+
+const isRedisDown = () => redisClient.status !== 'ready';
 
 const requireRedis = (req, res, next) => {
-    if (redisClient.status !== 'ready') {
+    if (isRedisDown()) {
         return res.status(503).json({ message: 'الخدمة غير متاحة مؤقتاً' });
     }
     next();
 };
 
-const secureHash = (data) => crypto.createHash('sha3-256').update(String(data)).digest('hex');
+const generateFingerprint = (req) => {
+    const components = [
+        req.ip,
+        req.headers['user-agent'] || 'unknown',
+        req.headers['accept-language'] || 'unknown',
+        req.headers['x-forwarded-for'] || 'none'
+    ].join('|');
+    return crypto.createHash('sha3-256').update(components).digest('hex');
+};
 
-const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter, message, strictFail }) => {
-    const isRedisDown = () => redisClient.status !== 'ready';
+const secureHash = (data) => {
+    if (!data || typeof data !== 'string') return String(data);
+    return crypto.createHash('sha3-256').update(data).digest('hex');
+};
 
-    const generateKey = (req, res) => secureHash(keyGenerator(req, res));
+const abuseScoringMiddleware = async (req, res, next) => {
+    if (isRedisDown()) return next();
+    try {
+        const fp = generateFingerprint(req);
+        const scoreKey = `sec:abuse:score:${fp}`;
+        const score = await redisClient.get(scoreKey);
+        
+        if (score && parseInt(score) >= 100) {
+            res.set({
+                'X-Security-Action': 'THREAT_BLOCKED',
+                'Retry-After': '86400'
+            });
+            return res.status(403).json({ 
+                message: 'تم حظر الوصول بسبب نشاط مشبوه.', 
+                requiresCaptcha: true,
+                lockout: true
+            });
+        }
+        req.securityFingerprint = fp;
+        next();
+    } catch (e) {
+        next();
+    }
+};
 
-    const speedStore = new RedisStore({
-        sendCommand: (...args) => redisClient.call(...args),
-        prefix: `sec:sd:${prefix}:`
-    });
+const recordAbuse = (req) => {
+    if (isRedisDown() || !req.securityFingerprint) return;
+    const scoreKey = `sec:abuse:score:${req.securityFingerprint}`;
+    redisClient.multi()
+        .incrby(scoreKey, 25)
+        .expire(scoreKey, 86400)
+        .exec()
+        .catch(() => {});
+};
 
-    const limitStore = new RedisStore({
-        sendCommand: (...args) => redisClient.call(...args),
-        prefix: `sec:rl:${prefix}:`
-    });
+const storeFactory = (prefix) => new RedisStore({
+    sendCommand: (...args) => redisClient.call(...args),
+    prefix: `sec:${prefix}:`
+});
+
+const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter, message, strictFail, sensitiveKey }) => {
+    const speedStore = storeFactory(`sd:${prefix}`);
+    const limitStore = storeFactory(`rl:${prefix}`);
+
+    const resolvedKeyGenerator = (req, res) => {
+        const rawKey = keyGenerator(req, res);
+        return sensitiveKey ? secureHash(rawKey) : rawKey;
+    };
 
     const speedLimiter = slowDown({
         store: speedStore,
@@ -50,7 +99,7 @@ const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter,
         delayAfter: delayAfter || Math.max(1, Math.floor(max * 0.3)),
         delayMs: (hits) => Math.min(hits * 1000, 30000),
         maxDelayMs: 30000,
-        keyGenerator: generateKey,
+        keyGenerator: resolvedKeyGenerator,
         skip: strictFail ? () => false : isRedisDown
     });
 
@@ -60,9 +109,10 @@ const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter,
         max,
         standardHeaders: true,
         legacyHeaders: false,
-        keyGenerator: generateKey,
+        keyGenerator: resolvedKeyGenerator,
         skip: strictFail ? () => false : isRedisDown,
         handler: (req, res) => {
+            recordAbuse(req);
             res.set({
                 'X-Security-Action': 'CAPTCHA_REQUIRED',
                 'Retry-After': Math.ceil(windowMs / 1000)
@@ -75,7 +125,9 @@ const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter,
         }
     });
 
-    return strictFail ? [requireRedis, speedLimiter, requestLimiter] : [speedLimiter, requestLimiter];
+    const middlewares = [abuseScoringMiddleware, speedLimiter, requestLimiter];
+    if (strictFail) middlewares.unshift(requireRedis);
+    return middlewares;
 };
 
 const loginIpLimiter = createUltimateShield({
@@ -85,7 +137,8 @@ const loginIpLimiter = createUltimateShield({
     delayAfter: 3,
     keyGenerator: (req) => req.ip,
     message: { message: "محاولات تسجيل دخول كثيرة. تم الحظر مؤقتاً." },
-    strictFail: true
+    strictFail: true,
+    sensitiveKey: false
 });
 
 const loginAccountLimiter = createUltimateShield({
@@ -95,10 +148,16 @@ const loginAccountLimiter = createUltimateShield({
     delayAfter: 1,
     keyGenerator: (req) => String(req.body?.identifier || 'unknown').toLowerCase().trim(),
     message: { message: "تجاوزت الحد المسموح لتسجيل الدخول للحساب. تم القفل لمدة 15 دقيقة." },
-    strictFail: true
+    strictFail: true,
+    sensitiveKey: true
 });
 
-const authLoginLimiter = [...loginIpLimiter, ...loginAccountLimiter];
+const authLoginLimiter = [
+    requireRedis,
+    abuseScoringMiddleware,
+    ...loginIpLimiter.filter(m => m !== requireRedis && m !== abuseScoringMiddleware),
+    ...loginAccountLimiter.filter(m => m !== requireRedis && m !== abuseScoringMiddleware)
+];
 
 const apiLimiter = createUltimateShield({
     windowMs: 60 * 1000,
@@ -107,7 +166,8 @@ const apiLimiter = createUltimateShield({
     delayAfter: 50,
     keyGenerator: (req) => req.user?.id || req.ip,
     message: { message: "تجاوزت الحد المسموح من الطلبات." },
-    strictFail: false
+    strictFail: false,
+    sensitiveKey: false
 });
 
 const uploadLimiter = createUltimateShield({
@@ -117,7 +177,8 @@ const uploadLimiter = createUltimateShield({
     delayAfter: 5,
     keyGenerator: (req) => req.user?.id || req.ip,
     message: { message: "تجاوزت الحد المسموح للرفع." },
-    strictFail: false
+    strictFail: false,
+    sensitiveKey: false
 });
 
 const publicQuizLimiter = createUltimateShield({
@@ -127,7 +188,8 @@ const publicQuizLimiter = createUltimateShield({
     delayAfter: 5,
     keyGenerator: (req) => req.ip,
     message: { message: "تجاوزت الحد المسموح." },
-    strictFail: false
+    strictFail: false,
+    sensitiveKey: false
 });
 
 const redeemAccountLimiter = createUltimateShield({
@@ -137,7 +199,8 @@ const redeemAccountLimiter = createUltimateShield({
     delayAfter: 3,
     keyGenerator: (req) => req.user?.email || 'anon',
     message: { message: "محاولات كثيرة جداً من هذا الحساب. تم التجميد 30 دقيقة." },
-    strictFail: true
+    strictFail: true,
+    sensitiveKey: true
 });
 
 const redeemIpLimiter = createUltimateShield({
@@ -147,7 +210,8 @@ const redeemIpLimiter = createUltimateShield({
     delayAfter: 5,
     keyGenerator: (req) => req.ip,
     message: { message: "محاولات تفعيل كثيرة من شبكتك. تم التجميد 30 دقيقة." },
-    strictFail: true
+    strictFail: true,
+    sensitiveKey: false
 });
 
 const redeemCodeLimiter = createUltimateShield({
@@ -157,10 +221,17 @@ const redeemCodeLimiter = createUltimateShield({
     delayAfter: 3,
     keyGenerator: (req) => String(req.body?.code || 'nocode').toUpperCase().trim(),
     message: { message: "محاولات كثيرة جداً على هذا الكود. تم التجميد 30 دقيقة." },
-    strictFail: true
+    strictFail: true,
+    sensitiveKey: true
 });
 
-const redeemLimiter = [...redeemAccountLimiter, ...redeemIpLimiter, ...redeemCodeLimiter];
+const redeemLimiter = [
+    requireRedis,
+    abuseScoringMiddleware,
+    ...redeemAccountLimiter.filter(m => m !== requireRedis && m !== abuseScoringMiddleware),
+    ...redeemIpLimiter.filter(m => m !== requireRedis && m !== abuseScoringMiddleware),
+    ...redeemCodeLimiter.filter(m => m !== requireRedis && m !== abuseScoringMiddleware)
+];
 
 const applyGlobalSecurity = (app) => {
     if (process.env.NODE_ENV === 'production') {
@@ -172,8 +243,8 @@ const applyGlobalSecurity = (app) => {
         contentSecurityPolicy: {
             directives: {
                 defaultSrc: ["'self'"],
-                scriptSrc: ["'self'", "'unsafe-inline'"],
-                styleSrc: ["'self'", "'unsafe-inline'"],
+                scriptSrc: ["'self'"],
+                styleSrc: ["'self'"],
                 imgSrc: ["'self'", "data:", "https:"],
                 connectSrc: ["'self'"],
                 fontSrc: ["'self'", "https:", "data:"],
@@ -181,6 +252,7 @@ const applyGlobalSecurity = (app) => {
                 mediaSrc: ["'self'"],
                 frameAncestors: ["'none'"],
                 upgradeInsecureRequests: [],
+                blockAllMixedContent: [],
             },
         },
         crossOriginEmbedderPolicy: true,
@@ -190,14 +262,13 @@ const applyGlobalSecurity = (app) => {
         frameguard: { action: 'deny' },
         hidePoweredBy: true,
         hsts: {
-            maxAge: 31536000,
+            maxAge: 63072000,
             includeSubDomains: true,
             preload: true
         },
         ieNoOpen: true,
         noSniff: true,
-        referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
-        xssFilter: true
+        referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
     }));
     
     app.use(hpp());
@@ -211,4 +282,3 @@ module.exports = {
     redeemLimiter,
     applyGlobalSecurity
 };
-s
