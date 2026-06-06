@@ -16,8 +16,10 @@ import { DraftSystem, addMCQBlock, addPublicMCQBlock, SmartImportSystem, copyPub
 import './stream.js'; 
 import { VideoSystem } from './video.js'; 
 import { WalletAdmin } from './admin/wallet.js';
+import { Teacher } from './admin/teacher.js';
 
 window.WalletAdmin = WalletAdmin;
+window.Teacher = Teacher;
 
 window.addMCQBlock = addMCQBlock;
 window.addPublicMCQBlock = addPublicMCQBlock;
@@ -61,6 +63,7 @@ export function switchTab(tabId) {
         if(tabId === 'requests') fetchPendingRequests();
         if(tabId === 'dashboard') fetchStats();
         if(tabId === 'videos' && VideoSystem && typeof VideoSystem.loadCourses === 'function') VideoSystem.loadCourses(); 
+        if(Teacher && typeof Teacher.onTab === 'function') Teacher.onTab(tabId);
     }
 }
 window.switchTab = switchTab;
@@ -204,6 +207,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => fetchStats(), 300);
     setTimeout(() => DraftSystem.check(), 1000); 
     setTimeout(() => SmartImportSystem.init(), 1000); 
+    if (Teacher && typeof Teacher.init === 'function') setTimeout(() => Teacher.init(), 200);
 });
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
