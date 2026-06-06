@@ -1,13 +1,22 @@
 const rateLimit = require('express-rate-limit');
 const slowDown = require('express-slow-down');
-const { RedisStore } = require('rate-limit-redis');
+const rateLimitRedis = require('rate-limit-redis');
+const RedisStore = rateLimitRedis.default || rateLimitRedis;
 const Redis = require('ioredis');
 const helmet = require('helmet');
+const hpp = require('hpp');
+const crypto = require('crypto');
 
-const redisClient = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', {
+const redisOptions = {
     enableOfflineQueue: false,
-    maxRetriesPerRequest: 2
-});
+    maxRetriesPerRequest: 2,
+    connectTimeout: 10000,
+    keepAlive: 10000,
+    retryStrategy: (times) => Math.min(Math.exp(times) * 50, 2000),
+    reconnectOnError: (err) => err.message.includes('READONLY') || err.message.includes('ECONNRESET')
+};
+
+const redisClient = new Redis(process.env.REDIS_URL || 'redis://127.0.0.1:6379', redisOptions);
 
 redisClient.on('error', () => {});
 
@@ -18,8 +27,12 @@ const requireRedis = (req, res, next) => {
     next();
 };
 
+const secureHash = (data) => crypto.createHash('sha3-256').update(String(data)).digest('hex');
+
 const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter, message, strictFail }) => {
     const isRedisDown = () => redisClient.status !== 'ready';
+
+    const generateKey = (req, res) => secureHash(keyGenerator(req, res));
 
     const speedStore = new RedisStore({
         sendCommand: (...args) => redisClient.call(...args),
@@ -35,9 +48,9 @@ const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter,
         store: speedStore,
         windowMs,
         delayAfter: delayAfter || Math.max(1, Math.floor(max * 0.3)),
-        delayMs: (hits) => hits * 1000,
+        delayMs: (hits) => Math.min(hits * 1000, 30000),
         maxDelayMs: 30000,
-        keyGenerator,
+        keyGenerator: generateKey,
         skip: strictFail ? () => false : isRedisDown
     });
 
@@ -47,11 +60,13 @@ const createUltimateShield = ({ windowMs, max, prefix, keyGenerator, delayAfter,
         max,
         standardHeaders: true,
         legacyHeaders: false,
-        keyGenerator,
+        keyGenerator: generateKey,
         skip: strictFail ? () => false : isRedisDown,
         handler: (req, res) => {
-            res.set('X-Security-Action', 'CAPTCHA_REQUIRED');
-            res.set('Retry-After', Math.ceil(windowMs / 1000));
+            res.set({
+                'X-Security-Action': 'CAPTCHA_REQUIRED',
+                'Retry-After': Math.ceil(windowMs / 1000)
+            });
             res.status(429).json({
                 ...message,
                 lockout: true,
@@ -152,15 +167,40 @@ const applyGlobalSecurity = (app) => {
         app.set('trust proxy', 1);
     }
     app.disable('x-powered-by');
+    
     app.use(helmet({
-        contentSecurityPolicy: true,
+        contentSecurityPolicy: {
+            directives: {
+                defaultSrc: ["'self'"],
+                scriptSrc: ["'self'", "'unsafe-inline'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                imgSrc: ["'self'", "data:", "https:"],
+                connectSrc: ["'self'"],
+                fontSrc: ["'self'", "https:", "data:"],
+                objectSrc: ["'none'"],
+                mediaSrc: ["'self'"],
+                frameAncestors: ["'none'"],
+                upgradeInsecureRequests: [],
+            },
+        },
         crossOriginEmbedderPolicy: true,
+        crossOriginOpenerPolicy: { policy: "same-origin" },
+        crossOriginResourcePolicy: { policy: "same-site" },
+        dnsPrefetchControl: { allow: false },
+        frameguard: { action: 'deny' },
+        hidePoweredBy: true,
         hsts: {
             maxAge: 31536000,
             includeSubDomains: true,
             preload: true
-        }
+        },
+        ieNoOpen: true,
+        noSniff: true,
+        referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+        xssFilter: true
     }));
+    
+    app.use(hpp());
 };
 
 module.exports = { 
@@ -171,3 +211,4 @@ module.exports = {
     redeemLimiter,
     applyGlobalSecurity
 };
+s
