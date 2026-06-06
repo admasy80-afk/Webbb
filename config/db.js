@@ -52,6 +52,15 @@ async function connectMongo() {
         await db.collection('subscription_plans').createIndex({ price: 1 }, { background: true });
         await db.collection('users').createIndex({ subscriptionEnd: 1 }, { background: true });
 
+        // ═══════════ 🎓 مركز قيادة المستر ═══════════
+        await db.collection('users').createIndex({ role: 1, grade: 1 }, { background: true });
+        await db.collection('users').createIndex({ role: 1, points: 1 }, { background: true });
+        await db.collection('student_notes').createIndex({ email: 1, createdAt: -1 }, { background: true });
+        await db.collection('homework').createIndex({ grade: 1, createdAt: -1 }, { background: true });
+        await db.collection('homework_submissions').createIndex({ homeworkId: 1 }, { background: true });
+        await db.collection('homework_submissions').createIndex({ email: 1 }, { background: true });
+        await db.collection('messages').createIndex({ target: 1, grade: 1, createdAt: -1 }, { background: true });
+
         logger.info("🔥 قاعدة البيانات والـ Indexes جاهزة للعمل");
     } catch (error) {
         logger.fatal({ err: error }, "فشل الاتصال بمونجو");
