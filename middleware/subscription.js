@@ -1,8 +1,3 @@
-// ==========================================
-// 🔒 [SECURITY] SUBSCRIPTION GUARD
-// يمنع تنفيذ الوظائف الحساسة على الخادم عند انتهاء الاشتراك.
-// القرار يُتخذ من الخادم فقط بالاعتماد على قاعدة البيانات.
-// ==========================================
 const { getDb } = require('../config/db');
 
 /**
@@ -23,8 +18,15 @@ async function requireActiveSubscription(req, res, next) {
         const db = getDb();
         const user = await db.collection('users').findOne(
             { email },
-            { projection: { subscriptionEnd: 1 } }
+            { projection: { subscriptionEnd: 1, restricted: 1 } }
         );
+
+        if (user && user.restricted) {
+            return res.status(403).json({
+                message: 'تم تقييد حسابك من قبل الإدارة. يرجى التواصل مع المستر.',
+                code: 'ACCOUNT_RESTRICTED'
+            });
+        }
 
         const active = user && user.subscriptionEnd && new Date(user.subscriptionEnd).getTime() > Date.now();
         if (!active) {
