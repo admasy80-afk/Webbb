@@ -1,21 +1,365 @@
 const { logger } = require('../config/db');
 
+const MAX_NODES = 10000;
+const MAX_DEPTH = 20;
+const MAX_KEYS_PER_NODE = 1000;
+const MAX_KEY_LENGTH = 256;
+const MAX_STRING_LENGTH = 1024 * 100;
+const MAX_ARRAY_LENGTH = 10000;
+const MAX_TOTAL_STRING_BUDGET = 1024 * 1024 * 4;
+const SUSPICION_BLOCK_THRESHOLD = 6;
+
+const FORBIDDEN_KEYS = new Set([
+    '__proto__',
+    'prototype',
+    'constructor',
+    '$where',
+    '$function',
+    '$accumulator',
+    '$expr',
+    '$jsonSchema',
+    '$comment',
+    'mapReduce',
+    '$merge',
+    '$out',
+    '$facet',
+    '$lookup',
+    '$graphLookup',
+    '$unionWith'
+]);
+
+const RESERVED_PROTO_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+const HIGH_RISK_OPERATORS = new Set([
+    '$where',
+    '$function',
+    '$accumulator',
+    '$expr',
+    '$regex',
+    '$options',
+    '$mod',
+    '$text',
+    '$search',
+    '$nin',
+    '$ne',
+    '$gt',
+    '$gte',
+    '$lt',
+    '$lte',
+    '$in',
+    '$or',
+    '$and',
+    '$not',
+    '$nor',
+    '$exists',
+    '$type',
+    '$elemMatch'
+]);
+
+const SUSPICIOUS_VALUE_PATTERN = /(\$where|\$function|\$accumulator|sleep\s*\(|benchmark\s*\(|function\s*\(|=>|process\.|require\s*\(|child_process|global\.|globalThis|this\.constructor|__proto__|prototype\s*\[|eval\s*\(|setTimeout\s*\(|setInterval\s*\(|Function\s*\(|fs\.|exec\s*\(|spawn\s*\()/i;
+
+const NOSQL_VALUE_PATTERN = /(\{\s*"?\$[a-zA-Z]+"?\s*:|\[\$ne\]|\$gt|\$lt|\$regex|\$where|\$or\b|\$and\b)/i;
+
+const SQLI_VALUE_PATTERN = /(\bunion\b\s+\bselect\b|\bselect\b.+\bfrom\b|\binsert\b\s+\binto\b|\bdrop\b\s+\btable\b|\bupdate\b.+\bset\b|\bdelete\b\s+\bfrom\b|--\s|;\s*--|\bor\b\s+1\s*=\s*1|'\s*or\s*'1'\s*=\s*'1|\/\*.*\*\/|\bxp_cmdshell\b|\bsleep\s*$$\s*\d+\s*$$)/i;
+
+const PATH_TRAVERSAL_PATTERN = /(\.\.\/|\.\.\\|%2e%2e%2f|%2e%2e\/|\.\.%2f|\/etc\/passwd|c:\\windows|boot\.ini)/i;
+
+const TEMPLATE_INJECTION_PATTERN = /(\{\{.*\}\}|\$\{.*\}|<%.*%>|#\{.*\})/;
+
+const COMMAND_INJECTION_PATTERN = /(\|\s*\w+|;\s*\w+|`[^`]+`|\$$$[^)]+$$|&&\s*\w+|\|\|\s*\w+)/;
+
+function isPlainContainer(value) {
+    return value !== null && typeof value === 'object';
+}
+
+function isCleanObject(value) {
+    if (value === null || typeof value !== 'object') return false;
+    if (Array.isArray(value)) return true;
+    const proto = Object.getPrototypeOf(value);
+    return proto === Object.prototype || proto === null;
+}
+
+function fingerprint(req) {
+    const ua = req.headers ? req.headers['user-agent'] || '' : '';
+    const ip = req.ip || '';
+    let hash = 5381;
+    const raw = ip + '|' + ua;
+    for (let i = 0; i < raw.length; i++) {
+        hash = ((hash << 5) + hash) ^ raw.charCodeAt(i);
+    }
+    return (hash >>> 0).toString(36);
+}
+
+function describeOffense(req, key, reason, extra) {
+    const base = {
+        reason,
+        key,
+        path: req.path,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl,
+        ip: req.ip,
+        ips: req.ips,
+        method: req.method,
+        protocol: req.protocol,
+        secure: req.secure,
+        hostname: req.hostname,
+        userAgent: req.headers ? req.headers['user-agent'] : undefined,
+        referer: req.headers ? req.headers['referer'] : undefined,
+        origin: req.headers ? req.headers['origin'] : undefined,
+        contentType: req.headers ? req.headers['content-type'] : undefined,
+        contentLength: req.headers ? req.headers['content-length'] : undefined,
+        acceptLanguage: req.headers ? req.headers['accept-language'] : undefined,
+        xForwardedFor: req.headers ? req.headers['x-forwarded-for'] : undefined,
+        userId: req.user ? (req.user.id || req.user._id) : undefined,
+        sessionId: req.sessionID,
+        requestId: req.id || (req.headers ? req.headers['x-request-id'] : undefined),
+        fingerprint: fingerprint(req),
+        timestamp: new Date().toISOString()
+    };
+    if (extra) {
+        const ek = Object.keys(extra);
+        for (let i = 0; i < ek.length; i++) {
+            base[ek[i]] = extra[ek[i]];
+        }
+    }
+    return base;
+}
+
+function severityFor(reason) {
+    switch (reason) {
+        case 'operator_injection':
+        case 'forbidden_key':
+        case 'prototype_pollution':
+        case 'suspicious_payload_value':
+        case 'sql_injection_value':
+        case 'nosql_injection_value':
+        case 'command_injection_value':
+        case 'high_risk_operator':
+            return 'critical';
+        case 'path_traversal_value':
+        case 'template_injection_value':
+        case 'null_byte':
+        case 'null_byte_value':
+        case 'control_character':
+            return 'high';
+        case 'max_nodes_exceeded':
+        case 'max_depth_exceeded':
+        case 'max_keys_exceeded':
+        case 'array_too_large':
+        case 'string_too_long':
+        case 'string_budget_exceeded':
+            return 'medium';
+        default:
+            return 'low';
+    }
+}
+
+function reject(req, res, statusCode, errorMessage, offense) {
+    if (logger && typeof logger.warn === 'function') {
+        offense.severity = severityFor(offense.reason);
+        offense.action = 'blocked';
+        logger.warn(offense, "🚨 تم رفض الطلب بسبب محتوى مشبوه");
+    }
+    if (res.headersSent) {
+        return false;
+    }
+    res.status(statusCode).json({
+        success: false,
+        error: errorMessage,
+        code: offense.reason,
+        requestId: offense.requestId
+    });
+    return false;
+}
+
+function inspectKey(key) {
+    if (typeof key !== 'string') {
+        return 'invalid_key_type';
+    }
+    if (key.length === 0) {
+        return 'empty_key';
+    }
+    if (key.length > MAX_KEY_LENGTH) {
+        return 'key_too_long';
+    }
+    if (key.charCodeAt(0) === 36) {
+        if (HIGH_RISK_OPERATORS.has(key)) {
+            return 'high_risk_operator';
+        }
+        return 'operator_injection';
+    }
+    if (key.indexOf('.') !== -1) {
+        return 'dotted_key';
+    }
+    if (key.indexOf('\0') !== -1) {
+        return 'null_byte';
+    }
+    if (FORBIDDEN_KEYS.has(key)) {
+        return 'forbidden_key';
+    }
+    if (RESERVED_PROTO_KEYS.has(key)) {
+        return 'prototype_pollution';
+    }
+    for (let i = 0; i < key.length; i++) {
+        const code = key.charCodeAt(i);
+        if (code < 32 || code === 127) {
+            return 'control_character';
+        }
+    }
+    return null;
+}
+
+function inspectValue(value, budget) {
+    if (typeof value === 'string') {
+        if (value.length > MAX_STRING_LENGTH) {
+            return 'string_too_long';
+        }
+        budget.used += value.length;
+        if (budget.used > MAX_TOTAL_STRING_BUDGET) {
+            return 'string_budget_exceeded';
+        }
+        if (value.indexOf('\0') !== -1) {
+            return 'null_byte_value';
+        }
+        if (SUSPICIOUS_VALUE_PATTERN.test(value)) {
+            return 'suspicious_payload_value';
+        }
+        if (NOSQL_VALUE_PATTERN.test(value)) {
+            return 'nosql_injection_value';
+        }
+        if (SQLI_VALUE_PATTERN.test(value)) {
+            return 'sql_injection_value';
+        }
+        if (PATH_TRAVERSAL_PATTERN.test(value)) {
+            return 'path_traversal_value';
+        }
+        if (COMMAND_INJECTION_PATTERN.test(value)) {
+            return 'command_injection_value';
+        }
+        if (TEMPLATE_INJECTION_PATTERN.test(value)) {
+            return 'template_injection_value';
+        }
+    }
+    return null;
+}
+
+function applySecurityHeaders(res) {
+    if (typeof res.setHeader !== 'function' || res.headersSent) {
+        return;
+    }
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0');
+    res.setHeader('X-Permitted-Cross-Domain-Policies', 'none');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Origin-Agent-Cluster', '?1');
+    res.removeHeader('X-Powered-By');
+}
+
 module.exports = (req, res, next) => {
-    const sanitize = (obj) => {
-        if (obj instanceof Object) {
-            for (let key in obj) {
-                if (/^\$/.test(key)) {
-                    logger.warn({ key, path: req.path, ip: req.ip }, "🚨 تم رصد ومسح كود مشبوه");
-                    delete obj[key];
-                } else if (typeof obj[key] === 'object') {
-                    sanitize(obj[key]);
+    const startedAt = process.hrtime.bigint();
+    const stack = [];
+    const seen = new WeakSet();
+    const budget = { used: 0 };
+    let visitedNodes = 0;
+    let suspicionScore = 0;
+
+    if (isPlainContainer(req.body)) {
+        stack.push({ obj: req.body, depth: 0, src: 'body' });
+    }
+    if (isPlainContainer(req.query)) {
+        stack.push({ obj: req.query, depth: 0, src: 'query' });
+    }
+    if (isPlainContainer(req.params)) {
+        stack.push({ obj: req.params, depth: 0, src: 'params' });
+    }
+
+    while (stack.length > 0) {
+        const frame = stack.pop();
+        const obj = frame.obj;
+        const depth = frame.depth;
+
+        if (obj === null || seen.has(obj)) {
+            continue;
+        }
+        seen.add(obj);
+
+        visitedNodes++;
+        if (visitedNodes > MAX_NODES) {
+            return reject(req, res, 413, 'Payload too large', describeOffense(req, null, 'max_nodes_exceeded', { src: frame.src, visitedNodes }));
+        }
+
+        if (depth > MAX_DEPTH) {
+            return reject(req, res, 413, 'Payload too deep', describeOffense(req, null, 'max_depth_exceeded', { src: frame.src, depth }));
+        }
+
+        if (!isCleanObject(obj)) {
+            return reject(req, res, 400, 'Invalid payload', describeOffense(req, null, 'tainted_object_prototype', { src: frame.src }));
+        }
+
+        if (Array.isArray(obj)) {
+            if (obj.length > MAX_ARRAY_LENGTH) {
+                return reject(req, res, 413, 'Payload too large', describeOffense(req, null, 'array_too_large', { src: frame.src, length: obj.length }));
+            }
+            for (let i = 0; i < obj.length; i++) {
+                const item = obj[i];
+                const itemReason = inspectValue(item, budget);
+                if (itemReason) {
+                    return reject(req, res, 400, 'Invalid payload', describeOffense(req, String(i), itemReason, { src: frame.src }));
+                }
+                if (isPlainContainer(item)) {
+                    stack.push({ obj: item, depth: depth + 1, src: frame.src });
                 }
             }
+            continue;
         }
+
+        const keys = Object.keys(obj);
+
+        if (keys.length > MAX_KEYS_PER_NODE) {
+            return reject(req, res, 413, 'Too many keys', describeOffense(req, null, 'max_keys_exceeded', { src: frame.src, keys: keys.length }));
+        }
+
+        for (let i = 0; i < keys.length; i++) {
+            const key = keys[i];
+
+            const keyReason = inspectKey(key);
+            if (keyReason) {
+                return reject(req, res, 400, 'Invalid payload', describeOffense(req, key, keyReason, { src: frame.src }));
+            }
+
+            const value = obj[key];
+
+            const valueReason = inspectValue(value, budget);
+            if (valueReason) {
+                return reject(req, res, 400, 'Invalid payload', describeOffense(req, key, valueReason, { src: frame.src }));
+            }
+
+            if (isPlainContainer(value)) {
+                stack.push({ obj: value, depth: depth + 1, src: frame.src });
+            }
+        }
+    }
+
+    if (suspicionScore >= SUSPICION_BLOCK_THRESHOLD) {
+        return reject(req, res, 400, 'Invalid payload', describeOffense(req, null, 'suspicion_threshold_exceeded', { suspicionScore }));
+    }
+
+    applySecurityHeaders(res);
+
+    const elapsedNs = process.hrtime.bigint() - startedAt;
+    req.securityScan = {
+        nodes: visitedNodes,
+        bytes: budget.used,
+        elapsedMs: Number(elapsedNs) / 1e6,
+        fingerprint: fingerprint(req)
     };
-    if (req.body) sanitize(req.body);
-    if (req.query) sanitize(req.query);
-    if (req.params) sanitize(req.params);
+
+    if (typeof res.setHeader === 'function' && !res.headersSent) {
+        res.setHeader('X-Sanitizer', 'verified');
+    }
+
     next();
 };
-
